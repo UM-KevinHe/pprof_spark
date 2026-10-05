@@ -38,3 +38,7 @@ sbt scalafmtAll scalafmtSbt             # format sources and build files
 sbt -Dpprof.linkageCheck=true compile   # PLAT-3: compile against the runtime's scala-library
 bash scripts/check-engine-api.sh        # ARCH-2 and PLAT-7 engine API rules
 ```
+
+## License
+
+MIT; see [LICENSE](LICENSE).

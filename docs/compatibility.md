@@ -9,4 +9,5 @@ Notes:
   ships 2.13.16. Hence PLAT-3 and the linkage check.
 - DBR 18 receives dated updates under one version number, so record the runtime build
   identifier with any evidence gathered on Databricks (OI-06).
+- Classic test classpaths exclude spark-connect-shims, as Spark's own Classic modules do (OI-21).
 - Toolchain: sbt 1.12.15, scalafmt 3.11.5, munit 1.2.0, sbt-buildinfo 0.13.2.

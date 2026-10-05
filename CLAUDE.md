@@ -17,6 +17,7 @@ then the pinned reference (reference/REFERENCE.lock), then PROJECT_CONTEXT.md, t
   classpath does not catch all of these (spark-connect-shims); the API check does.
 - Kernels are pure top-level functions: `StrictMath` for transcendental functions, no
   iteration over hash-based collections, no per-row allocation, closures capture no `this`.
+- Classic test classpaths never contain spark-connect-shims; build.sbt filters them (OI-21).
 - Patient-level rows never reach the driver (NN-3); only size-guarded `collect…`/`toLocal…`
   methods materialize anything there.
 - Every behavioral difference from pprof_py gets a discrepancy class (§3.5) in DISCREPANCIES.md.

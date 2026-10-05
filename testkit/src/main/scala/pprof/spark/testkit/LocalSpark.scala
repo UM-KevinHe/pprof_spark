@@ -2,6 +2,9 @@ package pprof.spark.testkit
 
 import java.nio.file.Files
 
+import scala.util.Try
+
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 /** The shared local Classic Spark session of test layer T3.
@@ -22,6 +25,7 @@ object LocalSpark {
   val SessionTimeZone: String = "UTC"
 
   lazy val session: SparkSession = {
+    requireSparkCoreClasses()
     val warehouse = Files.createTempDirectory("pprof-spark-warehouse")
     org.apache.spark.sql.classic.SparkSession
       .builder()
@@ -37,6 +41,26 @@ object LocalSpark {
       .config("spark.sql.session.timeZone", SessionTimeZone)
       .config("spark.sql.warehouse.dir", warehouse.toUri.toString)
       .getOrCreate()
+  }
+
+  /** Fails fast when spark-connect-shims shadows spark-core on this Classic classpath.
+    *
+    * The shims define placeholder classes, such as a `SparkConf` without methods. If they come
+    * first on the classpath, session creation fails later with an obscure `NoSuchMethodError`.
+    * The check is behavioral, so it does not depend on jar names. build.sbt removes the shims
+    * from Test classpaths (OI-21).
+    */
+  def requireSparkCoreClasses(): Unit = {
+    val conf = classOf[SparkConf]
+    val location = Option(conf.getProtectionDomain.getCodeSource)
+      .map(_.getLocation.toString)
+      .getOrElse("an unknown location")
+    val isPlaceholder = Try(conf.getMethod("set", classOf[String], classOf[String])).isFailure
+    require(
+      !isPlaceholder,
+      s"org.apache.spark.SparkConf from $location lacks set(String, String): spark-connect-shims " +
+        "shadows spark-core on this Classic classpath (see sparkModuleSettings in build.sbt)"
+    )
   }
 
   /** Runs `body` with SQL configuration overrides and restores the previous values afterwards. */

@@ -84,6 +84,11 @@ lazy val sparkModuleSettings = Seq(
   allowUnsafeScalaLibUpgrade := true,
   Test / fork := true,
   Test / parallelExecution := false,
+  // spark-sql-api depends on spark-connect-shims, whose placeholder SparkConf, SparkContext and
+  // RDD classes shadow spark-core's real ones when both are on a Classic classpath. Spark's own
+  // Classic modules exclude the shims, so Test classpaths drop them too. Main code still
+  // compiles against them, as the shared Classic/Connect interface requires (OI-21).
+  Test / dependencyClasspath ~= (_.filterNot(_.data.getName.startsWith("spark-connect-shims"))),
   Test / javaOptions ++= sparkJavaModuleOptions ++ Seq(
     "-Xmx2g",
     "-Duser.timezone=UTC",

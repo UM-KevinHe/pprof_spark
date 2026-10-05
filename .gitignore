@@ -18,3 +18,7 @@ derby.log
 
 # OS
 .DS_Store
+
+# Python bytecode (scripts/)
+__pycache__/
+*.pyc

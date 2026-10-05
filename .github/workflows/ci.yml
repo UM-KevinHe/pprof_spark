@@ -1,5 +1,7 @@
 # Continuous integration (PROJECT_CONTEXT §11.4). Layers T1-T3 so far; T4-T7 join as their
-# suites land. Test reports are uploaded on every run as evidence (NN-8).
+# suites land. Test reports are uploaded on every run as evidence (NN-8). Workflow logs are
+# visible only to signed-in users, so failures are also published as annotations and a job
+# summary, which the public run page shows (scripts/ci_failure_report.py).
 name: ci
 
 on:
@@ -33,9 +35,14 @@ jobs:
           bash scripts/check-engine-api.sh --self-test
           bash scripts/check-engine-api.sh
       - name: Formatting (scalafmt)
-        run: sbt -v scalafmtCheckAll scalafmtSbtCheck
+        shell: bash
+        run: sbt -v scalafmtCheckAll scalafmtSbtCheck 2>&1 | tee -a sbt.log
       - name: Linkage against the runtime scala-library (PLAT-3)
-        run: sbt -v -Dpprof.linkageCheck=true compile
+        shell: bash
+        run: sbt -v -Dpprof.linkageCheck=true compile 2>&1 | tee -a sbt.log
+      - name: Publish failure details (readable without signing in)
+        if: failure()
+        run: python3 scripts/ci_failure_report.py sbt.log
 
   test:
     name: test (JDK ${{ matrix.java }})
@@ -54,7 +61,11 @@ jobs:
           cache: sbt
       - uses: sbt/setup-sbt@v1
       - name: Compile and test (T1-T3)
-        run: sbt -v Test/compile test
+        shell: bash
+        run: sbt -v Test/compile test 2>&1 | tee sbt.log
+      - name: Publish failure details (readable without signing in)
+        if: failure()
+        run: python3 scripts/ci_failure_report.py sbt.log
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7

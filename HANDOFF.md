@@ -1,5 +1,44 @@
 # Handoff
 
+## Round 1.1 (2026-10-05): fix for the round-1 CI failure
+
+### Round-1 CI result
+Run 37318035767 on `main` (434ce01). The checks job passed: engine API rules, scalafmt through
+sbt, and the linkage compile against scala-library 2.13.16, which also shows that sbt resolves
+every dependency and loads both plugins. Both test jobs failed in step 5 with exit code 1 after
+writing test reports. Workflow logs require signing in, so the failing lines were not read.
+
+### Diagnosis: reproduced in the sandbox, not yet confirmed by CI
+spark-sql-api depends on spark-connect-shims, whose placeholder `SparkConf`, `SparkContext` and
+`RDD` classes shadow spark-core's real ones. Spark's Classic modules (spark-catalyst, spark-sql)
+exclude the shims from their spark-sql-api dependency; `engine` declares spark-sql-api directly,
+so its Test classpath carried both the shims and spark-core. With the shims first, 7 of 9 engine
+tests fail with `NoSuchMethodError` on `SparkConf.set`; with spark-core first, all pass. This
+matches the CI symptoms (compilation fine, the same failure on both JDKs, a fast failure), but
+the classpath order in CI was not observed directly.
+
+### Changes
+- build.sbt: the Test classpaths of Spark modules drop spark-connect-shims; main code still
+  compiles against them (ARCH-2).
+- testkit: `LocalSpark.requireSparkCoreClasses()` fails fast, with an actionable message, when a
+  placeholder `SparkConf` is on the classpath; `LocalSparkSuite` exercises it.
+- Test logging goes to stdout, so sbt no longer reports Spark's warnings at error level.
+- CI keeps the sbt output and, on failure, publishes failed tests and sbt `[error]` lines as
+  annotations and a job summary (`scripts/ci_failure_report.py`); the public run page shows both.
+- LICENSE: MIT, Copyright (c) 2026 Kevin He (D-07). The scripts regain their executable bit.
+
+### Evidence (assistant sandbox; not CI)
+The round-1 emulation on 434ce01 plus this change: scalac 2.13.16 with the build's flags compiled
+every module, including the linkage compile against scala-library 2.13.16; 33 of 33 tests pass on
+OpenJDK 17.0.20 and 21.0.12. Negative control: with the shims ahead of spark-core, the engine
+tests fail with the guard's message instead of `NoSuchMethodError`. The failure reporter was run
+on synthetic JUnit reports and logs; scalafmt and the API check pass. Not verified: the sbt
+classpath filter itself (sbt cannot run in the sandbox) and the workflow changes.
+
+### What to send back
+The URL of the next CI run. If it fails, its annotations carry the failing tests and sbt errors,
+readable without signing in.
+
 ## Round 1 (2026-10-03): repository bootstrap
 
 Delivered as a patch; not merged. Decisions D-01 to D-11 are open, and round 1 used their

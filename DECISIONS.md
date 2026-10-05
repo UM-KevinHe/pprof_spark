@@ -18,7 +18,7 @@ in the bootstrap is hard to reverse.
 | D-04 | Design envelope and performance targets | Proposed | §2.3 ranges once the reduction volume at large p is resolved (OI-02); targets after the first benchmarks |
 | D-05 | pprof_py pin and reference versions | Proposed | v0.5.0, commit d3d92a1, by SHA (evidence below) |
 | D-06 | Default Cox tie method | Proposed | Breslow, the reference default |
-| D-07 | Project license | Proposed | MIT, matching pprof_py; the copyright holder must be named. No LICENSE file until approved |
+| D-07 | Project license | Approved 2026-10-05 | MIT, copyright holder Kevin He (LICENSE added in round 1.1) |
 | D-08 | Artifact distribution | Proposed | GitHub Releases plus a Unity Catalog volume |
 | D-09 | Tolerance calibration | Proposed | §8.4 initial values (`testkit/src/main/resources/tolerances.conf`), after the scaling rules are defined (OI-09) |
 | D-10 | Root package and artifact names | Proposed | Provisionally organization and root package `pprof.spark`, artifacts `pprof-spark-<module>_2.13`; renaming is mechanical now and costly later |
