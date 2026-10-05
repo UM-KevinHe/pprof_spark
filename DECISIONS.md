@@ -71,6 +71,12 @@ workspace CI, job clusters or Unity Catalog artifacts until the maintainer reope
   which keep one JAR usable on open-source Spark 4.1.x and on DBR 18 LTS at no extra cost; and
   Spark Connect compatibility (PLAT-2), which any Spark Connect deployment needs.
 
+### D-15: Deterministic summation algorithms (Delegated, 2026-10-05; ADR-0003)
+
+Pairwise (cascade) summation with sequential leaves of at most 32 values within a block, and
+Neumaier compensation for partials combined in block order, as specified in ADR-0003. These
+algorithms fix the bits of every reduction; changing them is a behavioral change (NUM-2).
+
 ### D-12: Build and test tooling baseline (Delegated; reversible)
 
 sbt 1.12.15 (1.13.0 exists but has no patch release yet); sbt-scalafmt 2.6.2 with scalafmt

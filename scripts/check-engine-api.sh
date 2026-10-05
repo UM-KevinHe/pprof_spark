@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Engine API rules: PROJECT_CONTEXT ARCH-2, PLAT-2 and PLAT-7, plus §10.3 (explicit storage levels).
+# Kernel rule (§8.1, §13): main code of numerics and engine computes transcendental functions with
+# StrictMath, whose results are the same on every JVM and CPU; java.lang.Math and scala.math may
+# use platform intrinsics that differ in the last bit.
 #
 # Compiling `engine` against spark-sql-api is necessary but not sufficient. spark-sql-api 4.1.0
 # depends on spark-connect-shims, which defines placeholder SparkContext, RDD and JavaRDD
@@ -35,6 +38,9 @@ if [[ "${1:-}" == "--self-test" ]]; then
     'val c = ds.localCheckpoint()'
     'val k = ds.checkpoint()'
     'val d = ds.cache()'
+    'val e = math.exp(x)'
+    'val l = Math.log1p(x)'
+    'val p = scala.math.pow(x, 2.0)'
   )
   for sample in "${samples[@]}"; do
     printf 'object Sample {\n  %s\n}\n' "$sample" >"$src/Sample.scala"
@@ -48,7 +54,7 @@ if [[ "${1:-}" == "--self-test" ]]; then
     echo "self-test FAILED: package placement inside org.apache.spark not detected" >&2
     exit 1
   fi
-  printf 'object Sample {\n  val p = ds.persist(level)\n  val s = spark.sparkContext // api-check: allow sample\n}\n' >"$src/Sample.scala"
+  printf 'object Sample {\n  val p = ds.persist(level)\n  val s = spark.sparkContext // api-check: allow sample\n  val e = StrictMath.exp(x) + math.abs(x) + math.sqrt(x)\n}\n' >"$src/Sample.scala"
   if ! bash "$self" "$tmp" >/dev/null 2>&1; then
     echo "self-test FAILED: compliant source was rejected" >&2
     exit 1
@@ -82,6 +88,11 @@ if [[ -d "$engine_main" ]]; then
   scan "$engine_main" '\b(localCheckpoint|checkpoint)\(' 'checkpoints are unavailable on serverless; use table materialization (§6.7)'
   scan "$engine_main" '\.cache\(\)' 'set storage levels explicitly with persist (§10.3)'
 fi
+for kernel_main in "$root/numerics/src/main" "$engine_main"; do
+  if [[ -d "$kernel_main" ]]; then
+    scan "$kernel_main" '\b(math|Math)\.(exp|expm1|log|log10|log1p|pow|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|cbrt|hypot)\(' 'use StrictMath for transcendental functions (§8.1, §13)'
+  fi
+done
 scan "$root" '^[[:space:]]*package[[:space:]]+org\.apache\.spark\b' 'no sources inside org.apache.spark (PLAT-7)'
 
 if [[ "$status" -eq 0 ]]; then

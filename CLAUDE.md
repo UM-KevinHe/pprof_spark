@@ -16,8 +16,9 @@ then the pinned reference (reference/REFERENCE.lock), then PROJECT_CONTEXT.md, t
 - `engine` uses only the shared Classic/Connect API: no `sparkContext`, `rdd`, `checkpoint`,
   `localCheckpoint`, `cache()`, Spark ML, or `org.apache.spark.sql.classic`. The compile
   classpath does not catch all of these (spark-connect-shims); the API check does.
-- Kernels are pure top-level functions: `StrictMath` for transcendental functions, no
-  iteration over hash-based collections, no per-row allocation, closures capture no `this`.
+- Kernels are pure top-level functions: `StrictMath` for transcendental functions (the source
+  check enforces it), no iteration over hash-based collections, no per-row allocation, closures
+  capture no `this`. Sums go through `pprof.spark.numerics.Summation` (ADR-0003).
 - Classic test classpaths never contain spark-connect-shims; build.sbt filters them (OI-21).
 - Patient-level rows never reach the driver (NN-3); only size-guarded `collect…`/`toLocal…`
   methods materialize anything there.

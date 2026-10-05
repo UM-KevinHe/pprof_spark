@@ -1,5 +1,25 @@
 # Handoff
 
+## Round 4 (2026-10-05): deterministic summation in `numerics`
+
+Apply after round 3.
+
+### What this round adds
+- `pprof.spark.numerics.Summation.pairwise`, `NeumaierSum`, `Summation.neumaier` and
+  `NeumaierVector`: the summation algorithms that fix the bits of every reduction (§6.4, §6.8),
+  specified in ADR-0003 (D-15, delegated).
+- `SummationSuite` pins results computed by an independent Python implementation,
+  `reference/numerics/summation_reference.py` (standard library only), checks error bounds
+  against the exactly rounded sum, and includes a negative control.
+- `scripts/check-engine-api.sh` now also rejects `math.*` and `Math.*` transcendental functions in
+  `numerics` and `engine` main code (§8.1); its self-test covers 16 violations.
+
+### Evidence (assistant sandbox; not CI)
+scalac 2.13.16 with the build's flags compiled `numerics` against scala-library 2.13.16 only, and
+every other module as before. Tests: 40 of 40 on OpenJDK 17.0.20 and 21.0.12 (numerics 25,
+testkit 6, engine 9), and the engine suites again under Spark Connect. The Python reference and
+the Scala code agree bit for bit; scalafmt and the source check pass.
+
 ## Round 3 (2026-10-05): maintainer decisions and the round-2 CI fix
 
 ### Decisions recorded

@@ -15,7 +15,7 @@ decision is approved.
 | OI-07 | `Double.toString` output differs between JDK 17 and 21, so `metadata.json` is not byte-stable across JDKs | Persistence specification: store raw bits or hex next to decimals |
 | OI-08 | DIST-6 canonical order: −0.0 and +0.0 compare equal, so input order would decide their position | Normalize −0.0 to +0.0 at encoding (working-set round) |
 | OI-09 | Tolerance semantics: "relative, scaled by magnitude" (T-fn) and "absolute, scaled" (T-res) are undefined | Define before D-09 calibration |
-| OI-10 | §8.1 lists exp, log, log1p, expm1; `pow` is missing; nothing yet bans `scala.math`/`java.lang.Math` transcendentals | Round 4: lint rule in `numerics`; doc fix |
+| OI-10 | §8.1 lists exp, log, log1p, expm1; `pow` is missing | Round 4: `scripts/check-engine-api.sh` bans `math`/`Math` transcendental functions in `numerics` and `engine` main code; doc fix remains (OI-27) |
 | OI-11 | §12 names survival (LGPL) and EmpiNull (GPL-3) only; glmnet and lme4 are GPL too | Doc fix: "run, never port" applies to every copyleft fixture tool |
 | OI-12 | pprof_py's R-comparison suite has 26 documented failures and does not run in upstream CI | Fixture round: run it at the candidate pin and map each failure to a feature (D-05) |
 | OI-13 | pprof_py's README says the lme4 comparison script is not in the repository | Relevant to PAR-2 for random-effect models (later phases) |
