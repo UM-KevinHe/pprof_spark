@@ -1,6 +1,6 @@
 # ADR-0002: Spark Connect locally for test layer T8 (spike S-02, local part)
 
-- Status: Proposed
+- Status: Accepted (D-13, approved 2026-10-05)
 - Date: 2026-10-05
 - Decision: D-13 in DECISIONS.md
 - Spike: S-02, local part; the Databricks standard and serverless legs remain open
@@ -18,9 +18,9 @@ need the deployment path of round 3.
    the Connect server, and the test classes that deserialized closures need.
 3. Databricks only: standard or serverless JAR tasks.
 
-## Decision (proposed)
-Option 1 for CI now, as an informational job until this ADR is accepted. Option 3 completes S-02
-once round 3 exists. Option 2 remains the fallback if option 1 proves fragile.
+## Decision
+Option 1 in CI on every push and pull request, as a required job. Option 3, the Databricks legs of
+S-02, is deferred by D-14. Option 2 remains the fallback if option 1 proves fragile.
 
 ## Evidence (assistant sandbox, 2026-10-05; not CI)
 - Spark 4.1.0 with spark-connect-client-jvm 4.1.0 on OpenJDK 17.0.20 and 21.0.12: the 9 engine
@@ -35,7 +35,9 @@ once round 3 exists. Option 2 remains the fallback if option 1 proves fragile.
   in-process server fails to start (`NoSuchMethodError` in `SparkConnectServiceGrpc.bindService`)
   and 7 of 9 engine tests fail; with the client last, everything above passes. build.sbt
   therefore pins the client to the end of Test classpaths.
-- Pending: the first CI run of the T8 job.
+- CI, run 37351537662 (`main` at c89fcee): the T8 job passed, with the 9 engine tests run
+  through the Connect client; the Classic test jobs passed on JDK 17 and 21 with the Connect
+  jars on the classpath (33 tests each), confirming the client-last order inside sbt.
 
 ## Consequences
 - T8 sends every engine operation through the Connect protocol: the client serializes typed

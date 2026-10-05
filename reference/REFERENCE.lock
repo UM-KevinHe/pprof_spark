@@ -1,17 +1,18 @@
 # Pinned reference implementation (PROJECT_CONTEXT §3.2, PAR-1).
-# status is "proposed" until decision D-05 is approved, then "pinned".
+# Pinned by decision D-05 (2026-10-05).
 # Re-pinning is a dedicated pull request with regenerated fixtures and a diff report.
-status = "proposed"
+status = "pinned"
 
 [pprof_py]
 repository = "https://github.com/UM-KevinHe/pprof_py"
-commit = "d3d92a1faedd4acc3c987084599f7fac324e5ca5"
-tag = "v0.5.0"
-version = "0.5.0"
-commit_date = "2026-09-29"
+commit = "9320766e35e5b385d596a2b75418192098a124c4"
+tag = "v0.7.0"
+tag_object = "9849f6c349088eee5007d312867fc45f253181da"
+version = "0.7.0"
+commit_date = "2026-10-03"
 license = "MIT"
-# Alternative considered: main at 9320766e35e5b385d596a2b75418192098a124c4 (2026-10-03,
-# pyproject 0.7.0, untagged). Nothing under pprof_py/models/survival differs between the two.
+# Not published on PyPI; the fixture pipeline installs it from this commit.
+# Nothing under pprof_py/models/survival differs from v0.5.0 (d3d92a1).
 
 [python]
 # Fixed by the fixture-pipeline round.

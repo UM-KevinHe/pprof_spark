@@ -1,7 +1,8 @@
 # CLAUDE.md — pprof_spark
 
-Read docs/PROJECT_CONTEXT.md before any non-trivial change. It is normative: RFC 2119 keywords
-and rule IDs such as NN-4 or DIST-6. Precedence: approved specs (docs/spec/) and DECISIONS.md,
+Read docs/PROJECT_CONTEXT.md before any non-trivial change, starting with its amendments preface.
+It is normative: RFC 2119 keywords and rule IDs such as NN-4 or DIST-6. No Databricks
+deployment work (D-14): pprof_spark is a standalone Apache Spark package. Precedence: approved specs (docs/spec/) and DECISIONS.md,
 then the pinned reference (reference/REFERENCE.lock), then PROJECT_CONTEXT.md, then code.
 
 ## Commands

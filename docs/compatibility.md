@@ -2,7 +2,7 @@
 
 | Release | Spark (compile, `provided`) | Databricks Runtime | Scala | JDK (bytecode / tested) | Tiers tested |
 |---|---|---|---|---|---|
-| unreleased, 0.1.0-SNAPSHOT | 4.1.0 (`spark-sql-api`; `spark-sql` and `spark-mllib` where needed) | 18 LTS (target, not yet run) | 2.13.16 | 17 / 17 and 21 in CI | None yet |
+| unreleased, 0.1.0-SNAPSHOT | 4.1.0 (`spark-sql-api`; `spark-sql` and `spark-mllib` where needed) | 18 LTS compatible by construction; not tested (D-14) | 2.13.16 | 17 / 17 and 21 in CI | Classic and Spark Connect, local, in CI |
 
 Notes:
 - Open-source Spark 4.1.0 to 4.1.3 are built with Scala 2.13.17 and 4.2.0 with 2.13.18; DBR 18

@@ -1,8 +1,9 @@
 # pprof_spark
 
-A Spark-native Scala package for large-scale healthcare provider profiling. It reimplements the
-validated statistical methods of [pprof_py](https://github.com/UM-KevinHe/pprof_py) as
-distributed algorithms for Databricks, preserving their statistical definitions.
+A standalone, Spark-native Scala package for large-scale healthcare provider profiling. It
+reimplements the validated statistical methods of [pprof_py](https://github.com/UM-KevinHe/pprof_py)
+as distributed algorithms for Apache Spark, preserving their statistical definitions. pprof_py is
+used only to produce reference results for the test suite.
 
 **Status: Phase 0 (foundations and spikes).** There are no statistical features yet; every
 feature stays `Experimental` until it passes the parity gate (NN-12).
@@ -23,14 +24,15 @@ feature stays `Experimental` until it passes the parity gate (NN-12).
 | `numerics` | Pure kernels and linear algebra | Scala standard library only |
 | `engine` | Distributed engine, models, inference, measures | `spark-sql-api`, the shared Classic/Connect interface |
 | `ml` | Spark ML adapters (Classic only) | `spark-mllib` |
-| `app` | Databricks job entry points | `engine` |
+| `app` | Spark job entry points | `engine` |
 | `testkit` | Shared test harness (never published) | `spark-sql` (Classic) |
 | `bench` | Benchmark workloads (never published) | `engine`, `testkit` |
 
 ## Building
 
-The build targets Databricks Runtime 18 LTS: Spark 4.1.0, Scala 2.13.16, bytecode for Java 17.
-CI runs everything. Anywhere with JDK 17+ and sbt (Codespaces, for example):
+The build targets Apache Spark 4.1 with Scala 2.13.16 and Java 17 bytecode, so the same JAR runs
+on open-source Spark 4.1.x and on Databricks Runtime 18 LTS. CI runs everything, including the
+engine suites under Spark Connect. Anywhere with JDK 17+ and sbt (Codespaces, for example):
 
 ```
 sbt ci                                  # formatting check, compile, all tests

@@ -1,5 +1,26 @@
 # Handoff
 
+## Round 3 (2026-10-05): maintainer decisions and the round-2 CI fix
+
+### Decisions recorded
+D-05 (pprof_py v0.7.0, commit 9320766, pinned in reference/REFERENCE.lock), D-10 (`pprof.spark`),
+D-11 (Phase 0 exits on the platform skeleton in CI), D-13 (in-process Connect for T8; ADR-0002
+accepted) and D-14 (no Databricks deployment work). PROJECT_CONTEXT.md is v2.1, with a preface
+listing the amendments in force; README, CLAUDE.md and docs/compatibility.md describe a
+standalone Spark package.
+
+### Round-2 CI result
+Run 37351537662 on `main` (c89fcee): both test jobs passed (33 tests each: engine 9, numerics 18,
+testkit 6) and the T8 job passed (9 engine tests through Spark Connect). The linkage compile
+failed: spark-connect-client-jvm depends on scala-compiler 2.13.17, and sbt keeps scala-library,
+scala-reflect and scala-compiler at one version, so forcing only the first two to 2.13.16 is
+rejected (OI-28). Round 3 forces all three. The T8 job is now required.
+
+### Evidence
+The CI facts above come from the run's public annotations. The fix itself is not verified (sbt
+cannot run in the sandbox); the POM of spark-connect-client-jvm 4.1.0 shows the scala-compiler
+dependency.
+
 ## Round 2 (2026-10-05): Spark Connect locally (spike S-02, local part)
 
 ### CI result of round 1.1

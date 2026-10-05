@@ -78,12 +78,11 @@ jobs:
           if-no-files-found: warn
 
   connect:
-    # Layer T8 (spike S-02): the engine suites through a Spark Connect client served by an
-    # in-process Connect server. Informational until ADR-0002 is accepted, then required.
+    # Layer T8: the engine suites through a Spark Connect client served by an in-process
+    # Connect server (ADR-0002).
     name: Spark Connect (T8)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6

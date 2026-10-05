@@ -36,12 +36,15 @@ ThisBuild / javacOptions ++= Seq("--release", "17")
 // PLAT-3 linkage guard. `sbt -Dpprof.linkageCheck=true compile` forces the runtime's Scala
 // library onto every classpath, so main code that links against methods added after
 // runtimeScalaVersion fails to compile. Compile only: Spark 4.1.x needs 2.13.17 to run tests.
+// sbt requires scala-library, scala-reflect and scala-compiler at one version, and the Spark
+// Connect client depends on scala-compiler, so all three are forced (OI-28).
 val linkageCheck = sys.props.get("pprof.linkageCheck").contains("true")
 ThisBuild / dependencyOverrides ++= {
   if (linkageCheck)
     Seq(
       "org.scala-lang" % "scala-library" % runtimeScalaVersion,
-      "org.scala-lang" % "scala-reflect" % runtimeScalaVersion
+      "org.scala-lang" % "scala-reflect" % runtimeScalaVersion,
+      "org.scala-lang" % "scala-compiler" % runtimeScalaVersion
     )
   else Nil
 }

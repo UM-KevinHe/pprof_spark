@@ -12,7 +12,8 @@ approval.
 
 ## Known reference limitations to verify at the pinned commit (§3.4)
 
-Classes are proposals. Each row is re-verified and finalized after D-05 pins the reference.
+Classes are proposals. Each row is re-verified against the pinned reference, pprof_py v0.7.0
+(commit 9320766), in the fixture round.
 
 | ID | Reference behavior | Proposed handling | Proposed class |
 |---|---|---|---|

@@ -1,32 +1,31 @@
 # Status
 
-Updated 2026-10-05, round 2.
+Updated 2026-10-05, round 3.
 
 **Phase 0, foundations and spikes: in progress.** No phase gate has been passed.
 
-## Phase 0 exit criteria (PROJECT_CONTEXT §4)
+## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
 
 | Criterion | Status | Evidence |
 |---|---|---|
-| CI green on the walking skeleton | Not met | The bootstrap is green (run 37325078166, `main` at 0c0bdd8: every job passed on JDK 17 and 21); the skeleton awaits D-11 |
-| A JAR deployed by CI runs on a DBR 18 LTS job cluster | Not started | Round 3 (S-01), blocked on the Databricks prerequisites in HANDOFF.md |
-| Every spike recorded as an ADR | In progress | ADR-0002 (S-02, local part) proposed |
+| CI green on the platform skeleton, under Classic Spark and Spark Connect | Not met | The bootstrap and the T8 harness pass in CI (run 37351537662); the skeleton is round 5 |
+| Every spike recorded as an ADR | In progress | ADR-0002 (S-02, local part) accepted. S-01, S-03, S-07 and the Databricks legs of S-02 are deferred by D-14 and will be recorded as deferred; S-04, S-05 and S-06 remain |
+| Phase 0 decisions resolved | In progress | D-05, D-07, D-10, D-11, D-13 and D-14 approved; D-01 to D-03 and D-08 partly deferred by D-14; D-04, D-06 and D-09 open |
 
 ## Rounds
 
 | Round | Scope | Status |
 |---|---|---|
-| 1 | Repository bootstrap | Merged (434ce01); its tests failed in CI (OI-21) |
+| 1 | Repository bootstrap | Merged (434ce01); tests failed in CI (OI-21) |
 | 1.1 | Classic test-classpath fix, public CI failure details, LICENSE | Merged (0c0bdd8); CI green, run 37325078166 |
-| 2 | S-02 local part: engine suites under Spark Connect (layer T8), ADR-0002; public test counts | Delivered as a patch; awaiting CI |
-| 3 | Databricks deployment path: bundle, OIDC, Unity Catalog volume, smoke job on DBR 18 LTS (S-01); S-02 standard and serverless legs | Blocked on the prerequisites in HANDOFF.md |
-| 4 | Cost of deterministic mode (S-05) | Planned |
-| 5 | `numerics` core: summation, Cholesky with aliasing report, StrictMath lint rules | Planned |
-| 6 | Fixture pipeline; pin the reference (D-05); calibrate tolerances (D-09) | Planned |
-| 7 | Working set, StratumLocal layout, deterministic reduction; platform skeleton on DBR; S-03, S-07 | Planned |
-| — | S-04 (Spark Connect ML) and S-06 (Codespaces) | Alongside later rounds |
+| 2 | Engine suites under Spark Connect (layer T8), test counts, ADR-0002 | Merged (c89fcee). Run 37351537662: tests and T8 passed; the linkage compile failed (OI-28) |
+| 3 | Maintainer decisions (D-05, D-10, D-11, D-13, D-14); reference pinned to pprof_py v0.7.0; T8 required; linkage fix | Delivered as a patch |
+| 4 | `numerics`: deterministic summation and the StrictMath rule (ADR-0003) | Delivered as a patch, to apply after round 3 |
+| 5 | Platform skeleton: working set, logical blocks, block-ordered reduction, result table, persisted metadata | Planned |
+| 6 | Fixture pipeline: pprof_py v0.7.0 and R reference generators, manifests, R-comparison triage (OI-12); tolerance calibration (D-09) | Planned |
+| 7 | S-05 (cost of deterministic mode), S-06 (Codespaces), deferred-spike ADRs, Phase 0 gate review | Planned |
 
 ## Decisions and spikes
 
-D-07 is approved. D-01 to D-06, D-08 to D-11 and D-13 are proposed; D-12 is delegated. S-02 is in
-progress (local part awaiting CI; Databricks legs open). The other spikes have not started.
+See the table above and DECISIONS.md. S-02's local part is complete; the remaining spikes are
+listed under the exit criteria.

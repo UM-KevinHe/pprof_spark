@@ -1,9 +1,25 @@
 # pprof_spark — Project Context
 
-**Version** 2.0 · **Date** 2026-10-03 · **Supersedes** v1 (initial project brief)
+**Version** 2.1 · **Date** 2026-10-05 · **Supersedes** v2.0 (2026-10-03)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). The pinned commit and reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
+
+> **Amendments in force (v2.1, 2026-10-05).** Recorded decisions take precedence over this
+> document (§0). Until the affected sections are revised:
+> - **D-14, no Databricks deployment work.** pprof_spark is developed and tested as a standalone
+>   Apache Spark package. Databricks deployment (bundles, workspace CI, job clusters, Unity
+>   Catalog artifacts, standard and serverless tiers) and the work that depends on it (S-01, the
+>   Databricks legs of S-02, S-03, S-07, layers T9 and T10) are deferred. The build pins stay
+>   compatible with Databricks Runtime 18 LTS.
+> - **D-11, Phase 0 exit.** Phase 0 exits on a statistics-free platform skeleton that is green in
+>   CI under Classic Spark and Spark Connect; the first Cox slice (stratified, right-censored,
+>   Breslow) opens Phase 1a.
+> - **D-05, reference pin.** pprof_py v0.7.0, commit 9320766 (reference/REFERENCE.lock).
+> - **D-07, D-10.** MIT license, copyright holder Kevin He; root package `pprof.spark`.
+> - **D-13, layer T8.** In-process Spark Connect server in the test JVM (ADR-0002), run by
+>   `ci.yml` on every push and pull request.
+> - Further corrections awaiting a full revision are the doc fixes listed in OPEN_ITEMS.md.
 ---
 
 ## 0. How to use this document
