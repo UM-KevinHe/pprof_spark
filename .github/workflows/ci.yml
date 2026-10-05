@@ -1,0 +1,64 @@
+# Continuous integration (PROJECT_CONTEXT §11.4). Layers T1-T3 so far; T4-T7 join as their
+# suites land. Test reports are uploaded on every run as evidence (NN-8).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    name: API rules, format, linkage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - name: Engine API rules (ARCH-2, PLAT-7), with negative control
+        run: |
+          bash scripts/check-engine-api.sh --self-test
+          bash scripts/check-engine-api.sh
+      - name: Formatting (scalafmt)
+        run: sbt -v scalafmtCheckAll scalafmtSbtCheck
+      - name: Linkage against the runtime scala-library (PLAT-3)
+        run: sbt -v -Dpprof.linkageCheck=true compile
+
+  test:
+    name: test (JDK ${{ matrix.java }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ["17", "21"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - name: Compile and test (T1-T3)
+        run: sbt -v Test/compile test
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports-jdk${{ matrix.java }}
+          path: "**/target/test-reports/*.xml"
+          if-no-files-found: warn
