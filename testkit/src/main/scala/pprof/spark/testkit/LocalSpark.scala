@@ -63,16 +63,4 @@ object LocalSpark {
     )
   }
 
-  /** Runs `body` with SQL configuration overrides and restores the previous values afterwards. */
-  def withSqlConf[A](overrides: (String, String)*)(body: => A): A = {
-    val conf = session.conf
-    val previous = overrides.map { case (key, _) => key -> conf.getOption(key) }
-    overrides.foreach { case (key, value) => conf.set(key, value) }
-    try body
-    finally
-      previous.foreach {
-        case (key, Some(value)) => conf.set(key, value)
-        case (key, None)        => conf.unset(key)
-      }
-  }
 }

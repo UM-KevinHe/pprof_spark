@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-05, round 1.1. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-05, round 2. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -23,9 +23,12 @@ decision is approved.
 | OI-15 | Deferred tooling: scalafix (with a semantic ARCH-2 rule), scoverage, MiMa from 1.0, Scala Steward or Dependabot (keep the munit pin), parity-matrix CI check (§9.8), Codespaces devcontainer (S-06) | Schedule per round |
 | OI-16 | §8.4 names `testkit/tolerances.conf`; the file is the classpath resource `testkit/src/main/resources/tolerances.conf` | Doc fix |
 | OI-17 | `numerics` tests cannot use `testkit`, which brings Spark and scala-library 2.13.17 | Spark-free `testkit-core` when `numerics` needs tolerance assertions (round 4) |
-| OI-18 | sbt evidence: run 37318035767 showed dependency resolution, both plugins, scalafmt through sbt and the linkage compile working (checks job passed); the test jobs failed (OI-21) | Confirm a green test run with round 1.1 |
+| OI-18 | sbt evidence | Closed: run 37325078166 passed every job, tests included, on JDK 17 and 21 |
 | OI-19 | Maintainer inputs for round 2: the Databricks prerequisites in HANDOFF.md (repository UM-KevinHe/pprof_spark exists; D-07 approved) | Maintainer |
-| OI-21 | spark-sql-api depends on spark-connect-shims; Spark's Classic modules (spark-catalyst, spark-sql) exclude it, but `engine` declares spark-sql-api directly, so its Test classpath held the shims and spark-core. With the shims first, 7 of 9 engine tests fail with `NoSuchMethodError` (sandbox) | Round 1.1: Test classpaths drop the shims; `LocalSpark` fails fast with a clear message. Confirm with CI; treat any Classic run or assembly classpath built by sbt the same way |
-| OI-22 | Workflow logs require signing in, so the assistant cannot read CI failures | Round 1.1: failures are published as annotations and a job summary (`scripts/ci_failure_report.py`) |
+| OI-21 | spark-sql-api depends on spark-connect-shims; Spark's Classic modules (spark-catalyst, spark-sql) exclude it, but `engine` declares spark-sql-api directly, so its Test classpath held the shims and spark-core. With the shims first, 7 of 9 engine tests fail with `NoSuchMethodError` (sandbox) | Fixed in round 1.1 and confirmed by CI (run 37325078166). Remaining: treat any Classic run or assembly classpath built by sbt the same way |
+| OI-22 | Workflow logs require signing in, so the assistant cannot read CI failures | Done: failure details since round 1.1; per-module test counts as a notice on every run since round 2 |
 | OI-23 | The initial commit stored the scripts without the executable bit | Harmless (CI invokes them through bash and python); round 1.1 restores mode 100755 |
+| OI-24 | The Connect client uber jar overlaps 1,228 spark-sql-api classes (4 differ) and 1,883 Connect-server classes (1,713 differ). In one JVM the client must come last: with it first, the in-process server fails and 7 of 9 engine tests fail (sandbox) | Pinned in build.sbt (ADR-0002); re-check on every Spark upgrade |
+| OI-25 | T8 runs Classic and Connect in one JVM, so it cannot catch client-side use of Classic-only classes | Covered statically by ARCH-2 and the API check, at run time by the Databricks legs of S-02 (round 3); a separate server JVM is the fallback |
+| OI-26 | The T8 job runs in ci.yml on every push and pull request, informational (`continue-on-error`); §11.4 plans a nightly `connect.yml` | Make T8 required once ADR-0002 is accepted; doc fix to §11.4 |
 | OI-20 | Re-verification (§3.4, §5.1): Spark/Scala pairs, DBR 18 facts and pprof_py README claims checked 2026-10-03; §3.4 rows await the pin | DISCREPANCIES.md after D-05 |

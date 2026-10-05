@@ -1,13 +1,16 @@
 package pprof.spark.engine.metadata
 
 import pprof.spark.engine.BuildInfo
-import pprof.spark.testkit.SparkSuite
+import pprof.spark.testkit.{SparkSuite, TestSessions}
 
 class SoftwareInfoSuite extends SparkSuite {
 
-  test("captures build and run-time versions from the local Classic session") {
+  private val expectedApi: SparkApi =
+    if (TestSessions.isConnect) SparkApi.Connect else SparkApi.Classic
+
+  test("captures build and run-time versions from the test session") {
     val info = SoftwareInfo.capture(spark, _ => None)
-    assertEquals(info.sparkApi, SparkApi.Classic)
+    assertEquals(info.sparkApi, expectedApi)
     assertEquals(info.packageVersion, BuildInfo.version)
     assertEquals(info.scalaCompilerVersion, BuildInfo.scalaVersion)
     assert(info.scalaLibraryVersion.startsWith("2.13."), info.scalaLibraryVersion)

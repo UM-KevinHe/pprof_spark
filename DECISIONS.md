@@ -57,6 +57,13 @@ is the one-stratum case while it fits in one block, and TimeRange follows within
 Stratified first exercises multi-block reduction and bin packing, matches SMR stage 1, and avoids
 starting with the hardest layout (OI-03).
 
+### D-13: Spark Connect topology for test layer T8 (Proposed, round 2; ADR-0002)
+
+Run the T8 suites through the Scala Spark Connect client against a Connect server started inside
+the test JVM on the local Classic session, with the Connect client jar pinned to the end of Test
+classpaths. The CI job stays informational until this is approved. Alternatives considered: a
+separate server JVM, and Databricks only. Evidence and limits are in ADR-0002.
+
 ### D-12: Build and test tooling baseline (Delegated; reversible)
 
 sbt 1.12.15 (1.13.0 exists but has no patch release yet); sbt-scalafmt 2.6.2 with scalafmt

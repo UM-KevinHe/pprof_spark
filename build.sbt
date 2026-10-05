@@ -88,7 +88,17 @@ lazy val sparkModuleSettings = Seq(
   // RDD classes shadow spark-core's real ones when both are on a Classic classpath. Spark's own
   // Classic modules exclude the shims, so Test classpaths drop them too. Main code still
   // compiles against them, as the shared Classic/Connect interface requires (OI-21).
-  Test / dependencyClasspath ~= (_.filterNot(_.data.getName.startsWith("spark-connect-shims"))),
+  // The Spark Connect client is an uber jar that repackages about 3,100 classes of spark-sql-api
+  // and the Connect server, 1,700 of them differently; placed first, it breaks the in-process
+  // Connect server of test layer T8, so it always goes last (ADR-0002).
+  Test / dependencyClasspath ~= { classpath =>
+    val kept = classpath.filterNot(_.data.getName.startsWith("spark-connect-shims"))
+    val (client, rest) = kept.partition(_.data.getName.startsWith("spark-connect-client-jvm"))
+    rest ++ client
+  },
+  // `sbt -Dpprof.test.sparkApi=connect ...` runs Spark suites through Spark Connect (layer T8).
+  Test / javaOptions ++=
+    sys.props.get("pprof.test.sparkApi").map(mode => s"-Dpprof.test.sparkApi=$mode").toSeq,
   Test / javaOptions ++= sparkJavaModuleOptions ++ Seq(
     "-Xmx2g",
     "-Duser.timezone=UTC",
@@ -155,7 +165,7 @@ lazy val app = project
     libraryDependencies += "org.apache.spark" %% "spark-sql-api" % sparkVersion % Provided
   )
 
-/** Shared test harness: local Classic session, tolerances, generators. Never published. */
+/** Shared test harness: local Classic and Connect sessions, tolerances. Never published. */
 lazy val testkit = project
   .settings(sparkModuleSettings)
   .settings(
@@ -163,6 +173,8 @@ lazy val testkit = project
     publish / skip := true,
     libraryDependencies ++= Seq(
       "org.apache.spark" %% "spark-sql" % sparkVersion,
+      "org.apache.spark" %% "spark-connect" % sparkVersion,
+      "org.apache.spark" %% "spark-connect-client-jvm" % sparkVersion,
       "org.scalameta" %% "munit" % munitVersion
     )
   )

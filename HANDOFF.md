@@ -1,5 +1,41 @@
 # Handoff
 
+## Round 2 (2026-10-05): Spark Connect locally (spike S-02, local part)
+
+### CI result of round 1.1
+Run 37325078166 on `main` (0c0bdd8): every job passed, including the tests on JDK 17 and 21,
+which confirms the Classic test-classpath fix (OI-21).
+
+### What this round adds
+- Selectable test sessions: `-Dpprof.test.sparkApi=connect` runs Spark suites through the Scala
+  Spark Connect client, served by a Connect server started inside the test JVM on the local
+  Classic session (`TestSessions`, `LocalSparkConnect`).
+- `SparkSuite.withSqlConf` works with either session; `SoftwareInfoSuite` expects the session
+  API of the selected mode.
+- build.sbt: testkit depends on the Connect server and client; Test classpaths put the client
+  jar last (ADR-0002); the mode property reaches forked test JVMs.
+- CI: a Spark Connect (T8) job runs the engine suites under Connect, informational until
+  ADR-0002 is accepted; every test job publishes per-module test counts as a notice.
+- ADR-0002 and D-13, both proposed.
+
+### Evidence (assistant sandbox; not CI)
+scalac 2.13.16 with the build's flags compiled every module with the Connect jars on the
+classpaths. Classic: 33 of 33 tests pass on OpenJDK 17.0.20 and 21.0.12. Connect: 33 of 33 pass
+on both JDKs, the 9 engine tests running through the Connect client; the backend-shape results
+were bitwise identical across partition counts, input orders and ANSI modes, and equal to the
+Spark-free evaluation, hence to Classic. Negative control: with the client jar first, 7 of 9
+engine tests fail with the server's `NoSuchMethodError`. scalafmt, the API check and the workflow
+YAML pass; the counts reporter was run on synthetic reports.
+Not verified: sbt's resolution of spark-connect and spark-connect-client-jvm, the classpath order
+inside sbt, and the new CI job.
+
+### What to send back
+The CI run link. Annotations now show per-module test counts for every job, plus failure details
+when something fails.
+
+### Next
+Round 3 needs the Databricks prerequisites listed under round 1 below.
+
 ## Round 1.1 (2026-10-05): fix for the round-1 CI failure
 
 ### Round-1 CI result

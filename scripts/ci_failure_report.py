@@ -7,6 +7,8 @@ the public run page. This script reads sbt's JUnit reports (target/test-reports/
 the job itself: the step that failed already did.
 
 Usage: python3 scripts/ci_failure_report.py <sbt-log>...
+       python3 scripts/ci_failure_report.py --counts
+The second form publishes per-module test counts as a notice, so that what ran is visible too.
 """
 
 import glob
@@ -62,7 +64,35 @@ def error_lines(paths):
     return lines
 
 
+def report_counts():
+    modules = {}
+    for path in sorted(glob.glob("**/target/test-reports/*.xml", recursive=True)):
+        module = path.split(os.sep)[0]
+        try:
+            root = ET.parse(path).getroot()
+        except ET.ParseError:
+            continue
+        totals = modules.setdefault(module, [0, 0, 0, 0])
+        for index, key in enumerate(("tests", "failures", "errors", "skipped")):
+            totals[index] += int(root.get(key) or 0)
+    if not modules:
+        print("::warning title=Test counts::No JUnit test reports were found")
+        return 0
+    parts = ["%s: %d tests, %d failed, %d errors, %d skipped" % ((name,) + tuple(values))
+             for name, values in sorted(modules.items())]
+    print("::notice title=Test counts::%s" % escape_data("; ".join(parts)))
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a", encoding="utf-8") as out:
+            out.write("## Test counts\n\n| Module | Tests | Failed | Errors | Skipped |\n|---|---|---|---|---|\n")
+            for name, values in sorted(modules.items()):
+                out.write("| %s | %d | %d | %d | %d |\n" % ((name,) + tuple(values)))
+    return 0
+
+
 def main(argv):
+    if argv[1:] == ["--counts"]:
+        return report_counts()
     tests = failed_tests()
     errors = error_lines(argv[1:])
     for name, message, detail in tests[:MAX_TEST_ANNOTATIONS]:

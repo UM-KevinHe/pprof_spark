@@ -66,10 +66,45 @@ jobs:
       - name: Publish failure details (readable without signing in)
         if: failure()
         run: python3 scripts/ci_failure_report.py sbt.log
+      - name: Publish test counts
+        if: always()
+        run: python3 scripts/ci_failure_report.py --counts
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: test-reports-jdk${{ matrix.java }}
+          path: "**/target/test-reports/*.xml"
+          if-no-files-found: warn
+
+  connect:
+    # Layer T8 (spike S-02): the engine suites through a Spark Connect client served by an
+    # in-process Connect server. Informational until ADR-0002 is accepted, then required.
+    name: Spark Connect (T8)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - name: Engine suites under Spark Connect (T8)
+        shell: bash
+        run: sbt -v -Dpprof.test.sparkApi=connect engine/test 2>&1 | tee sbt.log
+      - name: Publish failure details (readable without signing in)
+        if: failure()
+        run: python3 scripts/ci_failure_report.py sbt.log
+      - name: Publish test counts
+        if: always()
+        run: python3 scripts/ci_failure_report.py --counts
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports-connect
           path: "**/target/test-reports/*.xml"
           if-no-files-found: warn
