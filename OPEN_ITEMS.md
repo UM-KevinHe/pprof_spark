@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-06, round 12. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-06, round 13. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -45,5 +45,7 @@ decision is approved.
 | OI-39 | Spark Connect rejects an aggregate whose output has two columns with the same generated name; Classic Spark accepts it. Found in round 11, where two validation counts shared an expression (15 engine tests failed under T8 only) | Closed: `CoxValidation` aliases every count. Rule for new code: alias every column of a multi-column aggregate |
 | OI-40 | §9.8: CI must fail when a public API has no parity-matrix entry; no such check exists | Add a check (for example over `engine` public classes against `docs/parity/matrix.md`) before the first release |
 | OI-41 | PERS-2: models persisted by each release are kept as test fixtures | Start with release 0.1.0: save one `CoxFit` per tie method into `fixtures/models/` and load them in CI |
+| OI-42 | pprof_py v0.7.0 raised "Empty risk set at an event time with positive event weight" on a five-row right-censored dataset with one zero-weight tied event (round 13 probe) | Reproduce, add to X-013's evidence, and report upstream with OI-33 |
+| OI-43 | Prediction's as-of join partitions by stratum, so unstratified prediction puts every row in one window partition | Measure before Phase 1d; if needed, bucket by time range or broadcast a small baseline |
 | OI-38 | Breslow kernel cost: Neumaier running sums on S₂ add about four flops per entry | Measure with the S-05 benchmark harness at p = 10 to 100 before large-p work (D-04) |
 | OI-20 | Re-verification (§3.4, §5.1): Spark/Scala pairs, DBR 18 facts and pprof_py README claims checked 2026-10-03; §3.4 rows await the pin | DISCREPANCIES.md after D-05 |

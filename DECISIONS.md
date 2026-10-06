@@ -97,12 +97,18 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-22: Close Phase 1a at parity-verified (Proposed, round 12; the maintainer's sign-off required)
+### D-23: Phase 1b specification (Proposed, round 13; approval required, NN-2)
+
+`docs/spec/cox/counting-process-baseline.md`: (start, stop] data and left truncation, per-stratum
+baseline hazard and survival, and prediction, with X-014 (the baseline is reported at x = 0 and
+offset 0; pprof_py's public baseline and R's `basehaz` include exp of the weighted mean offset).
+
+### D-22: Close Phase 1a at parity-verified (Accepted, 2026-10-06)
 
 `docs/gates/phase-1a.md`: every Phase 1a requirement of §9.8 is met except the scale test, which
 needs a cluster (D-14) and targets (D-04). Proposed: close Phase 1a once CI confirms rounds 11 and
 12, keep the Cox features `Experimental` at parity-verified, and move their scale verification to
-the Phase 1d gate.
+the Phase 1d gate. Asked to sign off, the maintainer replied "Continue"; recorded as sign-off.
 
 ### D-21: Efron ties, case weights and offsets (Accepted in advance, 2026-10-06)
 

@@ -30,6 +30,12 @@
 - The CI check that every public API has a parity-matrix entry (§9.8) does not exist yet (OI-40).
 - Kernel cost at larger p (OI-38) and the reduction volume at large p (OI-02) are unmeasured.
 
+## Outcome
+
+Signed off on 2026-10-06 (D-22): the maintainer replied "Continue" to the sign-off question. Phase 1a
+closes when CI confirms rounds 11 and 12 (main at f619e9b and 094fd5b); CI as read in round 13:
+not readable from the sandbox.
+
 ## Recommendation
 
 Close Phase 1a when CI confirms rounds 11 and 12, with the Cox features parity-verified and

@@ -21,6 +21,7 @@ approval.
 | X-011 | Collinear or constant covariates: pprof_py returns pseudo-inverse estimates (silently for collinearity, with a NumPy warning for a constant column) | Probed at v0.7.0 | C | pprof_spark fails and names the aliased covariates (Cox specification §9). Approved 2026-10-06 (D-20) |
 | X-012 | No events at all: pprof_py returns β̂ = 0, converged, with a NumPy warning | Probed at v0.7.0 | C | pprof_spark fails: the partial likelihood is constant. Approved 2026-10-06 (D-20) |
 | X-013 | Efron ties: pprof_py counts a zero-weight event in the number of tied events d, so a zero weight is not the same as dropping the row (0.67% coefficient change on tiny-ties), contrary to its own validation message; R rejects zero weights | Probed at v0.7.0 and R 3.5-8 | B (corrected; accepted 2026-10-06, D-21) | pprof_spark counts only events with positive weight, so a zero weight equals dropping the row under both tie methods (D-21) |
+| X-014 | Baseline hazard reference point: pprof_py's public `baseline_hazard_` and R's `basehaz(fit, centered = FALSE)` equal the hazard at x = 0 and offset 0 times exp(weighted mean offset); pprof_py's predictions use the raw baseline | Read in pprof_py v0.7.0's source and probed | C (proposed) | Report the raw baseline and document the factor (Phase 1b specification §2, D-23) |
 
 ## Known reference limitations to verify at the pinned commit (§3.4)
 

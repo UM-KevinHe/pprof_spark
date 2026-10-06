@@ -1,5 +1,20 @@
 # Handoff
 
+## Round 13 (2026-10-06): Phase 1a signed off; Phase 1b specification
+
+- D-22 accepted: asked to sign off the Phase 1a gate, the maintainer replied "Continue". Phase 1a
+  closes when CI confirms rounds 11 and 12 (not readable from the sandbox).
+- `docs/spec/cox/counting-process-baseline.md` (D-23, awaiting approval): (start, stop] data and
+  left truncation with the risk set a < t ≤ b; per-stratum baseline increments (Breslow d_w/S₀;
+  Efron Σ m/Aₖ), cumulative hazard and survival exp(−Λ₀) at x = 0 and offset 0 (X-014);
+  prediction of the linear predictor, relative hazard (exp clipped at 700, as pprof_py), cumulative
+  hazard and survival as DataFrame columns, the baseline as a distributed table, an as-of join for
+  times; fixtures, metamorphic tests and the distributed plan.
+- Probes of pprof_py v0.7.0: baseline tables list each stratum's event times with cumulative
+  hazard and survival; the public baseline is the raw one times exp(weighted mean offset); negative
+  entry times are accepted; a small dataset with one zero-weight tied event raised "Empty risk
+  set" (OI-42).
+
 ## Round 12 (2026-10-06): persistence, logging, and the Phase 1a gate review
 
 - `CoxFitIO` saves a `CoxFit` as one JSON metadata record with doubles as 64-bit patterns and loads

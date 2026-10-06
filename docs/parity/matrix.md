@@ -10,3 +10,6 @@ Status values: planned, implemented, parity-verified, scale-verified, stable.
 The CI check that fails when a public API has no entry here is not implemented yet (OI-15).
 Reference fixtures for the Phase 1a Cox features are in `fixtures/cox`; their tolerance
 calibration is in [cox-calibration.md](cox-calibration.md).
+| Cox PH: (start, stop] data and left truncation | [cox/counting-process-baseline.md](../spec/cox/counting-process-baseline.md) §1 (draft, D-23) | `CoxPH.fit(start=, stop=)`; R `coxph(Surv(start, stop, event))` | new left-truncation fixtures (to generate) | Not written | T-fn, T-iter, T-coef, T-var | planned |
+| Cox PH: baseline hazard and survival | same, §2 | `compute_baseline_hazard`, `_efron_baseline_numba`; R `basehaz`, `survfit.coxph` | same | Not written | T-base | planned |
+| Cox PH: prediction | same, §3 | `predict_linear`, `predict_partial_hazard`, `predict_cumulative_hazard`, `predict_survival_function` | same | Not written | T-base | planned |
