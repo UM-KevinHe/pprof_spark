@@ -18,7 +18,8 @@ class CoxFitIOSuite extends SparkSuite {
     val node = info.get("features")
     val features = (0 until node.size).map(i => node.get(i).asText())
     val table = Fixtures.csv(s"cox/$name/input.csv")
-    val names = Seq("id", "stratum", "time", "event", "weight", "offset") ++ features
+    val extra = if (table.columns.contains("entry")) Seq("entry") else Seq.empty
+    val names = Seq("id", "stratum", "time", "event", "weight", "offset") ++ extra ++ features
     val index = names.map(table.columns.indexOf(_))
     val rows = table.rows.map { r =>
       Row.fromSeq(
@@ -34,9 +35,10 @@ class CoxFitIOSuite extends SparkSuite {
         StructField("event", IntegerType),
         StructField("weight", DoubleType),
         StructField("offset", DoubleType)
-      ) ++ features.map(StructField(_, DoubleType))
+      ) ++ (extra ++ features).map(StructField(_, DoubleType))
     )
-    def role(key: String, column: String) = if (info.get(key).asBoolean) Some(column) else None
+    def role(key: String, column: String) =
+      if (Option(info.get(key)).exists(_.asBoolean)) Some(column) else None
     val spec = CoxSpec(
       "time",
       "event",
@@ -44,7 +46,8 @@ class CoxFitIOSuite extends SparkSuite {
       role("stratified", "stratum"),
       Some("id"),
       role("weighted", "weight"),
-      role("offset", "offset")
+      role("offset", "offset"),
+      role("truncated", "entry")
     )
     (spark.createDataFrame(rows.asJava, schema), spec)
   }
@@ -60,7 +63,8 @@ class CoxFitIOSuite extends SparkSuite {
       .map(java.lang.Double.doubleToRawLongBits)
 
   test("save and load round-trip every bit, both tie methods, weights and offsets (PERS-1)") {
-    val (df, spec) = input("rc-stratified-weights-offset")
+    val (df, spec) = input("lt-weights-offset")
+    assertEquals(spec.entry, Some("entry"))
     for (ties <- Ties.all) {
       val fit = CoxPH.fit(df, spec, CoxOptions(ties = ties))
       val path = freshPath()

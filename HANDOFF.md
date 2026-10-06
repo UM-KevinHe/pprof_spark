@@ -1,5 +1,28 @@
 # Handoff
 
+## Round 14 (2026-10-06): Phase 1b fixtures and fitting with entry times
+
+The maintainer approved the Phase 1b specification with X-014 (D-23).
+
+- Fixtures: two left-truncated cases (lt-stratified; lt-weights-offset with weights and offsets),
+  entries in [0, exit) for about half the rows. For all six cases the generator now records the
+  tight fit's raw baseline (stratum, time, cumulative hazard, survival), the public baseline,
+  the weighted mean offset, linear predictors and relative hazards for three covariate profiles,
+  and cumulative hazards and survival on two strata's grids; R records `basehaz(fit, centered =
+  FALSE)`. pprof_py's public baseline agrees with R's at every event time within 0.046 of T-base,
+  and equals the raw baseline times exp(weighted mean offset) exactly (X-014). Regeneration is
+  byte-identical and calibration passes for all six cases.
+- `numerics`: `CoxStratum` removes rows whose entry time is at or after the current event time,
+  using a per-stratum entry order; with every entry below every event time the sums are exactly
+  those of right-censored data. Tested against brute-force risk sets and finite differences.
+- `engine.cox`: `CoxSpec.entry`; validation (finite entries below the exit; exits may then be zero
+  or negative); entries in the blocks, canonical order, fingerprint and `CoxFitIO`.
+- Tests: the Cox suite now covers six fixtures and both tie methods, plus an entry column of zeros
+  (bitwise equal to right-censored fits), interval splitting, and a shift of every time to below
+  zero (bitwise equal).
+- Sandbox verification: JDK 17 Classic (numerics 54, testkit 11, engine 61), JDK 21 Classic (the
+  same counts) and JDK 17 Spark Connect (engine 61) pass.
+
 ## Round 13 (2026-10-06): Phase 1a signed off; Phase 1b specification
 
 - D-22 accepted: asked to sign off the Phase 1a gate, the maintainer replied "Continue". Phase 1a

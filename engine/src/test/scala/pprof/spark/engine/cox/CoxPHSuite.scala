@@ -18,14 +18,22 @@ import pprof.spark.testkit.{Fixtures, SparkSuite, Tolerances}
 class CoxPHSuite extends SparkSuite {
 
   private val cases =
-    Seq("tiny-ties", "rc-unstratified", "rc-stratified", "rc-stratified-weights-offset")
+    Seq(
+      "tiny-ties",
+      "rc-unstratified",
+      "rc-stratified",
+      "rc-stratified-weights-offset",
+      "lt-stratified",
+      "lt-weights-offset"
+    )
   private val methods = Seq[Ties](Ties.Breslow, Ties.Efron)
 
   private def tight(ties: Ties) = CoxOptions(ties = ties, eps = 1e-11, maxIterations = 100)
 
   private def info(name: String): JsonNode = Fixtures.json(s"cox/$name/case.json")
 
-  private def flag(name: String, key: String): Boolean = info(name).get(key).asBoolean
+  private def flag(name: String, key: String): Boolean =
+    Option(info(name).get(key)).exists(_.asBoolean)
 
   private def features(name: String): Seq[String] = {
     val node = info(name).get("features")
@@ -40,12 +48,14 @@ class CoxPHSuite extends SparkSuite {
       if (flag(name, "stratified")) Some("stratum") else None,
       Some("id"),
       if (flag(name, "weighted")) Some("weight") else None,
-      if (flag(name, "offset")) Some("offset") else None
+      if (flag(name, "offset")) Some("offset") else None,
+      if (flag(name, "truncated")) Some("entry") else None
     )
 
   private def frame(name: String, reverse: Boolean = false): DataFrame = {
     val table = Fixtures.csv(s"cox/$name/input.csv")
-    val names = Seq("id", "stratum", "time", "event", "weight", "offset") ++ features(name)
+    val extra = if (table.columns.contains("entry")) Seq("entry") else Seq.empty
+    val names = Seq("id", "stratum", "time", "event", "weight", "offset") ++ extra ++ features(name)
     val index = names.map(table.columns.indexOf(_))
     val rows = table.rows.map { r =>
       Row.fromSeq(
@@ -61,7 +71,7 @@ class CoxPHSuite extends SparkSuite {
         StructField("event", IntegerType, nullable = false),
         StructField("weight", DoubleType, nullable = false),
         StructField("offset", DoubleType, nullable = false)
-      ) ++ features(name).map(StructField(_, DoubleType, nullable = false))
+      ) ++ (extra ++ features(name)).map(StructField(_, DoubleType, nullable = false))
     )
     spark.createDataFrame((if (reverse) rows.reverse else rows).asJava, schema)
   }
@@ -424,5 +434,88 @@ class CoxPHSuite extends SparkSuite {
     assertEquals(block.weight.toSeq, Seq(1.0, 2.0, 0.5, 1.0))
     assertEquals(java.lang.Double.doubleToLongBits(block.x(0)), 0L)
     assertEquals(java.lang.Double.doubleToLongBits(block.offset(0)), 0L)
+  }
+
+  test("an entry column of zeros reproduces the right-censored fit bit for bit") {
+    val name = "rc-stratified"
+    for (ties <- methods) {
+      val options = CoxOptions(ties = ties)
+      val plain = CoxPH.fit(frame(name), spec(name), options)
+      val zero = CoxPH.fit(
+        frame(name).withColumn("entry", lit(0.0)),
+        spec(name).copy(entry = Some("entry")),
+        options
+      )
+      assertEquals(bits(zero.estimates), bits(plain.estimates))
+      assertEquals(bits(zero.covariance), bits(plain.covariance))
+      assertEquals(bits(Seq(zero.logLikelihood)), bits(Seq(plain.logLikelihood)))
+    }
+  }
+
+  test("splitting (a, b] at c into (a, c] without an event and (c, b] leaves the fit unchanged") {
+    val name = "lt-stratified"
+    for (ties <- methods) {
+      val base = frame(name)
+      val long = col("time") - col("entry") >= 2.0
+      val first =
+        base.filter(long).withColumn("time", col("entry") + 1.0).withColumn("event", lit(0))
+      val second =
+        base
+          .filter(long)
+          .withColumn("entry", col("entry") + 1.0)
+          .withColumn("id", col("id") + 100000L)
+      val pieces = base.filter(!long).unionByName(first).unionByName(second)
+      val a = CoxPH.fit(base, spec(name), tight(ties))
+      val b = CoxPH.fit(pieces, spec(name), tight(ties))
+      assert(b.observations > a.observations)
+      check("T-coef", s"${ties.name} split intervals", b.estimates, a.estimates.toArray)
+      check(
+        "T-fn",
+        s"${ties.name} split intervals, loglik",
+        Seq(b.logLikelihood),
+        Array(a.logLikelihood)
+      )
+    }
+  }
+
+  test(
+    "shifting every entry and exit time, here below zero, leaves the fit unchanged bit for bit"
+  ) {
+    val name = "lt-weights-offset"
+    for (ties <- methods) {
+      val options = CoxOptions(ties = ties)
+      val a = CoxPH.fit(frame(name), spec(name), options)
+      val shifted = frame(name)
+        .withColumn("time", col("time") - 100.0)
+        .withColumn("entry", col("entry") - 100.0)
+      val b = CoxPH.fit(shifted, spec(name), options)
+      assertEquals(bits(b.estimates), bits(a.estimates))
+      assertEquals(bits(b.covariance), bits(a.covariance))
+      assertEquals(bits(Seq(b.logLikelihood)), bits(Seq(a.logLikelihood)))
+    }
+  }
+
+  test("entry times must be finite and below the exit time, with counts reported") {
+    val schema = StructType(
+      Seq(
+        StructField("entry", DoubleType),
+        StructField("time", DoubleType),
+        StructField("event", IntegerType),
+        StructField("x1", DoubleType)
+      )
+    )
+    val rows =
+      Seq((1.0, 1.0, 1, 0.5), (2.0, 1.5, 0, 1.0), (Double.NaN, 3.0, 1, 0.0), (0.0, 2.0, 1, -1.0))
+    val df = spark.createDataFrame(rows.map { case (a, b, e, x) => Row(a, b, e, x) }.asJava, schema)
+    val e = intercept[InvalidInputException](
+      CoxPH.fit(df, CoxSpec("time", "event", Seq("x1"), entry = Some("entry")))
+    )
+    assertEquals(
+      e.problems.toSet,
+      Set[InputProblem](
+        InputProblem.InvalidValues("entry", 0L, 1L),
+        InputProblem.EntryNotBeforeExit("entry", "time", 2L)
+      )
+    )
   }
 }

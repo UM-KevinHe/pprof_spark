@@ -1,7 +1,8 @@
 # Specification: counting-process data, baseline hazard and prediction (Phase 1b)
 
-- Status: **Draft, awaiting the maintainer's approval (D-23, NN-2)**. No Phase 1b code is written
-  before approval.
+- Status: **Approved on 2026-10-06 (D-23), including X-014.** Round 14 implements §1 (fitting with
+  entry times) and generates the fixtures for §2 and §3; round 15 implements the baseline,
+  prediction and persistence of the baseline.
 - Extends [first-slice.md](first-slice.md) and [efron-weights-offsets.md](efron-weights-offsets.md);
   everything not stated here is unchanged.
 - Reference: pprof_py v0.7.0 (`CoxPH.fit(start=, stop=)`, `inference/survival/baseline.py`

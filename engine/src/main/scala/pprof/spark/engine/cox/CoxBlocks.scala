@@ -17,7 +17,8 @@ final case class CoxRow(
     event: Boolean,
     weight: Double,
     offset: Double,
-    x: Array[Double]
+    x: Array[Double],
+    entry: Double = 0.0
 )
 
 /** Whole strata in canonical order (Cox specification §6, DIST-6), covariates row-major. Stratum
@@ -33,7 +34,9 @@ final case class CoxBlock(
     event: Array[Boolean],
     weight: Array[Double],
     offset: Array[Double],
-    x: Array[Double]
+    x: Array[Double],
+    entry: Array[Double],
+    entryOrder: Array[Int]
 ) {
   def rowCount: Int = rowId.length
   def groupCount: Int = groupIndex.length
@@ -63,7 +66,11 @@ object CoxBlockBuilder {
               if (byValues != 0) byValues
               else {
                 val byWeight = java.lang.Double.compare(a.weight, b.weight)
-                if (byWeight != 0) byWeight else java.lang.Double.compare(a.offset, b.offset)
+                if (byWeight != 0) byWeight
+                else {
+                  val byOffset = java.lang.Double.compare(a.offset, b.offset)
+                  if (byOffset != 0) byOffset else java.lang.Double.compare(a.entry, b.entry)
+                }
               }
             }
           }
@@ -83,6 +90,7 @@ object CoxBlockBuilder {
     val events = new Array[Boolean](n)
     val weights = new Array[Double](n)
     val offsets = new Array[Double](n)
+    val entries = new Array[Double](n)
     val x = new Array[Double](n * p)
     val groups = Array.newBuilder[Int]
     val starts = Array.newBuilder[Int]
@@ -99,20 +107,36 @@ object CoxBlockBuilder {
       events(r) = row.event
       weights(r) = row.weight
       offsets(r) = row.offset
+      entries(r) = row.entry
       System.arraycopy(row.x, 0, x, r * p, p)
       r += 1
+    }
+    val groupStarts = starts.result()
+    val entryOrder = new Array[Int](n)
+    var g = 0
+    while (g < groupStarts.length) {
+      val from = groupStarts(g)
+      val until = if (g + 1 < groupStarts.length) groupStarts(g + 1) else n
+      val order = (from until until).sortWith { (a, b) =>
+        val byEntry = java.lang.Double.compare(entries(b), entries(a))
+        byEntry < 0 || (byEntry == 0 && a < b)
+      }
+      order.copyToArray(entryOrder, from)
+      g += 1
     }
     CoxBlock(
       blockId,
       p,
       groups.result(),
-      starts.result(),
+      groupStarts,
       rowIds,
       times,
       events,
       weights,
       offsets,
-      x
+      x,
+      entries,
+      entryOrder
     )
   }
 
@@ -121,6 +145,7 @@ object CoxBlockBuilder {
       time = row.time + 0.0,
       weight = row.weight + 0.0,
       offset = row.offset + 0.0,
+      entry = row.entry + 0.0,
       x = row.x.map(v => if (v == 0.0) 0.0 else v)
     )
 
@@ -161,6 +186,7 @@ object CoxWorkingSet {
         col(CoxValidation.EventColumn).as("event"),
         col(CoxValidation.WeightColumn).as("weight"),
         col(CoxValidation.OffsetColumn).as("offset"),
+        col(CoxValidation.EntryColumn).as("entry"),
         col(Validation.FeaturesColumn).as("x")
       )
       .as[CoxRow](Encoders.product[CoxRow])

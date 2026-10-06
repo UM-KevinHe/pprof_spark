@@ -23,7 +23,11 @@ final class CoxTotals(val p: Int) {
   * events before censored rows, then row identifier. Covariates are row-major and are centered by
   * `center` before use; offsets are not centered. A row with zero weight is skipped, so it is the
   * same as an absent row (X-013). The sweep adds every row of an exit time to the running risk-set
-  * sums before that time's events contribute, so tied events share one risk set. Running sums and
+  * sums, then removes every row whose entry time is at or after that time (rows are at risk on
+  * (entry, exit], Phase 1b specification §1 and §6), before that time's events contribute, so tied
+  * events share one risk set. `entryOrder` lists the stratum's row indices by entry time descending;
+  * removals add the negated terms to the same Neumaier sums. With every entry below every exit time
+  * of an event nothing is removed, and the sums are exactly those of right-censored data. Running sums and
   * the stratum's contributions are Neumaier sums in sweep order; the per-time event sums are plain
   * sums in the same order. The stratum total is added to `totals` once, so the result depends only
   * on the canonical order (R0).
@@ -32,6 +36,8 @@ object CoxStratum {
 
   def add(
       time: Array[Double],
+      entry: Array[Double],
+      entryOrder: Array[Int],
       event: Array[Boolean],
       weight: Array[Double],
       offset: Array[Double],
@@ -55,6 +61,8 @@ object CoxStratum {
     val tied1 = new Array[Double](p)
     val tied2 = new Array[Double](q)
     val means = new Array[Double](p)
+    val riskScore = new Array[Double](until - from)
+    var removal = from
     var r = from
     while (r < until) {
       val t = time(r)
@@ -77,6 +85,7 @@ object CoxStratum {
           }
           val eta = linear + offset(r)
           val rw = w * StrictMath.exp(eta)
+          riskScore(r - from) = rw
           s0.add(rw)
           j = 0
           var k = 0
@@ -119,6 +128,27 @@ object CoxStratum {
           }
         }
         r += 1
+      }
+      while (removal < until && entry(entryOrder(removal)) >= t) {
+        val i = entryOrder(removal)
+        if (weight(i) > 0.0) {
+          val rw = riskScore(i - from)
+          s0.add(-rw)
+          var j = 0
+          var k = 0
+          while (j < p) {
+            val wx = rw * (x(i * p + j) - center(j))
+            s1.addAt(j, -wx)
+            var l = j
+            while (l < p) {
+              s2.addAt(k, -(wx * (x(i * p + l) - center(l))))
+              k += 1
+              l += 1
+            }
+            j += 1
+          }
+        }
+        removal += 1
       }
       if (d > 0) {
         val total0 = s0.value

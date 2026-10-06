@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-06, round 13. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-06, round 14. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -36,7 +36,7 @@ decision is approved.
 | OI-29 | m-scale results (group sizes, group tables) are collected to the driver under `BlockOptions` guards | Distributed result tables for m beyond the driver budget, when a model needs them |
 | OI-30 | Groups larger than a block get a block of their own; nothing splits them | TimeRange (OI-03) before the large-stratum Cox work |
 | OI-31 | DIST-1's naming rule (`collect…` and `toLocal…` methods) is enforced by review only | Consider a source check once more models exist |
-| OI-32 | Fixture families for later phases | Left truncation and baseline hazards (1b), residuals and robust variance (1c), provider measures (1d), each with negative controls |
+| OI-32 | Fixture families for later phases | Round 14 added left truncation (lt-stratified, lt-weights-offset), baseline hazards and predictions for all six cases; residuals, robust variance and provider measures remain |
 | OI-33 | Upstream reports to pprof_py: the README's failure count (X-008) and the step-control order (X-010) | Maintainer |
 | OI-34 | Kernels with several sums per row need a fused pairwise cascade: one walk over rows, the same addition tree as `Summation.pairwise` per statistic (ADR-0006) | Reusable form in `numerics` with the first Cox kernel |
 | OI-35 | Lockstep parity needs pprof_py's Newton iterates in the fixtures | Closed: round 10 records `CoxPH(max_iter = k)`, k = 1 to 5, and pprof_py's z, p and interval outputs in the fixtures; `CoxPHSuite` uses them |

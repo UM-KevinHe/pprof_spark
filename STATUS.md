@@ -1,9 +1,10 @@
 # Status
 
-Updated 2026-10-06, round 13.
+Updated 2026-10-06, round 14.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: signed off (D-22)**; it closes when CI confirms rounds 11 and 12.
-**Phase 1b, counting process and baseline:** the specification awaits approval (D-23).
+**Phase 1b, counting process and baseline: in progress.** The specification is approved (D-23);
+fitting with entry times is done, and the baseline and prediction come next.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
 
@@ -30,8 +31,9 @@ Updated 2026-10-06, round 13.
 | 10 | First Cox slice: numerics (normal distribution, Cholesky, Newton, Breslow kernel), engine estimator, lockstep fixtures, parity tests | Merged (099fefe); CI green, run 37502839703 |
 | 11 | Efron ties, case weights and offsets (D-21, X-013) | Merged (f619e9b); CI not yet read |
 | 12 | `CoxFit` persistence (OI-37), information matrix in the result, warning logging (OI-36), Phase 1a gate review (D-22) | Merged (094fd5b); CI to confirm |
-| 13 | Phase 1b specification: (start, stop] data, left truncation, baseline hazard, prediction (D-23, X-014) | Delivered as a patch; awaiting approval |
-| 14 | Phase 1b fixtures and implementation | After D-23 |
+| 13 | Phase 1b specification: (start, stop] data, left truncation, baseline hazard, prediction (D-23, X-014) | Merged (f7aed80); approved 2026-10-06 |
+| 14 | Phase 1b fixtures (left truncation, baselines, predictions) and fitting with entry times | Delivered as a patch; CI to confirm |
+| 15 | Baseline hazard table, prediction, and persisting the baseline | Planned |
 
 ## Decisions and spikes
 

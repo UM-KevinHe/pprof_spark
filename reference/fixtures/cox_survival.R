@@ -1,5 +1,5 @@
 # Cox reference outputs from R survival::coxph for one fixture case (ADR-0005).
-# Usage: Rscript cox_survival.R <case-dir> <p> <stratified> <weighted> <offset>
+# Usage: Rscript cox_survival.R <case-dir> <p> <stratified> <weighted> <offset> [<truncated>]
 # Writes <case-dir>/r_survival.txt: one line per quantity, "key<TAB>comma-separated %a values".
 # Hexadecimal floating point (C's %a) is exact; Python and Java parse it back bit for bit.
 # robust = FALSE throughout: with non-integer case weights coxph reports a robust (sandwich)
@@ -10,13 +10,14 @@ p <- as.integer(args[[2]])
 stratified <- args[[3]] == "true"
 weighted <- args[[4]] == "true"
 with_offset <- args[[5]] == "true"
+truncated <- length(args) >= 6 && args[[6]] == "true"
 suppressMessages(library(survival))
 
 d <- read.csv(file.path(case_dir, "input.csv"))
 rhs <- paste(paste0("x", seq_len(p)), collapse = " + ")
 if (stratified) rhs <- paste(rhs, "+ strata(stratum)")
 if (with_offset) rhs <- paste(rhs, "+ offset(offset)")
-f <- as.formula(paste("Surv(time, event) ~", rhs))
+f <- as.formula(paste(if (truncated) "Surv(entry, time, event) ~" else "Surv(time, event) ~", rhs))
 w <- if (weighted) d$weight else rep(1, nrow(d))
 fixed_beta <- c(0.375, -0.1875, 0.0625)[seq_len(p)]
 
@@ -39,6 +40,13 @@ for (ties in c("breslow", "efron")) {
     emit(paste0(key, ".loglik"), fit$loglik[2])
     emit(paste0(key, ".loglik_null"), fit$loglik[1])
     emit(paste0(key, ".iterations"), fit$iter)
+    if (label == "tight") {
+      # Cumulative hazard at x = 0 times exp(weighted mean offset), at every distinct time (X-014).
+      bh <- basehaz(fit, centered = FALSE)
+      emit(paste0(key, ".basehaz_time"), bh$time)
+      emit(paste0(key, ".basehaz_hazard"), bh$hazard)
+      if (stratified) emit(paste0(key, ".basehaz_stratum"), as.numeric(sub("^stratum=", "", as.character(bh$strata))))
+    }
   }
   for (name in c("beta_zero", "beta_fixed")) {
     beta <- if (name == "beta_zero") rep(0, p) else fixed_beta

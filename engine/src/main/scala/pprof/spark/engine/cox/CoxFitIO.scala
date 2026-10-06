@@ -57,6 +57,7 @@ object CoxFitIO {
       field("rowIdCol", StringType, nullable = true),
       field("weightCol", StringType, nullable = true),
       field("offsetCol", StringType, nullable = true),
+      field("entryCol", StringType, nullable = true),
       field("ties", StringType),
       field("maxIterations", IntegerType),
       field("epsBits", LongType),
@@ -119,6 +120,7 @@ object CoxFitIO {
       fit.spec.rowId.orNull,
       fit.spec.weight.orNull,
       fit.spec.offset.orNull,
+      fit.spec.entry.orNull,
       o.ties.name,
       o.maxIterations,
       bit(o.eps),
@@ -192,7 +194,8 @@ object CoxFitIO {
       optional("strataCol"),
       optional("rowIdCol"),
       optional("weightCol"),
-      optional("offsetCol")
+      optional("offsetCol"),
+      optional("entryCol")
     )
     val options = CoxOptions(
       Ties.fromName(r.getAs[String]("ties")),

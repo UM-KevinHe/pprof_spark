@@ -40,6 +40,13 @@ class FixturesSuite extends munit.FunSuite {
       assert(table.column("event").forall(v => v == 0.0 || v == 1.0), name)
       assert(onGrid("weight", 2.0) && onGrid("offset", 16.0), name)
       table.columns.filter(_.startsWith("x")).foreach(c => assert(onGrid(c, 64.0), s"$name $c"))
+      if (table.columns.contains("entry")) {
+        assert(onGrid("entry", 1.0), name)
+        assert(
+          table.column("entry").zip(table.column("time")).forall { case (a, b) => a < b },
+          name
+        )
+      }
     }
   }
 

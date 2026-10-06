@@ -97,7 +97,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-23: Phase 1b specification (Proposed, round 13; approval required, NN-2)
+### D-23: Phase 1b specification (Accepted: approved by the maintainer, 2026-10-06)
 
 `docs/spec/cox/counting-process-baseline.md`: (start, stop] data and left truncation, per-stratum
 baseline hazard and survival, and prediction, with X-014 (the baseline is reported at x = 0 and

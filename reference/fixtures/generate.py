@@ -49,7 +49,15 @@ CASES = (
      "stratified": True, "weighted": False, "offset": False},
     {"id": "rc-stratified-weights-offset", "seed": 4, "n": 600, "p": 3, "strata": 25, "max_time": 60,
      "stratified": True, "weighted": True, "offset": True},
+    {"id": "lt-stratified", "seed": 5, "n": 600, "p": 3, "strata": 10, "max_time": 60,
+     "stratified": True, "weighted": False, "offset": False, "truncated": True},
+    {"id": "lt-weights-offset", "seed": 6, "n": 600, "p": 3, "strata": 10, "max_time": 60,
+     "stratified": True, "weighted": True, "offset": True, "truncated": True},
 )
+
+# Covariate profiles for prediction fixtures (Phase 1b specification §3).
+PROFILES = ((0.0, 0.0, 0.0), (0.5, -0.25, 0.125), (-1.0, 0.75, 0.5))
+PROFILE_OFFSETS = (0.0, 0.25, -0.5)
 
 
 def tiny():
@@ -79,6 +87,10 @@ def make_data(case):
         event[stratum == 0] = 0  # one stratum without events (§9.5)
     df = pd.DataFrame({"id": np.arange(n), "stratum": stratum, "time": time, "event": event,
                        "weight": weight, "offset": offset})
+    if case.get("truncated"):
+        # Delayed entry for about half the rows, strictly before exit (Phase 1b specification §1).
+        delayed = rng.random(n) < 0.5
+        df.insert(2, "entry", np.where(delayed, rng.integers(0, time), 0).astype(np.int64))
     for j in range(p):
         df[f"x{j + 1}"] = x[:, j]
     return df
@@ -89,7 +101,11 @@ def features(case):
 
 
 def fit_arguments(df, case):
-    arguments = {"duration": df["time"].to_numpy(dtype=float), "event": df["event"].to_numpy()}
+    if case.get("truncated"):
+        arguments = {"start": df["entry"].to_numpy(dtype=float), "stop": df["time"].to_numpy(dtype=float),
+                     "event": df["event"].to_numpy()}
+    else:
+        arguments = {"duration": df["time"].to_numpy(dtype=float), "event": df["event"].to_numpy()}
     if case["stratified"]:
         arguments["strata"] = df["stratum"].to_numpy()
     if case["offset"]:
@@ -137,6 +153,39 @@ def pprof_iterates(df, case, ties, count=5):
     return iterates
 
 
+def label(value):
+    """A stratum label as JSON: an integer when it is one."""
+    return int(value) if float(value).is_integer() else str(value)
+
+
+def pprof_baseline(df, case, ties):
+    """Raw and public baselines and predictions of the tight fit (Phase 1b specification §2, §3)."""
+    model = CoxPH(ties=ties, **TIGHT).fit(df[features(case)].to_numpy(dtype=float), **fit_arguments(df, case))
+    raw = model._baseline_hazard_raw.sort_values(["stratum", "time"], kind="stable")
+    public = model.baseline_hazard_.sort_values(["stratum", "time"], kind="stable")
+    p = case["p"]
+    x = np.array([profile[:p] for profile in PROFILES], dtype=float)
+    offsets = np.array(PROFILE_OFFSETS, dtype=float) if case["offset"] else None
+    predictions = []
+    for stratum in list(dict.fromkeys(raw["stratum"].tolist()))[:2]:
+        hazard = model.predict_cumulative_hazard(x, offset=offsets, stratum=stratum)
+        survival = model.predict_survival_function(x, offset=offsets, stratum=stratum)
+        predictions.append({"stratum": label(stratum), "time": hexes(hazard.index.to_numpy(dtype=float)),
+                            "cumulative_hazard": [hexes(hazard[c].to_numpy()) for c in hazard.columns],
+                            "survival": [hexes(survival[c].to_numpy()) for c in survival.columns]})
+    weights = df["weight"].to_numpy(dtype=float) if case["weighted"] else np.ones(len(df))
+    return {
+        "raw": {"stratum": [label(s) for s in raw["stratum"]], "time": hexes(raw["time"].to_numpy(dtype=float)),
+                "cumulative_hazard": hexes(raw["hazard"].to_numpy()), "survival": hexes(raw["survival"].to_numpy())},
+        "public_cumulative_hazard": hexes(public["hazard"].to_numpy()),
+        "offset_mean": hexes([np.average(df["offset"].to_numpy(dtype=float), weights=weights) if case["offset"] else 0.0]),
+        "profiles": {"x": [hexes(row) for row in x], "offset": hexes(offsets if offsets is not None else np.zeros(len(x))),
+                     "linear": hexes(model.predict_linear(x, offset=offsets)),
+                     "relative_hazard": hexes(model.predict_partial_hazard(x, offset=offsets))},
+        "predictions": predictions,
+    }
+
+
 def pprof_function(df, case, ties, beta):
     clean = validate_fit_inputs(df[features(case)].to_numpy(dtype=float), **fit_arguments(df, case))
     data = SurvivalData(**clean)
@@ -167,7 +216,7 @@ def dropped_weight(df):
 
 
 def r_outputs(case_dir, case):
-    flags = [str(case[k]).lower() for k in ("stratified", "weighted", "offset")]
+    flags = [str(case.get(k, False)).lower() for k in ("stratified", "weighted", "offset", "truncated")]
     subprocess.run(["Rscript", os.path.join(HERE, "cox_survival.R"), case_dir, str(case["p"]), *flags], check=True)
     path = os.path.join(case_dir, "r_survival.txt")
     result = {}
@@ -236,6 +285,7 @@ def main():
                 "beta_zero": pprof_function(df, case, ties, [0.0] * case["p"]),
                 "beta_fixed": pprof_function(df, case, ties, FIXED_BETA[:case["p"]]),
                 "iterates": pprof_iterates(df, case, ties),
+                "baseline": pprof_baseline(df, case, ties),
                 "negative_controls": controls,
             }
         write_json(os.path.join(case_dir, "pprof_py.json"), reference)

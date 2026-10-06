@@ -25,7 +25,7 @@ object CoxKernel {
 
   def summary(block: CoxBlock): CoxBlockSummary = {
     val p = block.p
-    val values = new Array[Double](p + 4)
+    val values = new Array[Double](p + 5)
     var events = 0L
     var withoutEvents = 0
     var fingerprint = 0L
@@ -42,8 +42,9 @@ object CoxKernel {
         values(1) = if (block.event(r)) 1.0 else 0.0
         values(2) = block.weight(r)
         values(3) = block.offset(r)
-        System.arraycopy(block.x, r * p, values, 4, p)
-        fingerprint += Fingerprint.row(block.groupIndex(g), block.rowId(r), values, 0, p + 4)
+        values(4) = block.entry(r)
+        System.arraycopy(block.x, r * p, values, 5, p)
+        fingerprint += Fingerprint.row(block.groupIndex(g), block.rowId(r), values, 0, p + 5)
         r += 1
       }
       if (!any) withoutEvents += 1
@@ -71,6 +72,8 @@ object CoxKernel {
     while (g < block.groupCount) {
       CoxStratum.add(
         block.time,
+        block.entry,
+        block.entryOrder,
         block.event,
         block.weight,
         block.offset,

@@ -24,7 +24,8 @@ final case class CoxSpec(
     strata: Option[String] = None,
     rowId: Option[String] = None,
     weight: Option[String] = None,
-    offset: Option[String] = None
+    offset: Option[String] = None,
+    entry: Option[String] = None
 ) {
   require(features.nonEmpty, "at least one feature column is required")
   require(
@@ -33,7 +34,8 @@ final case class CoxSpec(
   )
 
   def columns: Seq[String] =
-    Seq(time, event) ++ features ++ strata.toSeq ++ rowId.toSeq ++ weight.toSeq ++ offset.toSeq
+    Seq(time, event) ++ features ++ strata.toSeq ++ rowId.toSeq ++ weight.toSeq ++ offset.toSeq ++
+      entry.toSeq
 }
 
 /** A validated Cox input: the internal columns only, with its row and event counts. */
@@ -54,6 +56,7 @@ object CoxValidation {
   val EventColumn: String = "__pprof_event"
   val WeightColumn: String = "__pprof_weight"
   val OffsetColumn: String = "__pprof_offset"
+  val EntryColumn: String = "__pprof_entry"
 
   def validate(df: DataFrame, spec: CoxSpec): CoxInput = {
     val types = df.schema.fields.map(f => f.name -> f.dataType).toMap
@@ -76,7 +79,8 @@ object CoxValidation {
     val timeNonPositive = next()
     if (timeNulls > 0 || timeNonFinite > 0)
       problems += InputProblem.InvalidValues(spec.time, timeNulls, timeNonFinite)
-    if (timeNonPositive > 0) problems += InputProblem.NonPositiveValues(spec.time, timeNonPositive)
+    if (timeNonPositive > 0 && spec.entry.isEmpty)
+      problems += InputProblem.NonPositiveValues(spec.time, timeNonPositive)
     val eventNulls = next()
     val eventNonBinary = next()
     val events = next()
@@ -109,6 +113,13 @@ object CoxValidation {
       val nonFinite = next()
       if (nulls > 0 || nonFinite > 0) problems += InputProblem.InvalidValues(name, nulls, nonFinite)
     }
+    spec.entry.foreach { name =>
+      val nulls = next()
+      val nonFinite = next()
+      val notBefore = next()
+      if (nulls > 0 || nonFinite > 0) problems += InputProblem.InvalidValues(name, nulls, nonFinite)
+      if (notBefore > 0) problems += InputProblem.EntryNotBeforeExit(name, spec.time, notBefore)
+    }
     val weightedEvents = next()
     if (rows == 0) problems += InputProblem.EmptyInput
     val found = problems.result()
@@ -132,7 +143,8 @@ object CoxValidation {
         .fold(lit(0L))(name => Validation.column(name).cast(LongType))
         .as(Validation.RowIdColumn),
       spec.weight.fold(lit(1.0))(name => Validation.column(name).cast(DoubleType)).as(WeightColumn),
-      spec.offset.fold(lit(0.0))(name => Validation.column(name).cast(DoubleType)).as(OffsetColumn)
+      spec.offset.fold(lit(0.0))(name => Validation.column(name).cast(DoubleType)).as(OffsetColumn),
+      spec.entry.fold(lit(0.0))(name => Validation.column(name).cast(DoubleType)).as(EntryColumn)
     )
     CoxInput(frame, spec, rows, events, strataKeyIsText)
   }
@@ -159,7 +171,7 @@ object CoxValidation {
         check(name, t => Validation.isIntegral(t) || t == StringType, "an integral or string type")
       ) ++
       spec.rowId.toSeq.flatMap(name => check(name, Validation.isIntegral, "an integral type")) ++
-      (spec.weight.toSeq ++ spec.offset.toSeq).flatMap(name =>
+      (spec.weight.toSeq ++ spec.offset.toSeq ++ spec.entry.toSeq).flatMap(name =>
         check(name, numeric, "a numeric type")
       )
   }
@@ -177,6 +189,18 @@ object CoxValidation {
         coalesce(sum(when(Validation.column(name) < 0, 1L).otherwise(0L)), lit(0L))
     }
     val offset = spec.offset.toSeq.flatMap(finiteCounts)
+    val entry = spec.entry.toSeq.flatMap { name =>
+      finiteCounts(name) :+ coalesce(
+        sum(
+          when(
+            Validation.column(name) >= Validation.column(spec.time) &&
+              !Validation.nonFinite(Validation.column(name), types(name)),
+            1L
+          ).otherwise(0L)
+        ),
+        lit(0L)
+      )
+    }
     val isEvent =
       if (types(spec.event) == BooleanType) Validation.column(spec.event) === true
       else Validation.column(spec.event) === 1
@@ -213,6 +237,6 @@ object CoxValidation {
       countWhere(time.isNull),
       countWhere(Validation.nonFinite(time, types(spec.time))),
       countWhere(time <= 0)
-    ) ++ eventCounts ++ features ++ strata ++ rowId ++ weight ++ offset :+ weightedEvents
+    ) ++ eventCounts ++ features ++ strata ++ rowId ++ weight ++ offset ++ entry :+ weightedEvents
   }
 }
