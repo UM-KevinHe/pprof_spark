@@ -10,6 +10,12 @@ then the pinned reference (reference/REFERENCE.lock), then PROJECT_CONTEXT.md, t
 - `sbt -Dpprof.linkageCheck=true compile`: compile main code against the runtime's scala-library.
 - `bash scripts/check-engine-api.sh [--self-test]`: engine API rules.
 
+## Reference fixtures
+`fixtures/` is generated, never edited by hand: `python reference/fixtures/generate.py` (fixture
+environment: reference/fixtures/requirements.txt, pprof_py at the pinned commit, R 4.3.3 with
+survival 3.5-8), then `python reference/fixtures/calibrate.py`. `FixturesSuite` checks checksums,
+the pin and the calibration in CI. Doubles in fixtures are hexadecimal floating-point strings.
+
 ## Rules that bite most often
 - Evidence only (NN-8): never claim that something compiles, passes, matches, or is faster
   without the run that shows it; say which environment produced the evidence.

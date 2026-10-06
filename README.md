@@ -41,6 +41,11 @@ sbt -Dpprof.linkageCheck=true compile   # PLAT-3: compile against the runtime's 
 bash scripts/check-engine-api.sh        # ARCH-2 and PLAT-7 engine API rules
 ```
 
+## Reference fixtures
+
+`fixtures/` holds synthetic inputs and reference outputs from pprof_py and R for parity tests;
+`reference/fixtures/` holds the generators and the calibration script (ADR-0005).
+
 ## License
 
 MIT; see [LICENSE](LICENSE).

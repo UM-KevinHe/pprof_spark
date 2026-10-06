@@ -1,0 +1,23 @@
+{
+ "events": 434,
+ "features": [
+  "x1",
+  "x2",
+  "x3"
+ ],
+ "fixed_beta": [
+  0.375,
+  -0.1875,
+  0.0625
+ ],
+ "id": "rc-stratified-weights-offset",
+ "max_time": 60,
+ "n": 600,
+ "offset": true,
+ "p": 3,
+ "rows": 600,
+ "seed": 4,
+ "strata": 25,
+ "stratified": true,
+ "weighted": true
+}

@@ -1,5 +1,34 @@
 # Handoff
 
+## Round 6 (2026-10-06): Cox reference fixtures and tolerance calibration
+
+### CI result of round 5
+Run 37458038911 on `main` (7f31717): every job passed; tests counted engine 34, numerics 29 and
+testkit 6. The first Phase 0 exit criterion (D-11) is met.
+
+### What this round adds (ADR-0005, D-17)
+- `reference/fixtures/`: `generate.py` (inputs once, outputs from pprof_py and R),
+  `cox_survival.R`, `calibrate.py`, `compare_outputs.py`, `requirements.txt`.
+- `fixtures/`: four Cox cases (tiny-ties, rc-unstratified, rc-stratified,
+  rc-stratified-weights-offset) with Breslow and Efron outputs, function-level values, negative
+  controls, and a checksummed manifest; `docs/parity/cox-calibration.md`.
+- testkit: `Fixtures` (reader), the element-wise tolerance rule (`Tolerance.worstRatio`), and
+  `FixturesSuite`, which checks checksums, the pin, exact inputs and the calibration in CI.
+- `.github/workflows/fixtures.yml`, run by hand, recomputes outputs and compares them under T-part.
+- Decisions D-01 to D-04, D-06, D-08 and D-09 approved with the recommendations; D-17; X-007
+  resolved; X-008, X-009 and X-010 registered.
+
+### Evidence (assistant sandbox)
+Fixture generation is deterministic (byte-identical reruns). Calibration passes every check
+(ADR-0005). pprof_py's survival suite passes at v0.7.0, and R regenerates its R results byte for
+byte. All modules compile with scalac 2.13.16 and the build's flags; 74 tests (engine 34, numerics
+29, testkit 11) pass on OpenJDK 17.0.20 and 21.0.12 under Classic Spark and Spark Connect.
+Not verified: `fixtures.yml` on GitHub's runners.
+
+### Next
+Round 7: S-05 (cost of deterministic mode), S-06 (Codespaces), ADRs recording S-04 and the spikes
+deferred by D-14, then the Phase 0 gate review. Phase 1a starts with the Cox specification.
+
 ## Round 5 (2026-10-05): platform skeleton (Phase 0 exit candidate, D-11)
 
 ### CI result of rounds 3 and 4

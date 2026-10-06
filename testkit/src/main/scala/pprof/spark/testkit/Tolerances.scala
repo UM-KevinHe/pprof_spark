@@ -18,6 +18,41 @@ final case class Tolerance(name: String, rtol: Double, atol: Double) {
     s"tolerance $name must be finite and non-negative"
   )
 
+  /** The element-wise rule for vectors and packed matrices (D-09): element `i` passes when
+    * `|a(i) - e(i)| <= atol + rtol * max(|e(i)|, s)`, where `s` is the largest finite magnitude in
+    * `expected`. Scaling by the quantity's largest element keeps near-zero elements, such as a
+    * score at the optimum, from failing on relative error alone. Returns the worst ratio of
+    * observed to allowed difference, so at most 1 passes; NaN, or an infinity that is not matched
+    * exactly, gives positive infinity.
+    */
+  def worstRatio(actual: Array[Double], expected: Array[Double]): Double = {
+    require(
+      actual.length == expected.length,
+      s"$name: ${actual.length} values against ${expected.length}"
+    )
+    val scale = expected.iterator
+      .filter(java.lang.Double.isFinite)
+      .map(math.abs)
+      .foldLeft(0.0)((x, y) => math.max(x, y))
+    actual.indices.iterator
+      .map { i =>
+        val a = actual(i)
+        val e = expected(i)
+        if (a.isNaN || e.isNaN) Double.PositiveInfinity
+        else if (a.isInfinite || e.isInfinite) { if (a == e) 0.0 else Double.PositiveInfinity }
+        else {
+          val difference = math.abs(a - e)
+          if (difference == 0.0) 0.0
+          else difference / (atol + rtol * math.max(math.abs(e), scale))
+        }
+      }
+      .foldLeft(0.0)((x, y) => math.max(x, y))
+  }
+
+  /** Whether every element passes the element-wise rule of [[worstRatio]]. */
+  def acceptsAll(actual: Array[Double], expected: Array[Double]): Boolean =
+    worstRatio(actual, expected) <= 1.0
+
   def accepts(actual: Double, expected: Double): Boolean =
     if (actual.isNaN || expected.isNaN) false
     else if (actual.isInfinite || expected.isInfinite) actual == expected

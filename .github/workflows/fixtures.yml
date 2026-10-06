@@ -1,0 +1,42 @@
+# Reference fixtures (PROJECT_CONTEXT §9.3, PAR-1; ADR-0005). Run by hand: after a re-pin, or to
+# show that the committed fixtures still reproduce. Installs the pinned pprof_py and R 4.3.3 with
+# survival 3.5-8 from Ubuntu 24.04's archive, recomputes every output from the committed inputs,
+# compares them with the committed outputs under T-part, and reruns the tolerance calibration.
+name: fixtures
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    name: Regenerate and compare reference fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install R 4.3.3 and survival 3.5-8
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends r-base-core=4.3.3-2build2 r-cran-survival=3.5-8-1
+      - name: Install the pinned pprof_py and its pinned dependencies
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -r reference/fixtures/requirements.txt
+          commit=$(python3 -c "import tomllib; print(tomllib.load(open('reference/REFERENCE.lock', 'rb'))['pprof_py']['commit'])")
+          .venv/bin/pip install --no-deps "pprof_py @ git+https://github.com/UM-KevinHe/pprof_py@${commit}"
+      - name: Recompute outputs from the committed inputs and compare
+        run: |
+          .venv/bin/python reference/fixtures/generate.py --out regenerated --inputs fixtures
+          .venv/bin/python reference/fixtures/compare_outputs.py regenerated fixtures
+      - name: Calibrate the tolerances against the committed fixtures
+        run: .venv/bin/python reference/fixtures/calibrate.py
+      - name: Upload the regenerated fixtures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: regenerated-fixtures
+          path: regenerated
+          if-no-files-found: warn

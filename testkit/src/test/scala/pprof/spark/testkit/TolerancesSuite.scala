@@ -31,6 +31,19 @@ class TolerancesSuite extends munit.FunSuite {
     assert(!t.accepts(Double.PositiveInfinity, 1e308))
   }
 
+  test("vectors are scaled by their largest element") {
+    val t = Tolerance("example", rtol = 1e-8, atol = 0.0)
+    val expected = Array(100.0, 1e-12, -50.0)
+    assert(
+      t.acceptsAll(Array(100.0 + 5e-7, 5e-7, -50.0), expected),
+      "near-zero element, large scale"
+    )
+    assert(!t.acceptsAll(Array(100.0 + 2e-6, 1e-12, -50.0), expected))
+    assertEquals(t.worstRatio(expected, expected), 0.0)
+    assertEquals(t.worstRatio(Array(Double.NaN, 0.0, 0.0), expected), Double.PositiveInfinity)
+    intercept[IllegalArgumentException](t.worstRatio(Array(1.0), expected))
+  }
+
   test("negative and non-finite tolerances are rejected") {
     intercept[IllegalArgumentException](Tolerance("bad", rtol = -1.0, atol = 0.0))
     intercept[IllegalArgumentException](Tolerance("bad", rtol = 0.0, atol = Double.NaN))

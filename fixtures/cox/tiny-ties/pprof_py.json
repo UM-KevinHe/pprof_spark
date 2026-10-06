@@ -1,0 +1,218 @@
+{
+ "breslow": {
+  "beta_fixed": {
+   "beta": [
+    "0x1.8000000000000p-2"
+   ],
+   "information": [
+    "0x1.1324e0c26c13cp+1"
+   ],
+   "loglik": [
+    "-0x1.3729bcec38619p+3"
+   ],
+   "score": [
+    "-0x1.3c110c2566ba8p+0"
+   ]
+  },
+  "beta_zero": {
+   "beta": [
+    "0x0.0p+0"
+   ],
+   "information": [
+    "0x1.2631c71c71c72p+1"
+   ],
+   "loglik": [
+    "-0x1.2d52f8e914bd5p+3"
+   ],
+   "score": [
+    "-0x1.9555555555555p-2"
+   ]
+  },
+  "default": {
+   "coef": [
+    "-0x1.5f422538649c9p-3"
+   ],
+   "converged": true,
+   "covariance": [
+    "0x1.bb0cdd0dd0e29p-2"
+   ],
+   "iterations": 3,
+   "loglik": [
+    "-0x1.2c3ca264c162cp+3"
+   ],
+   "loglik_null": [
+    "-0x1.2d52f8e914bd5p+3"
+   ],
+   "se": [
+    "0x1.50c7b7550efdfp-1"
+   ]
+  },
+  "negative_controls": {
+   "other_ties": {
+    "coef": [
+     "-0x1.65cd2c99223b9p-3"
+    ],
+    "converged": true,
+    "covariance": [
+     "0x1.c82aef784794ap-2"
+    ],
+    "iterations": 3,
+    "loglik": [
+     "-0x1.1ec002c41ff02p+3"
+    ],
+    "loglik_null": [
+     "-0x1.1fd8643ff0566p+3"
+    ],
+    "se": [
+     "0x1.55bab569e9e5ap-1"
+    ]
+   },
+   "shifted_tie": {
+    "coef": [
+     "-0x1.bed4c2666607ap-3"
+    ],
+    "converged": true,
+    "covariance": [
+     "0x1.b83da1da833f8p-2"
+    ],
+    "iterations": 3,
+    "loglik": [
+     "-0x1.2c37d8900fe16p+3"
+    ],
+    "loglik_null": [
+     "-0x1.2dfbe2b09b38dp+3"
+    ],
+    "se": [
+     "0x1.4fb5ec5994644p-1"
+    ]
+   }
+  },
+  "tight": {
+   "coef": [
+    "-0x1.5f422538649c9p-3"
+   ],
+   "converged": true,
+   "covariance": [
+    "0x1.bb0cdd0dd0e29p-2"
+   ],
+   "iterations": 3,
+   "loglik": [
+    "-0x1.2c3ca264c162cp+3"
+   ],
+   "loglik_null": [
+    "-0x1.2d52f8e914bd5p+3"
+   ],
+   "se": [
+    "0x1.50c7b7550efdfp-1"
+   ]
+  }
+ },
+ "efron": {
+  "beta_fixed": {
+   "beta": [
+    "0x1.8000000000000p-2"
+   ],
+   "information": [
+    "0x1.0b19b13f6f4a2p+1"
+   ],
+   "loglik": [
+    "-0x1.297a4319c0cf2p+3"
+   ],
+   "score": [
+    "-0x1.347d2c2f80a5fp+0"
+   ]
+  },
+  "beta_zero": {
+   "beta": [
+    "0x0.0p+0"
+   ],
+   "information": [
+    "0x1.1d64ef2a605cep+1"
+   ],
+   "loglik": [
+    "-0x1.1fd8643ff0566p+3"
+   ],
+   "score": [
+    "-0x1.90c30c30c30c3p-2"
+   ]
+  },
+  "default": {
+   "coef": [
+    "-0x1.65cd2c99223b9p-3"
+   ],
+   "converged": true,
+   "covariance": [
+    "0x1.c82aef784794ap-2"
+   ],
+   "iterations": 3,
+   "loglik": [
+    "-0x1.1ec002c41ff02p+3"
+   ],
+   "loglik_null": [
+    "-0x1.1fd8643ff0566p+3"
+   ],
+   "se": [
+    "0x1.55bab569e9e5ap-1"
+   ]
+  },
+  "negative_controls": {
+   "other_ties": {
+    "coef": [
+     "-0x1.5f422538649c9p-3"
+    ],
+    "converged": true,
+    "covariance": [
+     "0x1.bb0cdd0dd0e29p-2"
+    ],
+    "iterations": 3,
+    "loglik": [
+     "-0x1.2c3ca264c162cp+3"
+    ],
+    "loglik_null": [
+     "-0x1.2d52f8e914bd5p+3"
+    ],
+    "se": [
+     "0x1.50c7b7550efdfp-1"
+    ]
+   },
+   "shifted_tie": {
+    "coef": [
+     "-0x1.b7bea6e675081p-3"
+    ],
+    "converged": true,
+    "covariance": [
+     "0x1.c100719cb7289p-2"
+    ],
+    "iterations": 3,
+    "loglik": [
+     "-0x1.1e2b3b3fcf2c6p+3"
+    ],
+    "loglik_null": [
+     "-0x1.1fd8643ff0566p+3"
+    ],
+    "se": [
+     "0x1.5308d9fada31cp-1"
+    ]
+   }
+  },
+  "tight": {
+   "coef": [
+    "-0x1.65cd2c99223b9p-3"
+   ],
+   "converged": true,
+   "covariance": [
+    "0x1.c82aef784794ap-2"
+   ],
+   "iterations": 3,
+   "loglik": [
+    "-0x1.1ec002c41ff02p+3"
+   ],
+   "loglik_null": [
+    "-0x1.1fd8643ff0566p+3"
+   ],
+   "se": [
+    "0x1.55bab569e9e5ap-1"
+   ]
+  }
+ }
+}

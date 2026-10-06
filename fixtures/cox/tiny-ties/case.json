@@ -1,0 +1,15 @@
+{
+ "events": 6,
+ "features": [
+  "x1"
+ ],
+ "fixed_beta": [
+  0.375
+ ],
+ "id": "tiny-ties",
+ "offset": false,
+ "p": 1,
+ "rows": 8,
+ "stratified": false,
+ "weighted": false
+}

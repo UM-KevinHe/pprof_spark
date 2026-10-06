@@ -105,6 +105,7 @@ lazy val sparkModuleSettings = Seq(
   Test / javaOptions ++= sparkJavaModuleOptions ++ Seq(
     "-Xmx2g",
     "-Duser.timezone=UTC",
+    "-Dpprof.fixtures=" + ((LocalRootProject / baseDirectory).value / "fixtures"),
     "-Dlog4j2.configurationFile=" +
       ((LocalRootProject / baseDirectory).value / "project" / "log4j2-test.properties")
   )

@@ -12,15 +12,15 @@ force.
 
 | ID | Decision | Status | Outcome or recommendation |
 |---|---|---|---|
-| D-01 | Supported compute tiers for v1 | Proposed; Databricks tiers deferred by D-14 | Classic Spark only; `engine` kept Connect-compatible (PLAT-2) |
-| D-02 | Target and secondary runtimes | Proposed; see D-14 | Build pins stay Spark 4.1.0 and Scala 2.13.16, so one JAR runs on open-source Spark 4.1.x and on Databricks Runtime 18 LTS |
-| D-03 | Python access in v1 | Deferred by D-14 | — |
-| D-04 | Design envelope and performance targets | Proposed | §2.3 ranges once the reduction volume at large p is resolved (OI-02); targets after the first benchmarks |
+| D-01 | Supported compute tiers for v1 | Approved (delegated), 2026-10-06 | Classic Spark only; `engine` kept Connect-compatible (PLAT-2) and tested under Spark Connect (T8) |
+| D-02 | Target and secondary runtimes | Approved (delegated), 2026-10-06 | Spark 4.1.0, Scala 2.13.16, Java 17 bytecode: one JAR for open-source Spark 4.1.x and Databricks Runtime 18 LTS; tested on open-source Spark only (D-14) |
+| D-03 | Python access in v1 | Approved (delegated), 2026-10-06 | None in v1; revisit after Phase 1d (job-based access was deferred by D-14) |
+| D-04 | Design envelope and performance targets | Approved (delegated), 2026-10-06 | §2.3 ranges as planning assumptions; targets set after the first benchmarks; OI-02 resolved before large-p work |
 | D-05 | pprof_py pin and reference versions | Approved (delegated), 2026-10-05 | pprof_py v0.7.0, commit 9320766 (see below) |
-| D-06 | Default Cox tie method | Proposed | Breslow, the reference default |
+| D-06 | Default Cox tie method | Approved (delegated), 2026-10-06 | Breslow, the reference default; every fit records its tie method |
 | D-07 | Project license | Approved, 2026-10-05 | MIT, copyright holder Kevin He |
-| D-08 | Artifact distribution | Proposed; see D-14 | GitHub Releases |
-| D-09 | Tolerance calibration | Proposed | §8.4 initial values once the scaling rules are defined (OI-09); calibrated in the fixture round |
+| D-08 | Artifact distribution | Approved (delegated), 2026-10-06 | GitHub Releases |
+| D-09 | Tolerance calibration | Approved (delegated), 2026-10-06 | §8.4 values, an element-wise rule scaled by each quantity's largest element, calibrated against the Cox fixtures and enforced in CI (ADR-0005) |
 | D-10 | Root package and artifact names | Approved, 2026-10-05 | Organization and root package `pprof.spark`; artifacts `pprof-spark-<module>_2.13` |
 
 ### D-05: what the pin is, and the choice
@@ -81,6 +81,12 @@ algorithms fix the bits of every reduction; changing them is a behavioral change
 
 The data contract, layout plan, working set, kernels, ordered reduction, result tables and
 persistence format of ADR-0004, which every model family reuses.
+
+### D-17: Reference fixtures and calibration (Approved, delegated, 2026-10-06; ADR-0005)
+
+Exact synthetic inputs generated once (CSV), reference outputs from pprof_py v0.7.0 and R 4.3.3
+with survival 3.5-8 as hexadecimal doubles (JSON), a checksummed manifest, stored negative
+controls, and calibration enforced in CI by `FixturesSuite`.
 
 ### D-12: Build and test tooling baseline (Delegated; reversible)
 

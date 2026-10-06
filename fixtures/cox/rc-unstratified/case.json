@@ -1,0 +1,23 @@
+{
+ "events": 304,
+ "features": [
+  "x1",
+  "x2",
+  "x3"
+ ],
+ "fixed_beta": [
+  0.375,
+  -0.1875,
+  0.0625
+ ],
+ "id": "rc-unstratified",
+ "max_time": 60,
+ "n": 400,
+ "offset": false,
+ "p": 3,
+ "rows": 400,
+ "seed": 2,
+ "strata": 1,
+ "stratified": false,
+ "weighted": false
+}

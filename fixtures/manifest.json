@@ -1,0 +1,62 @@
+{
+ "cases": {
+  "cox": [
+   "tiny-ties",
+   "rc-unstratified",
+   "rc-stratified",
+   "rc-stratified-weights-offset"
+  ]
+ },
+ "files": {
+  "cox/rc-stratified-weights-offset/case.json": "7c46d0f8c6e2497bcc2ef0a63d71c42516117b3e17f998693d50748566b2c422",
+  "cox/rc-stratified-weights-offset/input.csv": "af173851d3543f3fd9b1e66efd642f9daa63c362b409da09f6c01556a098bcdb",
+  "cox/rc-stratified-weights-offset/pprof_py.json": "3b98f98e4df74193d5ac7b96de735198abe15a67e7a0702f15fb22b4cb4da70b",
+  "cox/rc-stratified-weights-offset/r_survival.json": "b489b3fca397dea57000f2292bc0c09274be4f9957f89ee753e9f3e818f817d3",
+  "cox/rc-stratified/case.json": "8596653cf6edb0a60267e3cc977c577424efb2faa97d93e87c799f7849a27fd1",
+  "cox/rc-stratified/input.csv": "5a6c1340d449d6eeca9bc17b5b68dc6b1e1ce35c9163a6efec6451ffaa0ab296",
+  "cox/rc-stratified/pprof_py.json": "b8e99e635555a208a4ba24ec63c4b22c2f634e0190bc7b494b96ca3ac65ffc96",
+  "cox/rc-stratified/r_survival.json": "ac1132ed18c2abd4019b86a3696f5044af6ebde03d01957f215d47ad80adad31",
+  "cox/rc-unstratified/case.json": "b9ef160ec79db0b2ed5d88d8fbf3a6082e8a62c309355aee0e277ea1e16b8543",
+  "cox/rc-unstratified/input.csv": "d48d51d700730080922c50dda93c840df88d06b108e9fd7052117dfc67f547c7",
+  "cox/rc-unstratified/pprof_py.json": "8cd61fa5e1914211e2c0355bfd04fd0ab4648e14360124d45cfe2720ba59acf0",
+  "cox/rc-unstratified/r_survival.json": "468de1a7c74f2a1e63bd61a9bda0d20078f795578936a4da1919e40b2db71fa1",
+  "cox/tiny-ties/case.json": "657176ef9d7b11ef8a52d9354f25cd51977b447b85164805415f4eed54685f86",
+  "cox/tiny-ties/input.csv": "013a5178b49cd73c21b9c312f48fa7309bdc7aeaffc62821151f0534f98fc88f",
+  "cox/tiny-ties/pprof_py.json": "deeb79667e6da364ff897f202889e2e12b697e2a9fb8849a997e2699ef3a39dc",
+  "cox/tiny-ties/r_survival.json": "fc6d3f46a947ad9539e8935649689eada9995b863131a9e3c87ba5c8d1ca6be6"
+ },
+ "formatVersion": 1,
+ "generator": "reference/fixtures/generate.py",
+ "options": {
+  "function_level": "R: coxph(init = beta, control = coxph.control(iter.max = 0))",
+  "r_tight_control": "coxph.control(eps = 1e-11, iter.max = 100)",
+  "r_timefix": true,
+  "r_variance": "model-based: coxph(robust = FALSE)",
+  "ties": [
+   "breslow",
+   "efron"
+  ],
+  "tight": {
+   "eps": 1e-11,
+   "max_iter": 100
+  }
+ },
+ "reference": {
+  "packages": {
+   "llvmlite": "0.50.0",
+   "numba": "0.68.0",
+   "numpy": "2.5.3",
+   "pandas": "3.0.6",
+   "scipy": "1.18.1"
+  },
+  "pprof_py": {
+   "commit": "9320766e35e5b385d596a2b75418192098a124c4",
+   "version": "0.7.0"
+  },
+  "python": "3.12.3",
+  "r": {
+   "survival": "3.5.8",
+   "version": "4.3.3"
+  }
+ }
+}

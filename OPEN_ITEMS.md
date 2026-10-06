@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-05, round 5. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-06, round 6. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -14,10 +14,10 @@ decision is approved.
 | OI-06 | DBR 18 ships dated updates under one version number; clusters pick them up on restart | Deferred by D-14 (no Databricks work); `SoftwareInfo` already records the identifiers that exist |
 | OI-07 | `Double.toString` output differs between JDK 17 and 21, so `metadata.json` is not byte-stable across JDKs | Done for the skeleton's format (doubles stored as raw bits, ADR-0004); every persisted model keeps the rule |
 | OI-08 | DIST-6 canonical order: −0.0 and +0.0 compare equal, so input order would decide their position | Done: `BlockBuilder` normalizes negative zeros before ordering (ADR-0004) |
-| OI-09 | Tolerance semantics: "relative, scaled by magnitude" (T-fn) and "absolute, scaled" (T-res) are undefined | Define before D-09 calibration |
+| OI-09 | Tolerance semantics: "relative, scaled by magnitude" (T-fn) and "absolute, scaled" (T-res) | Defined for vectors by D-09 (scaled by the quantity's largest element); T-res is fixed with the residuals specification (Phase 1c) |
 | OI-10 | §8.1 lists exp, log, log1p, expm1; `pow` is missing | Round 4: `scripts/check-engine-api.sh` bans `math`/`Math` transcendental functions in `numerics` and `engine` main code; doc fix remains (OI-27) |
 | OI-11 | §12 names survival (LGPL) and EmpiNull (GPL-3) only; glmnet and lme4 are GPL too | Doc fix: "run, never port" applies to every copyleft fixture tool |
-| OI-12 | pprof_py's R-comparison suite has 26 documented failures and does not run in upstream CI | Fixture round: run it at the candidate pin and map each failure to a feature (D-05) |
+| OI-12 | pprof_py's R-comparison suite has 26 documented failures and does not run in upstream CI | Closed: see X-007 and X-008 |
 | OI-13 | pprof_py's README says the lme4 comparison script is not in the repository | Relevant to PAR-2 for random-effect models (later phases) |
 | OI-14 | Second CI time zone (§5.5) | Add with the first time-handling code (data contract) |
 | OI-15 | Deferred tooling: scalafix (with a semantic ARCH-2 rule), scoverage, MiMa from 1.0, Scala Steward or Dependabot (keep the munit pin), parity-matrix CI check (§9.8), Codespaces devcontainer (S-06) | Schedule per round |
@@ -36,4 +36,6 @@ decision is approved.
 | OI-29 | m-scale results (group sizes, group tables) are collected to the driver under `BlockOptions` guards | Distributed result tables for m beyond the driver budget, when a model needs them |
 | OI-30 | Groups larger than a block get a block of their own; nothing splits them | TimeRange (OI-03) before the large-stratum Cox work |
 | OI-31 | DIST-1's naming rule (`collect…` and `toLocal…` methods) is enforced by review only | Consider a source check once more models exist |
+| OI-32 | Fixture families for later phases | Left truncation and baseline hazards (1b), residuals and robust variance (1c), provider measures (1d), each with negative controls |
+| OI-33 | Upstream reports to pprof_py: the README's failure count (X-008) and the step-control order (X-010) | Maintainer |
 | OI-20 | Re-verification (§3.4, §5.1): Spark/Scala pairs, DBR 18 facts and pprof_py README claims checked 2026-10-03; §3.4 rows await the pin | DISCREPANCIES.md after D-05 |
