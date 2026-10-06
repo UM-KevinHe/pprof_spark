@@ -1,8 +1,9 @@
 # Phase 0 gate review (ROAD-2)
 
 - Date: 2026-10-06
-- Recommendation: close Phase 0 when CI passes on round 7. On 2026-10-06 the maintainer delegated
-  open decisions to the assistant's recommendations.
+- Outcome: **Phase 0 closed on 2026-10-06.** Round 7's CI passed (run 37484837090, `main` at
+  d47532c), as did round 8's (run 37487451760). The maintainer had delegated open decisions to the
+  assistant's recommendations on 2026-10-06.
 
 ## Exit criteria (§4, as amended by D-11 and D-14)
 

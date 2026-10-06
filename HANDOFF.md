@@ -1,5 +1,21 @@
 # Handoff
 
+## Round 9 (2026-10-06): Cox first-slice specification (Phase 1a starts)
+
+Rounds 7 and 8 passed CI (runs 37484837090 and 37487451760), so Phase 0 is closed.
+
+`docs/spec/cox/first-slice.md` specifies the first Cox slice (D-11): stratified, right-censored,
+Breslow, model-based variance, with its data contract, conventions, algorithm, inference, outputs,
+edge cases, reference mapping to pprof_py v0.7.0 and R, distributed plan and validation plan. It
+awaits the maintainer's approval (D-20, NN-2); no Cox code is written before that.
+
+Evidence gathered for it (assistant sandbox, pprof_py v0.7.0): the reference's behavior on ten edge
+cases (it raises on invalid times, events and covariates; returns β̂ = 0 when there are no events;
+returns pseudo-inverse estimates for collinear covariates) and a row-order experiment: under
+pprof_py's step rule, 30 row orders of tiny-ties give 9 distinct coefficient vectors up to 1.05e-8
+apart; testing convergence first, as R does, gives a spread of 2.3e-15. Hence the proposed change
+to X-010. X-002 is resolved at v0.7.0 (CoxPH warns on non-convergence).
+
 ## Round 8 (2026-10-06): PROJECT_CONTEXT v2.2
 
 PROJECT_CONTEXT.md v2.2 folds in decisions D-01 to D-19 and the corrections found in Phase 0, and

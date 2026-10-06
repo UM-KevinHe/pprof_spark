@@ -1,8 +1,9 @@
 # Status
 
-Updated 2026-10-06, round 8.
+Updated 2026-10-06, round 9.
 
-**Phase 0, foundations and spikes: in progress.** No phase gate has been passed.
+**Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: in progress**;
+its first step, the specification of the first slice, awaits approval (D-20).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
 
@@ -23,9 +24,10 @@ Updated 2026-10-06, round 8.
 | 4 | `numerics`: deterministic summation and the StrictMath rule (ADR-0003) | Merged (08b378f); CI green, run 37361715287 (40 tests per JDK) |
 | 5 | Platform skeleton: data contract, layout plan, working set, kernels, ordered reduction, result table, persistence (ADR-0004) | Merged (7f31717); CI green, run 37458038911 |
 | 6 | Reference fixtures for Cox (pprof_py v0.7.0, R 4.3.3, survival 3.5-8), calibration, R-comparison triage (ADR-0005) | Merged (0be6e54); CI green, run 37477285324 |
-| 7 | S-05 (ADR-0006), S-06 (ADR-0007), deferred spikes (ADR-0008), Phase 0 gate review | Merged (d47532c); Phase 0 closes when its CI is confirmed green |
-| 8 | PROJECT_CONTEXT v2.2: Phase 0 decisions and review fixes folded in | Delivered as a patch |
-| 9 | Phase 1a: Cox specification for the first slice (approval needed, NN-2) | Planned |
+| 7 | S-05 (ADR-0006), S-06 (ADR-0007), deferred spikes (ADR-0008), Phase 0 gate review | Merged (d47532c); CI green, run 37484837090; Phase 0 closed |
+| 8 | PROJECT_CONTEXT v2.2: Phase 0 decisions and review fixes folded in | Merged (3565b66); CI green, run 37487451760 |
+| 9 | Phase 1a: Cox specification for the first slice (D-20) | Delivered as a patch; awaiting approval |
+| 10 | First Cox slice: numerics (Cholesky, normal distribution, kernel), engine estimator, lockstep fixtures, parity tests | After D-20 |
 
 ## Decisions and spikes
 

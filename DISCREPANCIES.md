@@ -16,7 +16,10 @@ approval.
 |---|---|---|---|---|
 | X-008 | pprof_py's README says a fresh R-comparison run ends with 26 failures; at v0.7.0 none of the survival tests fail | X-007 run | E | Follow the behavior; ask upstream to correct the README (OI-33) |
 | X-009 | With non-integer case weights, R's coxph reports a robust variance by default; pprof_py's default, and pprof_spark's, is model-based | `fit$naive.var` equals pprof_py's covariance; the reported variance does not | — (not a pprof_spark difference) | Fixtures call coxph with `robust = FALSE`; the user guide will tell R users to do the same |
-| X-010 | pprof_py tests for a log-likelihood decrease, and halves the step, before testing convergence; R's coxfit6 tests convergence first and keeps the full step. When a converged step lowers the log-likelihood at rounding level, the two return estimates half a step apart. R's later halvings also follow a different schedule | Iterate trace on tiny-ties: identical to 1e-16 for two iterations, then R's third step is twice pprof_py's; coxfit6.c lines 249-276. Converged coefficients differ by 1.05e-8 relative on tiny-ties (Breslow), at most 2.4e-9 elsewhere | B | Bug-compatible: pprof_spark follows pprof_py's step control, flagged in the Cox specification, and the difference is reported upstream (OI-33). Approved (delegated), 2026-10-06 |
+| X-010 | pprof_py tests for a log-likelihood decrease, and halves the step, before testing convergence; R's coxfit6 tests convergence first and keeps the full step. When a converged step lowers the log-likelihood at rounding level, the two return estimates half a step apart. R's later halvings also follow a different schedule | Iterate trace on tiny-ties: identical to 1e-16 for two iterations, then R's third step is twice pprof_py's; coxfit6.c lines 249-276. Converged coefficients differ by 1.05e-8 relative on tiny-ties (Breslow), at most 2.4e-9 elsewhere | B | Round 6: bug-compatible, approved (delegated). Proposed change (Cox specification §10, D-20): test convergence first, because pprof_py's order makes its own results depend on row order by up to 1.05e-8 (9 distinct results over 30 row orders of tiny-ties), which conflicts with NN-4 and R1. Reported upstream (OI-33) |
+
+| X-011 | Collinear or constant covariates: pprof_py returns pseudo-inverse estimates (silently for collinearity, with a NumPy warning for a constant column) | Probed at v0.7.0 | C (proposed) | pprof_spark fails and names the aliased covariates (Cox specification §9, D-20) |
+| X-012 | No events at all: pprof_py returns β̂ = 0, converged, with a NumPy warning | Probed at v0.7.0 | C (proposed) | pprof_spark fails: the partial likelihood is constant (D-20) |
 
 ## Known reference limitations to verify at the pinned commit (§3.4)
 
@@ -26,7 +29,7 @@ Classes are proposals. Each row is re-verified against the pinned reference, ppr
 | ID | Reference behavior | Proposed handling | Proposed class |
 |---|---|---|---|
 | X-001 | `CoxPH(fit_intercept=True)` fits, but every `predict_*` method raises | Reject an intercept at validation | C |
-| X-002 | `CoxPH` does not warn when `max_iter` is reached | Report non-convergence (NN-10); estimates unchanged | C |
+| X-002 | `CoxPH` does not warn when `max_iter` is reached | Resolved at v0.7.0: `CoxPH` warns; pprof_spark warns too | — |
 | X-003 | `FineGrayPH` with left truncation differs from R `finegray()` (about 3e-3 in coefficients) | Choose the parity target before the competing-risks phase | B |
 | X-004 | SerBIN can stop at a near-null fit when covariates are far from zero (upstream C27) | Center internally; confirm with a dedicated fixture | B |
 | X-005 | `LogisticThreeStageModel.sigma_sensitivity()` fails when σ̂ = 0 | Define the boundary in the three-stage specification | B |
