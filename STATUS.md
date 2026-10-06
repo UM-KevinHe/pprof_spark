@@ -1,10 +1,10 @@
 # Status
 
-Updated 2026-10-06, round 10.
+Updated 2026-10-06, round 11.
 
-**Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: in progress.** The first
-slice (stratified, right-censored, Breslow, model-based variance) is implemented and at parity in
-the sandbox; next come Efron ties, case weights and offsets.
+**Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: in progress.** Stratified Cox
+regression for right-censored data with Breslow or Efron ties, case weights and offsets is
+implemented and at parity; next come persistence and the Phase 1a gate review.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
 
@@ -28,8 +28,9 @@ the sandbox; next come Efron ties, case weights and offsets.
 | 7 | S-05 (ADR-0006), S-06 (ADR-0007), deferred spikes (ADR-0008), Phase 0 gate review | Merged (d47532c); CI green, run 37484837090; Phase 0 closed |
 | 8 | PROJECT_CONTEXT v2.2: Phase 0 decisions and review fixes folded in | Merged (3565b66); CI green, run 37487451760 |
 | 9 | Phase 1a: Cox specification for the first slice (D-20) | Merged (697e5df); approved 2026-10-06 |
-| 10 | First Cox slice: numerics (normal distribution, Cholesky, Newton, Breslow kernel), engine estimator, lockstep fixtures, parity tests | Delivered as a patch; CI to confirm |
-| 11 | Efron ties, case weights and offsets (Phase 1a) | Planned |
+| 10 | First Cox slice: numerics (normal distribution, Cholesky, Newton, Breslow kernel), engine estimator, lockstep fixtures, parity tests | Merged (099fefe); CI green, run 37502839703 |
+| 11 | Efron ties, case weights and offsets (D-21, X-013) | Delivered as a patch; CI to confirm |
+| 12 | `CoxFit` persistence (OI-37), warning logging (OI-36), Phase 1a gate review | Planned |
 
 ## Decisions and spikes
 

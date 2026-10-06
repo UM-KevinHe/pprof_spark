@@ -13,15 +13,18 @@ import org.apache.spark.sql.types.{
 
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 
-/** Column roles of a Cox fit (Cox specification §4): exit time, event indicator and features, and
-  * optionally strata and a row identifier. Every subject enters at time 0.
+/** Column roles of a Cox fit (Cox specification §4 and addendum §3): exit time, event indicator and
+  * features, and optionally strata, a row identifier, case weights and offsets. Every subject enters
+  * at time 0.
   */
 final case class CoxSpec(
     time: String,
     event: String,
     features: Seq[String],
     strata: Option[String] = None,
-    rowId: Option[String] = None
+    rowId: Option[String] = None,
+    weight: Option[String] = None,
+    offset: Option[String] = None
 ) {
   require(features.nonEmpty, "at least one feature column is required")
   require(
@@ -29,7 +32,8 @@ final case class CoxSpec(
     s"each column may have one role only: ${columns.mkString(", ")}"
   )
 
-  def columns: Seq[String] = Seq(time, event) ++ features ++ strata.toSeq ++ rowId.toSeq
+  def columns: Seq[String] =
+    Seq(time, event) ++ features ++ strata.toSeq ++ rowId.toSeq ++ weight.toSeq ++ offset.toSeq
 }
 
 /** A validated Cox input: the internal columns only, with its row and event counts. */
@@ -48,12 +52,16 @@ object CoxValidation {
 
   val TimeColumn: String = "__pprof_time"
   val EventColumn: String = "__pprof_event"
+  val WeightColumn: String = "__pprof_weight"
+  val OffsetColumn: String = "__pprof_offset"
 
   def validate(df: DataFrame, spec: CoxSpec): CoxInput = {
     val types = df.schema.fields.map(f => f.name -> f.dataType).toMap
     val structural = schemaProblems(types, spec)
     if (structural.nonEmpty) throw new InvalidInputException(structural)
-    val aggregates = valueCounts(types, spec)
+    // Unique aliases: two counts can share an expression (events, and events with positive weight
+    // when there are no weights), and Spark Connect rejects duplicate column names.
+    val aggregates = valueCounts(types, spec).zipWithIndex.map { case (c, i) => c.as(s"count_$i") }
     val counts = df.agg(aggregates.head, aggregates.tail: _*).collect().head
     var position = 0
     def next(): Long = {
@@ -89,10 +97,23 @@ object CoxValidation {
       if (nulls > 0) problems += InputProblem.InvalidValues(name, nulls, 0L)
       if (duplicates > 0) problems += InputProblem.DuplicateRowIds(name, duplicates)
     }
+    spec.weight.foreach { name =>
+      val nulls = next()
+      val nonFinite = next()
+      val negative = next()
+      if (nulls > 0 || nonFinite > 0) problems += InputProblem.InvalidValues(name, nulls, nonFinite)
+      if (negative > 0) problems += InputProblem.NegativeValues(name, negative)
+    }
+    spec.offset.foreach { name =>
+      val nulls = next()
+      val nonFinite = next()
+      if (nulls > 0 || nonFinite > 0) problems += InputProblem.InvalidValues(name, nulls, nonFinite)
+    }
+    val weightedEvents = next()
     if (rows == 0) problems += InputProblem.EmptyInput
     val found = problems.result()
     if (found.nonEmpty) throw new InvalidInputException(found)
-    if (events == 0) throw new InvalidInputException(Seq(InputProblem.NoEvents))
+    if (weightedEvents == 0) throw new InvalidInputException(Seq(InputProblem.NoEvents))
 
     val strataKeyIsText = spec.strata.exists(name => types(name) == StringType)
     val group = spec.strata match {
@@ -109,7 +130,9 @@ object CoxValidation {
         .as(Validation.FeaturesColumn),
       spec.rowId
         .fold(lit(0L))(name => Validation.column(name).cast(LongType))
-        .as(Validation.RowIdColumn)
+        .as(Validation.RowIdColumn),
+      spec.weight.fold(lit(1.0))(name => Validation.column(name).cast(DoubleType)).as(WeightColumn),
+      spec.offset.fold(lit(0.0))(name => Validation.column(name).cast(DoubleType)).as(OffsetColumn)
     )
     CoxInput(frame, spec, rows, events, strataKeyIsText)
   }
@@ -135,10 +158,35 @@ object CoxValidation {
       spec.strata.toSeq.flatMap(name =>
         check(name, t => Validation.isIntegral(t) || t == StringType, "an integral or string type")
       ) ++
-      spec.rowId.toSeq.flatMap(name => check(name, Validation.isIntegral, "an integral type"))
+      spec.rowId.toSeq.flatMap(name => check(name, Validation.isIntegral, "an integral type")) ++
+      (spec.weight.toSeq ++ spec.offset.toSeq).flatMap(name =>
+        check(name, numeric, "a numeric type")
+      )
   }
 
   private def valueCounts(types: Map[String, DataType], spec: CoxSpec): Seq[Column] = {
+    def finiteCounts(name: String): Seq[Column] = {
+      val value = Validation.column(name)
+      Seq(
+        coalesce(sum(when(value.isNull, 1L).otherwise(0L)), lit(0L)),
+        coalesce(sum(when(Validation.nonFinite(value, types(name)), 1L).otherwise(0L)), lit(0L))
+      )
+    }
+    val weight = spec.weight.toSeq.flatMap { name =>
+      finiteCounts(name) :+
+        coalesce(sum(when(Validation.column(name) < 0, 1L).otherwise(0L)), lit(0L))
+    }
+    val offset = spec.offset.toSeq.flatMap(finiteCounts)
+    val isEvent =
+      if (types(spec.event) == BooleanType) Validation.column(spec.event) === true
+      else Validation.column(spec.event) === 1
+    val weightedEvents = coalesce(
+      sum(
+        when(spec.weight.fold(isEvent)(name => isEvent && Validation.column(name) > 0), 1L)
+          .otherwise(0L)
+      ),
+      lit(0L)
+    )
     def countWhere(condition: Column): Column =
       coalesce(sum(when(condition, 1L).otherwise(0L)), lit(0L))
     val time = Validation.column(spec.time)
@@ -165,6 +213,6 @@ object CoxValidation {
       countWhere(time.isNull),
       countWhere(Validation.nonFinite(time, types(spec.time))),
       countWhere(time <= 0)
-    ) ++ eventCounts ++ features ++ strata ++ rowId
+    ) ++ eventCounts ++ features ++ strata ++ rowId ++ weight ++ offset :+ weightedEvents
   }
 }

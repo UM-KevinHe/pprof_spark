@@ -97,6 +97,13 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-21: Efron ties, case weights and offsets (Accepted in advance, 2026-10-06)
+
+`docs/spec/cox/efron-weights-offsets.md`. The maintainer approved the round's specification and
+changes in advance and asked for the work to continue. X-013 (zero-weight events under Efron) was
+found afterwards; asked to confirm the recommended corrected behavior, the maintainer replied
+"Continue", so it stands under the standing delegation. Implemented in round 11.
+
 ### D-20: Cox first-slice specification (Accepted: approved by the maintainer, 2026-10-06)
 
 `docs/spec/cox/first-slice.md`: stratified, right-censored, Breslow, model-based variance. It

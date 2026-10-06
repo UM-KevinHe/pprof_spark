@@ -1,6 +1,6 @@
 package pprof.spark.engine.cox
 
-import pprof.spark.numerics.kernels.{CoxBreslow, CoxTotals, Fingerprint, Moments}
+import pprof.spark.numerics.kernels.{CoxStratum, CoxTotals, Fingerprint, Moments}
 
 /** One block's log partial likelihood, score and packed information at one β. */
 final case class CoxPartial(
@@ -25,7 +25,7 @@ object CoxKernel {
 
   def summary(block: CoxBlock): CoxBlockSummary = {
     val p = block.p
-    val values = new Array[Double](p + 2)
+    val values = new Array[Double](p + 4)
     var events = 0L
     var withoutEvents = 0
     var fingerprint = 0L
@@ -36,12 +36,14 @@ object CoxKernel {
       while (r < block.groupEnd(g)) {
         if (block.event(r)) {
           events += 1
-          any = true
+          if (block.weight(r) > 0.0) any = true
         }
         values(0) = block.time(r)
         values(1) = if (block.event(r)) 1.0 else 0.0
-        System.arraycopy(block.x, r * p, values, 2, p)
-        fingerprint += Fingerprint.row(block.groupIndex(g), block.rowId(r), values, 0, p + 2)
+        values(2) = block.weight(r)
+        values(3) = block.offset(r)
+        System.arraycopy(block.x, r * p, values, 4, p)
+        fingerprint += Fingerprint.row(block.groupIndex(g), block.rowId(r), values, 0, p + 4)
         r += 1
       }
       if (!any) withoutEvents += 1
@@ -57,22 +59,28 @@ object CoxKernel {
     )
   }
 
-  /** The Breslow contributions of the block's strata, added in stratum order (Cox specification
-    * §6).
-    */
-  def partial(block: CoxBlock, beta: Array[Double], center: Array[Double]): CoxPartial = {
+  /** The contributions of the block's strata, added in stratum order (Cox specification §6). */
+  def partial(
+      block: CoxBlock,
+      beta: Array[Double],
+      center: Array[Double],
+      efron: Boolean
+  ): CoxPartial = {
     val totals = new CoxTotals(block.p)
     var g = 0
     while (g < block.groupCount) {
-      CoxBreslow.addStratum(
+      CoxStratum.add(
         block.time,
         block.event,
+        block.weight,
+        block.offset,
         block.x,
         block.p,
         block.groupStart(g),
         block.groupEnd(g),
         beta,
         center,
+        efron,
         totals
       )
       g += 1

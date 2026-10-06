@@ -9,17 +9,23 @@ import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StructFiel
 
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.data.{InputProblem, InvalidInputException}
+import pprof.spark.numerics.Normal
 import pprof.spark.testkit.{Fixtures, SparkSuite, Tolerances}
 
-/** Parity and behavior of the first Cox slice (docs/spec/cox/first-slice.md §12) against the
-  * reference fixtures of pprof_py v0.7.0 and R survival 3.5-8 (ADR-0005).
+/** Parity and behavior of Cox regression (docs/spec/cox/first-slice.md §12 and
+  * efron-weights-offsets.md §7) against the fixtures of pprof_py v0.7.0 and R survival 3.5-8.
   */
 class CoxPHSuite extends SparkSuite {
 
-  private val cases = Seq("tiny-ties", "rc-unstratified", "rc-stratified")
-  private val tight = CoxOptions(eps = 1e-11, maxIterations = 100)
+  private val cases =
+    Seq("tiny-ties", "rc-unstratified", "rc-stratified", "rc-stratified-weights-offset")
+  private val methods = Seq[Ties](Ties.Breslow, Ties.Efron)
+
+  private def tight(ties: Ties) = CoxOptions(ties = ties, eps = 1e-11, maxIterations = 100)
 
   private def info(name: String): JsonNode = Fixtures.json(s"cox/$name/case.json")
+
+  private def flag(name: String, key: String): Boolean = info(name).get(key).asBoolean
 
   private def features(name: String): Seq[String] = {
     val node = info(name).get("features")
@@ -31,13 +37,15 @@ class CoxPHSuite extends SparkSuite {
       "time",
       "event",
       features(name),
-      if (info(name).get("stratified").asBoolean) Some("stratum") else None,
-      Some("id")
+      if (flag(name, "stratified")) Some("stratum") else None,
+      Some("id"),
+      if (flag(name, "weighted")) Some("weight") else None,
+      if (flag(name, "offset")) Some("offset") else None
     )
 
   private def frame(name: String, reverse: Boolean = false): DataFrame = {
     val table = Fixtures.csv(s"cox/$name/input.csv")
-    val names = Seq("id", "stratum", "time", "event") ++ features(name)
+    val names = Seq("id", "stratum", "time", "event", "weight", "offset") ++ features(name)
     val index = names.map(table.columns.indexOf(_))
     val rows = table.rows.map { r =>
       Row.fromSeq(
@@ -50,14 +58,16 @@ class CoxPHSuite extends SparkSuite {
         StructField("id", LongType, nullable = false),
         StructField("stratum", LongType, nullable = false),
         StructField("time", DoubleType, nullable = false),
-        StructField("event", IntegerType, nullable = false)
+        StructField("event", IntegerType, nullable = false),
+        StructField("weight", DoubleType, nullable = false),
+        StructField("offset", DoubleType, nullable = false)
       ) ++ features(name).map(StructField(_, DoubleType, nullable = false))
     )
     spark.createDataFrame((if (reverse) rows.reverse else rows).asJava, schema)
   }
 
-  private def reference(name: String, source: String): JsonNode =
-    Fixtures.json(s"cox/$name/$source.json").get("breslow")
+  private def reference(name: String, source: String, ties: Ties): JsonNode =
+    Fixtures.json(s"cox/$name/$source.json").get(ties.name)
 
   private def doubles(node: JsonNode, key: String): Array[Double] = Fixtures.doubles(node.get(key))
 
@@ -77,37 +87,34 @@ class CoxPHSuite extends SparkSuite {
 
   private def bits(values: Seq[Double]): Seq[Long] = values.map(java.lang.Double.doubleToLongBits)
 
-  test("function-level parity at beta = 0 and the fixed beta (T-fn)") {
-    for (name <- cases; point <- Seq("beta_zero", "beta_fixed")) {
-      val beta = doubles(reference(name, "pprof_py").get(point), "beta")
-      val e = CoxPH.evaluateAt(frame(name), spec(name), beta)
+  test("function-level parity at beta = 0 and the fixed beta, both tie methods (T-fn)") {
+    for (name <- cases; ties <- methods; point <- Seq("beta_zero", "beta_fixed")) {
+      val beta = doubles(reference(name, "pprof_py", ties).get(point), "beta")
+      val e = CoxPH.evaluateAt(frame(name), spec(name), beta, CoxOptions(ties = ties))
       for (source <- Seq("pprof_py", "r_survival")) {
-        val node = reference(name, source).get(point)
-        check("T-fn", s"$name $point loglik vs $source", Seq(e.value), doubles(node, "loglik"))
-        check("T-fn", s"$name $point score vs $source", e.gradient.toSeq, doubles(node, "score"))
-        check(
-          "T-fn",
-          s"$name $point information vs $source",
-          e.information.toSeq,
-          doubles(node, "information")
-        )
+        val node = reference(name, source, ties).get(point)
+        val what = s"$name ${ties.name} $point vs $source"
+        check("T-fn", s"$what loglik", Seq(e.value), doubles(node, "loglik"))
+        check("T-fn", s"$what score", e.gradient.toSeq, doubles(node, "score"))
+        check("T-fn", s"$what information", e.information.toSeq, doubles(node, "information"))
       }
     }
   }
 
-  test("tight fits match pprof_py and R (T-coef, T-var, T-fn)") {
-    for (name <- cases) {
-      val fit = CoxPH.fit(frame(name), spec(name), tight)
-      assert(fit.converged, s"$name: ${fit.message}")
+  test("tight fits match pprof_py and R, both tie methods (T-coef, T-var, T-fn)") {
+    for (name <- cases; ties <- methods) {
+      val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
+      assert(fit.converged, s"$name ${ties.name}: ${fit.message}")
       for (source <- Seq("pprof_py", "r_survival")) {
-        val node = reference(name, source).get("tight")
-        check("T-coef", s"$name coefficients vs $source", fit.estimates, doubles(node, "coef"))
-        check("T-var", s"$name standard errors vs $source", fit.standardErrors, doubles(node, "se"))
-        check("T-var", s"$name covariance vs $source", fit.covariance, doubles(node, "covariance"))
-        check("T-fn", s"$name loglik vs $source", Seq(fit.logLikelihood), doubles(node, "loglik"))
+        val node = reference(name, source, ties).get("tight")
+        val what = s"$name ${ties.name} vs $source"
+        check("T-coef", s"$what coefficients", fit.estimates, doubles(node, "coef"))
+        check("T-var", s"$what standard errors", fit.standardErrors, doubles(node, "se"))
+        check("T-var", s"$what covariance", fit.covariance, doubles(node, "covariance"))
+        check("T-fn", s"$what loglik", Seq(fit.logLikelihood), doubles(node, "loglik"))
         check(
           "T-fn",
-          s"$name null loglik vs $source",
+          s"$what null loglik",
           Seq(fit.logLikelihoodNull),
           doubles(node, "loglik_null")
         )
@@ -116,14 +123,14 @@ class CoxPHSuite extends SparkSuite {
   }
 
   test("default fits stop where pprof_py stops, within T-coef of its estimates") {
-    for (name <- cases) {
-      val fit = CoxPH.fit(frame(name), spec(name))
-      val node = reference(name, "pprof_py").get("default")
-      assert(fit.converged, s"$name: ${fit.message}")
-      assertEquals(fit.iterations, node.get("iterations").asInt, s"$name iterations")
+    for (name <- cases; ties <- methods) {
+      val fit = CoxPH.fit(frame(name), spec(name), CoxOptions(ties = ties))
+      val node = reference(name, "pprof_py", ties).get("default")
+      assert(fit.converged, s"$name ${ties.name}: ${fit.message}")
+      assertEquals(fit.iterations, node.get("iterations").asInt, s"$name ${ties.name} iterations")
       check(
         "T-coef",
-        s"$name default coefficients vs pprof_py",
+        s"$name ${ties.name} default coefficients",
         fit.estimates,
         doubles(node, "coef")
       )
@@ -131,16 +138,16 @@ class CoxPHSuite extends SparkSuite {
   }
 
   test("lockstep: iterates before the final one match pprof_py's (T-iter)") {
-    for (name <- cases) {
-      val fit = CoxPH.fit(frame(name), spec(name))
-      val iterates = reference(name, "pprof_py").get("iterates")
+    for (name <- cases; ties <- methods) {
+      val fit = CoxPH.fit(frame(name), spec(name), CoxOptions(ties = ties))
+      val iterates = reference(name, "pprof_py", ties).get("iterates")
       val compared =
         (1 until fit.iterations).filter(k => iterates.get(k - 1).get("iterations").asInt == k)
-      assert(compared.nonEmpty, s"$name: no iterate to compare")
+      assert(compared.nonEmpty, s"$name ${ties.name}: no iterate to compare")
       for (k <- compared)
         check(
           "T-iter",
-          s"$name iterate $k",
+          s"$name ${ties.name} iterate $k",
           fit.iterationLog(k - 1).beta,
           doubles(iterates.get(k - 1), "beta")
         )
@@ -150,103 +157,180 @@ class CoxPHSuite extends SparkSuite {
   test("Wald statistics, p-values and intervals (T-test, T-p, T-fn)") {
     val threshold = Tolerances.number("T-p.log10.threshold")
     val atol = Tolerances.number("T-p.log10.atol")
-    for (name <- cases) {
-      val py = reference(name, "pprof_py").get("tight")
+    val q = Normal.upperQuantile(0.025)
+    for (name <- cases; ties <- methods) {
+      val py = reference(name, "pprof_py", ties).get("tight")
       val (coef, se, z, p) =
         (doubles(py, "coef"), doubles(py, "se"), doubles(py, "z"), doubles(py, "p"))
-      val q = pprof.spark.numerics.Normal.upperQuantile(0.025)
       for (j <- coef.indices) {
-        val ours = pprof.spark.numerics.Normal.twoSidedPValue(z(j))
+        val ours = Normal.twoSidedPValue(z(j))
         if (p(j) < threshold)
           assert(math.abs(StrictMath.log10(ours) - StrictMath.log10(p(j))) <= atol, s"$name p $j")
         else assert(Tolerances("T-test").accepts(ours, p(j)), s"$name p $j: $ours vs ${p(j)}")
       }
-      check(
-        "T-fn",
-        s"$name lower bounds",
-        coef.indices.map(j => coef(j) - q * se(j)),
-        doubles(py, "ci_lower")
-      )
-      check(
-        "T-fn",
-        s"$name upper bounds",
-        coef.indices.map(j => coef(j) + q * se(j)),
-        doubles(py, "ci_upper")
-      )
-      val r = reference(name, "r_survival").get("tight")
-      val fit = CoxPH.fit(frame(name), spec(name), tight)
+      val lower = coef.indices.map(j => coef(j) - q * se(j))
+      val upper = coef.indices.map(j => coef(j) + q * se(j))
+      check("T-fn", s"$name ${ties.name} lower bounds", lower, doubles(py, "ci_lower"))
+      check("T-fn", s"$name ${ties.name} upper bounds", upper, doubles(py, "ci_upper"))
+      val r = reference(name, "r_survival", ties).get("tight")
+      val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
       val rz = doubles(r, "coef").zip(doubles(r, "se")).map { case (b, s) => b / s }
-      check("T-test", s"$name z vs R", fit.coefficients.map(_.z), rz)
+      check("T-test", s"$name ${ties.name} z vs R", fit.coefficients.map(_.z), rz)
     }
   }
 
-  test("negative controls: Efron and shifted-tie estimates lie outside T-coef") {
-    for (name <- cases) {
-      val fit = CoxPH.fit(frame(name), spec(name), tight)
-      val controls = reference(name, "pprof_py").get("negative_controls")
+  test("negative controls: the other tie method and shifted ties lie outside T-coef") {
+    for (name <- cases; ties <- methods) {
+      val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
+      val controls = reference(name, "pprof_py", ties).get("negative_controls")
       for (control <- Seq("other_ties", "shifted_tie")) {
-        val ratio = Tolerances("T-coef").worstRatio(
-          fit.estimates.toArray,
-          doubles(controls.get(control), "coef")
-        )
-        assert(ratio > 10.0, s"$name $control: ratio $ratio")
+        val ratio =
+          Tolerances("T-coef").worstRatio(
+            fit.estimates.toArray,
+            doubles(controls.get(control), "coef")
+          )
+        assert(ratio > 10.0, s"$name ${ties.name} $control: ratio $ratio")
       }
     }
   }
 
-  test("R0: row order and partitioning leave every bit unchanged") {
-    val a = CoxPH.fit(frame("rc-stratified"), spec("rc-stratified"))
-    val b = CoxPH.fit(frame("rc-stratified", reverse = true).repartition(5), spec("rc-stratified"))
-    assertEquals(bits(b.estimates), bits(a.estimates))
-    assertEquals(bits(b.covariance), bits(a.covariance))
-    assertEquals(bits(Seq(b.logLikelihood)), bits(Seq(a.logLikelihood)))
-    assertEquals(b.fingerprint, a.fingerprint)
+  test("R0: row order and partitioning leave every bit unchanged, with weights and offsets") {
+    val name = "rc-stratified-weights-offset"
+    for (ties <- methods) {
+      val a = CoxPH.fit(frame(name), spec(name), CoxOptions(ties = ties))
+      val b =
+        CoxPH.fit(frame(name, reverse = true).repartition(5), spec(name), CoxOptions(ties = ties))
+      assertEquals(bits(b.estimates), bits(a.estimates))
+      assertEquals(bits(b.covariance), bits(a.covariance))
+      assertEquals(bits(Seq(b.logLikelihood)), bits(Seq(a.logLikelihood)))
+      assertEquals(b.fingerprint, a.fingerprint)
+    }
   }
 
   test("R1: another block layout stays within T-part") {
-    val small = CoxOptions(blocks = BlockOptions(targetBlockBytes = 2048L))
-    val a = CoxPH.fit(frame("rc-stratified"), spec("rc-stratified"))
-    val b = CoxPH.fit(frame("rc-stratified"), spec("rc-stratified"), small)
-    assert(b.layout.blockCount > a.layout.blockCount, s"${b.layout} vs ${a.layout}")
-    check("T-part.parameters", "estimates across layouts", b.estimates, a.estimates.toArray)
-    check("T-part.objective", "loglik across layouts", Seq(b.logLikelihood), Array(a.logLikelihood))
-    assertEquals(b.fingerprint, a.fingerprint)
+    val name = "rc-stratified-weights-offset"
+    for (ties <- methods) {
+      val small = CoxOptions(ties = ties, blocks = BlockOptions(targetBlockBytes = 2048L))
+      val a = CoxPH.fit(frame(name), spec(name), CoxOptions(ties = ties))
+      val b = CoxPH.fit(frame(name), spec(name), small)
+      assert(b.layout.blockCount > a.layout.blockCount, s"${b.layout} vs ${a.layout}")
+      check(
+        "T-part.parameters",
+        s"${ties.name} estimates across layouts",
+        b.estimates,
+        a.estimates.toArray
+      )
+      check(
+        "T-part.objective",
+        s"${ties.name} loglik across layouts",
+        Seq(b.logLikelihood),
+        Array(a.logLikelihood)
+      )
+      assertEquals(b.fingerprint, a.fingerprint)
+    }
   }
 
   test("metamorphic: monotone time maps, scaling and translation") {
     val name = "rc-stratified"
-    val base = CoxPH.fit(frame(name), spec(name))
-    val squared =
-      CoxPH.fit(frame(name).withColumn("time", col("time") * col("time") + 5.0), spec(name))
-    assertEquals(bits(squared.estimates), bits(base.estimates))
-    assertEquals(bits(Seq(squared.logLikelihood)), bits(Seq(base.logLikelihood)))
-    val scaled = CoxPH.fit(frame(name).withColumn("x1", col("x1") * 4.0), spec(name))
-    check(
-      "T-coef",
-      "x1 scaled by 4",
-      scaled.estimates,
-      base.estimates.updated(0, base.estimates(0) / 4).toArray
-    )
-    val shifted = CoxPH.fit(frame(name).withColumn("x2", col("x2") + 3.0), spec(name))
-    check("T-coef", "x2 shifted by 3", shifted.estimates, base.estimates.toArray)
+    for (ties <- methods) {
+      val options = CoxOptions(ties = ties)
+      val base = CoxPH.fit(frame(name), spec(name), options)
+      val squared =
+        CoxPH.fit(
+          frame(name).withColumn("time", col("time") * col("time") + 5.0),
+          spec(name),
+          options
+        )
+      assertEquals(bits(squared.estimates), bits(base.estimates))
+      assertEquals(bits(Seq(squared.logLikelihood)), bits(Seq(base.logLikelihood)))
+      val scaled = CoxPH.fit(frame(name).withColumn("x1", col("x1") * 4.0), spec(name), options)
+      val expected = base.estimates.updated(0, base.estimates(0) / 4).toArray
+      check("T-coef", s"${ties.name} x1 scaled by 4", scaled.estimates, expected)
+      val shifted = CoxPH.fit(frame(name).withColumn("x2", col("x2") + 3.0), spec(name), options)
+      check("T-coef", s"${ties.name} x2 shifted by 3", shifted.estimates, base.estimates.toArray)
+    }
   }
 
-  private def small(rows: (Double, Int, Double)*): DataFrame = {
+  test("metamorphic: weights scaled by 3 and an offset proportional to a covariate") {
+    for (ties <- methods) {
+      val options = CoxOptions(ties = ties)
+      val name = "rc-stratified-weights-offset"
+      val base = CoxPH.fit(frame(name), spec(name), options)
+      val tripled =
+        CoxPH.fit(frame(name).withColumn("weight", col("weight") * 3.0), spec(name), options)
+      check("T-coef", s"${ties.name} weights times 3", tripled.estimates, base.estimates.toArray)
+      val rootThree = math.sqrt(3.0)
+      check(
+        "T-var",
+        s"${ties.name} weights times 3, SE",
+        tripled.standardErrors,
+        base.standardErrors.map(_ / rootThree).toArray
+      )
+      val plain = "rc-stratified"
+      val noOffset = CoxPH.fit(frame(plain), spec(plain), options)
+      val withOffset = CoxPH.fit(
+        frame(plain).withColumn("o", col("x1") * 0.5),
+        spec(plain).copy(offset = Some("o")),
+        options
+      )
+      val expected = noOffset.estimates.updated(0, noOffset.estimates(0) - 0.5).toArray
+      check("T-coef", s"${ties.name} offset 0.5 x1", withOffset.estimates, expected)
+    }
+  }
+
+  test("a zero weight is the same as dropping the row, under both tie methods (X-013)") {
+    val name = "tiny-ties"
+    for (ties <- methods) {
+      val options = tight(ties)
+      // id 0 is an event tied with id 1 at time 1
+      val zero = frame(name).withColumn("weight", when(col("id") === 0L, 0.0).otherwise(1.0))
+      val a = CoxPH.fit(zero, spec(name).copy(weight = Some("weight")), options)
+      val b = CoxPH.fit(frame(name).filter(col("id") =!= 0L), spec(name), options)
+      check("T-coef", s"${ties.name} zero weight vs dropped row", a.estimates, b.estimates.toArray)
+      check(
+        "T-var",
+        s"${ties.name} zero weight vs dropped row, SE",
+        a.standardErrors,
+        b.standardErrors.toArray
+      )
+    }
+  }
+
+  test("under Breslow, an integer weight of 2 equals a duplicated row") {
+    val name = "rc-unstratified"
+    val doubled = frame(name).withColumn("weight", when(col("id") % 3L === 0L, 2.0).otherwise(1.0))
+    val copies = frame(name).union(
+      frame(name).filter(col("id") % 3L === 0L).withColumn("id", col("id") + 100000L)
+    )
+    val a = CoxPH.fit(doubled, spec(name).copy(weight = Some("weight")))
+    val b = CoxPH.fit(copies, spec(name))
+    check("T-coef", "weight 2 vs duplicated rows", a.estimates, b.estimates.toArray)
+    check("T-var", "weight 2 vs duplicated rows, SE", a.standardErrors, b.standardErrors.toArray)
+  }
+
+  private def small(rows: (Double, Int, Double, Double, Double)*): DataFrame = {
     val schema = StructType(
       Seq(
         StructField("time", DoubleType),
         StructField("event", IntegerType),
-        StructField("x1", DoubleType)
+        StructField("x1", DoubleType),
+        StructField("w", DoubleType),
+        StructField("o", DoubleType)
       )
     )
-    spark.createDataFrame(rows.map { case (t, e, x) => Row(t, e, x) }.asJava, schema)
+    spark.createDataFrame(rows.map { case (t, e, x, w, o) => Row(t, e, x, w, o) }.asJava, schema)
   }
 
-  test("invalid times, events and covariates fail with counts, never values") {
+  test("invalid times, events, covariates, weights and offsets fail with counts, never values") {
     val e = intercept[InvalidInputException](
       CoxPH.fit(
-        small((0.0, 1, 1.0), (-1.0, 0, 2.0), (2.0, 2, Double.NaN), (3.0, 1, 0.5)),
-        CoxSpec("time", "event", Seq("x1"))
+        small(
+          (0.0, 1, 1.0, 1.0, 0.0),
+          (-1.0, 0, 2.0, -0.5, 0.0),
+          (2.0, 2, Double.NaN, 1.0, Double.NaN),
+          (3.0, 1, 0.5, 1.0, 0.0)
+        ),
+        CoxSpec("time", "event", Seq("x1"), weight = Some("w"), offset = Some("o"))
       )
     )
     assertEquals(
@@ -254,16 +338,28 @@ class CoxPHSuite extends SparkSuite {
       Set[InputProblem](
         InputProblem.NonPositiveValues("time", 2L),
         InputProblem.NonBinaryValues("event", 1L),
-        InputProblem.InvalidValues("x1", 0L, 1L)
+        InputProblem.InvalidValues("x1", 0L, 1L),
+        InputProblem.NegativeValues("w", 1L),
+        InputProblem.InvalidValues("o", 0L, 1L)
       )
     )
   }
 
-  test("no events at all fails (X-012)") {
-    val e = intercept[InvalidInputException](
-      CoxPH.fit(small((1.0, 0, 1.0), (2.0, 0, 2.0)), CoxSpec("time", "event", Seq("x1")))
+  test("no events, or only zero-weight events, fails (X-012)") {
+    val none = intercept[InvalidInputException](
+      CoxPH.fit(
+        small((1.0, 0, 1.0, 1.0, 0.0), (2.0, 0, 2.0, 1.0, 0.0)),
+        CoxSpec("time", "event", Seq("x1"))
+      )
     )
-    assertEquals(e.problems, Seq[InputProblem](InputProblem.NoEvents))
+    assertEquals(none.problems, Seq[InputProblem](InputProblem.NoEvents))
+    val weightless = intercept[InvalidInputException](
+      CoxPH.fit(
+        small((1.0, 1, 1.0, 0.0, 0.0), (2.0, 0, 2.0, 1.0, 0.0)),
+        CoxSpec("time", "event", Seq("x1"), weight = Some("w"))
+      )
+    )
+    assertEquals(weightless.problems, Seq[InputProblem](InputProblem.NoEvents))
   }
 
   test("collinear and constant covariates fail and are named (X-011)") {
@@ -313,15 +409,17 @@ class CoxPHSuite extends SparkSuite {
 
   test("blocks hold rows in canonical order: time descending, events first, then row id") {
     val rows = Seq(
-      CoxRow(0, 1, 7L, 2.0, event = false, Array(1.0)),
-      CoxRow(0, 0, 3L, 1.0, event = true, Array(-0.0)),
-      CoxRow(0, 1, 5L, 2.0, event = true, Array(2.0)),
-      CoxRow(0, 1, 4L, 3.0, event = false, Array(0.5))
+      CoxRow(0, 1, 7L, 2.0, event = false, 1.0, 0.0, Array(1.0)),
+      CoxRow(0, 0, 3L, 1.0, event = true, 1.0, -0.0, Array(-0.0)),
+      CoxRow(0, 1, 5L, 2.0, event = true, 0.5, 0.25, Array(2.0)),
+      CoxRow(0, 1, 4L, 3.0, event = false, 2.0, 0.0, Array(0.5))
     )
     val block = CoxBlockBuilder.build(0, rows.iterator, 1)
     assertEquals(block.groupIndex.toSeq, Seq(0, 1))
     assertEquals(block.groupStart.toSeq, Seq(0, 1))
     assertEquals(block.rowId.toSeq, Seq(3L, 4L, 5L, 7L))
+    assertEquals(block.weight.toSeq, Seq(1.0, 2.0, 0.5, 1.0))
     assertEquals(java.lang.Double.doubleToLongBits(block.x(0)), 0L)
+    assertEquals(java.lang.Double.doubleToLongBits(block.offset(0)), 0L)
   }
 }

@@ -15,6 +15,8 @@ final case class CoxRow(
     rowId: Long,
     time: Double,
     event: Boolean,
+    weight: Double,
+    offset: Double,
     x: Array[Double]
 )
 
@@ -29,6 +31,8 @@ final case class CoxBlock(
     rowId: Array[Long],
     time: Array[Double],
     event: Array[Boolean],
+    weight: Array[Double],
+    offset: Array[Double],
     x: Array[Double]
 ) {
   def rowCount: Int = rowId.length
@@ -38,7 +42,9 @@ final case class CoxBlock(
 
 object CoxBlockBuilder {
 
-  /** Stratum, exit time descending, events first, row identifier, then covariate values. */
+  /** Stratum, exit time descending, events first, row identifier, then covariate values, weight
+    * and offset.
+    */
   val canonicalOrder: Ordering[CoxRow] = new Ordering[CoxRow] {
     def compare(a: CoxRow, b: CoxRow): Int = {
       val byGroup = Integer.compare(a.groupIndex, b.groupIndex)
@@ -51,7 +57,15 @@ object CoxBlockBuilder {
           if (byEvent != 0) byEvent
           else {
             val byRowId = java.lang.Long.compare(a.rowId, b.rowId)
-            if (byRowId != 0) byRowId else compareValues(a.x, b.x)
+            if (byRowId != 0) byRowId
+            else {
+              val byValues = compareValues(a.x, b.x)
+              if (byValues != 0) byValues
+              else {
+                val byWeight = java.lang.Double.compare(a.weight, b.weight)
+                if (byWeight != 0) byWeight else java.lang.Double.compare(a.offset, b.offset)
+              }
+            }
           }
         }
       }
@@ -67,6 +81,8 @@ object CoxBlockBuilder {
     val rowIds = new Array[Long](n)
     val times = new Array[Double](n)
     val events = new Array[Boolean](n)
+    val weights = new Array[Double](n)
+    val offsets = new Array[Double](n)
     val x = new Array[Double](n * p)
     val groups = Array.newBuilder[Int]
     val starts = Array.newBuilder[Int]
@@ -81,14 +97,32 @@ object CoxBlockBuilder {
       rowIds(r) = row.rowId
       times(r) = row.time
       events(r) = row.event
+      weights(r) = row.weight
+      offsets(r) = row.offset
       System.arraycopy(row.x, 0, x, r * p, p)
       r += 1
     }
-    CoxBlock(blockId, p, groups.result(), starts.result(), rowIds, times, events, x)
+    CoxBlock(
+      blockId,
+      p,
+      groups.result(),
+      starts.result(),
+      rowIds,
+      times,
+      events,
+      weights,
+      offsets,
+      x
+    )
   }
 
   private def normalize(row: CoxRow): CoxRow =
-    row.copy(time = row.time + 0.0, x = row.x.map(v => if (v == 0.0) 0.0 else v))
+    row.copy(
+      time = row.time + 0.0,
+      weight = row.weight + 0.0,
+      offset = row.offset + 0.0,
+      x = row.x.map(v => if (v == 0.0) 0.0 else v)
+    )
 
   private def compareValues(a: Array[Double], b: Array[Double]): Int = {
     var i = 0
@@ -125,6 +159,8 @@ object CoxWorkingSet {
         col(Validation.RowIdColumn).as("rowId"),
         col(CoxValidation.TimeColumn).as("time"),
         col(CoxValidation.EventColumn).as("event"),
+        col(CoxValidation.WeightColumn).as("weight"),
+        col(CoxValidation.OffsetColumn).as("offset"),
         col(Validation.FeaturesColumn).as("x")
       )
       .as[CoxRow](Encoders.product[CoxRow])

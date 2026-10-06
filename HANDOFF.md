@@ -1,5 +1,27 @@
 # Handoff
 
+## Round 11 (2026-10-06): Efron ties, case weights and offsets
+
+Round 10 passed CI (run 37502839703). The maintainer approved this round in advance (D-21) and,
+asked to confirm X-013, replied "Continue", so the corrected behavior stands.
+
+- Spec addendum `docs/spec/cox/efron-weights-offsets.md`: pprof_py's Efron formula (mean weight,
+  k = 1 to d, the d = 1 shortcut), which R's coxfit6 shares; weights finite and non-negative;
+  offsets finite; model-based variance; X-013, a zero weight equals an absent row under both
+  methods (pprof_py still counts a zero-weight tied event under Efron; R rejects zero weights).
+- `numerics`: `CoxStratum` replaces `CoxBreslow`, with weights, offsets and Efron. Unweighted
+  Breslow fits are bitwise identical to round 10's.
+- `engine.cox`: `CoxSpec.weight` and `CoxSpec.offset`, `Ties.Efron`, validation of both columns,
+  weights and offsets in the blocks, canonical order and fingerprint.
+- Tests: `CoxStratumSuite` (7) and `CoxPHSuite` (19), both tie methods on all four fixtures, plus
+  metamorphic tests for weights and offsets and the X-013 equivalence.
+- Spark Connect caught a defect: with no weight column, two validation counts shared an expression
+  and Spark Connect rejected the duplicate column names (OI-39). Every count now has an alias.
+- Sandbox verification: JDK 17 and 21 under Classic Spark and JDK 17 under Spark Connect pass
+  (numerics 51, testkit 11, engine 53 each); the eight fixture fits are bitwise identical across
+  the three. Worst ratios: T-coef 0.995 (Breslow) and 0.596 (Efron), both tiny-ties against
+  pprof_py (X-010); T-fn 0.020; T-iter 2.3e-4; T-var 1.5e-3; T-test 1.6e-7.
+
 ## Round 10 (2026-10-06): the first Cox slice
 
 The maintainer approved the Cox first-slice specification with its three discrepancy decisions

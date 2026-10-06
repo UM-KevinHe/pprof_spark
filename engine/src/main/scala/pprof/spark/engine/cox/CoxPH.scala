@@ -18,11 +18,12 @@ import pprof.spark.numerics.{
 }
 import pprof.spark.numerics.kernels.Moments
 
-/** The tie method (§7.2). This slice implements Breslow; Efron follows in Phase 1a. */
+/** The tie method (§7.2 and addendum §2). Breslow is the default (D-06). */
 sealed abstract class Ties(val name: String) extends Product with Serializable
 
 object Ties {
   case object Breslow extends Ties("breslow")
+  case object Efron extends Ties("efron")
 }
 
 /** Fit options (Cox specification §5); defaults are pprof_py's and R's. */
@@ -92,8 +93,8 @@ final class CoxAliasingException(val features: Seq[String])
         "combination of the others, so its coefficient is not identifiable"
     )
 
-/** Stratified Cox regression for right-censored data with Breslow ties and model-based variance
-  * (docs/spec/cox/first-slice.md).
+/** Stratified Cox regression for right-censored data with Breslow or Efron ties, case weights,
+  * offsets and model-based variance (docs/spec/cox/first-slice.md, efron-weights-offsets.md).
   */
 object CoxPH {
 
@@ -101,7 +102,12 @@ object CoxPH {
     withWorkingSet(df, spec, options) { prepared =>
       val p = spec.features.size
       val result =
-        try Newton.maximize(beta => evaluate(prepared, beta), new Array[Double](p), options.newton)
+        try
+          Newton.maximize(
+            beta => evaluate(prepared, beta, options.ties),
+            new Array[Double](p),
+            options.newton
+          )
         catch {
           case e: AliasedException => throw new CoxAliasingException(e.columns.map(spec.features))
         }
@@ -157,7 +163,8 @@ object CoxPH {
       spec: CoxSpec,
       beta: Array[Double],
       options: CoxOptions = CoxOptions()
-  ): Evaluation = withWorkingSet(df, spec, options)(prepared => evaluate(prepared, beta))
+  ): Evaluation =
+    withWorkingSet(df, spec, options)(prepared => evaluate(prepared, beta, options.ties))
 
   private final case class Prepared(
       plan: LayoutPlan,
@@ -219,12 +226,13 @@ object CoxPH {
   }
 
   /** One pass: block partials combined in block order (ADR-0003). */
-  private def evaluate(prepared: Prepared, beta: Array[Double]): Evaluation = {
+  private def evaluate(prepared: Prepared, beta: Array[Double], ties: Ties): Evaluation = {
     val p = prepared.center.length
     val b = beta.clone()
     val c = prepared.center.clone()
+    val efron = ties == Ties.Efron
     val partials = prepared.workingSet.blocks
-      .map((block: CoxBlock) => CoxKernel.partial(block, b, c))(Encoders.product[CoxPartial])
+      .map((block: CoxBlock) => CoxKernel.partial(block, b, c, efron))(Encoders.product[CoxPartial])
       .collect()
       .sortBy(_.blockId)
       .toSeq
