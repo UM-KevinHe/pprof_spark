@@ -7,7 +7,8 @@ used only to produce reference results for the test suite.
 
 **Status: Phase 1a (Cox estimation core).** Stratified Cox regression for right-censored data is
 in place (`pprof.spark.engine.cox.CoxPH`): Breslow or Efron ties, case weights, offsets and
-model-based variance, at parity with pprof_py v0.7.0 and R. Every
+model-based variance, entry times (left truncation), the per-stratum baseline hazard and
+predictions, at parity with pprof_py v0.7.0 and R. Every
 feature stays `Experimental` until it passes the parity gate (NN-12).
 
 | Document | Purpose |

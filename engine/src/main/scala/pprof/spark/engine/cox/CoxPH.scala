@@ -1,8 +1,10 @@
 package pprof.spark.engine.cox
 
 import org.apache.spark.sql.{DataFrame, Encoders}
+import org.apache.spark.sql.functions.{broadcast, col}
 
-import pprof.spark.engine.backend.{BlockOptions, DriverGuards, OrderedReduction}
+import pprof.spark.engine.backend.{BlockOptions, DriverGuards, OrderedReduction, PlanFrames}
+import pprof.spark.engine.data.Validation
 import pprof.spark.engine.layout.{GroupSizes, LayoutPlan}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
@@ -189,7 +191,49 @@ object CoxPH {
   ): Evaluation =
     withWorkingSet(df, spec, options)(prepared => evaluate(prepared, beta, options.ties))
 
+  /** Columns of the baseline hazard table (Phase 1b specification §5). */
+  val BaselineColumns: Seq[String] =
+    Seq("stratum", "time", "hazard_increment", "cumulative_hazard", "survival")
+
+  /** The per-stratum baseline hazard of `fit` at x = 0 and offset 0 (Phase 1b specification §2,
+    * X-014), computed on the executors from the training data `df`, whose fingerprint must match
+    * the fit's (API-3). The table is persisted at the fit's storage level and never collected
+    * (DIST-1); the caller may unpersist it.
+    */
+  def baseline(df: DataFrame, fit: CoxFit): DataFrame =
+    withWorkingSet(df, fit.spec, fit.options) { prepared =>
+      if (prepared.fingerprint != fit.fingerprint)
+        throw new IllegalArgumentException(
+          "the data differ from the data the model was fitted to (fingerprint mismatch, API-3)"
+        )
+      val beta = fit.estimates.toArray
+      val efron = fit.options.ties == Ties.Efron
+      val rows = prepared.workingSet.blocks
+        .flatMap((block: CoxBlock) => CoxKernel.baseline(block, beta, efron))(
+          Encoders.product[CoxBaselineRow]
+        )
+      val keys = PlanFrames
+        .placements(df.sparkSession, prepared.plan, prepared.strataKeyIsText)
+        .select(
+          col(PlanFrames.GroupIndexColumn).as("groupIndex"),
+          col(Validation.GroupColumn).as("stratum")
+        )
+      val table = rows
+        .join(broadcast(keys), Seq("groupIndex"))
+        .select(
+          col("stratum"),
+          col("time"),
+          col("increment").as("hazard_increment"),
+          col("cumulativeHazard").as("cumulative_hazard"),
+          col("survival")
+        )
+        .persist(fit.options.blocks.resolvedStorageLevel)
+      table.count()
+      table
+    }
+
   private final case class Prepared(
+      strataKeyIsText: Boolean,
       plan: LayoutPlan,
       workingSet: CoxWorkingSet,
       center: Array[Double],
@@ -236,6 +280,7 @@ object CoxPH {
       val sums = OrderedReduction.reduce(summaries.toSeq.map(s => s.blockId -> s.columnSums), p)
       body(
         Prepared(
+          input.strataKeyIsText,
           plan,
           workingSet,
           sums.map(_ / rows.toDouble),

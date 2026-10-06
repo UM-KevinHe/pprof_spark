@@ -1,5 +1,25 @@
 # Handoff
 
+## Round 15 (2026-10-06): baseline hazard, prediction, and format version 2
+
+- `numerics`: `CoxStratum.baseline` returns each stratum's event times and increments at β with
+  uncentered covariates (x = 0, offset 0): d_w/S₀, or m·Σ 1/Aₖ for Efron with ties, with the same
+  risk sets and entry-time removals as the likelihood.
+- `CoxPH.baseline(df, fit)`: checks the data fingerprint (API-3), builds the table on the executors
+  (stratum, time, hazard_increment, cumulative_hazard, survival) with a Neumaier running total,
+  persists it and never collects it (DIST-1).
+- `CoxPrediction`: linear predictor, relative hazard exp(min(η, 700)), and the cumulative hazard and
+  survival at each row's own time through a union-and-window as-of join, right-continuous; Spark's
+  EXP is StrictMath-based. Missing or non-finite inputs and strata without a baseline fail with
+  counts (`InputProblem.UnknownStrata`).
+- `CoxFitIO` format version 2: `hasBaseline` and the baseline table as Parquet; versions 1 and 2
+  load. `loadBaseline` returns the table when one was saved.
+- Tests (`CoxBaselineSuite`): baselines and predictions against pprof_py at pprof_py's own
+  estimates (so X-010 does not enter) and against R's `basehaz` end to end, for six fixtures and
+  both tie methods; steps between grid points; R0; the fingerprint check; validation; persistence.
+- Sandbox verification, run in parts to fit the sandbox time limit: JDK 17 Classic, JDK 21 Classic
+  and JDK 17 Spark Connect each pass numerics 54, testkit 11 and engine 67.
+
 ## Round 14 (2026-10-06): Phase 1b fixtures and fitting with entry times
 
 The maintainer approved the Phase 1b specification with X-014 (D-23).

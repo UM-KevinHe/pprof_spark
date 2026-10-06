@@ -1,8 +1,7 @@
 # Specification: counting-process data, baseline hazard and prediction (Phase 1b)
 
-- Status: **Approved on 2026-10-06 (D-23), including X-014.** Round 14 implements §1 (fitting with
-  entry times) and generates the fixtures for §2 and §3; round 15 implements the baseline,
-  prediction and persistence of the baseline.
+- Status: **Approved on 2026-10-06 (D-23), including X-014.** Implemented in rounds 14 (§1 and the
+  fixtures) and 15 (§2, §3 and §5: `CoxPH.baseline`, `CoxPrediction`, `CoxFitIO` format version 2).
 - Extends [first-slice.md](first-slice.md) and [efron-weights-offsets.md](efron-weights-offsets.md);
   everything not stated here is unchanged.
 - Reference: pprof_py v0.7.0 (`CoxPH.fit(start=, stop=)`, `inference/survival/baseline.py`
@@ -101,8 +100,8 @@ from it. The Neumaier compensation bounds this, and a heavily truncated fixture 
 |---|---|---|
 | Fixtures | New cases from the generator: left-truncated stratified data with ties, and left truncation with weights and offsets; pprof_py fits (both methods, function-level, iterates), raw and public baselines, and predictions for three covariate profiles; R fits, `basehaz(centered = FALSE)` and `survfit` cumulative hazards | — |
 | Function, lockstep, end to end | As in Phase 1a, for the new cases | T-fn, T-iter, T-coef, T-var |
-| Baseline | Increments and cumulative hazards against pprof_py's raw baseline and, after the X-014 factor, its public baseline and R's | T-base |
-| Prediction | All four quantities on pprof_py's grid and between grid points | T-base |
+| Baseline | Increments and cumulative hazards against pprof_py's raw baseline and, after the X-014 factor, its public baseline, evaluated at pprof_py's estimates so that X-010 does not enter; against R's `basehaz` end to end | T-base |
+| Prediction | All four quantities on pprof_py's grid at its estimates, and the step between grid points | T-base |
 | Metamorphic | Entry 0 everywhere gives the Phase 1a results bit for bit; splitting (a, b] at c into (a, c] without event and (c, b] leaves the fit unchanged; shifting every time by a constant leaves β̂ unchanged and shifts the baseline; entries below every event time change nothing | bitwise or T-coef |
 | Reproducibility | R0, R1 (T-base), R2 | as stated |
 

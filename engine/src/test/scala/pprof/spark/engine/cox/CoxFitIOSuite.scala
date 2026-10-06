@@ -111,15 +111,16 @@ class CoxFitIOSuite extends SparkSuite {
       .toSeq
     assertEquals(parts.size, 1)
     val text = new String(Files.readAllBytes(parts.head), UTF_8)
-    assert(text.contains("\"formatVersion\":1,"), text.take(80))
+    val current = s"\"formatVersion\":${CoxFitIO.FormatVersion},"
+    assert(text.contains(current), text.take(80))
     Files.write(
       parts.head,
-      text.replace("\"formatVersion\":1,", "\"formatVersion\":99,").getBytes(UTF_8)
+      text.replace(current, "\"formatVersion\":99,").getBytes(UTF_8)
     )
     // Hadoop's local file system keeps a checksum beside each file; drop it with the edit.
     Files.deleteIfExists(parts.head.resolveSibling(s".${parts.head.getFileName}.crc"))
     val e = intercept[IllegalArgumentException](CoxFitIO.load(spark, path))
     assert(e.getMessage.contains("format version 99"), e.getMessage)
-    assert(e.getMessage.contains(s"format version ${CoxFitIO.FormatVersion}"), e.getMessage)
+    assert(e.getMessage.contains("format versions 1 and 2"), e.getMessage)
   }
 }

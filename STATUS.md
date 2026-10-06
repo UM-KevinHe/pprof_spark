@@ -1,10 +1,10 @@
 # Status
 
-Updated 2026-10-06, round 14.
+Updated 2026-10-06, round 15.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: signed off (D-22)**; it closes when CI confirms rounds 11 and 12.
-**Phase 1b, counting process and baseline: in progress.** The specification is approved (D-23);
-fitting with entry times is done, and the baseline and prediction come next.
+**Phase 1b, counting process and baseline: implemented.** Fitting with entry times, the baseline
+hazard table and prediction are at parity in the sandbox; the Phase 1b gate review comes next.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
 
@@ -32,8 +32,9 @@ fitting with entry times is done, and the baseline and prediction come next.
 | 11 | Efron ties, case weights and offsets (D-21, X-013) | Merged (f619e9b); CI not yet read |
 | 12 | `CoxFit` persistence (OI-37), information matrix in the result, warning logging (OI-36), Phase 1a gate review (D-22) | Merged (094fd5b); CI to confirm |
 | 13 | Phase 1b specification: (start, stop] data, left truncation, baseline hazard, prediction (D-23, X-014) | Merged (f7aed80); approved 2026-10-06 |
-| 14 | Phase 1b fixtures (left truncation, baselines, predictions) and fitting with entry times | Delivered as a patch; CI to confirm |
-| 15 | Baseline hazard table, prediction, and persisting the baseline | Planned |
+| 14 | Phase 1b fixtures (left truncation, baselines, predictions) and fitting with entry times | Merged (ac55216); CI to confirm |
+| 15 | Baseline hazard table, prediction, and persisting the baseline (format version 2) | Delivered as a patch; CI to confirm |
+| 16 | Phase 1b gate review; then the Phase 1c specification (residuals, robust variance) | Planned |
 
 ## Decisions and spikes
 

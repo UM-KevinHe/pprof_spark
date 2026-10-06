@@ -208,4 +208,81 @@ object CoxStratum {
     }
     totals.add(stratum)
   }
+
+  /** Baseline hazard increments at the stratum's event times, in ascending time (Phase 1b
+    * specification §2), at `beta` with uncentered covariates, so they refer to x = 0 and offset 0:
+    * d_w/S₀ for Breslow fits and for Efron fits with one event at the time, and m·Σₖ 1/Aₖ for Efron
+    * fits with tied events (pprof_py's `_efron_baseline_numba`). Risk sets, removals at entry times
+    * and zero weights follow [[add]].
+    */
+  def baseline(
+      time: Array[Double],
+      entry: Array[Double],
+      entryOrder: Array[Int],
+      event: Array[Boolean],
+      weight: Array[Double],
+      offset: Array[Double],
+      x: Array[Double],
+      p: Int,
+      from: Int,
+      until: Int,
+      beta: Array[Double],
+      efron: Boolean
+  ): (Array[Double], Array[Double]) = {
+    require(beta.length == p, "dimension mismatch")
+    val s0 = new NeumaierSum
+    val riskScore = new Array[Double](until - from)
+    val times = Array.newBuilder[Double]
+    val increments = Array.newBuilder[Double]
+    var removal = from
+    var r = from
+    while (r < until) {
+      val t = time(r)
+      var d = 0
+      var dw = 0.0
+      var tied0 = 0.0
+      while (r < until && time(r) == t) {
+        val w = weight(r)
+        if (w > 0.0) {
+          var j = 0
+          var linear = 0.0
+          while (j < p) {
+            linear += x(r * p + j) * beta(j)
+            j += 1
+          }
+          val rw = w * StrictMath.exp(linear + offset(r))
+          riskScore(r - from) = rw
+          s0.add(rw)
+          if (event(r)) {
+            d += 1
+            dw += w
+            tied0 += rw
+          }
+        }
+        r += 1
+      }
+      while (removal < until && entry(entryOrder(removal)) >= t) {
+        val i = entryOrder(removal)
+        if (weight(i) > 0.0) s0.add(-riskScore(i - from))
+        removal += 1
+      }
+      if (d > 0) {
+        val total0 = s0.value
+        val increment =
+          if (!efron || d == 1) dw / total0
+          else {
+            var sum = 0.0
+            var k = 1
+            while (k <= d) {
+              sum += 1.0 / ((total0 - tied0) + (k.toDouble / d) * tied0)
+              k += 1
+            }
+            (dw / d) * sum
+          }
+        times += t
+        increments += increment
+      }
+    }
+    (times.result().reverse, increments.result().reverse)
+  }
 }

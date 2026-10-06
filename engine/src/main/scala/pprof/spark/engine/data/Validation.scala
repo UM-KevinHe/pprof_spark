@@ -48,6 +48,11 @@ object InputProblem {
       extends InputProblem(name, s"has $count negative values")
   final case class EntryNotBeforeExit(name: String, exit: String, count: Long)
       extends InputProblem(name, s"has $count values that are not below column $exit")
+  final case class UnknownStrata(name: String, count: Long)
+      extends InputProblem(
+        name,
+        s"has $count rows whose stratum has no baseline hazard (absent from the fit or without events)"
+      )
   final case class NonBinaryValues(name: String, count: Long)
       extends InputProblem(name, s"has $count values other than 0 and 1")
   case object NoEvents

@@ -1,6 +1,6 @@
 package pprof.spark.engine.cox
 
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.types.{
   ArrayType,
   BooleanType,
@@ -26,7 +26,10 @@ import pprof.spark.numerics.IterationRecord
   */
 object CoxFitIO {
 
-  val FormatVersion: Int = 1
+  val FormatVersion: Int = 2
+
+  /** Versions this release reads: 1 lacks `entryCol` and `hasBaseline`. */
+  val ReadableVersions: Set[Int] = Set(1, 2)
   val Kind: String = "pprof.spark.engine.cox.CoxFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -58,6 +61,7 @@ object CoxFitIO {
       field("weightCol", StringType, nullable = true),
       field("offsetCol", StringType, nullable = true),
       field("entryCol", StringType, nullable = true),
+      field("hasBaseline", BooleanType, nullable = true),
       field("ties", StringType),
       field("maxIterations", IntegerType),
       field("epsBits", LongType),
@@ -102,8 +106,15 @@ object CoxFitIO {
 
   private def bits(values: Seq[Double]): Seq[Long] = values.map(bit)
 
-  /** Writes `fit` under `path`, which must not exist yet. */
-  def save(spark: SparkSession, fit: CoxFit, path: String): Unit = {
+  /** Writes `fit`, and its baseline table when given (Parquet, §6.10), under `path`, which must not
+    * exist yet.
+    */
+  def save(
+      spark: SparkSession,
+      fit: CoxFit,
+      path: String,
+      baseline: Option[DataFrame] = None
+  ): Unit = {
     val software = fit.software.toFields
     val c = fit.coefficients
     val o = fit.options
@@ -121,6 +132,7 @@ object CoxFitIO {
       fit.spec.weight.orNull,
       fit.spec.offset.orNull,
       fit.spec.entry.orNull,
+      baseline.isDefined,
       o.ties.name,
       o.maxIterations,
       bit(o.eps),
@@ -165,10 +177,18 @@ object CoxFitIO {
       .write
       .mode("errorifexists")
       .json(s"$path/metadata")
+    baseline.foreach(_.coalesce(1).write.mode("errorifexists").parquet(s"$path/baseline"))
   }
 
-  /** Reads a fit written by [[save]]; every double comes back bit for bit (PERS-1). */
-  def load(spark: SparkSession, path: String): CoxFit = {
+  /** The baseline table saved with the fit, if any. */
+  def loadBaseline(spark: SparkSession, path: String): Option[DataFrame] = {
+    val record = metadata(spark, path)
+    if (Option(record.getAs[Any]("hasBaseline")).contains(true))
+      Some(spark.read.parquet(s"$path/baseline"))
+    else None
+  }
+
+  private def metadata(spark: SparkSession, path: String): Row = {
     val records = spark.read.schema(MetadataSchema).json(s"$path/metadata").collect()
     require(
       records.length == 1,
@@ -178,10 +198,17 @@ object CoxFitIO {
     val kind = Option(r.getAs[String]("kind"))
     val version = Option(r.getAs[Any]("formatVersion"))
     require(
-      kind.contains(Kind) && version.contains(FormatVersion),
+      kind.contains(Kind) && version.exists(v => ReadableVersions.exists(_ == v)),
       s"$path holds ${kind.getOrElse("an unknown kind")} of format version " +
-        s"${version.getOrElse("unknown")}; this release reads $Kind of format version $FormatVersion"
+        s"${version.getOrElse("unknown")}; this release reads $Kind of format versions " +
+        s"${ReadableVersions.toSeq.sorted.mkString(" and ")}"
     )
+    r
+  }
+
+  /** Reads a fit written by [[save]]; every double comes back bit for bit (PERS-1). */
+  def load(spark: SparkSession, path: String): CoxFit = {
+    val r = metadata(spark, path)
     def seq[A](name: String): Seq[A] = r.getSeq[A](r.fieldIndex(name)).toSeq
     def double(name: String): Double = java.lang.Double.longBitsToDouble(r.getAs[Long](name))
     def doubles(name: String): Vector[Double] =
