@@ -1,5 +1,28 @@
 # Handoff
 
+## Round 7 (2026-10-06): remaining spikes and the Phase 0 gate review
+
+### CI result of round 6
+Run 37477285324 on `main` (0be6e54): every job passed; tests counted engine 34, numerics 29 and
+testkit 11, so `FixturesSuite` and the calibration checks pass in CI.
+
+### What this round adds
+- S-05 (ADR-0006, D-18): `bench` module with `DeterminismCost` and the manual `bench.yml`.
+  Deterministic mode stays the default; multi-sum kernels use a fused pairwise cascade (OI-34).
+- S-06 (ADR-0007, D-19): `.devcontainer/` for Codespaces; the maintainer's trial is pending.
+- ADR-0008: S-01, S-02's Databricks legs, S-03, S-04 and S-07 deferred, with reasons.
+- `docs/gates/phase-0.md`: the gate review. Phase 0 closes when this round's CI passes.
+
+### Evidence (assistant sandbox)
+`DeterminismCost` compiled with scalac 2.13.16 and the build's flags and ran twice on OpenJDK
+17.0.20 and 21.0.12; the fused cascade reproduced the per-statistic pairwise bits (checked by the
+program before timing). The dev container is configuration only (JSON parses; `bash -n` passes).
+No test or main code of the other modules changed.
+
+### Next
+Round 8 opens Phase 1a: PROJECT_CONTEXT v2.2 (OI-27), then the Cox specification (approval needed,
+NN-2).
+
 ## Round 6 (2026-10-06): Cox reference fixtures and tolerance calibration
 
 ### CI result of round 5

@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-06, round 6. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-06, round 7. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -20,7 +20,7 @@ decision is approved.
 | OI-12 | pprof_py's R-comparison suite has 26 documented failures and does not run in upstream CI | Closed: see X-007 and X-008 |
 | OI-13 | pprof_py's README says the lme4 comparison script is not in the repository | Relevant to PAR-2 for random-effect models (later phases) |
 | OI-14 | Second CI time zone (§5.5) | Add with the first time-handling code (data contract) |
-| OI-15 | Deferred tooling: scalafix (with a semantic ARCH-2 rule), scoverage, MiMa from 1.0, Scala Steward or Dependabot (keep the munit pin), parity-matrix CI check (§9.8), Codespaces devcontainer (S-06) | Schedule per round |
+| OI-15 | Deferred tooling: scalafix (with a semantic ARCH-2 rule), scoverage, MiMa from 1.0, Scala Steward or Dependabot (keep the munit pin), parity-matrix CI check (§9.8) | Schedule per round |
 | OI-16 | §8.4 names `testkit/tolerances.conf`; the file is the classpath resource `testkit/src/main/resources/tolerances.conf` | Doc fix |
 | OI-17 | `numerics` tests cannot use `testkit`, which brings Spark and scala-library 2.13.17 | Spark-free `testkit-core` when `numerics` needs tolerance assertions (round 4) |
 | OI-18 | sbt evidence | Closed: run 37325078166 passed every job, tests included, on JDK 17 and 21 |
@@ -38,4 +38,5 @@ decision is approved.
 | OI-31 | DIST-1's naming rule (`collect…` and `toLocal…` methods) is enforced by review only | Consider a source check once more models exist |
 | OI-32 | Fixture families for later phases | Left truncation and baseline hazards (1b), residuals and robust variance (1c), provider measures (1d), each with negative controls |
 | OI-33 | Upstream reports to pprof_py: the README's failure count (X-008) and the step-control order (X-010) | Maintainer |
+| OI-34 | Kernels with several sums per row need a fused pairwise cascade: one walk over rows, the same addition tree as `Summation.pairwise` per statistic (ADR-0006) | Reusable form in `numerics` with the first Cox kernel |
 | OI-20 | Re-verification (§3.4, §5.1): Spark/Scala pairs, DBR 18 facts and pprof_py README claims checked 2026-10-03; §3.4 rows await the pin | DISCREPANCIES.md after D-05 |

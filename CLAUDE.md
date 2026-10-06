@@ -9,6 +9,7 @@ then the pinned reference (reference/REFERENCE.lock), then PROJECT_CONTEXT.md, t
 - `sbt ci`: formatting check, compile, tests (layers T1–T3). `sbt scalafmtAll scalafmtSbt` formats.
 - `sbt -Dpprof.linkageCheck=true compile`: compile main code against the runtime's scala-library.
 - `bash scripts/check-engine-api.sh [--self-test]`: engine API rules.
+- `sbt "bench/runMain pprof.spark.bench.DeterminismCost"`: cost of deterministic mode (ADR-0006).
 
 ## Reference fixtures
 `fixtures/` is generated, never edited by hand: `python reference/fixtures/generate.py` (fixture

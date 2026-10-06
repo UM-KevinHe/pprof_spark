@@ -1,0 +1,30 @@
+# Benchmarks (PROJECT_CONTEXT §10.4), run by hand. Spike S-05: the cost of deterministic mode
+# (ADR-0006) on a GitHub runner. Results go to the job summary and appear as notices on the run
+# page.
+name: bench
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  determinism-cost:
+    name: Cost of deterministic mode (JDK ${{ matrix.java }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ["17", "21"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - name: Microbenchmarks (S-05)
+        run: sbt -v "bench/runMain pprof.spark.bench.DeterminismCost"

@@ -1,0 +1,14 @@
+{
+  "name": "pprof_spark",
+  "image": "mcr.microsoft.com/devcontainers/java:21-bookworm",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["scalameta.metals"]
+    }
+  }
+}

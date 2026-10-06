@@ -41,6 +41,11 @@ sbt -Dpprof.linkageCheck=true compile   # PLAT-3: compile against the runtime's 
 bash scripts/check-engine-api.sh        # ARCH-2 and PLAT-7 engine API rules
 ```
 
+## Development environment
+
+CI is the build and test environment. For interactive work, `.devcontainer/` sets up a GitHub
+codespace with JDK 21, sbt and Metals (ADR-0007); use synthetic data only.
+
 ## Reference fixtures
 
 `fixtures/` holds synthetic inputs and reference outputs from pprof_py and R for parity tests;

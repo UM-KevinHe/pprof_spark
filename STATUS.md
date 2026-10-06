@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-06, round 6.
+Updated 2026-10-06, round 7: Phase 0 gate review recorded (docs/gates/phase-0.md).
 
 **Phase 0, foundations and spikes: in progress.** No phase gate has been passed.
 
@@ -9,7 +9,7 @@ Updated 2026-10-06, round 6.
 | Criterion | Status | Evidence |
 |---|---|---|
 | CI green on the platform skeleton, under Classic Spark and Spark Connect | Met | Run 37458038911 (`main` at 7f31717): every job passed; the test jobs counted engine 34, numerics 29, testkit 6 |
-| Every spike recorded as an ADR | In progress | ADR-0002 (S-02, local part) accepted. S-01, S-03, S-07 and the Databricks legs of S-02 are deferred by D-14 and will be recorded as deferred; S-04, S-05 and S-06 remain |
+| Every spike recorded as an ADR | Met with round 7 | S-02 local: ADR-0002; S-05: ADR-0006; S-06: ADR-0007 (trial pending); deferred spikes: ADR-0008 |
 | Phase 0 decisions resolved | Met | D-01 to D-17 are approved or delegated (2026-10-06) |
 
 ## Rounds
@@ -22,8 +22,9 @@ Updated 2026-10-06, round 6.
 | 3 | Maintainer decisions (D-05, D-10, D-11, D-13, D-14); reference pinned to pprof_py v0.7.0; T8 required; linkage fix | Merged (35f5a7c); CI green, run 37361715287 |
 | 4 | `numerics`: deterministic summation and the StrictMath rule (ADR-0003) | Merged (08b378f); CI green, run 37361715287 (40 tests per JDK) |
 | 5 | Platform skeleton: data contract, layout plan, working set, kernels, ordered reduction, result table, persistence (ADR-0004) | Merged (7f31717); CI green, run 37458038911 |
-| 6 | Reference fixtures for Cox (pprof_py v0.7.0, R 4.3.3, survival 3.5-8), calibration, R-comparison triage (ADR-0005) | Delivered as a patch |
-| 7 | S-05 (cost of deterministic mode), S-06 (Codespaces), deferred-spike ADRs, Phase 0 gate review | Planned |
+| 6 | Reference fixtures for Cox (pprof_py v0.7.0, R 4.3.3, survival 3.5-8), calibration, R-comparison triage (ADR-0005) | Merged (0be6e54); CI green, run 37477285324 |
+| 7 | S-05 (ADR-0006), S-06 (ADR-0007), deferred spikes (ADR-0008), Phase 0 gate review | Delivered as a patch; Phase 0 closes when its CI passes |
+| 8 | Phase 1a begins: PROJECT_CONTEXT v2.2, then the Cox specification for the first slice | Planned |
 
 ## Decisions and spikes
 

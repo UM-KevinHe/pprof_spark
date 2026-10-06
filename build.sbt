@@ -183,10 +183,15 @@ lazy val testkit = project
     )
   )
 
-/** Benchmark workloads (§10.4). Never published. No sources yet. */
+/** Benchmark workloads (§10.4), run with `bench/runMain`. Never published. */
 lazy val bench = project
   .dependsOn(engine, testkit)
   .settings(sparkModuleSettings)
-  .settings(name := "pprof-spark-bench", publish / skip := true)
+  .settings(
+    name := "pprof-spark-bench",
+    publish / skip := true,
+    Compile / run / fork := true,
+    Compile / run / javaOptions ++= Seq("-Xmx2g")
+  )
 
 addCommandAlias("ci", "; scalafmtCheckAll; scalafmtSbtCheck; Test/compile; test")

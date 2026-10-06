@@ -88,6 +88,15 @@ Exact synthetic inputs generated once (CSV), reference outputs from pprof_py v0.
 with survival 3.5-8 as hexadecimal doubles (JSON), a checksummed manifest, stored negative
 controls, and calibration enforced in CI by `FixturesSuite`.
 
+### D-18: Deterministic mode stays the default (Approved, delegated, 2026-10-06; ADR-0006)
+
+Spike S-05 measured the cost of `StrictMath` and ordered sums; in a Cox-shaped kernel, sums built
+with a fused pairwise cascade make determinism nearly free. There is no fast mode for now.
+
+### D-19: Codespaces development container (Approved, delegated, 2026-10-06; ADR-0007)
+
+`.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
+
 ### D-12: Build and test tooling baseline (Delegated; reversible)
 
 sbt 1.12.15 (1.13.0 exists but has no patch release yet); sbt-scalafmt 2.6.2 with scalafmt
