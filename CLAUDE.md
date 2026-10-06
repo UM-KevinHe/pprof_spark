@@ -28,7 +28,9 @@ then the pinned reference (reference/REFERENCE.lock), then PROJECT_CONTEXT.md, t
 
 ## Modules
 numerics (pure Scala) → engine (spark-sql-api) → ml (spark-mllib, Classic) and app (job runners);
-testkit (test harness) and bench are never published.
+testkit (test harness) and bench are never published. Inside engine: data (input contract), layout
+(plans), backend (blocks, working set, ordered reduction) and skeleton (BlockMoments, the path every
+model family follows; ADR-0004).
 
 ## End of every round
 Update STATUS.md, OPEN_ITEMS.md, DECISIONS.md, DISCREPANCIES.md and HANDOFF.md.

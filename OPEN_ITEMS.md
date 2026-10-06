@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-05, round 3. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-05, round 5. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -12,8 +12,8 @@ decision is approved.
 | OI-04 | Scala skew: sbt 1.12.15 documents that `allowUnsafeScalaLibUpgrade` puts the newer scala-library on the compilation classpath; PLAT-4 calls it a test-time library. The §11.3 fragment sets the flag on `engine` only | Done in round 1: linkage compile in CI, flag on every Spark module, munit pinned to 1.2.0. Doc fix to PLAT-4 and §11.3 |
 | OI-05 | spark-sql-api 4.1.0 depends on spark-connect-shims, so `sparkContext`, `rdd` and `localCheckpoint` compile against it (sandbox probe, round 1) | Done in round 1: `scripts/check-engine-api.sh` with self-test. Later: semantic scalafix rule (OI-15). Doc fix to §5.4 and ARCH-2 |
 | OI-06 | DBR 18 ships dated updates under one version number; clusters pick them up on restart | Deferred by D-14 (no Databricks work); `SoftwareInfo` already records the identifiers that exist |
-| OI-07 | `Double.toString` output differs between JDK 17 and 21, so `metadata.json` is not byte-stable across JDKs | Persistence specification: store raw bits or hex next to decimals |
-| OI-08 | DIST-6 canonical order: −0.0 and +0.0 compare equal, so input order would decide their position | Normalize −0.0 to +0.0 at encoding (working-set round) |
+| OI-07 | `Double.toString` output differs between JDK 17 and 21, so `metadata.json` is not byte-stable across JDKs | Done for the skeleton's format (doubles stored as raw bits, ADR-0004); every persisted model keeps the rule |
+| OI-08 | DIST-6 canonical order: −0.0 and +0.0 compare equal, so input order would decide their position | Done: `BlockBuilder` normalizes negative zeros before ordering (ADR-0004) |
 | OI-09 | Tolerance semantics: "relative, scaled by magnitude" (T-fn) and "absolute, scaled" (T-res) are undefined | Define before D-09 calibration |
 | OI-10 | §8.1 lists exp, log, log1p, expm1; `pow` is missing | Round 4: `scripts/check-engine-api.sh` bans `math`/`Math` transcendental functions in `numerics` and `engine` main code; doc fix remains (OI-27) |
 | OI-11 | §12 names survival (LGPL) and EmpiNull (GPL-3) only; glmnet and lme4 are GPL too | Doc fix: "run, never port" applies to every copyleft fixture tool |
@@ -32,5 +32,8 @@ decision is approved.
 | OI-25 | T8 runs Classic and Connect in one JVM, so it cannot catch client-side use of Classic-only classes | Covered statically by ARCH-2 and the API check, at run time by the Databricks legs of S-02 (round 3); a separate server JVM is the fallback |
 | OI-26 | T8 runs in ci.yml on every push and pull request; §11.4 plans a nightly `connect.yml` | Required since round 3 (ADR-0002 accepted); doc fix to §11.4 |
 | OI-27 | PROJECT_CONTEXT still describes Databricks deployment and the original Phase 0 exit in its body | v2.1 preface lists the amendments in force; full revision folding in D-05, D-07, D-10, D-11, D-13, D-14 and the doc fixes, at the Phase 0 gate review (round 7) |
-| OI-28 | Run 37351537662: the linkage compile failed because spark-connect-client-jvm depends on scala-compiler 2.13.17, and sbt keeps scala-library, scala-reflect and scala-compiler at one version | Round 3 forces all three to 2.13.16 in linkage mode; confirm in CI |
+| OI-28 | Run 37351537662: the linkage compile failed because spark-connect-client-jvm depends on scala-compiler 2.13.17, and sbt keeps scala-library, scala-reflect and scala-compiler at one version | Closed: fixed in round 3, green in run 37361715287 |
+| OI-29 | m-scale results (group sizes, group tables) are collected to the driver under `BlockOptions` guards | Distributed result tables for m beyond the driver budget, when a model needs them |
+| OI-30 | Groups larger than a block get a block of their own; nothing splits them | TimeRange (OI-03) before the large-stratum Cox work |
+| OI-31 | DIST-1's naming rule (`collect…` and `toLocal…` methods) is enforced by review only | Consider a source check once more models exist |
 | OI-20 | Re-verification (§3.4, §5.1): Spark/Scala pairs, DBR 18 facts and pprof_py README claims checked 2026-10-03; §3.4 rows await the pin | DISCREPANCIES.md after D-05 |

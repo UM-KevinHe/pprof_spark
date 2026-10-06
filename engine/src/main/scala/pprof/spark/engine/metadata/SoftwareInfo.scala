@@ -25,6 +25,13 @@ object SparkApi {
   /** Classifies `session` by its implementation class. Runs on the driver; starts no job. */
   def of(session: SparkSession): SparkApi = fromClassName(session.getClass.getName)
 
+  /** The API recorded under `name` by [[SoftwareInfo.toFields]]. */
+  def fromName(name: String, sessionClass: String): SparkApi = name match {
+    case Classic.name => Classic
+    case Connect.name => Connect
+    case _            => Unrecognized(sessionClass)
+  }
+
   def fromClassName(className: String): SparkApi =
     if (className.startsWith(ClassicPackage)) Classic
     else if (className.startsWith(ConnectPackage)) Connect
@@ -95,6 +102,32 @@ object SoftwareInfo {
     * reveal is recorded as absent instead of failing the fit.
     */
   def capture(spark: SparkSession): SoftwareInfo = capture(spark, sys.env.get)
+
+  /** Rebuilds the metadata written by [[SoftwareInfo.toFields]]. Empty Databricks fields read back
+    * as absent.
+    */
+  def fromFields(fields: Seq[(String, String)]): SoftwareInfo = {
+    val byKey = fields.toMap
+    def field(key: String): String =
+      byKey.getOrElse(key, throw new IllegalArgumentException(s"missing software field $key"))
+    def optional(key: String): Option[String] = byKey.get(key).filter(_.nonEmpty)
+    SoftwareInfo(
+      packageVersion = field("package.version"),
+      gitSha = field("package.gitSha"),
+      gitDirty = field("package.gitDirty").toBoolean,
+      scalaCompilerVersion = field("scala.compilerVersion"),
+      scalaLibraryVersion = field("scala.libraryVersion"),
+      sparkCompileVersion = field("spark.compileVersion"),
+      sparkRuntimeVersion = field("spark.runtimeVersion"),
+      sparkApi = SparkApi.fromName(field("spark.api"), field("spark.sessionClass")),
+      sessionClass = field("spark.sessionClass"),
+      javaVersion = field("java.version"),
+      javaVendor = field("java.vendor"),
+      osArch = field("os.arch"),
+      databricksRuntimeVersion = optional("databricks.runtimeVersion"),
+      databricksSparkVersion = optional("databricks.sparkVersion")
+    )
+  }
 
   private[metadata] def capture(spark: SparkSession, env: String => Option[String]): SoftwareInfo =
     SoftwareInfo(

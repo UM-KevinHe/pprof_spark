@@ -1,5 +1,36 @@
 # Handoff
 
+## Round 5 (2026-10-05): platform skeleton (Phase 0 exit candidate, D-11)
+
+### CI result of rounds 3 and 4
+Run 37361715287 on `main` (08b378f): every job passed, the linkage compile included (OI-28
+closed); tests on JDK 17 and 21 counted engine 9, numerics 25, testkit 6; T8 counted engine 9.
+
+### What this round adds (ADR-0004, D-16)
+- `engine.data`: `InputSpec` and `Validation` (data contract; counts, never values).
+- `engine.layout`: `GroupKey`, `LayoutPlan` (key order, dedicated blocks for oversized groups,
+  largest-first packing) and `GroupSizes.collectGroupSizes` (guarded).
+- `engine.backend`: `BlockOptions` and driver guards, `BlockBuilder` (canonical order, negative
+  zeros normalized), `WorkingSet` (broadcast-joined plan, `groupByKey` blocks, explicit
+  persistence) and `OrderedReduction`.
+- `numerics.kernels`: `Moments` (pairwise column sums and packed cross products) and
+  `Fingerprint`.
+- `engine.skeleton`: `BlockMoments.fit`, the statistics-free end-to-end computation, and
+  `BlockMomentsIO` (bit-exact save and load).
+- `SoftwareInfo.fromFields` for persisted metadata.
+
+### Evidence (assistant sandbox; not CI)
+All modules compiled with scalac 2.13.16 and the build's flags. 69 tests (engine 34, numerics 29,
+testkit 6) pass on OpenJDK 17.0.20 and 21.0.12, under Classic Spark and under in-process Spark
+Connect. The skeleton suite covers bitwise invariance (R0), agreement with a Spark-free
+evaluation, layout invariance within T-part (R1), exact integer sums, guards, persistence
+(PERS-1) and the result schema. scalafmt and the source checks pass.
+
+### Next
+Round 6, the fixture pipeline: reference generators for pprof_py v0.7.0 and R, manifests, the
+R-comparison triage (OI-12) and tolerance calibration (D-09). Then S-05, S-06 and the Phase 0
+gate review.
+
 ## Round 4 (2026-10-05): deterministic summation in `numerics`
 
 Apply after round 3.

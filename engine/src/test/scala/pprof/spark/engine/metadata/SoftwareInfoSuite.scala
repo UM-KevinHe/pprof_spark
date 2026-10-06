@@ -45,6 +45,17 @@ class SoftwareInfoSuite extends SparkSuite {
     )
   }
 
+  test("fromFields rebuilds what toFields wrote") {
+    val info = SoftwareInfo.capture(spark, _ => None)
+    assertEquals(SoftwareInfo.fromFields(info.toFields), info)
+    val databricks = info.copy(
+      databricksRuntimeVersion = Some("18"),
+      sparkApi = SparkApi.Unrecognized("x.Session"),
+      sessionClass = "x.Session"
+    )
+    assertEquals(SoftwareInfo.fromFields(databricks.toFields), databricks)
+  }
+
   test("toFields lists every field once, in a stable order") {
     val info = SoftwareInfo.capture(spark, _ => None)
     val keys = info.toFields.map(_._1)
