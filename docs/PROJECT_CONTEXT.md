@@ -1,25 +1,12 @@
 # pprof_spark — Project Context
 
-**Version** 2.1 · **Date** 2026-10-05 · **Supersedes** v2.0 (2026-10-03)
+**Version** 2.2 · **Date** 2026-10-06 · **Supersedes** v2.1 (2026-10-05)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
-**Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). The pinned commit and reference-tool versions are recorded in `reference/REFERENCE.lock`.
+**Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
-> **Amendments in force (v2.1, 2026-10-05).** Recorded decisions take precedence over this
-> document (§0). Until the affected sections are revised:
-> - **D-14, no Databricks deployment work.** pprof_spark is developed and tested as a standalone
->   Apache Spark package. Databricks deployment (bundles, workspace CI, job clusters, Unity
->   Catalog artifacts, standard and serverless tiers) and the work that depends on it (S-01, the
->   Databricks legs of S-02, S-03, S-07, layers T9 and T10) are deferred. The build pins stay
->   compatible with Databricks Runtime 18 LTS.
-> - **D-11, Phase 0 exit.** Phase 0 exits on a statistics-free platform skeleton that is green in
->   CI under Classic Spark and Spark Connect; the first Cox slice (stratified, right-censored,
->   Breslow) opens Phase 1a.
-> - **D-05, reference pin.** pprof_py v0.7.0, commit 9320766 (reference/REFERENCE.lock).
-> - **D-07, D-10.** MIT license, copyright holder Kevin He; root package `pprof.spark`.
-> - **D-13, layer T8.** In-process Spark Connect server in the test JVM (ADR-0002), run by
->   `ci.yml` on every push and pull request.
-> - Further corrections awaiting a full revision are the doc fixes listed in OPEN_ITEMS.md.
+> **v2.2 folds in the decisions of Phase 0** (D-01 to D-19 in `DECISIONS.md`) and the corrections
+> found while building it. Recorded decisions keep precedence over this document (§0).
 ---
 
 ## 0. How to use this document
@@ -30,7 +17,7 @@ The key words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are to be interpreted 
 
 When sources disagree, precedence is: (1) approved statistical specifications in `docs/spec/` and recorded decisions in `DECISIONS.md`; (2) the behavior of the pinned reference implementation, and of R where the reference is validated against R; (3) this document; (4) existing code. A conflict between this document and an approved specification is resolved in favor of the specification, and this document is corrected in the same change.
 
-Project state lives in a small set of files updated at the end of every working round: `STATUS.md` (current phase and gate status), `OPEN_ITEMS.md`, `DECISIONS.md` (sequentially numbered, never renumbered), `DISCREPANCIES.md` (the register defined in §3.5), `HANDOFF.md` (continuity between sessions), and `docs/adr/` (architecture decision records).
+Project state lives in a small set of files updated at the end of every working round: `STATUS.md` (current phase and gate status), `OPEN_ITEMS.md`, `DECISIONS.md` (sequentially numbered, never renumbered), `DISCREPANCIES.md` (the register defined in §3.5), `HANDOFF.md` (continuity between sessions), `docs/adr/` (architecture decision records), and `docs/gates/` (phase gate reviews).
 
 ---
 
@@ -50,7 +37,7 @@ Project state lives in a small set of files updated at the end of every working 
 | NN-10 | **Degenerate outcomes are surfaced, never hidden.** Non-convergence, rank deficiency, infinite or boundary estimates, and degenerate providers or strata are reported in result status fields and warnings. |
 | NN-11 | **Every fit records reproducibility metadata** (§6.10). |
 | NN-12 | **Features are `Experimental` until they pass the parity gate** (§9.8); gate status is visible in documentation and in fit summaries. |
-| NN-13 | **Build for the runtime actually deployed.** Spark line, Scala patch version, and JDK bytecode level are pinned to the target Databricks Runtime and verified on that runtime (§5). |
+| NN-13 | **Build for the supported runtimes.** The Spark line, Scala patch version and JDK bytecode level are pinned (§5): one JAR for open-source Spark 4.1.x and, by construction, Databricks Runtime 18 LTS. A linkage compile checks the Scala pin on every push. |
 
 ---
 
@@ -62,11 +49,11 @@ Project state lives in a small set of files updated at the end of every working 
 
 ### 2.2 Users and workloads
 
-The primary users are statisticians and analysts who run national-scale provider profiling on Databricks — for example the CMS dialysis-facility measures that `pprof_py` already supports (two-stage SMR and SHR from Cox models; readmission measures from logistic models with provider effects) and transplant-center or hospital profiling — in settings where data volume, governance rules that keep patient-level data inside the governed environment, or production repeatability make single-node execution impractical. Secondary users are data engineers who run fitted models inside scheduled pipelines.
+The primary users are statisticians and analysts who run national-scale provider profiling on Spark clusters, Databricks among them — for example the CMS dialysis-facility measures that `pprof_py` already supports (two-stage SMR and SHR from Cox models; readmission measures from logistic models with provider effects) and transplant-center or hospital profiling — in settings where data volume, governance rules that keep patient-level data inside the governed environment, or production repeatability make single-node execution impractical. Secondary users are data engineers who run fitted models inside scheduled pipelines.
 
 ### 2.3 Design envelope
 
-These are planning assumptions, to be confirmed in Phase 0 (decision D-04). They determine which layouts and thresholds must perform well.
+These are planning assumptions (D-04); performance targets are set after the first benchmarks. They determine which layouts and thresholds must perform well.
 
 | Symbol | Meaning | Planning range |
 |---|---|---|
@@ -78,7 +65,7 @@ These are planning assumptions, to be confirmed in Phase 0 (decision D-04). They
 
 ### 2.4 Definition of success
 
-For each in-scope model family, `pprof_spark` succeeds when it (a) passes the parity gate against the pinned reference (§9.8); (b) fits workloads at the top of the design envelope through distributed computation, without patient-level data on the driver, within the performance targets set in Phase 0; (c) produces deterministic, partition-invariant results (NN-4); (d) runs as a versioned, repeatable Databricks job that records complete reproducibility metadata; and (e) is measurably faster or more feasible than single-node `pprof_py` beyond a documented crossover point (§3.7).
+For each in-scope model family, `pprof_spark` succeeds when it (a) passes the parity gate against the pinned reference (§9.8); (b) fits workloads at the top of the design envelope through distributed computation, without patient-level data on the driver, within the performance targets set in Phase 0; (c) produces deterministic, partition-invariant results (NN-4); (d) runs as a versioned, repeatable Spark application that records complete reproducibility metadata; and (e) is measurably faster or more feasible than single-node `pprof_py` beyond a documented crossover point (§3.7).
 
 ### 2.5 Non-goals for the first releases
 
@@ -90,7 +77,7 @@ The first releases will not reproduce `pprof_py`'s plotting and presentation lay
 
 ### 3.1 A companion, not a port
 
-`pprof_py` and `pprof_spark` are related implementations of the same methods, not one package with two language bindings. `pprof_py` remains optimized for local and medium-scale analysis with NumPy, SciPy, and numba, rich local result objects, publication-oriented presentation, and exploratory work. `pprof_spark` is optimized for very large datasets, distributed fitting, Databricks execution, Spark-native pipelines, and repeatable production runs. APIs differ where the execution model requires it; mathematical behavior does not.
+`pprof_py` and `pprof_spark` are related implementations of the same methods, not one package with two language bindings. `pprof_py` remains optimized for local and medium-scale analysis with NumPy, SciPy, and numba, rich local result objects, publication-oriented presentation, and exploratory work. `pprof_spark` is optimized for very large datasets, distributed fitting, cluster execution, Spark-native pipelines, and repeatable production runs. APIs differ where the execution model requires it; mathematical behavior does not.
 
 ### 3.2 The pinned reference
 
@@ -98,11 +85,15 @@ The first releases will not reproduce `pprof_py`'s plotting and presentation lay
 
 PAR-1: Re-pinning is a deliberate event. A dedicated pull request updates the lock file, regenerates fixtures, produces a diff report of every changed fixture value, and classifies each change under §3.5 before merge.
 
+Current pin (D-05): pprof_py v0.7.0, commit `9320766`, with R 4.3.3 and survival 3.5-8 from Ubuntu 24.04's archive and the Python packages of `reference/fixtures/requirements.txt`.
+
 ### 3.3 Inherited validation status
 
 `pprof_py` reports *(re-verify at the pinned commit)*: Cox coefficients, standard errors, log-likelihood, baseline hazard, and martingale residuals matching `survival::coxph()` to 1e-8–1e-14 relative error across right-censored, left-truncated, stratified, offset, and weighted data, under both Breslow and Efron ties; robust and clustered variance validated against `coxph(robust = TRUE, cluster = ...)`; penalized regression validated against `glmnet`; linear random-effect models agreeing with `lme4::lmer` at about 1e-7–1e-9; logistic random-effect models agreeing with `glmer(nAGQ = 1)` at about 2e-5; and no external R reference for group lasso, provider-penalized, and discrete-time models.
 
 PAR-2: This determines the parity target for each feature. Features validated against R are tested against both `pprof_py` fixtures and R fixtures. Features without an external reference are tested against `pprof_py` fixtures plus checks that depend on neither implementation: optimality (KKT) conditions for penalized fits, analytic special cases, and simulation studies of bias and coverage.
+
+Verified at the pin for survival (2026-10-06): pprof_py's survival suite passes with its committed R results (275 passed, 1 skipped for an optional package), and R 4.3.3 with survival 3.5-8 regenerates those results byte for byte (X-007). The lme4 comparison script is not in pprof_py's repository (OI-13).
 
 ### 3.4 Known reference limitations and open items
 
@@ -118,7 +109,9 @@ PAR-2: This determines the parity target for each feature. Features validated ag
 | The SerBIN fixed-effect solver can stop at a near-null fit when covariates are far from zero (open item C27). | `pprof_spark` centers covariates internally, which leaves the MLE unchanged; a dedicated fixture confirms the behavior, and cases where the reference stops early are class B. |
 | `LogisticThreeStageModel.sigma_sensitivity()` fails when σ̂ = 0. | The three-stage specification defines behavior at the σ̂ = 0 boundary. |
 | Some reference measures have unresolved discrepancies with internal R code (for example `IUR.fac` and `cal_SMR_pro_adj`). | Dependent features are not parity-gated until resolved. |
-| The R-comparison suite has documented expected failures (`R_COMPATIBILITY.md`). | Only features with passing, documented validation are parity targets. |
+| pprof_py's README reports 26 failures in a fresh R-comparison run; at v0.7.0 none of the survival tests fail (X-007, X-008). | No Cox feature is excluded; other families are checked when their phase begins. |
+| `CoxPH` tests for a log-likelihood decrease, and halves the step, before testing convergence; R tests convergence first (X-010). | pprof_spark follows pprof_py (class B, bug-compatible, flagged): converged coefficients can differ from R by half a final step. |
+| With non-integer case weights R's `coxph` reports a robust variance by default; pprof_py's default is model-based (X-009). | Fixtures and comparisons with R use `robust = FALSE`. |
 
 ### 3.5 Discrepancy protocol
 
@@ -149,7 +142,7 @@ A migration guide maps each `pprof_py` call to its `pprof_spark` equivalent and 
 
 ### 3.7 When to use which package
 
-`pprof_py` is fast on one machine: its README reports a 200,000-row, 3,000-stratum, 6-covariate Cox fit in about 1.8 seconds on one vCPU *(re-verify)*. Spark adds job-scheduling latency to every Newton iteration and a pass over the data per iteration, so for data that fit comfortably in one machine's memory — including a large Databricks driver node — `pprof_py` can be the faster tool. `pprof_spark` is justified when data exceed single-node memory or runtime budgets, when governance requires processing in place, or when the fit is part of a production Spark pipeline.
+`pprof_py` is fast on one machine: its README reports a 200,000-row, 3,000-stratum, 6-covariate Cox fit in about 1.8 seconds on one vCPU *(re-verify)*. Spark adds job-scheduling latency to every Newton iteration and a pass over the data per iteration, so for data that fit comfortably in one machine's memory — including a large Spark driver node — `pprof_py` can be the faster tool. `pprof_spark` is justified when data exceed single-node memory or runtime budgets, when governance requires processing in place, or when the fit is part of a production Spark pipeline.
 
 PERF-1: Phase 1 publishes a measured crossover analysis for Cox (runtime as a function of n, p, strata, and cluster size, for both packages), and the documentation includes a decision guide derived from it.
 
@@ -161,16 +154,16 @@ When a problem's sufficient statistics are small — the covariate-free stage-2 
 
 | Phase | Scope | Exit criteria |
 |---|---|---|
-| 0 — Foundations and spikes | Repository, multi-module build, CI, test harness, fixture pipeline, numerics and backend skeletons, Databricks deployment path; decisions D-01–D-10 and spikes S-01–S-07 (§16). | CI green on the walking skeleton; a JAR deployed by CI runs on a DBR 18 LTS job cluster; every spike recorded as an ADR. |
+| 0 — Foundations and spikes | Repository, multi-module build, CI, test harness, fixture pipeline, numerics and backend skeletons; decisions and spikes (§16). The Databricks deployment path is deferred (D-14). | CI green on the statistics-free platform skeleton under Classic Spark and Spark Connect (D-11); every spike recorded as an ADR; Phase 0 decisions resolved. Gate review: `docs/gates/phase-0.md`. |
 | 1a — Cox estimation core | Right censoring, strata, offsets, case weights, Breslow and Efron ties; coefficients, information, model-based covariance, standard errors, Wald inference, log partial likelihood; convergence and step-halving; aliasing. | Parity gate passed for these features. |
 | 1b — Counting process and baseline | (start, stop] data and left truncation; per-stratum baseline cumulative hazard and survival; prediction (linear predictor, relative hazard, cumulative hazard, survival). | Parity gate passed. |
 | 1c — Residuals and robust inference | Martingale residuals (correct under left truncation and Efron ties), score and dfbeta residuals, robust sandwich and clustered variance. | Parity gate passed. |
-| 1d — Provider workflows | Two-stage SMR and SHR; expected counts; O/E ratios; exact Poisson intervals and tests; flags; provider result tables; job-runner entry point. | Parity gate passed; end-to-end job on DBR 18 LTS at design-envelope scale. |
+| 1d — Provider workflows | Two-stage SMR and SHR; expected counts; O/E ratios; exact Poisson intervals and tests; flags; provider result tables; job-runner entry point. | Parity gate passed; end-to-end Spark application at design-envelope scale (the cluster is to be chosen; D-14). |
 | 2 — Logistic provider models | Large-m fixed effects (SerBIN-type blocked Newton); provider tests (Wald, score, exact Poisson-binomial, bootstrap); direct and indirect standardization; then the three-stage SRR pipeline, including the stage-2 random-intercept variance estimation it needs. | Parity gate passed. |
 | 3 — Linear fixed effects | Profile (within) estimation, standardization, inference. | Parity gate passed. |
 | Later | Penalized models (elastic net, group lasso, provider-penalized), random and mixed effects, shared-frailty Cox, time-varying coefficients, discrete-time survival, competing risks (cause-specific, Fine-Gray), variable selection, inter-unit reliability, empirical-null calibration, funnel limits. | Each family enters through Phase-0-style spikes and its own gate. |
 
-ROAD-1 (walking skeleton): The first merged vertical slice is an unstratified, right-censored, Breslow Cox model with model-based variance that passes through every layer: data contract, working set, kernel, Newton loop, fitted model, result tables, persistence, CI parity tests, and execution on DBR 18 LTS from the deployed JAR. Statistical breadth is then added behind the same skeleton, so that platform, build, and determinism risks surface before effort goes into breadth.
+ROAD-1 (walking skeleton, as amended by D-11): Phase 0 ends with a statistics-free platform skeleton (data contract, logical blocks, a toy kernel, block-ordered reduction, result tables and persistence) that is green in CI under Classic Spark and Spark Connect (ADR-0004). The first Cox slice opens Phase 1a: stratified (StratumLocal), right-censored, Breslow, with model-based variance, passing through every layer and all three parity levels. Statistical breadth is then added behind the same skeleton.
 
 ROAD-2: Each phase ends with a gate review recorded in `STATUS.md`. A phase cannot close with open class A or B discrepancies affecting its features.
 
@@ -190,44 +183,42 @@ The mapping below covers `pprof_py`'s public model classes *(re-verify)*.
 
 ## 5. Platform targets and compatibility
 
-### 5.1 Platform facts *(as of 2026-10-03; re-verify)*
+### 5.1 Targets and platform facts
 
-| Item | Value |
+pprof_spark is a standalone Apache Spark package (D-14). It targets open-source Spark 4.1.x with Scala 2.13 and Java 17 or later, and keeps one JAR compatible with Databricks Runtime 18 LTS by construction (§5.3); Databricks itself is not tested while D-14 stands.
+
+| Item | Value *(as of 2026-10-06; re-verify)* |
 |---|---|
-| Databricks Runtime 18 LTS | Apache Spark 4.1.0; Scala 2.13.16; JDK 21 by default, with JDK 17 available as a fallback; supported until June 2029 |
-| Databricks Runtime 17.3 LTS | Apache Spark 4.0.0; from Databricks Runtime 17 onward only Scala 2.13 is supported |
-| Databricks Runtime 19 | Apache Spark 4.2.0; generally available but not yet LTS |
-| Open-source Spark 4.1.x | Built with Scala 2.13.17; Spark ML on Spark Connect is generally available for the Python client |
-| Open-source Spark 4.2.0 | Adds support for building and running on Java 25 |
-| Serverless JAR tasks | Generally available since August 2026; a JAR must match the Scala, JDK, and Databricks Connect versions of its serverless environment |
-| Declarative Automation Bundles | Current name of Databricks Asset Bundles, Databricks' recommended mechanism for CI/CD deployment |
+| Open-source Spark 4.1.0 to 4.1.3 | Built with Scala 2.13.17; Spark 4.2.0 with 2.13.18 |
+| Open-source Spark 4.0.x | Built with Scala 2.13.16 |
+| Databricks Runtime 18 LTS | Apache Spark 4.1.0, Scala 2.13.16, JDK 21 by default; a rolling release whose dated updates change the runtime without changing its version |
+| JDK | Java 17 bytecode; CI tests on JDK 17 and 21 |
 
-### 5.2 Compute modes and support tiers
+### 5.2 Execution modes and support
 
-| Compute | Constraints relevant to this package | Tier |
-|---|---|---|
-| Classic, dedicated access mode | Full Spark API, Spark ML, caching, Spark UI. | Tier 1 — primary; all features |
-| Classic, standard access mode (Unity Catalog) | Scala code cannot use `SparkContext`; RDD APIs are unsupported; JARs must be on the Unity Catalog allowlist; Databricks documents Spark ML on standard compute as Python-only. | Tier 2 — engine API from Scala notebooks or JAR tasks, after spike S-02; no Spark ML adapter |
-| Serverless jobs | Spark Connect APIs only; no RDDs; DataFrame `cache`, `persist`, and `checkpoint` raise exceptions; custom code such as UDFs and `mapPartitions` may use at most 1 GB of memory; no Spark UI; JAR tasks run when versions match. | Tier 3 — engine through JAR tasks with table-materialized working sets, after spikes S-02 and S-03 |
-| Serverless notebooks | Scala notebooks and JAR libraries are unsupported. | Not supported |
+| Mode | Status |
+|---|---|
+| Classic Spark, local or cluster | Supported (D-01); every test layer runs here |
+| Spark Connect | `engine` stays Connect-compatible (PLAT-2), and its suites run against a local Connect server in CI (T8, ADR-0002); the `ml` adapters are Classic only |
+| Databricks standard and serverless compute | Deferred (D-14, ADR-0008). The constraints recorded in v2.0 apply when this is reopened: no `SparkContext` or RDDs in standard access mode; no caching and at most 1 GB for custom code on serverless |
 
-PLAT-1: Only Tier 1 gates releases until decision D-01 says otherwise.
+PLAT-1: Classic Spark gates releases (D-01).
 
-PLAT-2: Engine code MUST remain Connect-compatible whatever the tier decision. This costs little and protects the package as Databricks moves more compute onto Spark Connect.
+PLAT-2: Engine code MUST remain Connect-compatible. This costs little, and every Spark Connect deployment needs it.
 
 ### 5.3 Version pinning and the Scala patch-skew hazard
 
-The Scala 2.13 standard library is now only backward binary compatible (SIP-51): code compiled against a newer 2.13 patch release may call library methods that an older runtime lacks. A Scala issue (scala/bug#13181) reports exactly this failure, a `NoSuchMethodError`, when Spark 4.1.0 runs on a runtime that ships Scala 2.13.16. DBR 18 LTS ships Scala 2.13.16, while open-source Spark 4.1.x depends on scala-library 2.13.17. Since sbt 1.10, a build fails when `scalaVersion` is older than the scala-library on the dependency classpath, unless `allowUnsafeScalaLibUpgrade := true` demotes the failure to a warning.
+The Scala 2.13 standard library is only backward binary compatible (SIP-51): code compiled against a newer 2.13 patch release can call library methods that an older runtime lacks, and then fails with `NoSuchMethodError` (scala/bug#13181 reports Spark 4.1.0 failing this way on a 2.13.16 runtime). Open-source Spark 4.1.x depends on scala-library 2.13.17, and the Spark Connect client also on scala-compiler 2.13.17. sbt keeps scala-library, scala-reflect and scala-compiler at one version and, since 1.10, fails when `scalaVersion` is older than the scala-library on the classpath, unless `allowUnsafeScalaLibUpgrade := true`. With that setting the newer library is on the compilation classpath, not only on the test classpath.
 
-PLAT-3: `scalaVersion` MUST equal the target runtime's Scala patch version (2.13.16 for DBR 18 LTS) and MUST NOT exceed it.
+PLAT-3: `scalaVersion` is 2.13.16, the oldest Scala patch among the supported runtimes, and MUST NOT exceed it.
 
-PLAT-4: Because open-source Spark 4.1.x needs scala-library 2.13.17 on the test classpath, CI keeps the compiler at the runtime's version and tolerates the newer test-time library. The linkage of every release candidate MUST then be verified on the actual runtime by an integration smoke test. Spike S-01 confirms this arrangement or replaces it, for example by compiling `engine` against Databricks Connect.
+PLAT-4: Spark modules set `allowUnsafeScalaLibUpgrade := true`, so that tests run on open-source Spark 4.1.x. A linkage compile (`sbt -Dpprof.linkageCheck=true compile`, in CI on every push) forces scala-library, scala-reflect and scala-compiler to 2.13.16, so main code cannot link against newer library methods. `numerics` keeps its whole classpath at 2.13.16; munit 1.2.0 is the newest test framework release built with that version.
 
 PLAT-5: Bytecode targets Java 17 (`-release 17`), so one JAR runs on JDK 17 and JDK 21; CI runs the tests on both.
 
 PLAT-6: Spark and Scala dependencies are `provided`; the JAR bundles no Spark, Scala, or runtime-provided libraries. Third-party runtime dependencies are avoided and, when unavoidable, shaded.
 
-PLAT-7: Only public Spark APIs are used. Package-private APIs (`private[spark]`, `private[ml]`) are never reached through package-placement tricks, and APIs that Spark marks unstable — including Spark ML's shared `Has*` parameter traits, which are documented as changeable between minor versions — are wrapped behind project-owned interfaces.
+PLAT-7: Only public Spark APIs are used. Package-private APIs (`private[spark]`, `private[ml]`) are never reached through package-placement tricks, and APIs that Spark marks unstable, including Spark ML's shared `Has*` parameter traits, which are documented as changeable between minor versions, are wrapped behind project-owned interfaces.
 
 ### 5.4 Compile-time API surface per module
 
@@ -239,7 +230,9 @@ PLAT-7: Only public Spark APIs are used. Package-private APIs (`private[spark]`,
 | `app` | `engine`, plus `ml` where needed | Job-runner entry points |
 | `testkit` | `spark-sql` (Classic), test scope | Shared test harness, data generators, fixture loaders |
 
-For JARs on standard and serverless compute, Databricks documents two compile targets — Databricks Connect (recommended) or `spark-sql-api` — and for classic compute it allows any Spark artifact that matches the cluster's Spark version, marked `provided`. Since Spark 4, the Scala `SparkSession`, `Dataset`, and related types form a shared interface with Classic and Connect implementations. Code limited to that interface runs in either mode; Classic-only members such as `sparkContext` and RDD conversions are unavailable under Connect.
+Since Spark 4, the Scala `SparkSession`, `Dataset`, and related types form a shared interface with Classic and Connect implementations. Code limited to that interface runs in either mode; Classic-only members such as `sparkContext` and RDD conversions throw under Connect.
+
+The `engine` compile classpath does not catch every Connect-incompatible call: spark-sql-api 4.1.0 depends on spark-connect-shims, which define placeholder `SparkContext`, `SparkConf` and `RDD` classes, and the shared interfaces declare `sparkContext`, `rdd` and `checkpoint`. `scripts/check-engine-api.sh`, with a self-test, therefore enforces ARCH-2 on every push. On Classic test classpaths the shims would shadow spark-core, so the build removes them there; the Connect client jar, which repackages Connect classes differently, goes last on test classpaths (ADR-0002).
 
 ### 5.5 Spark 4 and Spark Connect behaviors that affect library code
 
@@ -263,7 +256,7 @@ For JARs on standard and serverless compute, Databricks documents two compile ta
 ### 6.1 Layering and modules
 
 ```
- Users:   Scala engine API       Spark ML pipelines        Databricks JAR jobs
+ Users:   Scala engine API       Spark ML pipelines        Spark job entry points
                |                        |                          |
                |                  [ ml ] adapters            [ app ] run specs
                |                        |                          |
@@ -332,7 +325,7 @@ The engine reaches Spark through a narrow internal interface. A **working set** 
 
 DIST-3: The default backend uses Dataset APIs only: a one-time `groupByKey` on the block identifier builds a `Dataset[Block]`, and typed `mapPartitions` runs kernels over it. A Classic-only RDD backend MAY be added behind the same interface if profiling shows a material gain (an ADR with benchmark evidence), and it MUST produce bitwise-identical results. Dataset-first is chosen for Connect compatibility, not for Catalyst optimization, which does little for custom numerical loops; that is also why Spark's own iterative MLlib algorithms use RDDs internally.
 
-DIST-4: Blocks hold roughly 1–16 MB of primitive arrays. This amortizes decoding costs, keeps kernels allocation-free, and stays well inside serverless memory limits for custom code. Block size is a recorded layout parameter.
+DIST-4: Blocks hold roughly 1–16 MB of primitive arrays. This amortizes decoding costs, keeps kernels allocation-free, and stays well inside serverless memory limits for custom code. Block size is a recorded layout parameter. The default target is 4 MB (`BlockOptions.targetBlockBytes`, ADR-0004).
 
 ### 6.6 Layouts, partitioning, and skew
 
@@ -346,9 +339,11 @@ DIST-4: Blocks hold roughly 1–16 MB of primitive arrays. This amortizes decodi
 
 DIST-5: The layout plan (block assignment, bin packing, splits) is computed on the driver from data summaries — strata count and size distribution, K, p, m — with deterministic tie-breaking, and applied through an explicit block-identifier column rather than Spark's sampling-based range partitioning or hash partitioning. The plan is recorded in the fit summary.
 
-DIST-6 (canonical order): Within each block, rows are ordered by layout keys, then time, then a stable row identifier when one is supplied, and otherwise by full row content compared lexicographically. Results are therefore bitwise invariant to input row order.
+DIST-6 (canonical order): Within each block, rows are ordered by layout keys, then time, then a stable row identifier when one is supplied, and otherwise by full row content compared lexicographically. Results are therefore bitwise invariant to input row order. Negative zeros are normalized to positive zeros before ordering, because the two compare equal (ADR-0004).
 
 Provider and stratum sizes are heavy-tailed. Largest-first bin packing balances blocks; per-provider computations whose cost grows faster than linearly, such as exact tests, are packed by estimated cost; strata that exceed the block budget are split and handled by the TimeRange technique. Adaptive query execution's skew handling does not apply to custom kernels and is not relied on.
+
+TimeRange has two consequences that its specification must state (OI-03). With left truncation, a row whose (a, b] spans a block boundary needs an entry record in the block that contains a, so such rows appear in two blocks. And because the block offsets depend on β, TimeRange takes two passes per Newton iteration. Until TimeRange exists, a group larger than a block gets a block of its own (ADR-0004, OI-30).
 
 ### 6.7 Iteration management
 
@@ -361,6 +356,8 @@ Each kernel invocation returns one partial per logical block, keyed by block ide
 DIST-7: Quantities under parity tolerance MUST NOT be computed with built-in floating-point SQL aggregates, whose summation order depends on task scheduling and on the execution engine (for example Photon versus the JVM). Integer counts are exempt.
 
 DIST-8: Every floating-point reduction that follows a shuffle, such as summing dfbeta residuals within clusters, sorts its inputs by an explicit, data-derived key before summing.
+
+At large p the partials themselves become large: a packed p×p partial is about 4 MB at p = 1,000, so the driver budget admits few blocks, and the two-level reduction would shuffle every partial on every iteration. Fixed reduction groups of consecutive blocks, co-located when the working set is built, would keep the order fixed without that shuffle; the design is open (OI-02) and must be settled before large-p work (D-04).
 
 ### 6.9 Model contract, results, and schemas
 
@@ -382,7 +379,7 @@ API-3: Methods that compute from training data take the data explicitly (for exa
 | Execution | Layout plan, block size, block count, materialization strategy, reduction mode |
 | Outcome | Convergence status and trace, warnings, degeneracy reports, timings |
 
-Models persist to a self-describing directory: `metadata.json` holding the metadata above, with numeric arrays in a round-trip-exact representation, plus Parquet files for m-scale tables such as baseline hazards and provider effects.
+Models persist to a self-describing directory: `metadata.json` holding the metadata above, with numeric arrays in a round-trip-exact representation, plus Parquet files for m-scale tables such as baseline hazards and provider effects. Doubles are stored as their 64-bit patterns, because `Double.toString` differs between JDK 17 and JDK 21, and everything is written through Spark, so any file system Spark reaches works (ADR-0004).
 
 PERS-1: Save followed by load yields bitwise-identical parameters and predictions.
 
@@ -400,19 +397,13 @@ Categorical encoding is a parity hazard. `StringIndexer` orders categories by de
 
 Hyperparameter tuning uses `CrossValidator` with `foldCol` and group-level folds (patient or provider); random row splits leak information across clustered records.
 
-Spark ML on Spark Connect discovers estimators through Java's `ServiceLoader` and restricts which model attributes remote clients may call. Whether third-party models can be exposed that way is unverified (spike S-04); until it is, the `ml` module is Tier 1 only.
+Spark ML on Spark Connect discovers estimators through Java's `ServiceLoader` and restricts which model attributes remote clients may call. Whether third-party models can be exposed that way is unverified (spike S-04, deferred in ADR-0008); the `ml` module is Classic only (D-01).
 
 ### 6.12 Application layer and Python access
 
-The `app` module provides JAR-task entry points that read a declarative, versioned run specification (input tables, column mapping, model and options, output tables, reproducibility mode) and write results to Unity Catalog tables and model artifacts to a volume. This is the primary production interface: it works on every tier that runs JAR tasks, it is language-neutral because Python and SQL users work through tables and job parameters, and every run is auditable.
+The `app` module will provide plain Spark entry points, for `spark-submit`, that read a declarative, versioned run specification (input tables or paths, column mapping, model and options, outputs, reproducibility mode) and write result tables and model artifacts. Python and SQL users then work through tables and job parameters, and every run is auditable. Databricks-specific packaging (JAR tasks, Unity Catalog volumes) is deferred with D-14.
 
-| Python access option | Mechanism | Runs on | Status |
-|---|---|---|---|
-| Job-based | Run specification plus JAR task | Tiers 1–3 | Planned for Phase 1d |
-| py4j wrappers | PySpark `JavaEstimator` and `JavaModel` wrappers around `ml` classes | Tier 1 only | Decision D-03 |
-| Spark Connect ML | Server-side registration of `ml` classes | Unverified | Spike S-04 |
-
-Python-facing code never reimplements statistics.
+There is no Python access in v1 (D-03). py4j wrappers and Spark Connect ML registration (S-04, ADR-0008) are revisited after Phase 1d. Python-facing code never reimplements statistics.
 
 ### 6.13 Observability
 
@@ -490,7 +481,7 @@ so the tied events share their mean weight, which is the `survival` package's co
 | Strata | Separate baseline hazards with shared coefficients; strata without events contribute nothing to ℓ but are represented in baseline tables. |
 | Offsets | Added to η; baseline-hazard centering with offsets follows the reference (the `basehaz` offset-mean subtlety that `pprof_py` documents). |
 | Centering | Internal centering, and per-stratum shifts of η for overflow safety, are free because ℓ is exactly invariant to them; reported baselines and linear predictors follow the reference's centering convention. |
-| Convergence | Mirror the reference's rule. For orientation, `survival::coxph.control` stops when the relative change in log partial likelihood falls below `eps` = 1e-9, caps iterations at `iter.max` = 20, and halves steps that decrease ℓ. |
+| Convergence | Mirror the reference's rule. For orientation, `survival::coxph.control` stops when the relative change in log partial likelihood falls below `eps` = 1e-9, caps iterations at `iter.max` = 20, and halves steps that decrease ℓ. pprof_py tests for a decrease (and halves the step) before testing convergence, whereas R tests convergence first; pprof_spark follows pprof_py (X-010, class B, bug-compatible). |
 | Singularity | Cholesky with a singularity tolerance (`toler.chol` = ε^0.75 in `survival`); aliased covariates reported as null coefficients with a flag, per reference. |
 | Infinite coefficients | Detection rule per reference (`toler.inf` in `survival`); always reported. |
 | Weights in variance | Model-based variance treats case weights as frequency weights; robust and clustered variance follow the reference's dfbeta-based construction. |
@@ -578,7 +569,7 @@ STAT-2: Every random quantity is reproducible and partition-invariant. It comes 
 
 ### 8.1 Floating-point model
 
-Since Java 17, all floating-point arithmetic has strict IEEE 754 semantics (JEP 306): the same operations in the same order produce the same bits on any compliant JVM, and the JIT never fuses a multiply and an add unless `Math.fma` is called explicitly. Transcendental functions in `java.lang.Math` may differ by up to one ulp across implementations and intrinsics, whereas `StrictMath` is specified to reproduce the fdlibm algorithms bit for bit. Kernels therefore use `StrictMath` for `exp`, `log`, `log1p`, and `expm1` in deterministic mode; spike S-05 measures the cost. Small dense linear algebra uses the project's own routines rather than whatever native BLAS a runtime loads. Decimal input columns are converted to doubles explicitly, under the specification's rules.
+Since Java 17, all floating-point arithmetic has strict IEEE 754 semantics (JEP 306): the same operations in the same order produce the same bits on any compliant JVM, and the JIT never fuses a multiply and an add unless `Math.fma` is called explicitly. Transcendental functions in `java.lang.Math` may differ by up to one ulp across implementations and intrinsics, whereas `StrictMath` is specified to reproduce the fdlibm algorithms bit for bit. Kernels therefore use `StrictMath` for `exp`, `log`, `log1p`, `expm1`, `pow` and every other transcendental function, and `scripts/check-engine-api.sh` rejects `math.*` and `Math.*` transcendental calls in `numerics` and `engine` main code. Spike S-05 measured the cost (ADR-0006): 1.1 to 1.9 times per call, and almost nothing in a Cox-shaped kernel whose sums are fused into one pass over the rows. Small dense linear algebra uses the project's own routines rather than whatever native BLAS a runtime loads. Decimal input columns are converted to doubles explicitly, under the specification's rules.
 
 ### 8.2 Reproducibility levels
 
@@ -586,7 +577,7 @@ Since Java 17, all floating-point arithmetic has strict IEEE 754 semantics (JEP 
 |---|---|---|
 | R0 — bitwise | The same build, input, and configuration (including layout and block-size parameters) give identical bits on every run, on any cluster size or physical partitioning. | MUST in deterministic mode, the default |
 | R1 — layout-invariant | Different block sizes or layouts agree within the T-part tolerance. | MUST |
-| R2 — platform-invariant | CI local mode and Databricks, Classic and Connect, and JDK 17 and JDK 21 agree. | MUST within T-part; SHOULD be bitwise |
+| R2 — platform-invariant | CI local mode and a cluster, Classic and Connect, and JDK 17 and JDK 21 agree. | MUST within T-part; SHOULD be bitwise |
 | R3 — cross-implementation | Results agree with `pprof_py` and R within the parity tolerance classes. | MUST for gated features |
 
 NUM-2: Changes declared non-behavioral (refactors, performance work) MUST preserve R0 identity on the golden runs, demonstrated alongside a negative control showing that the comparison detects a deliberate one-ulp perturbation.
@@ -597,7 +588,7 @@ Covariates are centered internally, and scaled when poorly conditioned, with rep
 
 ### 8.4 Tolerance policy
 
-Tolerances live in one versioned file (`testkit/tolerances.conf`), tests refer to them by class rather than by literal value, and they change only under NN-9. The values below are initial defaults, to be calibrated in Phase 0 against negative controls (Breslow substituted for Efron, a one-day shift of a tied time, a dropped weight), each of which must fail.
+Tolerances live in one versioned file (`testkit/src/main/resources/tolerances.conf`), tests refer to them by class rather than by literal value, and they change only under NN-9. A scalar passes when |a − e| ≤ atol + rtol·|e|; element i of a vector or packed matrix passes when |aᵢ − eᵢ| ≤ atol + rtol·max(|eᵢ|, s), where s is the largest magnitude in the expected quantity (D-09). The values below were calibrated in Phase 0 against the Cox fixtures (`docs/parity/cox-calibration.md`): pprof_py and R agree within every class, and every negative control (the other tie method, a tied time shifted by a day, a dropped weight) misses by at least ten times its tolerance. `FixturesSuite` enforces both in CI.
 
 | Class | What is compared | Initial default |
 |---|---|---|
@@ -630,11 +621,11 @@ Converged-estimate comparisons run both implementations to a tighter criterion t
 | T5 Metamorphic | Invariance properties on generated data (§9.4) | CI | Every pull request |
 | T6 Edge cases | Degenerate inputs, validation errors, absence of row values in messages | CI | Every pull request |
 | T7 Contracts | Parameter defaults, output schemas, persistence round trips, backward compatibility | CI | Every pull request |
-| T8 Connect | Engine suite under local Spark Connect | CI | Nightly; every pull request once spike S-02 succeeds |
-| T9 Databricks integration | DBR 18 LTS job clusters, multi-node, synthetic data; standard and serverless tiers once adopted | Databricks, through bundles | Merges to main, nightly, releases |
-| T10 Scale and performance | Benchmark suite with regression thresholds | Databricks | Weekly and before releases |
-| T11 Statistical validation | Simulation studies of bias, coverage, and type I error for features without an external reference | Databricks or CI | When the feature is released |
-| T12 Production-data validation | Approved CMS data inside the approved environment, compared with `pprof_py` or production outputs; only aggregate results leave the environment | Restricted Databricks | Before production use |
+| T8 Connect | Engine suites through a Spark Connect client served in-process (ADR-0002) | CI | Every push and pull request |
+| T9 Cluster integration | Multi-node cluster with separate executor JVMs, synthetic data | A cluster; Databricks deferred (D-14) | Deferred |
+| T10 Scale and performance | Benchmark workloads in `bench`; regression thresholds once a cluster exists | GitHub runners by hand (`bench.yml`); a cluster later | By hand; before releases |
+| T11 Statistical validation | Simulation studies of bias, coverage, and type I error for features without an external reference | CI or a cluster | When the feature is released |
+| T12 Production-data validation | Approved CMS data inside the approved environment, compared with `pprof_py` or production outputs; only aggregate results leave the environment | The approved environment | Before production use |
 
 ### 9.2 Parity at three levels
 
@@ -642,9 +633,11 @@ Function-level parity compares objective, score, and information at the same fix
 
 ### 9.3 Reference fixtures
 
-A dedicated workflow, triggered manually on each re-pin, installs the pinned `pprof_py` and R stack, generates fixtures, and opens a pull request with a diff report. Fixtures are Parquet files for inputs and outputs plus a JSON manifest that records the generator, seed, reference versions, the options passed to each tool (including `ties` and `timefix`), and checksums. Input data are generated once and shared by every implementation, never regenerated per language. Synthetic event times are integers unless a fixture specifically tests near-ties, because R's `timefix` documentation warns that simulated continuous times can be spuriously merged. Fixtures contain only synthetic data (NN-7), and large fixtures are stored with Git LFS.
+Fixtures are generated once from synthetic inputs and shared by every implementation (ADR-0005). Inputs are exact in text: integer event times, covariates on a 1/64 grid, offsets on a 1/16 grid and case weights on a 1/2 grid, stored as CSV. Outputs of the pinned pprof_py and of R are stored as JSON with every double as a hexadecimal floating-point string, which parses back bit for bit in Python, R and Java. `fixtures/manifest.json` records the generator, the reference versions, the options passed to each tool (including `ties`, `timefix`, and `robust = FALSE` for R) and a SHA-256 checksum of every file. Each case stores negative controls next to its outputs. Fixtures contain only synthetic data (NN-7); Git LFS is unnecessary while they stay small.
 
-The catalog spans tiny cases solvable by hand, edge cases, mid-size datasets covering every feature combination (mirroring `pprof_py`'s right-censored, left-truncated, stratified, offset, and weighted combinations under both tie methods), and scale generators that are themselves partition-invariant (§7.7).
+`reference/fixtures/generate.py` and `cox_survival.R` produce the fixtures, and `calibrate.py` checks the tolerances against them. `fixtures.yml`, run by hand on a re-pin (PAR-1), installs pprof_py at the pinned commit and R 4.3.3 with survival 3.5-8 from Ubuntu 24.04's archive, recomputes the outputs from the committed inputs, and compares them under T-part, because numpy's BLAS and numba compile for the host CPU. `FixturesSuite` checks the checksums, the pin, the exactness of the inputs and the calibration in every CI run.
+
+The catalog grows with each phase: Cox estimation now (four cases, Breslow and Efron), then left truncation and baseline hazards, residuals and robust variance, and provider measures (OI-32).
 
 ### 9.4 Metamorphic and property tests
 
@@ -681,11 +674,11 @@ The catalog spans tiny cases solvable by hand, edge cases, mid-size datasets cov
 
 ### 9.6 Distributed and platform tests
 
-Every engine test runs with at least two physical partition counts, two block sizes, and one skewed provider-size distribution. A subset runs where executors are separate JVMs, on multi-node Databricks job clusters, because local mode shares one JVM between driver and executors and so hides singleton state initialized only on the driver, classpath differences, and some serialization paths. Tests that target Classic or Connect assert which implementation the session actually is: an upstream bug report (SPARK-58223) shows the session builder's `classic()` selector creating a Connect session in Spark 4.1.x. Integration jobs print the loaded package version and git SHA and fail if they differ from the commit under test, which guards against stale libraries on clusters.
+Every engine test runs with at least two physical partition counts, two block sizes, and one skewed provider-size distribution. A subset runs where executors are separate JVMs, on a multi-node cluster (deferred with T9), because local mode shares one JVM between driver and executors and so hides singleton state initialized only on the driver, classpath differences, and some serialization paths. Tests that target Classic or Connect assert which implementation the session actually is: an upstream bug report (SPARK-58223) shows the session builder's `classic()` selector creating a Connect session in Spark 4.1.x. Integration jobs print the loaded package version and git SHA and fail if they differ from the commit under test, which guards against stale libraries on clusters.
 
-### 9.7 Databricks integration and scale tests
+### 9.7 Cluster integration and scale tests
 
-Integration jobs are defined in the bundle (§11.5), run on fresh job clusters at the pinned DBR, generate synthetic data in place, and write machine-readable results (JUnit XML or JSON) to a volume for CI to collect. Scale tests sweep n, p, strata and provider counts, skew, tie density, and the fraction of left-truncated rows. They record time per iteration, iterations, passes, shuffle bytes, bytes reduced to the driver, and peak memory in a Delta table with regression thresholds.
+Deferred with D-14 (ADR-0008). When a cluster is available, integration jobs run on fresh clusters, generate synthetic data in place, and write machine-readable results for CI to collect. Scale tests sweep n, p, strata and provider counts, skew, tie density and the share of left-truncated rows, and record time per iteration, iterations, passes, shuffle bytes, bytes reduced to the driver and peak memory against regression thresholds.
 
 ### 9.8 Parity gate and traceability
 
@@ -720,7 +713,7 @@ Each algorithm's specification states its passes per iteration, shuffle volume (
 
 ### 10.4 Benchmarks and regression tracking
 
-The `bench` module defines reproducible synthetic workloads at three scales. A scheduled job runs them on a fixed cluster configuration and appends metrics to a Delta table. A change that regresses a tracked metric beyond its threshold needs a written justification in its pull request.
+The `bench` module holds reproducible workloads; `bench.yml` runs them by hand on GitHub's runners and shows the results on the run page. S-05's `DeterminismCost` is the first (ADR-0006). Scheduled runs on a fixed cluster with tracked regression thresholds wait for a cluster (D-14). A change that regresses a tracked metric beyond its threshold needs a written justification in its pull request.
 
 ---
 
@@ -728,77 +721,79 @@ The `bench` module defines reproducible synthetic workloads at three scales. A s
 
 ### 11.1 Environments
 
-The maintainer cannot install Scala or Spark locally, but local-mode Spark remains the backbone of testing, because it runs inside CI runners with nothing installed on the maintainer's machine. Four environments cover development. GitHub Actions runs every build and test. GitHub Codespaces, if institutional policy permits, provides a browser-based development container with a JDK, sbt, and the Metals language server, in which `sbt test`, local Spark, and `git apply` work interactively. The GitHub web editor handles small changes. Databricks hosts integration and scale testing. Protected data never enter Codespaces (NN-7), and any Databricks Connect session from a Codespace uses synthetic-data workspaces only. Databricks Scala notebooks are suitable for exploration, not for package development.
+The maintainer cannot install Scala or Spark locally, so CI is the build and test environment, and local-mode Spark inside CI runners is the backbone of testing. GitHub Actions runs every build and test and publishes failure details and test counts as annotations that are readable without signing in. A GitHub codespace (`.devcontainer/`, ADR-0007) adds interactive sbt, local Spark tests and `git apply` in the browser where policy allows. The AI assistant verifies each patch in its own sandbox before delivery: it compiles with the pinned Scala compiler and the build's flags, runs the suites on JDK 17 and 21 under a munit stand-in, and rehearses the patch on a fresh clone. That evidence is labeled as the sandbox's and does not replace CI. Protected data never enter any of these environments (NN-7).
 
 ### 11.2 Repository layout
 
 ```
 pprof_spark/
-  build.sbt, project/      sbt build and plugins
-  numerics/                pure Scala kernels and linear algebra
-  engine/                  distributed engine, models, inference, measures
-  ml/                      Spark ML adapters
-  app/                     Databricks job entry points and run specifications
-  testkit/                 Spark fixtures, generators, tolerance assertions
+  build.sbt, project/      sbt build, plugins, test logging configuration
+  numerics/                pure Scala: summation, kernels, linear algebra
+  engine/                  distributed engine: data contract, layout, backend, models, results
+  ml/                      Spark ML adapters (Classic)
+  app/                     Spark job entry points and run specifications
+  testkit/                 test harness: sessions, tolerances, fixture reader
   bench/                   benchmark workloads (not published)
-  reference/               REFERENCE.lock; fixture generators (Python, R); manifests
-  fixtures/                generated reference fixtures (synthetic only; Git LFS)
-  databricks/              bundle definition (databricks.yml), job and cluster specs
-  docs/                    spec/, adr/, parity/, compatibility.md, user and migration guides
+  reference/               REFERENCE.lock; fixture generators (Python, R); numerics references
+  fixtures/                generated reference fixtures (synthetic only)
+  scripts/                 source checks; CI failure reporting
+  docs/                    PROJECT_CONTEXT.md, spec/, adr/, parity/, gates/, compatibility.md
   .devcontainer/           Codespaces definition
-  .github/workflows/       CI, fixtures, Databricks integration, benchmarks, release
-  STATUS.md  OPEN_ITEMS.md  DECISIONS.md  DISCREPANCIES.md  HANDOFF.md
+  .github/workflows/       ci.yml, fixtures.yml, bench.yml
+  STATUS.md  OPEN_ITEMS.md  DECISIONS.md  DISCREPANCIES.md  HANDOFF.md  CLAUDE.md
 ```
 
 ### 11.3 Build configuration
 
-The build uses sbt 1.x at version 1.11.7 or later, the minimum Databricks lists for building Scala JARs for serverless compute; migration to sbt 2 waits until the required plugins support it. The fragment below is illustrative and must be validated by spike S-01.
+The build uses sbt 1.12.15 (D-12); migration to sbt 2 waits until the plugins support it. The essentials of `build.sbt`, abbreviated:
 
 ```scala
-// Pinned to the deployed runtime, DBR 18 LTS (re-verify; see §5.1 and §5.3)
-ThisBuild / scalaVersion := "2.13.16"
-ThisBuild / scalacOptions ++= Seq("-release", "17", "-deprecation", "-feature",
-  "-unchecked", "-Xlint", "-Wunused:imports,privates,locals", "-Werror")
-ThisBuild / javacOptions ++= Seq("--release", "17")
+val runtimeScalaVersion = "2.13.16"                        // PLAT-3
 val sparkVersion = "4.1.0"
+ThisBuild / scalaVersion := runtimeScalaVersion
+ThisBuild / scalacOptions ++= Seq("-release", "17", "-encoding", "UTF-8", "-deprecation",
+  "-feature", "-unchecked", "-Xlint", "-Wunused:imports,privates,locals", "-Werror")
 
-lazy val numerics = project                                   // no Spark dependency
+// PLAT-4: `sbt -Dpprof.linkageCheck=true compile` forces the runtime's Scala modules.
+ThisBuild / dependencyOverrides ++= (if (linkageCheck)
+  Seq("scala-library", "scala-reflect", "scala-compiler").map("org.scala-lang" % _ % runtimeScalaVersion)
+  else Nil)
 
-lazy val engine = project.dependsOn(numerics).settings(
-  libraryDependencies ++= Seq(
-    "org.apache.spark" %% "spark-sql-api" % sparkVersion % Provided,
-    "org.apache.spark" %% "spark-sql"     % sparkVersion % Test),
-  allowUnsafeScalaLibUpgrade := true,  // open-source Spark 4.1.x pulls scala-library 2.13.17 (SIP-51)
+lazy val sparkModuleSettings = Seq(
+  allowUnsafeScalaLibUpgrade := true,                       // open-source Spark 4.1.x needs 2.13.17
   Test / fork := true,
   Test / parallelExecution := false,
-  Test / javaOptions ++= Seq(/* --add-opens flags copied from Spark's JavaModuleOptions */))
+  Test / dependencyClasspath ~= dropShimsAndPutConnectClientLast,   // OI-21, ADR-0002
+  Test / javaOptions ++= sparkJavaModuleOptions ++ testProperties)  // Spark v4.1.0 JavaModuleOptions
 
-lazy val ml = project.dependsOn(engine).settings(
-  libraryDependencies += "org.apache.spark" %% "spark-mllib" % sparkVersion % Provided)
+lazy val numerics = project                                 // scala-library 2.13.16 only
+lazy val engine   = project.dependsOn(numerics, testkit % "test->compile")   // spark-sql-api, provided
+lazy val ml       = project.dependsOn(engine)               // spark-mllib, provided
+lazy val app      = project.dependsOn(engine)
+lazy val testkit  = project                                 // spark-sql, Connect server and client, munit
+lazy val bench    = project.dependsOn(engine, testkit)
 ```
 
-Tests fork a JVM that carries the `--add-opens` flags Spark needs on Java 17 and later, copied from the pinned Spark version's `JavaModuleOptions`. Suites run serially against a shared local session with the UI disabled, small shuffle-partition counts, and ANSI mode set explicitly. Formatting and linting use scalafmt and scalafix; `sbt-buildinfo` embeds the version and git SHA (NN-11); coverage uses scoverage; binary-compatibility checking with MiMa begins at 1.0.
+Tests fork a JVM with the `--add-opens` flags of the pinned Spark's `JavaModuleOptions`, a logging configuration that sends Spark's warnings to standard output, and system properties for the fixtures directory and the session mode (`pprof.test.sparkApi`). Suites run serially against a shared local session with the UI disabled, small shuffle-partition counts and ANSI mode set explicitly. Formatting uses scalafmt 3.11.5, and `sbt-buildinfo` embeds the version and git SHA (NN-11). scalafix, scoverage and MiMa (from 1.0) are not set up yet (OI-15).
 
-### 11.4 CI/CD workflows
+### 11.4 CI workflows
 
 | Workflow | Trigger | Content | Gate |
 |---|---|---|---|
-| `ci.yml` | Pull requests and pushes | `actions/setup-java` (Temurin 21 and 17, sbt cache) and `sbt/setup-sbt`, needed because GitHub removed sbt from `ubuntu-latest` in December 2024; format check; compile with `-Werror`; layers T1–T7; coverage | Required |
-| `connect.yml` | Nightly, later every pull request | Layer T8 | Required after spike S-02 |
-| `fixtures.yml` | Manual, on re-pin | Pinned `pprof_py` and R stack; regenerated fixtures; diff-report pull request | Review |
-| `databricks-it.yml` | Merges to main, nightly, release tags | Build the JAR; upload it to a Unity Catalog volume under an immutable name containing version and git SHA; `databricks bundle deploy`; run integration jobs (T9); collect results | Required for release |
-| `bench.yml` | Weekly; manual | Benchmark jobs (T10); metrics to Delta; comparison report | Required before release |
-| `release.yml` | Version tag | Build; publish artifacts; attach the validation report and compatibility entry | — |
+| `ci.yml` | Pull requests; pushes to main | Engine API rules with a self-test; scalafmt; the linkage compile (PLAT-3, PLAT-4); compilation with `-Werror` and tests on JDK 17 and 21 (Temurin, `sbt/setup-sbt`); the engine suites under Spark Connect (T8); failure details and per-module test counts published as annotations | Required |
+| `fixtures.yml` | By hand, on a re-pin | Pinned pprof_py and R stack; outputs recomputed from the committed inputs and compared under T-part; calibration | Review |
+| `bench.yml` | By hand | Benchmark workloads on JDK 17 and 21; results on the run page | Informational |
+| Release | Version tag | Build; publish to GitHub Releases (D-08); attach the validation report and compatibility entry | Not written yet |
 
-Databricks authentication uses workload identity federation for GitHub Actions (OIDC, with `permissions: id-token: write` and `DATABRICKS_AUTH_TYPE: github-oidc`) and a least-privilege service principal limited to development workspaces and synthetic-data schemas. No long-lived tokens are stored in the repository or its secrets.
+Workflow logs need a signed-in user; annotations and job summaries do not, which lets the AI assistant read CI results from the public run page (OI-22). No secrets are stored; deployment credentials, such as OIDC federation and service principals, return with Databricks work.
 
-### 11.5 Databricks deployment
+### 11.5 Deployment
 
-Deployment uses Declarative Automation Bundles. `databricks/databricks.yml` declares the JAR artifact, the job definitions (Lakeflow Jobs), job-cluster specifications pinned to the target DBR and dedicated access mode, and development, test, and production targets. JARs live in Unity Catalog volumes under immutable names, and a path is never overwritten. Standard-mode targets add the JAR path to the Unity Catalog allowlist. Serverless JAR tasks select an environment version whose Scala, JDK, and Databricks Connect versions match the build. Integration tests run on fresh job clusters rather than long-lived all-purpose clusters, whose installed libraries can stay stale until restart. Entry points obtain the session with `SparkSession.builder().getOrCreate()`; library code never stops the session or exits the JVM.
+Databricks deployment (Declarative Automation Bundles, Unity Catalog volumes, OIDC federation, job clusters) is deferred by D-14 (ADR-0008); version 2.1 of this document describes the plan to start from when the maintainer reopens it. Releases go to GitHub Releases (D-08). Entry points obtain the session with `SparkSession.builder().getOrCreate()`; library code never stops the session or exits the JVM.
 
 ### 11.6 Working process
 
-Work proceeds in rounds. Each round produces one self-contained change (a pull request or a `git apply`-ready diff, rehearsed on a fresh clone before delivery) and ends with updates to the state files of §0. Non-trivial work starts with a design sketch, and every behavior-changing proposal includes a numerical impact table. Decisions are numbered in `DECISIONS.md`, and architecture decisions also get an ADR. Statistical and design decisions, above all parity trade-offs and output-changing choices, require the maintainer's explicit approval; implementation and consistency work proceeds under delegated authority.
+Work proceeds in rounds. Each round produces one self-contained change (a pull request or a `git apply`-ready diff, rehearsed on a fresh clone before delivery) and ends with updates to the state files of §0. Non-trivial work starts with a design sketch, and every behavior-changing proposal includes a numerical impact table. Decisions are numbered in `DECISIONS.md`, and architecture decisions also get an ADR. Statistical and design decisions, above all parity trade-offs and output-changing choices, require the maintainer's explicit approval; implementation and consistency work proceeds under delegated authority. The maintainer applies each round's patch to `main`, and the assistant reads the resulting CI run, through its public annotations, before building the next round.
 
 | Pull-request check | Evidence required |
 |---|---|
@@ -815,7 +810,7 @@ Work proceeds in rounds. Each round produces one self-contained change (a pull r
 
 ### 11.7 Releases and versioning
 
-Releases follow semantic versioning and stay at 0.x until the first parity-gated feature set; public APIs carry stability annotations, and MiMa enforces binary compatibility from 1.0. The compatibility matrix (§5.6) maps each release to its Spark line; if several Spark lines are ever supported at once, the Spark line becomes part of the artifact name. Every release ships a changelog and a validation report covering parity status per feature with tolerance evidence, metamorphic and edge-case results, a benchmark summary, and the tiers tested. Artifacts are published to GitHub Releases and the deployment volume; publication to a public Maven repository is decision D-08.
+Releases follow semantic versioning and stay at 0.x until the first parity-gated feature set; public APIs carry stability annotations, and MiMa enforces binary compatibility from 1.0. The compatibility matrix (§5.6) maps each release to its Spark line; if several Spark lines are ever supported at once, the Spark line becomes part of the artifact name. Every release ships a changelog and a validation report covering parity status per feature with tolerance evidence, metamorphic and edge-case results, a benchmark summary, and the tiers tested. Artifacts are published to GitHub Releases (D-08).
 
 ---
 
@@ -823,13 +818,13 @@ Releases follow semantic versioning and stay at 0.x until the first parity-gated
 
 | Area | Rule |
 |---|---|
-| Protected data | PHI, PII, and CMS data stay in the approved Databricks environment. GitHub, CI runners, Codespaces, local machines, and AI assistants see only synthetic data. |
+| Protected data | PHI, PII, and CMS data stay in the approved environment. GitHub, CI runners, Codespaces, local machines, and AI assistants see only synthetic data. |
 | Logs and errors | Messages identify problems by column names and counts, never by row values or patient identifiers; tests check this (T6). |
 | Shared outputs | Provider-level outputs intended for sharing follow the applicable data use agreement's cell-size suppression rules; CMS policy prohibits displaying cell counts from 1 to 10. |
 | Real-data validation | T12 runs only inside the approved environment; only aggregate comparison results leave it. |
-| Credentials | OIDC federation and least-privilege service principals; no personal tokens in automation. |
+| Credentials | No secrets in the repository or its workflows today. When deployment returns: OIDC federation and least-privilege service principals, never personal tokens. |
 | Dependencies | Kept minimal; updated through Scala Steward or Dependabot; every new dependency gets a license review. |
-| Licensing | `pprof_py` is MIT-licensed. R's `survival` package is LGPL and EmpiNull is GPL-3: run them to produce reference outputs, but never port their source into this repository; implement from the published mathematics and the MIT-licensed reference. The project's own license is decision D-07. |
+| Licensing | pprof_spark is MIT-licensed, copyright Kevin He (D-07). `pprof_py` is MIT-licensed. R's `survival` (LGPL), `glmnet` and `lme4` (GPL), EmpiNull (GPL-3) and any other copyleft tool may be run to produce reference outputs, but their source is never ported into this repository; implement from the published mathematics and the MIT-licensed reference. |
 
 ---
 
@@ -860,7 +855,7 @@ Releases follow semantic versioning and stay at 0.x until the first parity-gated
 | Parity matrix and validation reports | Status per feature; evidence per release |
 | Compatibility matrix | Spark, DBR, Scala, JDK, tiers |
 | Migration guide | Mapping from `pprof_py` calls to `pprof_spark`; intentional differences |
-| Example jobs | Bundle-deployable examples on synthetic data |
+| Example jobs | Runnable Spark examples on synthetic data |
 
 Each model's documentation explains both the statistics and the distributed implementation, including its relationship to `pprof_py`, its reference implementation, its validation results, and its limitations.
 
@@ -873,7 +868,7 @@ AI assistants working on this project follow every rule above, plus the followin
 | Rule | Detail |
 |---|---|
 | Evidence | Never state that code compiles, passes, matches, or is faster without the run that shows it (NN-8). |
-| Platform APIs | Check Spark, Databricks, and sbt APIs against documentation for the pinned versions, and mark anything unverified as unverified. |
+| Platform APIs | Check Spark, sbt and other platform APIs against documentation for the pinned versions, and mark anything unverified as unverified. |
 | Execution location | For every code path, state whether it runs on the driver or on executors, and whether it is Connect-compatible. |
 | Statistical impact | Give every behavioral difference a discrepancy class (§3.5); never present one as a refactor. |
 | Tests with code | Every change includes tests at the appropriate layers. |
@@ -887,32 +882,49 @@ AI assistants working on this project follow every rule above, plus the followin
 
 ## 16. Phase 0: decisions and spikes
 
-| ID | Decision | Why it matters | Default if undecided |
+Phase 0's decisions and spikes are resolved. The outcomes are recorded in `DECISIONS.md` and `docs/adr/`, and the gate review in `docs/gates/phase-0.md`.
+
+| ID | Decision | Outcome |
+|---|---|---|
+| D-01 | Supported compute tiers for v1 | Classic Spark; `engine` Connect-compatible and tested under Spark Connect |
+| D-02 | Target and secondary runtimes | Spark 4.1.0, Scala 2.13.16, Java 17 bytecode: open-source Spark 4.1.x, and DBR 18 LTS by construction |
+| D-03 | Python access in v1 | None; revisit after Phase 1d |
+| D-04 | Design envelope and performance targets | §2.3 ranges as planning assumptions; targets after the first benchmarks; OI-02 before large-p work |
+| D-05 | pprof_py pin | v0.7.0, commit `9320766` |
+| D-06 | Default Cox tie method | Breslow |
+| D-07 | Project license | MIT, copyright Kevin He |
+| D-08 | Artifact distribution | GitHub Releases |
+| D-09 | Tolerance calibration | The §8.4 values and rule, calibrated against the Cox fixtures and enforced in CI |
+| D-10 | Root package and artifact names | `pprof.spark`; `pprof-spark-<module>_2.13` |
+| D-11 to D-19 | Raised during Phase 0 | Phase 0 exit and first Cox slice; tooling baseline; Spark Connect test topology; no Databricks work; summation; platform skeleton; fixtures; deterministic mode; Codespaces |
+
+| ID | Question | Outcome |
+|---|---|---|
+| S-01 | Does the JAR run on DBR 18 LTS while CI tests open-source Spark? | Deferred (D-14); the linkage compile guards PLAT-3 meanwhile |
+| S-02 | Does the Dataset backend run unchanged under Spark Connect? | Local part passed, bitwise identical to Classic (ADR-0002); Databricks legs deferred |
+| S-03 | What does table materialization cost against persist? | Deferred (D-14) |
+| S-04 | Can third-party Spark ML models be used through Spark Connect ML? | Deferred (D-01) |
+| S-05 | What does deterministic mode cost? | Little; deterministic mode stays the default (ADR-0006) |
+| S-06 | Is Codespaces usable? | Dev container provided; the maintainer's trial is pending (ADR-0007) |
+| S-07 | Which block sizes work at envelope scale? | Deferred: needs a cluster (ADR-0008) |
+
+## Appendix A. Changes and their rationale
+
+### v2.0 to v2.2 (Phase 0)
+
+| Area | v2.0 | v2.2 | Why |
 |---|---|---|---|
-| D-01 | Supported compute tiers for v1 | Backend strategies and test matrix | Tier 1 only; engine kept Connect-compatible |
-| D-02 | Target and secondary runtimes | Scala patch, JDK, Spark line | DBR 18 LTS; DBR 19 as a non-blocking canary |
-| D-03 | Python access in v1 | Adoption by Python-first users | Job-based access; py4j wrappers deferred |
-| D-04 | Design envelope and performance targets | Layout thresholds; success criteria | Ranges of §2.3; targets set after the first benchmarks |
-| D-05 | `pprof_py` pin and reference versions | Parity baseline | Latest release whose validation suite passes for Cox features |
-| D-06 | Default Cox tie method | Parity versus R familiarity | Breslow, the reference default |
-| D-07 | Project license | Distribution and reuse | MIT, matching `pprof_py` |
-| D-08 | Artifact distribution | How consumers install the package | GitHub Releases plus a Unity Catalog volume |
-| D-09 | Tolerance calibration | Strictness of the gate | Initial values of §8.4 |
-| D-10 | Root package and artifact names | Stability of public names | Decided before the first release |
+| Platform | Pinned to DBR 18 LTS and verified on that runtime | Standalone Apache Spark 4.1 package; DBR 18 LTS compatible by construction but not tested | D-14 |
+| Phase 0 exit | Walking Cox skeleton; a JAR on a DBR job cluster | Statistics-free platform skeleton, green under Classic Spark and Spark Connect | D-11: the Cox slice needs an approved specification (NN-2) |
+| Scala skew (PLAT-4) | The newer library tolerated at test time | The newer library is on the compilation classpath too; a linkage compile forces 2.13.16 | sbt's documentation of the setting; review |
+| Connect enforcement (§5.4) | The compile classpath enforces ARCH-2 | spark-connect-shims let incompatible calls compile; a source check enforces ARCH-2 | Review |
+| T8 | Nightly, later on pull requests | In-process Spark Connect on every push and pull request | D-13, ADR-0002 |
+| Fixtures (§9.3) | Parquet | CSV inputs on exact grids; JSON outputs as hexadecimal doubles | ADR-0005 |
+| Tolerances (§8.4) | Initial values | An element-wise rule scaled by magnitude, calibrated and enforced in CI | D-09 |
+| Licensing (§12) | survival and EmpiNull named | Every copyleft fixture tool; MIT for pprof_spark | Review; D-07 |
+| Reference (§3) | 26 documented R-comparison failures | None at v0.7.0 for survival; two reference-vs-R differences registered | X-007 to X-010 |
 
-| ID | Question | Method | Success criterion |
-|---|---|---|---|
-| S-01 | Can the JAR target DBR 18 LTS (Scala 2.13.16) while CI tests against open-source Spark 4.1.x? | Build per §11.3; deploy; run a kernel on a DBR 18 LTS job cluster; try compiling `engine` against Databricks Connect as the alternative | Passing smoke test on the runtime; ADR |
-| S-02 | Does the Dataset-only backend run unchanged under Spark Connect? | Run the T3 suite in local Connect mode; run a JAR task on standard and serverless compute | Results within T-part, bitwise expected (R2) |
-| S-03 | What does table materialization cost relative to persist? | Benchmark Cox iterations both ways on Tier 1, and table mode on serverless | Recorded ratio; layout guidance |
-| S-04 | Can third-party Spark ML models be used through Spark Connect ML? | Register through `ServiceLoader` on a test server; call `fit`, `transform`, and custom attributes | Documented answer with limits |
-| S-05 | What does deterministic mode cost (`StrictMath`, ordered reduction)? | Microbenchmarks and one Cox benchmark | Overhead recorded; default confirmed |
-| S-06 | Is Codespaces usable under institutional policy? | Devcontainer with a JDK, sbt, and local Spark tests | Working environment, or a documented alternative |
-| S-07 | Which block sizes and partition counts work at envelope scale? | Synthetic data at 10⁸–10⁹ rows | Defaults for DIST-4 and §10.3 |
-
----
-
-## Appendix A. Changes from v1 and their rationale
+### v1 to v2.0
 
 | Area | v1 | v2 | Why |
 |---|---|---|---|

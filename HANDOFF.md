@@ -1,5 +1,18 @@
 # Handoff
 
+## Round 8 (2026-10-06): PROJECT_CONTEXT v2.2
+
+PROJECT_CONTEXT.md v2.2 folds in decisions D-01 to D-19 and the corrections found in Phase 0, and
+drops the v2.1 amendments preface. Main changes: the platform is a standalone Apache Spark 4.1
+package (§5, NN-13, D-14); Phase 0's exit and ROAD-1 follow D-11; PLAT-4 and §5.4 describe the
+compilation-classpath hazard, the linkage compile and the source check; §3 records the pin, the
+verification at v0.7.0 and X-009 and X-010; §6 records the 4 MB block default, negative-zero
+normalization, TimeRange's consequences, the reduction-volume question and bit-exact persistence;
+§8.4 the calibrated tolerance rule; §9 the T8 cadence and the fixture format; §11 the actual
+build, workflows and environments; §12 the licenses; §16 the outcomes; Appendix A the changes.
+The claude.ai project copy of PROJECT_CONTEXT.md should be replaced with this file.
+No code changed.
+
 ## Round 7 (2026-10-06): remaining spikes and the Phase 0 gate review
 
 ### CI result of round 6

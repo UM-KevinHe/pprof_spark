@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-06, round 7: Phase 0 gate review recorded (docs/gates/phase-0.md).
+Updated 2026-10-06, round 8.
 
 **Phase 0, foundations and spikes: in progress.** No phase gate has been passed.
 
@@ -23,8 +23,9 @@ Updated 2026-10-06, round 7: Phase 0 gate review recorded (docs/gates/phase-0.md
 | 4 | `numerics`: deterministic summation and the StrictMath rule (ADR-0003) | Merged (08b378f); CI green, run 37361715287 (40 tests per JDK) |
 | 5 | Platform skeleton: data contract, layout plan, working set, kernels, ordered reduction, result table, persistence (ADR-0004) | Merged (7f31717); CI green, run 37458038911 |
 | 6 | Reference fixtures for Cox (pprof_py v0.7.0, R 4.3.3, survival 3.5-8), calibration, R-comparison triage (ADR-0005) | Merged (0be6e54); CI green, run 37477285324 |
-| 7 | S-05 (ADR-0006), S-06 (ADR-0007), deferred spikes (ADR-0008), Phase 0 gate review | Delivered as a patch; Phase 0 closes when its CI passes |
-| 8 | Phase 1a begins: PROJECT_CONTEXT v2.2, then the Cox specification for the first slice | Planned |
+| 7 | S-05 (ADR-0006), S-06 (ADR-0007), deferred spikes (ADR-0008), Phase 0 gate review | Merged (d47532c); Phase 0 closes when its CI is confirmed green |
+| 8 | PROJECT_CONTEXT v2.2: Phase 0 decisions and review fixes folded in | Delivered as a patch |
+| 9 | Phase 1a: Cox specification for the first slice (approval needed, NN-2) | Planned |
 
 ## Decisions and spikes
 
