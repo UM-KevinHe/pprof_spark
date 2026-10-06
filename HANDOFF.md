@@ -1,5 +1,22 @@
 # Handoff
 
+## Round 12 (2026-10-06): persistence, logging, and the Phase 1a gate review
+
+- `CoxFitIO` saves a `CoxFit` as one JSON metadata record with doubles as 64-bit patterns and loads
+  it bit for bit (PERS-1), through Spark's public API (PERS-3), never overwriting; another kind or
+  format version fails with a message naming both versions (PERS-2). `Ties.fromName` added.
+- `CoxFit` now carries the information matrix I(β̂) (a Phase 1a output, checked against the
+  inverse of the fixtures' covariance under T-var) and its feature status, `experimental` (NN-12).
+- `CoxPH` logs each fit warning through slf4j (OI-36): the iteration-cap tests show
+  `WARN CoxPH$: the Cox fit did not converge: ...` in the test log.
+- `docs/gates/phase-1a.md`: every requirement is met except the scale test (no cluster, D-14; no
+  targets yet, D-04). D-22 proposes closing Phase 1a at parity-verified once CI confirms rounds 11
+  and 12, keeping the features Experimental and moving scale verification to the Phase 1d gate.
+- Sandbox verification: all suites pass on JDK 17 and 21 (Classic) and JDK 17 (Spark Connect):
+  numerics 51, testkit 11, engine 57 each. A test that edits a saved file must also delete
+  Hadoop's `.crc` checksum beside it.
+- Round 11's CI result could not be read (the GitHub API was unavailable from the sandbox).
+
 ## Round 11 (2026-10-06): Efron ties, case weights and offsets
 
 Round 10 passed CI (run 37502839703). The maintainer approved this round in advance (D-21) and,

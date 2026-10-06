@@ -24,6 +24,17 @@ sealed abstract class Ties(val name: String) extends Product with Serializable
 object Ties {
   case object Breslow extends Ties("breslow")
   case object Efron extends Ties("efron")
+
+  val all: Seq[Ties] = Seq(Breslow, Efron)
+
+  def fromName(name: String): Ties =
+    all
+      .find(_.name == name)
+      .getOrElse(
+        throw new IllegalArgumentException(
+          s"unknown tie method $name; expected one of ${all.map(_.name).mkString(", ")}"
+        )
+      )
 }
 
 /** Fit options (Cox specification §5); defaults are pprof_py's and R's. */
@@ -57,12 +68,14 @@ final case class CoxCoefficient(
     upper: Double
 )
 
-/** A fitted Cox model (Cox specification §8): estimates, model-based covariance as a packed upper
-  * triangle, fit diagnostics, counts, and reproducibility metadata (§6.10).
+/** A fitted Cox model (Cox specification §8): estimates, model-based covariance and the information
+  * matrix I(β̂) as packed upper triangles, fit diagnostics, counts, reproducibility metadata
+  * (§6.10), and the feature status (NN-12). [[CoxFitIO]] saves and loads it bit for bit.
   */
 final case class CoxFit(
     coefficients: Vector[CoxCoefficient],
     covariance: Vector[Double],
+    information: Vector[Double],
     logLikelihood: Double,
     logLikelihoodNull: Double,
     iterations: Int,
@@ -79,7 +92,8 @@ final case class CoxFit(
     options: CoxOptions,
     software: SoftwareInfo,
     layout: LayoutSummary,
-    fingerprint: Long
+    fingerprint: Long,
+    featureStatus: String = CoxPH.FeatureStatus
 ) {
   def estimates: Vector[Double] = coefficients.map(_.estimate)
   def standardErrors: Vector[Double] = coefficients.map(_.standardError)
@@ -97,6 +111,13 @@ final class CoxAliasingException(val features: Seq[String])
   * offsets and model-based variance (docs/spec/cox/first-slice.md, efron-weights-offsets.md).
   */
 object CoxPH {
+
+  /** Every Cox feature is Experimental until it passes the parity gate, scale test included (NN-12,
+    * §9.8).
+    */
+  val FeatureStatus: String = "experimental"
+
+  private val log = org.slf4j.LoggerFactory.getLogger(getClass)
 
   def fit(df: DataFrame, spec: CoxSpec, options: CoxOptions = CoxOptions()): CoxFit =
     withWorkingSet(df, spec, options) { prepared =>
@@ -132,9 +153,11 @@ object CoxPH {
       val warnings =
         if (result.converged) Vector.empty[String]
         else Vector(s"the Cox fit did not converge: ${result.message}")
+      warnings.foreach(w => log.warn(w))
       CoxFit(
         coefficients,
         covariance.toVector,
+        result.evaluation.information.toVector,
         result.evaluation.value,
         result.initial.value,
         result.iterations,

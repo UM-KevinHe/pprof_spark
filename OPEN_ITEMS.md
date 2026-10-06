@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-06, round 11. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-06, round 12. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -40,8 +40,10 @@ decision is approved.
 | OI-33 | Upstream reports to pprof_py: the README's failure count (X-008) and the step-control order (X-010) | Maintainer |
 | OI-34 | Kernels with several sums per row need a fused pairwise cascade: one walk over rows, the same addition tree as `Summation.pairwise` per statistic (ADR-0006) | Reusable form in `numerics` with the first Cox kernel |
 | OI-35 | Lockstep parity needs pprof_py's Newton iterates in the fixtures | Closed: round 10 records `CoxPH(max_iter = k)`, k = 1 to 5, and pprof_py's z, p and interval outputs in the fixtures; `CoxPHSuite` uses them |
-| OI-36 | Fit warnings (non-convergence) are collected in `CoxFit.warnings` but not yet logged | Log through slf4j once its presence on the engine's compile classpath is confirmed in CI |
-| OI-37 | `CoxFit` has no persistence yet (PERS-1) | Add save and load with the model contract, before the Phase 1a gate |
+| OI-36 | Fit warnings (non-convergence) are collected in `CoxFit.warnings` but not yet logged | Closed in round 12: `CoxPH` logs each warning through slf4j (a dependency of Spark's common utilities, which spark-sql-api brings) |
+| OI-37 | `CoxFit` has no persistence yet (PERS-1) | Closed in round 12: `CoxFitIO` saves and loads bit for bit under Classic and Connect |
 | OI-39 | Spark Connect rejects an aggregate whose output has two columns with the same generated name; Classic Spark accepts it. Found in round 11, where two validation counts shared an expression (15 engine tests failed under T8 only) | Closed: `CoxValidation` aliases every count. Rule for new code: alias every column of a multi-column aggregate |
+| OI-40 | §9.8: CI must fail when a public API has no parity-matrix entry; no such check exists | Add a check (for example over `engine` public classes against `docs/parity/matrix.md`) before the first release |
+| OI-41 | PERS-2: models persisted by each release are kept as test fixtures | Start with release 0.1.0: save one `CoxFit` per tie method into `fixtures/models/` and load them in CI |
 | OI-38 | Breslow kernel cost: Neumaier running sums on S₂ add about four flops per entry | Measure with the S-05 benchmark harness at p = 10 to 100 before large-p work (D-04) |
 | OI-20 | Re-verification (§3.4, §5.1): Spark/Scala pairs, DBR 18 facts and pprof_py README claims checked 2026-10-03; §3.4 rows await the pin | DISCREPANCIES.md after D-05 |

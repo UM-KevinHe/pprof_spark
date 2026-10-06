@@ -97,6 +97,13 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-22: Close Phase 1a at parity-verified (Proposed, round 12; the maintainer's sign-off required)
+
+`docs/gates/phase-1a.md`: every Phase 1a requirement of §9.8 is met except the scale test, which
+needs a cluster (D-14) and targets (D-04). Proposed: close Phase 1a once CI confirms rounds 11 and
+12, keep the Cox features `Experimental` at parity-verified, and move their scale verification to
+the Phase 1d gate.
+
 ### D-21: Efron ties, case weights and offsets (Accepted in advance, 2026-10-06)
 
 `docs/spec/cox/efron-weights-offsets.md`. The maintainer approved the round's specification and

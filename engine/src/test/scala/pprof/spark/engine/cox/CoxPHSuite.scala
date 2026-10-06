@@ -9,7 +9,7 @@ import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StructFiel
 
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.data.{InputProblem, InvalidInputException}
-import pprof.spark.numerics.Normal
+import pprof.spark.numerics.{Cholesky, Normal}
 import pprof.spark.testkit.{Fixtures, SparkSuite, Tolerances}
 
 /** Parity and behavior of Cox regression (docs/spec/cox/first-slice.md §12 and
@@ -111,6 +111,9 @@ class CoxPHSuite extends SparkSuite {
         check("T-coef", s"$what coefficients", fit.estimates, doubles(node, "coef"))
         check("T-var", s"$what standard errors", fit.standardErrors, doubles(node, "se"))
         check("T-var", s"$what covariance", fit.covariance, doubles(node, "covariance"))
+        val information =
+          Cholesky.factor(doubles(node, "covariance"), features(name).size).inversePacked
+        check("T-var", s"$what information", fit.information, information)
         check("T-fn", s"$what loglik", Seq(fit.logLikelihood), doubles(node, "loglik"))
         check(
           "T-fn",

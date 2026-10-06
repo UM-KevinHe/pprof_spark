@@ -120,6 +120,8 @@ Driver-side result (API-2), immutable, with the metadata of §6.10:
 | Metadata | Software (`SoftwareInfo`), input specification, layout summary, data fingerprint, options |
 
 A per-iteration log (β, ℓ, halvings) is kept in the result for lockstep parity and diagnostics.
+Round 12 added the information matrix I(β̂) (packed) and the feature status (`experimental`,
+NN-12) to the result, logs warnings through slf4j, and persists fits with `CoxFitIO` (§6.10).
 
 ## 9. Edge cases
 
