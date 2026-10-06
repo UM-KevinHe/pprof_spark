@@ -1,6 +1,7 @@
 # Specification: Cox proportional hazards — first slice
 
-- Status: **Draft, awaiting the maintainer's approval (D-20, NN-2)**. No Cox code is written before approval.
+- Status: **Approved on 2026-10-06 (D-20)**, with X-010 (corrected), X-011 and X-012. Implemented in
+  round 10: `pprof.spark.engine.cox.CoxPH`, with kernels in `pprof.spark.numerics`.
 - Scope (D-11): right-censored data, strata, Breslow ties, model-based variance. Efron ties, case
   weights and offsets follow in Phase 1a; left truncation, baseline hazards and TimeRange in 1b;
   residuals and robust variance in 1c.
@@ -34,7 +35,8 @@ Strata without events contribute nothing to ℓ, U or I.
 
 β is estimated on the scale of the input covariates. Covariates may be centered internally by
 constants (for conditioning, as pprof_py and R do); centering shifts every ηᵢ of a stratum by the
-same constant and leaves ℓ, U, I and β̂ unchanged mathematically. Results are reported for the
+same constant and leaves ℓ, U, I and β̂ unchanged mathematically. pprof_spark centers by the column
+means, computed from per-block column sums combined in block order. Results are reported for the
 uncentered covariates.
 
 ## 4. Data contract
@@ -97,7 +99,10 @@ the evaluation non-finite, which step halving then treats as a decrease.
 - Covariance V = I(β̂)⁻¹ (packed, symmetric); SE = sqrt(diag V).
 - z = β̂/SE; p = 2·Φ̄(|z|), with Φ̄ computed through a complementary error function accurate in
   relative terms deep into the tail, so that T-p's log10 comparison holds below 1e-10.
-- Confidence interval β̂ ± q·SE with q = Φ⁻¹(1 − α/2) (Wichura's AS 241); level in (0, 1).
+- Confidence interval β̂ ± q·SE with q = Φ⁻¹(1 − α/2), level in (0, 1). Implementation note
+  (round 10): q comes from Newton steps on the upper tail, started from Abramowitz and Stegun
+  26.2.23, and agrees with 160-digit references to 1e-14 in relative terms; this replaces the
+  AS 241 named in the approved draft and changes no result beyond a unit in the last place.
 - A negative or zero variance cannot occur after a successful Cholesky factorization; aliasing
   fails earlier (§5).
 
@@ -161,7 +166,7 @@ and pprof_py's and R's tight Breslow fits differ there by at most 2.4e-9 in rela
 |---|---|
 | Layout | StratumLocal (§6.6): whole strata per block, ADR-0004's plan |
 | Shuffles | One, to build the working set |
-| Passes | One per evaluation of (ℓ, U, I): 1 at β = 0, then one per iteration plus one per halving; typically 4 to 6 |
+| Passes | One summary pass (counts, column sums for centering, fingerprint), then one per evaluation of (ℓ, U, I): 1 at β = 0, then one per iteration plus one per halving; typically 4 to 6 |
 | Driver traffic per pass | B partials of 1 + p + p(p+1)/2 doubles, under `driverBudgetBytes` |
 | Kernel cost | O(n·p²) per pass; O(n·p) memory per block |
 | Driver work | Cholesky of a p×p matrix per iteration, O(p³) |

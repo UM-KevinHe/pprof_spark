@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-06, round 9. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-06, round 10. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -39,5 +39,8 @@ decision is approved.
 | OI-32 | Fixture families for later phases | Left truncation and baseline hazards (1b), residuals and robust variance (1c), provider measures (1d), each with negative controls |
 | OI-33 | Upstream reports to pprof_py: the README's failure count (X-008) and the step-control order (X-010) | Maintainer |
 | OI-34 | Kernels with several sums per row need a fused pairwise cascade: one walk over rows, the same addition tree as `Summation.pairwise` per statistic (ADR-0006) | Reusable form in `numerics` with the first Cox kernel |
-| OI-35 | Lockstep parity needs pprof_py's Newton iterates in the fixtures | Add `CoxPH(max_iter = k)`, k = 1 to 5, to the generator with the first Cox slice |
+| OI-35 | Lockstep parity needs pprof_py's Newton iterates in the fixtures | Closed: round 10 records `CoxPH(max_iter = k)`, k = 1 to 5, and pprof_py's z, p and interval outputs in the fixtures; `CoxPHSuite` uses them |
+| OI-36 | Fit warnings (non-convergence) are collected in `CoxFit.warnings` but not yet logged | Log through slf4j once its presence on the engine's compile classpath is confirmed in CI |
+| OI-37 | `CoxFit` has no persistence yet (PERS-1) | Add save and load with the model contract, before the Phase 1a gate |
+| OI-38 | Breslow kernel cost: Neumaier running sums on S₂ add about four flops per entry | Measure with the S-05 benchmark harness at p = 10 to 100 before large-p work (D-04) |
 | OI-20 | Re-verification (§3.4, §5.1): Spark/Scala pairs, DBR 18 facts and pprof_py README claims checked 2026-10-03; §3.4 rows await the pin | DISCREPANCIES.md after D-05 |

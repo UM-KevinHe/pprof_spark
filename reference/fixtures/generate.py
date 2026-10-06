@@ -18,6 +18,7 @@ inputs are generated once (§9.3), and a re-pin or a check recomputes only the o
 
 import argparse
 import hashlib
+import warnings
 import json
 import os
 import shutil
@@ -117,7 +118,23 @@ def pprof_fit(df, case, ties, **control):
         "loglik_null": hexes([model.log_likelihood_null_]),
         "iterations": int(model.n_iter_),
         "converged": bool(model.converged_),
+        "z": hexes(model.z_scores_),
+        "p": hexes(model.p_values_),
+        "ci_lower": hexes(np.asarray(model.confidence_intervals_)[:, 0]),
+        "ci_upper": hexes(np.asarray(model.confidence_intervals_)[:, 1]),
     }
+
+
+def pprof_iterates(df, case, ties, count=5):
+    """Newton iterates for lockstep parity (§9.2): the fit after k iterations, k = 1 to count."""
+    iterates = []
+    for k in range(1, count + 1):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # CoxPH warns when max_iter stops it early
+            model = CoxPH(ties=ties, max_iter=k).fit(df[features(case)].to_numpy(dtype=float), **fit_arguments(df, case))
+        iterates.append({"iterations": int(model.n_iter_), "beta": hexes(model.coef_),
+                         "loglik": hexes([model.log_likelihood_])})
+    return iterates
 
 
 def pprof_function(df, case, ties, beta):
@@ -218,6 +235,7 @@ def main():
                 "tight": tight,
                 "beta_zero": pprof_function(df, case, ties, [0.0] * case["p"]),
                 "beta_fixed": pprof_function(df, case, ties, FIXED_BETA[:case["p"]]),
+                "iterates": pprof_iterates(df, case, ties),
                 "negative_controls": controls,
             }
         write_json(os.path.join(case_dir, "pprof_py.json"), reference)

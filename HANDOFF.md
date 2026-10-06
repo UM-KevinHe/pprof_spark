@@ -1,5 +1,35 @@
 # Handoff
 
+## Round 10 (2026-10-06): the first Cox slice
+
+The maintainer approved the Cox first-slice specification with its three discrepancy decisions
+(D-20). This round implements it.
+
+- `numerics`: `Normal` (upper tail by series and Laplace's continued fraction, quantile by Newton
+  steps; within 2e-13 and 1e-14 of 160-digit mpmath references), `Cholesky` with R's aliasing
+  rule (tolerance 2^-39), `Newton` with the approved step control (convergence tested on the full
+  step before halving), and the `CoxBreslow` kernel (Neumaier running sums in canonical order).
+  `NeumaierVector` gained `addAt` and `valueAt`; `add` keeps its arithmetic.
+- `engine.cox`: `CoxSpec`, `CoxValidation` (one job; counts, never values; fails on no events),
+  canonical `CoxBlock`s on StratumLocal layouts, `CoxKernel`, and `CoxPH.fit`, returning `CoxFit`
+  with Wald inference, warnings, the iteration log and reproducibility metadata.
+- Fixtures: the generator now records pprof_py's Newton iterates and z, p and interval outputs
+  (OI-35 closed); regeneration is byte-identical and calibration still passes. R outputs are
+  unchanged.
+- Tests: 19 new `numerics` tests and 16 in `CoxPHSuite`: function-level, lockstep and end-to-end
+  parity against pprof_py and R; inference; negative controls; R0 and R1; metamorphic relations;
+  every edge case of the specification. Worst ratios: T-coef 0.995 (tiny-ties against pprof_py:
+  the X-010 half step) and 1.2e-7 against R; T-fn 0.011; T-iter 2.1e-4; T-var 2.9e-4; T-test
+  1.3e-7; T-part 1.6e-7. Scaling x1 by 4 and shifting x2 by 3 left the estimates bitwise unchanged.
+- Spec amendment (implementation note, no statistical change): the normal quantile uses Newton
+  steps instead of AS 241.
+- New open items: OI-36 (log fit warnings), OI-37 (persist `CoxFit`), OI-38 (kernel cost).
+- Sandbox verification: every suite passes on JDK 17 and 21 under Classic Spark and on JDK 17
+  under Spark Connect (numerics 48, testkit 11, engine 50 tests each). The three fixture fits are
+  bitwise identical across those three configurations (R2). One Spark Connect log line
+  (`INVALID_CURSOR.DISCONNECTED`) appears during an existing BlockMoments test that passes; it
+  is the server's timing-dependent notice of a detached result stream, not a failure.
+
 ## Round 9 (2026-10-06): Cox first-slice specification (Phase 1a starts)
 
 Rounds 7 and 8 passed CI (runs 37484837090 and 37487451760), so Phase 0 is closed.

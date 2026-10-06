@@ -47,6 +47,16 @@
    ]
   },
   "default": {
+   "ci_lower": [
+    "0x1.a8ce1561fc082p-2",
+    "-0x1.3d78ebf5233dcp-2",
+    "0x1.24bec21f4390dp-4"
+   ],
+   "ci_upper": [
+    "0x1.423f62d9bdcdbp-1",
+    "-0x1.d155b4075265ap-4",
+    "0x1.163ed9c860c2ap-2"
+   ],
    "coef": [
     "0x1.0b5336c55de8ep-1",
     "-0x1.b1ce58f6f7d73p-3",
@@ -68,14 +78,91 @@
    "loglik_null": [
     "-0x1.89c725f17b198p+10"
    ],
+   "p": [
+    "0x1.b0b7d2708bb25p-70",
+    "0x1.8d0ecdf5fd25ap-16",
+    "0x1.9a2065904731fp-11"
+   ],
    "se": [
     "0x1.c05b065f7ffabp-5",
     "0x1.9a7e9dd30c5f4p-5",
     "0x1.a27ef35750664p-5"
+   ],
+   "z": [
+    "0x1.3145a5d1df5b1p+3",
+    "-0x1.0e89b41343a71p+2",
+    "0x1.adf3ab7c5a52bp+1"
    ]
   },
+  "iterates": [
+   {
+    "beta": [
+     "0x1.0c85a262c7a78p-1",
+     "-0x1.879edcced8e3ep-3",
+     "0x1.459f8f3c5996bp-3"
+    ],
+    "iterations": 1,
+    "loglik": [
+     "-0x1.7bb58336fba91p+10"
+    ]
+   },
+   {
+    "beta": [
+     "0x1.0b4eccde33a80p-1",
+     "-0x1.b1d3169698f17p-3",
+     "0x1.5f6ddecc613bap-3"
+    ],
+    "iterations": 2,
+    "loglik": [
+     "-0x1.7bae0dafac3d0p+10"
+    ]
+   },
+   {
+    "beta": [
+     "0x1.0b5336c55de8ep-1",
+     "-0x1.b1ce58f6f7d73p-3",
+     "0x1.5f6e8a5031a6dp-3"
+    ],
+    "iterations": 3,
+    "loglik": [
+     "-0x1.7bae0daec4478p+10"
+    ]
+   },
+   {
+    "beta": [
+     "0x1.0b5336c55de8ep-1",
+     "-0x1.b1ce58f6f7d73p-3",
+     "0x1.5f6e8a5031a6dp-3"
+    ],
+    "iterations": 3,
+    "loglik": [
+     "-0x1.7bae0daec4478p+10"
+    ]
+   },
+   {
+    "beta": [
+     "0x1.0b5336c55de8ep-1",
+     "-0x1.b1ce58f6f7d73p-3",
+     "0x1.5f6e8a5031a6dp-3"
+    ],
+    "iterations": 3,
+    "loglik": [
+     "-0x1.7bae0daec4478p+10"
+    ]
+   }
+  ],
   "negative_controls": {
    "other_ties": {
+    "ci_lower": [
+     "0x1.bfd2533582af8p-2",
+     "-0x1.47cac37a5fc37p-2",
+     "0x1.49a8a2a9b511ep-4"
+    ],
+    "ci_upper": [
+     "0x1.4e2af11c7234ap-1",
+     "-0x1.f92b9e37081cbp-4",
+     "0x1.20037fffc4976p-2"
+    ],
     "coef": [
      "0x1.170a0d5b99c63p-1",
      "-0x1.c615ab0821caap-3",
@@ -97,13 +184,33 @@
     "loglik_null": [
      "-0x1.875a2b99e1a9cp+10"
     ],
+    "p": [
+     "0x1.479f3c074bcf2p-75",
+     "0x1.50126fba7a1e3p-17",
+     "0x1.b1a743acad36fp-12"
+    ],
     "se": [
      "0x1.c209612997f65p-5",
      "0x1.9b3b1dc283b06p-5",
      "0x1.a398f4ab86b97p-5"
+    ],
+    "z": [
+     "0x1.3d7575d0c471ap+3",
+     "-0x1.1aad66e713f82p+2",
+     "0x1.c400c40c772f3p+1"
     ]
    },
    "shifted_tie": {
+    "ci_lower": [
+     "0x1.a8bb5a15ba9c2p-2",
+     "-0x1.3d8dc8969dbc9p-2",
+     "0x1.243552f96737dp-4"
+    ],
+    "ci_upper": [
+     "0x1.423ace4826f3dp-1",
+     "-0x1.d17c6ea41cee0p-4",
+     "0x1.1625f273ef658p-2"
+    ],
     "coef": [
      "0x1.0b4c3da98220fp-1",
      "-0x1.b1ece43fa4f81p-3",
@@ -125,14 +232,34 @@
     "loglik_null": [
      "-0x1.89c58db588d9ap+10"
     ],
+    "p": [
+     "0x1.bbae4d781c11cp-70",
+     "0x1.8ca051e326b1cp-16",
+     "0x1.9e53c7cb9fdefp-11"
+    ],
     "se": [
      "0x1.c06e8ecada556p-5",
      "0x1.9a956eb3d4ed2p-5",
      "0x1.a2923f23e725bp-5"
+    ],
+    "z": [
+     "0x1.3130639a070fep+3",
+     "-0x1.0e8db6cd9c7d7p+2",
+     "0x1.ad975befdb803p+1"
     ]
    }
   },
   "tight": {
+   "ci_lower": [
+    "0x1.a8ce156200078p-2",
+    "-0x1.3d78ebf523a56p-2",
+    "0x1.24bec21f438dcp-4"
+   ],
+   "ci_upper": [
+    "0x1.423f62d9bfda8p-1",
+    "-0x1.d155b40753d80p-4",
+    "0x1.163ed9c860c51p-2"
+   ],
    "coef": [
     "0x1.0b5336c55fef2p-1",
     "-0x1.b1ce58f6f89b6p-3",
@@ -154,10 +281,20 @@
    "loglik_null": [
     "-0x1.89c725f17b198p+10"
    ],
+   "p": [
+    "0x1.b0b7d26f70d5dp-70",
+    "0x1.8d0ecdf5f1908p-16",
+    "0x1.9a20659047685p-11"
+   ],
    "se": [
     "0x1.c05b065f80304p-5",
     "0x1.9a7e9dd30c75bp-5",
     "0x1.a27ef357506cdp-5"
+   ],
+   "z": [
+    "0x1.3145a5d1e1867p+3",
+    "-0x1.0e89b4134412ap+2",
+    "0x1.adf3ab7c5a4e0p+1"
    ]
   }
  },
@@ -209,6 +346,16 @@
    ]
   },
   "default": {
+   "ci_lower": [
+    "0x1.bfd25332a6f12p-2",
+    "-0x1.47cac37a54524p-2",
+    "0x1.49a8a2aaf5a2fp-4"
+   ],
+   "ci_upper": [
+    "0x1.4e2af11afad9fp-1",
+    "-0x1.f92b9e36fb3bap-4",
+    "0x1.2003800014dd5p-2"
+   ],
    "coef": [
     "0x1.170a0d5a27294p-1",
     "-0x1.c615ab0813212p-3",
@@ -230,14 +377,91 @@
    "loglik_null": [
     "-0x1.875a2b99e1a9cp+10"
    ],
+   "p": [
+    "0x1.479f3ca54f678p-75",
+    "0x1.50126fba3fa6bp-17",
+    "0x1.b1a743a2e59afp-12"
+   ],
    "se": [
     "0x1.c209612971420p-5",
     "0x1.9b3b1dc272e87p-5",
     "0x1.a398f4ab86fe4p-5"
+   ],
+   "z": [
+    "0x1.3d7575cf3a1afp+3",
+    "-0x1.1aad66e716608p+2",
+    "0x1.c400c40d3aa2dp+1"
    ]
   },
+  "iterates": [
+   {
+    "beta": [
+     "0x1.18bcfdc035afcp-1",
+     "-0x1.976da1629891bp-3",
+     "0x1.5513aeb135bbdp-3"
+    ],
+    "iterations": 1,
+    "loglik": [
+     "-0x1.782c1415ad0c3p+10"
+    ]
+   },
+   {
+    "beta": [
+     "0x1.1704a3fccdde4p-1",
+     "-0x1.c61e64c708535p-3",
+     "0x1.726d715406bd1p-3"
+    ],
+    "iterations": 2,
+    "loglik": [
+     "-0x1.7822b8c55ac74p+10"
+    ]
+   },
+   {
+    "beta": [
+     "0x1.170a0d5a27294p-1",
+     "-0x1.c615ab0813212p-3",
+     "0x1.726da8aad2461p-3"
+    ],
+    "iterations": 3,
+    "loglik": [
+     "-0x1.7822b8c3d4b61p+10"
+    ]
+   },
+   {
+    "beta": [
+     "0x1.170a0d5a27294p-1",
+     "-0x1.c615ab0813212p-3",
+     "0x1.726da8aad2461p-3"
+    ],
+    "iterations": 3,
+    "loglik": [
+     "-0x1.7822b8c3d4b61p+10"
+    ]
+   },
+   {
+    "beta": [
+     "0x1.170a0d5a27294p-1",
+     "-0x1.c615ab0813212p-3",
+     "0x1.726da8aad2461p-3"
+    ],
+    "iterations": 3,
+    "loglik": [
+     "-0x1.7822b8c3d4b61p+10"
+    ]
+   }
+  ],
   "negative_controls": {
    "other_ties": {
+    "ci_lower": [
+     "0x1.a8ce156200078p-2",
+     "-0x1.3d78ebf523a56p-2",
+     "0x1.24bec21f438dcp-4"
+    ],
+    "ci_upper": [
+     "0x1.423f62d9bfda8p-1",
+     "-0x1.d155b40753d80p-4",
+     "0x1.163ed9c860c51p-2"
+    ],
     "coef": [
      "0x1.0b5336c55fef2p-1",
      "-0x1.b1ce58f6f89b6p-3",
@@ -259,13 +483,33 @@
     "loglik_null": [
      "-0x1.89c725f17b198p+10"
     ],
+    "p": [
+     "0x1.b0b7d26f70d5dp-70",
+     "0x1.8d0ecdf5f1908p-16",
+     "0x1.9a20659047685p-11"
+    ],
     "se": [
      "0x1.c05b065f80304p-5",
      "0x1.9a7e9dd30c75bp-5",
      "0x1.a27ef357506cdp-5"
+    ],
+    "z": [
+     "0x1.3145a5d1e1867p+3",
+     "-0x1.0e89b4134412ap+2",
+     "0x1.adf3ab7c5a4e0p+1"
     ]
    },
    "shifted_tie": {
+    "ci_lower": [
+     "0x1.bfccc175835b2p-2",
+     "-0x1.47dac8c201c35p-2",
+     "0x1.49628d6f2c4e8p-4"
+    ],
+    "ci_upper": [
+     "0x1.4e2e0abb96d79p-1",
+     "-0x1.f93ed98650b53p-4",
+     "0x1.1ffd4d6cfb200p-2"
+    ],
     "coef": [
      "0x1.170a35bb2c429p-1",
      "-0x1.c62a7f2395f0ap-3",
@@ -287,14 +531,34 @@
     "loglik_null": [
      "-0x1.8759770f301bcp+10"
     ],
+    "p": [
+     "0x1.4e68247fb6f55p-75",
+     "0x1.50558f65b14ecp-17",
+     "0x1.b45ab661fe810p-12"
+    ],
     "se": [
      "0x1.c221663dcab9ep-5",
      "0x1.9b51ffeefe6f8p-5",
      "0x1.a3b0108fdbb34p-5"
+    ],
+    "z": [
+     "0x1.3d64b30a8b15ep+3",
+     "-0x1.1aaaa389a461dp+2",
+     "0x1.c3caf1398464cp+1"
     ]
    }
   },
   "tight": {
+   "ci_lower": [
+    "0x1.bfd2533582af8p-2",
+    "-0x1.47cac37a5fc37p-2",
+    "0x1.49a8a2a9b511ep-4"
+   ],
+   "ci_upper": [
+    "0x1.4e2af11c7234ap-1",
+    "-0x1.f92b9e37081cbp-4",
+    "0x1.20037fffc4976p-2"
+   ],
    "coef": [
     "0x1.170a0d5b99c63p-1",
     "-0x1.c615ab0821caap-3",
@@ -316,10 +580,20 @@
    "loglik_null": [
     "-0x1.875a2b99e1a9cp+10"
    ],
+   "p": [
+    "0x1.479f3c074bcf2p-75",
+    "0x1.50126fba7a1e3p-17",
+    "0x1.b1a743acad36fp-12"
+   ],
    "se": [
     "0x1.c209612997f65p-5",
     "0x1.9b3b1dc283b06p-5",
     "0x1.a398f4ab86b97p-5"
+   ],
+   "z": [
+    "0x1.3d7575d0c471ap+3",
+    "-0x1.1aad66e713f82p+2",
+    "0x1.c400c40c772f3p+1"
    ]
   }
  }

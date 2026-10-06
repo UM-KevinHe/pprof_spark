@@ -92,20 +92,26 @@ final class NeumaierVector(val length: Int) {
     require(xs.length == length, s"expected $length values, got ${xs.length}")
     var i = 0
     while (i < length) {
-      val s = sums(i)
-      val x = xs(i)
-      val t = s + x
-      if (java.lang.Double.isFinite(t)) {
-        if (math.abs(s) >= math.abs(x)) compensations(i) += (s - t) + x
-        else compensations(i) += (x - t) + s
-      }
-      sums(i) = t
+      addAt(i, xs(i))
       i += 1
     }
   }
 
-  /** The current sums, as a new array. */
-  def values: Array[Double] = Array.tabulate(length) { i =>
-    if (java.lang.Double.isFinite(sums(i))) sums(i) + compensations(i) else sums(i)
+  /** Adds `x` to element `i` alone, as running sums in a kernel do. */
+  def addAt(i: Int, x: Double): Unit = {
+    val s = sums(i)
+    val t = s + x
+    if (java.lang.Double.isFinite(t)) {
+      if (math.abs(s) >= math.abs(x)) compensations(i) += (s - t) + x
+      else compensations(i) += (x - t) + s
+    }
+    sums(i) = t
   }
+
+  /** The current sum of element `i`. */
+  def valueAt(i: Int): Double =
+    if (java.lang.Double.isFinite(sums(i))) sums(i) + compensations(i) else sums(i)
+
+  /** The current sums, as a new array. */
+  def values: Array[Double] = Array.tabulate(length)(valueAt)
 }

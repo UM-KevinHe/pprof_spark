@@ -97,12 +97,13 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-20: Cox first-slice specification (Proposed, round 9; approval required, NN-2)
+### D-20: Cox first-slice specification (Accepted: approved by the maintainer, 2026-10-06)
 
 `docs/spec/cox/first-slice.md`: stratified, right-censored, Breslow, model-based variance. It
 includes three discrepancy decisions to approve with it: X-010 changed to test convergence before
 halving (corrected behavior, superseding round 6's bug-compatible choice), X-011 (aliasing fails),
-and X-012 (no events fails).
+and X-012 (no events fails). Approved as written, with the three discrepancy decisions;
+implemented in round 10.
 
 ### D-12: Build and test tooling baseline (Delegated; reversible)
 

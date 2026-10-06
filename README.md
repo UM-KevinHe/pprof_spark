@@ -5,7 +5,9 @@ reimplements the validated statistical methods of [pprof_py](https://github.com/
 as distributed algorithms for Apache Spark, preserving their statistical definitions. pprof_py is
 used only to produce reference results for the test suite.
 
-**Status: Phase 0 (foundations and spikes).** There are no statistical features yet; every
+**Status: Phase 1a (Cox estimation core).** The first Cox model is in place: stratified Cox
+regression for right-censored data with Breslow ties and model-based variance
+(`pprof.spark.engine.cox.CoxPH`), at parity with pprof_py v0.7.0 and R. Every
 feature stays `Experimental` until it passes the parity gate (NN-12).
 
 | Document | Purpose |

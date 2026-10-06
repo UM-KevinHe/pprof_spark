@@ -42,6 +42,12 @@ object InputProblem {
   final case class DuplicateRowIds(name: String, duplicates: Long)
       extends InputProblem(name, s"has $duplicates duplicated identifiers")
   case object EmptyInput extends InputProblem("", "the input has no rows")
+  final case class NonPositiveValues(name: String, count: Long)
+      extends InputProblem(name, s"has $count values that are not positive")
+  final case class NonBinaryValues(name: String, count: Long)
+      extends InputProblem(name, s"has $count values other than 0 and 1")
+  case object NoEvents
+      extends InputProblem("", "the input has no events, so the partial likelihood is constant")
 }
 
 /** The input violates its data contract; `problems` lists every violation found. */
@@ -138,17 +144,17 @@ object Validation {
     Seq(count(lit(1)), countWhere(column(spec.groupCol).isNull)) ++ features ++ rowId
   }
 
-  private def nonFinite(value: Column, dataType: DataType): Column = dataType match {
+  private[engine] def nonFinite(value: Column, dataType: DataType): Column = dataType match {
     case DoubleType | FloatType =>
       isnan(value) || value === Double.PositiveInfinity || value === Double.NegativeInfinity
     case _ => lit(false)
   }
 
-  private def isIntegral(dataType: DataType): Boolean = dataType match {
+  private[engine] def isIntegral(dataType: DataType): Boolean = dataType match {
     case ByteType | ShortType | IntegerType | LongType => true
     case _                                             => false
   }
 
   /** A column reference that tolerates dots and other special characters in names. */
-  private def column(name: String): Column = col("`" + name.replace("`", "``") + "`")
+  private[engine] def column(name: String): Column = col("`" + name.replace("`", "``") + "`")
 }
