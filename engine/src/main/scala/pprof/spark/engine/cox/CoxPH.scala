@@ -217,6 +217,15 @@ object CoxPH {
   ): Evaluation =
     withWorkingSet(df, spec, options)(prepared => evaluate(prepared, beta, options.ties))
 
+  /** Fails unless `df` is the data `fit` was fitted to (API-3). */
+  private[cox] def requireFittedData(df: DataFrame, fit: CoxFit): Unit =
+    withWorkingSet(df, fit.spec, fit.options) { prepared =>
+      if (prepared.fingerprint != fit.fingerprint)
+        throw new IllegalArgumentException(
+          "the data differ from the data the model was fitted to (fingerprint mismatch, API-3)"
+        )
+    }
+
   /** Columns of the baseline hazard table (Phase 1b specification §5). */
   val BaselineColumns: Seq[String] =
     Seq("stratum", "time", "hazard_increment", "cumulative_hazard", "survival")
@@ -294,7 +303,7 @@ object CoxPH {
     }
   }
 
-  private final case class Prepared(
+  private[cox] final case class Prepared(
       strataKeyIsText: Boolean,
       plan: LayoutPlan,
       workingSet: CoxWorkingSet,
@@ -305,7 +314,7 @@ object CoxPH {
       fingerprint: Long
   )
 
-  private def withWorkingSet[A](df: DataFrame, spec: CoxSpec, options: CoxOptions)(
+  private[cox] def withWorkingSet[A](df: DataFrame, spec: CoxSpec, options: CoxOptions)(
       body: Prepared => A
   ): A = {
     val input = CoxValidation.validate(df, spec)

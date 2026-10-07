@@ -59,6 +59,12 @@ limits are in ADR-0002.
 
 ### D-14: No Databricks deployment work (Approved by the maintainer, 2026-10-05)
 
+**Clarified by the maintainer on 2026-10-06:** "no Databricks work" means that AI assistants (Claude
+Code included) must not access the maintainer's Databricks environment. It does not rule out running
+pprof_spark on Databricks: the maintainer tests it there himself, starting with the Phase 1d scale
+test (D-28). pprof_spark stays a standalone Apache Spark package, compatible with Databricks Runtime
+18 LTS by construction (§5.3).
+
 pprof_spark is developed and tested as a standalone Apache Spark package. No Databricks bundles,
 workspace CI, job clusters or Unity Catalog artifacts until the maintainer reopens the topic.
 
@@ -97,13 +103,13 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-28: Site for the Phase 1d scale test (Open, round 19; the maintainer's choice)
+### D-28: Site for the Phase 1d scale test (Decided by the maintainer, 2026-10-06)
 
-Options in `docs/spec/cox/provider-workflows.md` §6: a university HPC cluster running Spark in
-standalone mode, a managed cloud service billed per run, or one large machine (scale without
-distribution). D-14 rules out Databricks.
+The maintainer runs the scale test himself on his Databricks workspace once the code is ready. AI
+assistants never access that environment; they prepare the JARs, run specifications, generator and
+instructions, and analyse shared results.
 
-### D-27: Phase 1d specification (Proposed, round 19; approval required, NN-2)
+### D-27: Phase 1d specification (Accepted: approved by the maintainer, 2026-10-06)
 
 `docs/spec/cox/provider-workflows.md`: indirect and direct standardized ratios (two-stage SMR and
 SHR) with pprof_py's conventions, exact and mid-p provider tests with the theoretical null,

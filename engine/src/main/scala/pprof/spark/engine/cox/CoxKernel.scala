@@ -1,7 +1,14 @@
 package pprof.spark.engine.cox
 
 import pprof.spark.numerics.{NeumaierSum, NeumaierVector}
-import pprof.spark.numerics.kernels.{CoxResiduals, CoxStratum, CoxTotals, Fingerprint, Moments}
+import pprof.spark.numerics.kernels.{
+  CoxMeasures => MeasureKernels,
+  CoxResiduals,
+  CoxStratum,
+  CoxTotals,
+  Fingerprint,
+  Moments
+}
 
 /** One block's log partial likelihood, score and packed information at one β. */
 final case class CoxPartial(
@@ -36,6 +43,25 @@ final case class CoxClusterSum(bucket: Int, cluster: String, sum: Array[Double])
 
 /** A partial Σ s sᵀ (packed) over one block's rows or one bucket's clusters, with its count. */
 final case class CoxRobustPartial(key: Int, units: Long, outer: Array[Double])
+
+/** Per-time totals for the national baseline: Σ w by exit and by entry time, events at exit. */
+final case class CoxTimeTotal(
+    time: Double,
+    blockId: Int,
+    exitSum: Double,
+    entrySum: Double,
+    events: Long
+)
+
+/** One provider's observed and expected events, person-time and direct expectation (Phase 1d §1). */
+final case class CoxProviderRow(
+    groupIndex: Int,
+    observed: Long,
+    expected: Double,
+    personTime: Double,
+    directExpected: Double,
+    indirectRatio: Double
+)
 
 /** One block's counts, column sums (for centering), and fingerprint (§6.10). */
 final case class CoxBlockSummary(
@@ -320,4 +346,82 @@ object CoxKernel {
     }
     CoxRobustPartial(bucket, ordered.length.toLong, outer.values)
   }
+
+  /** The largest uncentered η = xᵀβ + o of the block's rows. */
+  def maxEta(block: CoxBlock, beta: Array[Double]): Double = {
+    var m = Double.NegativeInfinity
+    var r = 0
+    while (r < block.rowCount) {
+      m = math.max(m, MeasureKernels.eta(block.x, block.p, r, beta, block.offset))
+      r += 1
+    }
+    m
+  }
+
+  /** The block's per-time totals for the national baseline (Phase 1d §4). */
+  def timeTotals(block: CoxBlock, beta: Array[Double], maxEta: Double): Seq[CoxTimeTotal] = {
+    val (times, exits, entries, events) = MeasureKernels.timeTotals(
+      block.time,
+      block.entry,
+      block.event,
+      block.offset,
+      block.x,
+      block.p,
+      0,
+      block.rowCount,
+      beta,
+      maxEta
+    )
+    times.indices.map(i => CoxTimeTotal(times(i), block.blockId, exits(i), entries(i), events(i)))
+  }
+
+  /** One time's totals over all blocks, added in block order. */
+  def combineTimeTotals(time: Double, parts: Iterator[CoxTimeTotal]): CoxTimeTotal = {
+    val ordered = parts.toArray.sortBy(_.blockId)
+    val exits = new NeumaierSum
+    val entries = new NeumaierSum
+    var events = 0L
+    ordered.foreach { t =>
+      exits.add(t.exitSum)
+      entries.add(t.entrySum)
+      events += t.events
+    }
+    CoxTimeTotal(time, -1, exits.value, entries.value, events)
+  }
+
+  /** Each provider's measures, for blocks laid out by provider (Phase 1d §1 and §4). */
+  def providerMeasures(
+      block: CoxBlock,
+      beta: Array[Double],
+      maxEta: Double,
+      eventTimes: Array[Double],
+      cumulative: Array[Double],
+      riskSets: Array[Double]
+  ): Seq[CoxProviderRow] =
+    (0 until block.groupCount).map { g =>
+      val (observed, expected, personTime, direct) = MeasureKernels.provider(
+        block.time,
+        block.entry,
+        block.entryOrder,
+        block.event,
+        block.offset,
+        block.x,
+        block.p,
+        block.groupStart(g),
+        block.groupEnd(g),
+        beta,
+        maxEta,
+        eventTimes,
+        cumulative,
+        riskSets
+      )
+      CoxProviderRow(
+        block.groupIndex(g),
+        observed,
+        expected,
+        personTime,
+        direct,
+        observed / expected
+      )
+    }
 }

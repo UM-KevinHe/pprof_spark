@@ -1,10 +1,11 @@
 # Status
 
-Updated 2026-10-06, round 19.
+Updated 2026-10-06, round 20.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
-**Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows:** the
-specification awaits approval (D-27) and the scale-test site a choice (D-28).
+**Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: in progress**
+(D-27): standardized measures done; provider tests next. The maintainer runs the scale test on his
+Databricks workspace (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
 
@@ -38,8 +39,9 @@ specification awaits approval (D-27) and the scale-test site a choice (D-28).
 | 16.1 | Fix round 15's CI failure: one test per fixture case and tie method in the long Cox tests; Spark suites allow two minutes per test | Merged (04ea163); CI green |
 | 17 | Phase 1c fixtures (residuals, robust variances) and residuals | Merged (09167b4) |
 | 18 | Robust variance, per row and clustered; format version 3; Phase 1c gate review (D-26) | Merged (1f2ed5c); CI green |
-| 19 | Phase 1d specification (D-27) and the scale-test site question (D-28) | Delivered as a patch; awaiting approval |
-| 20 | Phase 1d fixtures and standardized measures (1d-1) | After D-27 |
+| 19 | Phase 1d specification (D-27) and the scale-test site question (D-28) | Merged (3ebf680); approved; site decided |
+| 20 | Phase 1d fixtures and standardized measures (1d-1) | Delivered as a patch; CI to confirm |
+| 21 | Provider tests (1d-2): Poisson numerics, exact and mid-p tests, flags, result tables | Planned |
 
 ## Decisions and spikes
 

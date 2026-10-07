@@ -1,5 +1,28 @@
 # Handoff
 
+## Round 20 (2026-10-06): Phase 1d fixtures and standardized measures
+
+The maintainer approved the Phase 1d specification (D-27) and settled the scale-test site: he runs
+it himself on his Databricks workspace (D-28). D-14 is clarified: AI assistants never access his
+Databricks environment; pprof_spark itself may run there (OI-47 tracks folding this into
+PROJECT_CONTEXT).
+
+- Fixtures: pprof_py's indirect and direct measures for every case and tie method, with the
+  stratum as provider for stratified (two-stage) fits and id mod 10 for pooled fits. Σ Eⱼ = O holds
+  to 2.3e-13. Regeneration byte-identical; calibration passes.
+- `numerics.kernels.CoxMeasures`: per-time totals (Σ w by exit and by entry, events), the national
+  baseline RS(t) = Σ_{exit ≥ t} w − Σ_{entry ≥ t} w and Λ₀, and per provider Oⱼ, Eⱼ, person-time and
+  E⁽ʲ⁾ = Σ RS(t)/RSⱼ(t); w = exp(η − max η), no case weights, as pprof_py.
+- `engine.cox.CoxMeasures.standardized(df, fit, provider, kinds, providers)`: a provider-local
+  working set (the fit's own when the provider is its strata, after the fingerprint check; otherwise
+  the fit's layout checks the fingerprint first, OI-46), time totals reduced by time in block order,
+  the K-scale national baseline on the driver (guarded by `maxGroupsOnDriver`), provider tables
+  distributed; providers without expected events are logged.
+- `CoxMeasuresSuite` (15): every case and tie method against pprof_py at its estimates; Σ Eⱼ = O;
+  the provider filter; the fingerprint checks.
+- Sandbox verification: JDK 17 Classic numerics 54, testkit 11, engine 202 (all suites); Spark
+  Connect: CoxMeasuresSuite (15). Not rerun on Spark Connect or JDK 21: the other suites.
+
 ## Round 19 (2026-10-06): Phase 1c closed; Phase 1d specification
 
 - Round 18's CI passed and the maintainer closed Phase 1c (D-26).

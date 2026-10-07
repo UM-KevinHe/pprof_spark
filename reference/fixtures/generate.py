@@ -217,6 +217,34 @@ def pprof_residuals(df, case, ties):
     }
 
 
+def providers_of(df, case):
+    """Provider of each row for the Phase 1d fixtures: the stratum when the fit is stratified (the
+    two-stage approach), otherwise id mod 10 (a pooled model)."""
+    return df["stratum"].to_numpy() if case["stratified"] else df["id"].to_numpy() % 10
+
+
+def pprof_measures(df, case, ties):
+    """Indirect and direct standardized measures of the tight fit (Phase 1d specification §1)."""
+    X = df[features(case)].to_numpy(dtype=float)
+    arguments = fit_arguments(df, case)
+    model = CoxPH(ties=ties, **TIGHT).fit(X, **arguments)
+    measure_arguments = {k: v for k, v in arguments.items() if k in ("duration", "event", "start", "stop", "offset")}
+    out = model.calculate_standardized_measures(X, provider_id=providers_of(df, case), stdz=["indirect", "direct"],
+                                                **measure_arguments)
+    indirect, direct = out["indirect"], out["direct"]
+    return {
+        "provider": [int(v) for v in indirect["provider_id"]],
+        "indirect_ratio": hexes(indirect["indirect_ratio"].to_numpy()),
+        "observed": hexes(indirect["observed"].to_numpy(dtype=float)),
+        "expected": hexes(indirect["expected"].to_numpy()),
+        "person_time": hexes(indirect["person_time"].to_numpy(dtype=float)),
+        "direct_ratio": hexes(direct["direct_ratio"].to_numpy()),
+        "direct_expected": hexes(direct["expected"].to_numpy()),
+        "total_observed": hexes([float(direct["observed"].iloc[0])]),
+        "n_pop": int(direct["n_pop"].iloc[0]),
+    }
+
+
 def pprof_function(df, case, ties, beta):
     clean = validate_fit_inputs(df[features(case)].to_numpy(dtype=float), **fit_arguments(df, case))
     data = SurvivalData(**clean)
@@ -318,6 +346,7 @@ def main():
                 "iterates": pprof_iterates(df, case, ties),
                 "baseline": pprof_baseline(df, case, ties),
                 "residuals": pprof_residuals(df, case, ties),
+                "measures": pprof_measures(df, case, ties),
                 "negative_controls": controls,
             }
         write_json(os.path.join(case_dir, "pprof_py.json"), reference)
