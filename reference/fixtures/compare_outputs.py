@@ -30,11 +30,12 @@ def values(node, path=()):
 def main(regenerated, committed):
     manifest = json.load(open(os.path.join(committed, "manifest.json"), encoding="utf-8"))
     worst, failures = 0.0, []
-    for case in manifest["cases"]["cox"]:
-        base = os.path.join("cox", case)
+    families = (("cox", ("pprof_py.json", "r_survival.json")), ("logistic", ("pprof_py.json", "r_logistic.json")))
+    for family, case, names in ((f, c, n) for f, n in families for c in manifest["cases"].get(f, [])):
+        base = os.path.join(family, case)
         if not filecmp.cmp(os.path.join(regenerated, base, "input.csv"), os.path.join(committed, base, "input.csv"), shallow=False):
             failures.append(f"{base}/input.csv differs")
-        for name in ("pprof_py.json", "r_survival.json"):
+        for name in names:
             new = dict(values(json.load(open(os.path.join(regenerated, base, name), encoding="utf-8"))))
             old = dict(values(json.load(open(os.path.join(committed, base, name), encoding="utf-8"))))
             if new.keys() != old.keys():

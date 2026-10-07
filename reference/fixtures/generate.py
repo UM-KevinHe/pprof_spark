@@ -29,6 +29,7 @@ from importlib import metadata
 
 import numpy as np
 import pandas as pd
+import logistic_fixtures
 from pprof_py.algorithms.survival.cox_likelihood import cox_partial_likelihood
 from pprof_py.data.survival_data import SurvivalData
 from pprof_py.data.survival_validation import validate_fit_inputs
@@ -328,6 +329,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", default=os.path.join(ROOT, "fixtures"))
     parser.add_argument("--inputs", help="copy input.csv files from this fixture tree")
+    parser.add_argument("--family", choices=("all", "cox", "logistic"), default="all",
+                        help="regenerate one family only; the manifest still covers every file")
     options = parser.parse_args()
     out = options.out
     with open(os.path.join(ROOT, "reference", "REFERENCE.lock"), "rb") as handle:
@@ -336,12 +339,15 @@ def main():
     if installed != lock["pprof_py"]["version"]:
         sys.exit(f"pprof_py {installed} is installed; REFERENCE.lock pins {lock['pprof_py']['version']}")
     r_version = subprocess.run(
-        ["Rscript", "-e", 'cat(R.version$major, R.version$minor, as.character(packageVersion("survival")), sep=" ")'],
+        ["Rscript", "-e", 'cat(R.version$major, R.version$minor, as.character(packageVersion("survival")), '
+         'as.character(packageVersion("Rcpp")), as.character(packageVersion("RcppArmadillo")), sep=" ")'],
         check=True, capture_output=True, text=True).stdout.split()
 
-    shutil.rmtree(out, ignore_errors=True)
-    cases = []
-    for case in CASES:
+    cases = [case["id"] for case in CASES]
+    for case in CASES if options.family in ("all", "cox") else ():
+        if case is CASES[0]:
+            shutil.rmtree(os.path.join(out, "cox"), ignore_errors=True)
+            cases = []
         case_dir = os.path.join(out, "cox", case["id"])
         os.makedirs(case_dir)
         if options.inputs:
@@ -376,28 +382,35 @@ def main():
         write_json(os.path.join(case_dir, "pprof_py.json"), reference)
         write_json(os.path.join(case_dir, "r_survival.json"), r_outputs(case_dir, case))
         cases.append(case["id"])
+    logistic_cases = ([case["id"] for case in logistic_fixtures.CASES] if options.family == "cox"
+                      else logistic_fixtures.generate(out, options.inputs, lock, write_json))
 
     files = {}
     for directory, _, names in os.walk(out):
         for name in names:
             path = os.path.join(directory, name)
-            files[os.path.relpath(path, out).replace(os.sep, "/")] = sha256(path)
+            relative = os.path.relpath(path, out).replace(os.sep, "/")
+            if relative != "manifest.json":  # present when one family is regenerated in place
+                files[relative] = sha256(path)
     packages = ("numpy", "scipy", "pandas", "numba", "llvmlite")
     write_json(os.path.join(out, "manifest.json"), {
         "formatVersion": FORMAT_VERSION,
         "generator": "reference/fixtures/generate.py",
-        "cases": {"cox": cases},
+        "cases": {"cox": cases, "logistic": logistic_cases},
         "reference": {"pprof_py": {"version": installed, "commit": lock["pprof_py"]["commit"]},
                       "python": sys.version.split()[0],
                       "packages": {name: metadata.version(name) for name in packages},
-                      "r": {"version": f"{r_version[0]}.{r_version[1]}", "survival": r_version[2]}},
+                      "r": {"version": f"{r_version[0]}.{r_version[1]}", "survival": r_version[2],
+                            "rcpp": r_version[3], "rcpparmadillo": r_version[4]},
+                      "r_pprof": {"version": lock["r_pprof"]["version"], "commit": lock["r_pprof"]["commit"]}},
         "options": {"ties": list(TIES), "tight": TIGHT, "r_timefix": True,
                     "r_tight_control": "coxph.control(eps = 1e-11, iter.max = 100)",
                     "function_level": "R: coxph(init = beta, control = coxph.control(iter.max = 0))",
-                    "r_variance": "model-based: coxph(robust = FALSE)"},
+                    "r_variance": "model-based: coxph(robust = FALSE)",
+                    "logistic": logistic_fixtures.OPTIONS},
         "files": dict(sorted(files.items())),
     })
-    print(f"wrote {len(files)} fixture files for {len(cases)} Cox cases to {out}")
+    print(f"wrote {len(files)} fixture files for {len(cases)} Cox and {len(logistic_cases)} logistic cases to {out}")
 
 
 if __name__ == "__main__":

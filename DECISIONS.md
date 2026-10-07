@@ -14,7 +14,7 @@ force.
 |---|---|---|---|
 | D-01 | Supported compute tiers for v1 | Approved (delegated), 2026-10-06 | Classic Spark only; `engine` kept Connect-compatible (PLAT-2) and tested under Spark Connect (T8) |
 | D-02 | Target and secondary runtimes | Approved (delegated), 2026-10-06 | Spark 4.1.0, Scala 2.13.16, Java 17 bytecode: one JAR for open-source Spark 4.1.x and Databricks Runtime 18 LTS; tested on open-source Spark only (D-14) |
-| D-03 | Python access in v1 | Approved (delegated), 2026-10-06 | None in v1; revisit after Phase 1d (job-based access was deferred by D-14). Revisited 2026-10-07 (round 25): asked whether to keep v1 without Python access or plan py4j wrappers or Spark Connect ML registration into Phase 2, the maintainer replied "Continue"; recorded as no change |
+| D-03 | Python access in v1 | Superseded by D-31, 2026-10-07 | Was: none in v1; revisit after Phase 1d. Round 25 first recorded the maintainer's "Continue" as no change; he then chose py4j wrappers (D-31) |
 | D-04 | Design envelope and performance targets | Approved (delegated), 2026-10-06 | §2.3 ranges as planning assumptions; targets set after the first benchmarks; OI-02 resolved before large-p work |
 | D-05 | pprof_py pin and reference versions | Approved (delegated), 2026-10-05 | pprof_py v0.7.0, commit 9320766 (see below) |
 | D-06 | Default Cox tie method | Approved (delegated), 2026-10-06 | Breslow, the reference default; every fit records its tie method |
@@ -103,15 +103,22 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-30: Phase 2 plan and the first-slice specification (Proposed, 2026-10-07)
+### D-31: Python access through py4j wrappers (Approved by the maintainer, 2026-10-07)
+
+Revisiting D-03 after Phase 1d, the maintainer chose py4j wrappers: Python calls the Scala engine
+through PySpark's JVM gateway; Python code never reimplements statistics (§6.12). Supersedes D-03.
+Design (facade, packaging, CI, supported compute) in ADR-0009 before any wrapper code; schedule in
+`docs/spec/logistic/plan.md` §6 (OI-53).
+
+### D-30: Phase 2 plan and the first-slice specification (Accepted: approved by the maintainer, 2026-10-07)
 
 `docs/spec/logistic/plan.md` (slices 2a to 2f with their references, fixtures, tolerance classes
 and distributed design) and `docs/spec/logistic/fixed-effect-estimation.md` (slice 2a: SerBIN
 estimation of the logistic fixed-effect model, screening, degenerate providers, model-based
 variances, the Wald test for β). Discrepancy decisions to approve with it: X-004 resolved at
 v0.7.0; X-016, X-017 and X-018 follow the reference, with degenerate providers flagged; X-019
-fails at validation (class C); X-020 follows the behavior (class E). Awaiting the maintainer's
-approval; no Phase 2 code before it (NN-2).
+fails at validation (class C); X-020 follows the behavior (class E). Approved as written, with the
+recommended decisions; fixtures and calibration in round 26.
 
 ### D-29: Close Phase 1d at parity-verified (Accepted: signed off by the maintainer, 2026-10-07, with round 22's CI green)
 

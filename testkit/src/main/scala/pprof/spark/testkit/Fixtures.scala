@@ -61,11 +61,14 @@ object Fixtures {
       .map(b => f"${b & 0xff}%02x")
       .mkString
 
-  /** Names of the Cox cases, as listed in the manifest. */
-  def coxCases: Seq[String] = {
-    val node = manifest.get("cases").get("cox")
+  /** Names of a family's cases (`cox`, `logistic`), as listed in the manifest. */
+  def cases(family: String): Seq[String] = {
+    val node = manifest.get("cases").get(family)
     (0 until node.size).map(i => node.get(i).asText())
   }
+
+  /** Names of the Cox cases, as listed in the manifest. */
+  def coxCases: Seq[String] = cases("cox")
 
   /** An array of hexadecimal floating-point strings (Python's `float.hex`, R's `%a`). */
   def doubles(node: JsonNode): Array[Double] = {

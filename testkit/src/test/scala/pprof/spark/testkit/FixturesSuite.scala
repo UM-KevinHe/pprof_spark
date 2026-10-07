@@ -5,6 +5,8 @@ import java.nio.file.Files
 
 import scala.jdk.CollectionConverters._
 
+import com.fasterxml.jackson.databind.JsonNode
+
 /** The reference fixtures and the tolerance calibration (D-09, NN-9, ADR-0005). This suite repeats
   * in CI what reference/fixtures/calibrate.py checks; keep the two in step.
   */
@@ -74,6 +76,57 @@ class FixturesSuite extends munit.FunSuite {
           Fixtures.doubles(r.get(point).get(quantity))
         )
         assert(agreement <= 1.0, s"$name $ties $quantity at $point: $agreement of T-fn")
+      }
+    }
+  }
+
+  test("logistic inputs are exact: integer outcomes and trials, features on a 1/64 grid") {
+    Fixtures.cases("logistic").foreach { name =>
+      val table = Fixtures.csv(s"logistic/$name/input.csv")
+      def integral(values: Array[Double]): Boolean = values.forall(v => v == math.rint(v))
+      val y = table.column("y")
+      val n =
+        if (table.columns.contains("n")) table.column("n") else Array.fill(y.length)(1.0)
+      assert(integral(y) && integral(n) && integral(table.column("provider")), name)
+      assert(
+        y.zip(n).forall { case (events, trials) =>
+          trials >= 1.0 && events >= 0.0 && events <= trials
+        },
+        name
+      )
+      Seq("x1", "x2", "x3").foreach { c =>
+        assert(table.column(c).forall(v => v * 64.0 == math.rint(v * 64.0)), s"$name $c")
+      }
+    }
+  }
+
+  test("logistic: pprof_py and R agree within the tolerance classes; controls fall far outside") {
+    val quantities = Seq(
+      "beta" -> "T-coef",
+      "gamma" -> "T-coef",
+      "var_beta" -> "T-var",
+      "var_gamma" -> "T-var",
+      "var_case_mix" -> "T-var",
+      "loglik" -> "T-fn"
+    )
+    def ratio(cls: String, actual: JsonNode, expected: JsonNode): Double =
+      Tolerances(cls).worstRatio(Fixtures.doubles(actual), Fixtures.doubles(expected))
+    Fixtures.cases("logistic").foreach { name =>
+      val py = Fixtures.json(s"logistic/$name/pprof_py.json")
+      val r = Fixtures.json(s"logistic/$name/r_logistic.json")
+      if (r.has("glm")) quantities.foreach { case (q, cls) =>
+        val agreement = ratio(cls, py.get("tight").get(q), r.get("glm").get(q))
+        assert(agreement <= 1.0, s"$name $q: pprof_py vs glm is $agreement of $cls")
+      }
+      for (fit <- Seq("default", "tight"); q <- Seq("beta", "gamma")) {
+        val agreement = ratio("T-coef", py.get(fit).get(q), r.get(s"serbin_$fit").get(q))
+        assert(agreement <= 1.0, s"$name $fit $q: pprof_py vs R SerBIN is $agreement of T-coef")
+      }
+      py.get("negative_controls").properties().asScala.foreach { control =>
+        quantities.foreach { case (q, cls) =>
+          val miss = ratio(cls, control.getValue.get(q), py.get("tight").get(q))
+          assert(miss >= Margin, s"$name $q: ${control.getKey} is $miss of $cls")
+        }
       }
     }
   }

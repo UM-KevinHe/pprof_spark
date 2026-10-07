@@ -7,6 +7,13 @@
    "rc-stratified-weights-offset",
    "lt-stratified",
    "lt-weights-offset"
+  ],
+  "logistic": [
+   "lfe-base",
+   "lfe-degenerate",
+   "lfe-shifted",
+   "lfe-binomial",
+   "lfe-many"
   ]
  },
  "files": {
@@ -33,12 +40,42 @@
   "cox/tiny-ties/case.json": "657176ef9d7b11ef8a52d9354f25cd51977b447b85164805415f4eed54685f86",
   "cox/tiny-ties/input.csv": "013a5178b49cd73c21b9c312f48fa7309bdc7aeaffc62821151f0534f98fc88f",
   "cox/tiny-ties/pprof_py.json": "9be13a68c9ce7ebc70d8d98b361cc59e1fd14e66e646fd6c273fffadb47cc3fd",
-  "cox/tiny-ties/r_survival.json": "58fa8d7331d8274e243cf5b0157b7834091cedf7db112ead8b3396a6291d6539"
+  "cox/tiny-ties/r_survival.json": "58fa8d7331d8274e243cf5b0157b7834091cedf7db112ead8b3396a6291d6539",
+  "logistic/lfe-base/case.json": "db19fc2f99280878594ef8c48c99d971f3543f2ab4dc1025303380e45a40c907",
+  "logistic/lfe-base/input.csv": "af053d556d554b841b7392ace8c1133fc818157083d8a1bcbcee9c23c10fa34a",
+  "logistic/lfe-base/pprof_py.json": "dd95522f888ff718c0aa69cdc8298ae71ab26eaffe1db6c24832e829cf164cb3",
+  "logistic/lfe-base/r_logistic.json": "4bae83e5c0dceb2cd68a3ae54360e3024601cbf4f7d311f2d41c7cc8d16967ef",
+  "logistic/lfe-binomial/case.json": "6aab5ec9dcae73573383f79b37be0799b5066cee0528423fb6da92f90e2934dd",
+  "logistic/lfe-binomial/input.csv": "fe3b3077210bf67691f117caf77d35019ae800865acea1468e5bc72bede1ed53",
+  "logistic/lfe-binomial/pprof_py.json": "3c18ea03f3b23b4b0068bd5eef3f6e3fc5e18c247a108f3d87d1a1b9c65b937d",
+  "logistic/lfe-binomial/r_logistic.json": "27dd947dc60b9c31028be9f1a772b1d5f1a7768f9e2f55bfbb1ddb3174d73a06",
+  "logistic/lfe-degenerate/case.json": "7cd8e4c03ab4b2a317cbdaa342f1a15ee1b62f926310efb974dcec10d76f846e",
+  "logistic/lfe-degenerate/input.csv": "02ee990399b3832ef4137dfc8000d603904ce8e172ce453dbfe8ca779f61b50b",
+  "logistic/lfe-degenerate/pprof_py.json": "8db6579b1922f7884a148fe8606c0b9288c7aa1ef9465c431af82ade329bb9b3",
+  "logistic/lfe-degenerate/r_logistic.json": "5ca8a910b1c99b0092c67c4a04556ba73b468361deb3155fb7b50ab709ce9bd8",
+  "logistic/lfe-many/case.json": "56272692511e141c5899303994f447cf9982713998682208bf7efa7b919d96f9",
+  "logistic/lfe-many/input.csv": "8e90c6e76f8285ab93ea9628e8366ed4d230a7f11467c47d584271f428551fce",
+  "logistic/lfe-many/pprof_py.json": "6b990df129504c77d222477b7f648a26d507fc40e25e1b66a7d6b0ff32d73d8d",
+  "logistic/lfe-many/r_logistic.json": "6501306df77d07a20b09eebb4debc359a61b32c9d6f78df9a2f38991ed2596cd",
+  "logistic/lfe-shifted/case.json": "cf687b7c0abb629f70447abb3fb867438d7c5d87fb69a651e2229ba05071193a",
+  "logistic/lfe-shifted/input.csv": "b795403e68b6b03340f32ae5c4264489d85cc5c785aac0fadb21133b5acb1b8f",
+  "logistic/lfe-shifted/pprof_py.json": "ba13233ccefc0c6890388e6753366c608ca9252460af279b828fbb8656f1d6f7",
+  "logistic/lfe-shifted/r_logistic.json": "45a7035d319ff287481e0cf4c1674691a7af9af1c07590e672e026b069641705"
  },
  "formatVersion": 1,
  "generator": "reference/fixtures/generate.py",
  "options": {
   "function_level": "R: coxph(init = beta, control = coxph.control(iter.max = 0))",
+  "logistic": {
+   "function_level": "SerbinAlgorithm._compute_scores_and_info and _loglikelihood at 'start' and 'fixed'",
+   "glm": "glm(cbind(y, n - y) ~ 0 + factor(provider) + x1 + x2 + x3, binomial, control = glm.control(epsilon = 1e-15, maxit = 200)); loglik without sum(lchoose(n, y))",
+   "iterates": "fit(max_iter=k - 1) gives the state after k Newton steps, k = 1 to 5",
+   "pprof_py": "LogisticFixedEffectModel(algorithm='Serbin'): default fit (max_iter=10000, tol=1e-8, bound=10, backtrack=True, screening of providers with at most 10 records)",
+   "serbin": "R pprof logis_BIN_fe_prov(threads = 1, max_iter = 10000, bound = 10, backtrack = TRUE, stop = 'beta'), tol = 1e-8 (default) and 1e-13 (tight), on pprof_py's screened rows (binomial rows expanded to Bernoulli rows)",
+   "tight": {
+    "tol": 1e-13
+   }
+  },
   "r_tight_control": "coxph.control(eps = 1e-11, iter.max = 100)",
   "r_timefix": true,
   "r_variance": "model-based: coxph(robust = FALSE)",
@@ -65,8 +102,14 @@
   },
   "python": "3.12.3",
   "r": {
+   "rcpp": "1.0.12",
+   "rcpparmadillo": "0.12.8.1.0",
    "survival": "3.5.8",
    "version": "4.3.3"
+  },
+  "r_pprof": {
+   "commit": "1efc4040de386900a7eeed222e478b18b77a6ff2",
+   "version": "1.0.3"
   }
  }
 }

@@ -1,6 +1,7 @@
 # Reference fixtures (PROJECT_CONTEXT §9.3, PAR-1; ADR-0005). Run by hand: after a re-pin, or to
 # show that the committed fixtures still reproduce. Installs the pinned pprof_py and R 4.3.3 with
-# survival 3.5-8 from Ubuntu 24.04's archive, recomputes every output from the committed inputs,
+# survival 3.5-8 and the Rcpp toolchain from Ubuntu 24.04's archive (the generator compiles R pprof's
+# SerBIN at the commit pinned in REFERENCE.lock), recomputes every output from the committed inputs,
 # compares them with the committed outputs under T-part, and reruns the tolerance calibration.
 name: fixtures
 
@@ -17,10 +18,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - name: Install R 4.3.3 and survival 3.5-8
+      - name: Install R 4.3.3, survival 3.5-8 and the Rcpp toolchain for R pprof's SerBIN
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends r-base-core=4.3.3-2build2 r-cran-survival=3.5-8-1
+          sudo apt-get install -y --no-install-recommends r-base-core=4.3.3-2build2 r-cran-survival=3.5-8-1 \
+            r-base-dev=4.3.3-2build2 r-cran-rcpp=1.0.12-1 r-cran-rcpparmadillo=0.12.8.1.0-1build1 \
+            r-cran-rcppparallel=5.1.7+dfsg-3ubuntu1
       - name: Install the pinned pprof_py and its pinned dependencies
         run: |
           python3 -m venv .venv

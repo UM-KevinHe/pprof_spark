@@ -1,6 +1,6 @@
 # Phase 2 plan: logistic provider models
 
-- Status: Proposed, awaiting approval with the first slice's specification (D-30).
+- Status: Approved by the maintainer, 2026-10-07 (D-30). Python access: D-31 (§6).
 - Scope: PROJECT_CONTEXT §4 (Phase 2) and §7.4, against pprof_py v0.7.0 (`9320766`).
 
 ## 1. What the reference contains at the pin
@@ -71,3 +71,20 @@ calibration (OI-51), never by relaxing a class (NN-9).
 | Before 2c | Exact Poisson-binomial algorithm and accuracy (OI-52) |
 | Before 2d | Direct standardization beyond n·m = 10¹³ (OI-49) |
 | Before 2f | Stage 2 and stage 3 designs after the spike (OI-51); X-005 at the σ̂ = 0 boundary |
+| Before the Python wrappers | ADR-0009: facade, packaging and CI for the py4j wrappers (D-31, OI-53) |
+
+## 6. Python access (D-31)
+
+The maintainer chose py4j wrappers for Python access (D-31, superseding D-03). Python code calls
+the Scala engine through PySpark's JVM gateway and never reimplements statistics (§6.12). Proposed
+shape, to be settled in ADR-0009 before any wrapper code:
+
+| Topic | Proposal |
+|---|---|
+| JVM side | A Java-friendly facade (strings, numbers, `java.util` collections, Datasets), so Python never builds Scala `Option`, `Seq` or case classes; options travel as the job runner's JSON specification |
+| Python side | A `pprof_spark` package in `python/`, versioned with the JAR; results as pandas-free dataclasses plus PySpark DataFrames |
+| Modes | Classic sessions only: py4j needs the driver JVM in the Python process's gateway, which Spark Connect clients do not have; Connect users keep the job runner |
+| Databricks | The maintainer's test: py4j access to library classes is expected on dedicated (single-user) compute and blocked in standard access mode (to re-verify, OI-53) |
+| CI | A job with PySpark 4.1.0 and the built JARs running the Python tests in local Classic mode |
+| Distribution | A wheel with the JAR on GitHub Releases (D-08) |
+| Schedule | After slice 2a's estimator: ADR-0009, then wrappers for the Cox API, then each logistic slice as it lands |

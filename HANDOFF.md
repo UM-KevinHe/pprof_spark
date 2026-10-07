@@ -22,7 +22,7 @@ and 21, under Classic Spark and Spark Connect (T8). The authoritative context is
 | 1b, counting process and baseline | Closed (D-24) |
 | 1c, residuals and robust variance | Closed (D-26) |
 | 1d, provider workflows | Closed (D-29) |
-| 2, logistic provider models | Plan and 2a specification proposed (round 25, D-30) |
+| 2, logistic provider models | In progress: plan and 2a specification approved (D-30); 2a fixtures (round 26) |
 
 Every closed phase passed its parity gate at parity-verified; its features stay `Experimental`
 until the package-level scale test, which the maintainer runs himself on his Databricks workspace
@@ -84,7 +84,7 @@ clone at `9320766`; R 4.3.3 with survival 3.5-8.
 
 ### 7. Open questions to carry into Phase 2
 
-- D-03 (Python access) was revisited in round 25: unchanged.
+- Python access: py4j wrappers (D-31, superseding D-03); ADR-0009 after slice 2a (OI-53).
 - OI-02 and OI-38 (large p), OI-03 (TimeRange for very large strata), OI-29 (distributed result
   tables at large m), OI-40 (CI check of the parity matrix), OI-41 (per-release model fixtures),
   OI-43, OI-45 and OI-46 (scale costs), OI-33 and OI-42 (reports to pprof_py), OI-13 (lme4
@@ -100,6 +100,27 @@ implementations at the pin, then propose a Phase 2 plan in slices with the first
 specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
+
+## Round 26 (2026-10-07): Phase 2a fixtures and calibration; py4j wrappers chosen
+
+The maintainer approved D-30 (the plan, the 2a specification and the decisions on X-004 and X-016
+to X-020) and chose py4j wrappers for Python access (D-31, superseding D-03; round 25 had recorded
+his "Continue" as no change).
+
+- `reference/fixtures/logistic_fixtures.py` and `logistic_r.R`: five cases in `fixtures/logistic`
+  (lfe-base, lfe-degenerate, lfe-shifted, lfe-binomial, lfe-many): pprof_py's default and tight
+  fits (estimates, the three variances, Wald table, ℓ, AIC, BIC, steps, flags), iterates of steps
+  1 to 5, function-level values at two points, negative controls; `glm` (MLE, variances, ℓ) and R
+  pprof's SerBIN at tol 1e-8 and 1e-13. R pprof 1.0.3 is pinned in REFERENCE.lock (commit and
+  file checksums; sources fetched by the generator); `generate.py --family` regenerates one family.
+- Calibration (`docs/parity/logistic-calibration.md`): every comparison within its class, worst
+  0.0253 of T-var (provider variances against `glm`); every negative control at least 1.6e3 times
+  outside. X-018 shown: 0.119 of T-coef on lfe-degenerate, informational.
+- testkit: `Fixtures.cases(family)`; FixturesSuite checks the logistic inputs and calibration.
+- `fixtures.yml`: installs the Rcpp toolchain; `compare_outputs.py` covers both families.
+- Sandbox: regeneration is byte-identical, also the full run with copied inputs (as
+  `fixtures.yml`, 36 s); testkit 13 tests pass on JDK 17 and 21 (Classic) and JDK 17 (Spark
+  Connect); engine tests compile. Cox fixtures unchanged; only the manifest gains entries.
 
 ## Round 25 (2026-10-07): Phase 2 plan and the first-slice specification
 

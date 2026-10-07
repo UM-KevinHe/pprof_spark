@@ -1,0 +1,149 @@
+{
+ "glm_nondegenerate": {
+  "beta": [
+   "0x1.1ae554085c0f9p-1",
+   "-0x1.0e1d0159f26b6p-2",
+   "0x1.92790dd0f81a4p-1"
+  ],
+  "gamma": [
+   "-0x1.bfa253ad9ea75p-1",
+   "0x1.52de89143bc1ep+0",
+   "0x1.f56b971cba9b8p-4",
+   "-0x1.02665f3d99b82p+0",
+   "-0x1.086494a6ebb3cp+0",
+   "0x1.c047a490e1e65p-2",
+   "0x1.f6f52fe51c8dbp-5",
+   "-0x1.2bb9ca105ef3fp+0",
+   "-0x1.ea7e3b69d6ee2p+0",
+   "-0x1.35d08ba90f310p-1",
+   "-0x1.62d9becdf2496p+0",
+   "-0x1.eded68c0112c9p-3",
+   "0x1.be4a5cd228226p-3",
+   "-0x1.dab54061299f0p-3",
+   "-0x1.d8b066e4dc71ep-1",
+   "-0x1.bb08625eb8600p-1",
+   "0x1.304ac6b67b741p+0",
+   "0x1.7e00c69bcc14fp-6",
+   "0x1.fe0f37fbce441p-1",
+   "-0x1.e5976b6a3eee2p+0"
+  ],
+  "iterations": 5,
+  "loglik": [
+   "-0x1.3bed6697d9719p+8"
+  ],
+  "var_beta": [
+   "0x1.6dba2cf2c2478p-7",
+   "-0x1.eb3155ce353a8p-11",
+   "0x1.3ca9971c93d59p-10",
+   "0x1.5c3ca32c4bdb3p-7",
+   "-0x1.6ad26b8a08c15p-11",
+   "0x1.4a1bc50c38f9dp-5"
+  ],
+  "var_case_mix": [
+   "0x1.e380678cc1abap-2",
+   "0x1.e96da89c064fep-2",
+   "0x1.ca6720ad1beeep-3",
+   "0x1.76b58d0a1bbc9p-3",
+   "0x1.3c1f611b9c711p-3",
+   "0x1.1debad8d160c1p-3",
+   "0x1.cd6747493815fp-4",
+   "0x1.bfe952b118886p-4",
+   "0x1.47b4a37eeabc9p-1",
+   "0x1.1e35e2c29ce08p-2",
+   "0x1.e53b76464778dp-3",
+   "0x1.5eb730b1da75ep-3",
+   "0x1.3b3b1a31ed711p-3",
+   "0x1.fd90ef8856d25p-4",
+   "0x1.c954a76073623p-4",
+   "0x1.9ca8000a99836p-4",
+   "0x1.59fea1f936c97p-1",
+   "0x1.24bdd696fb3f8p-2",
+   "0x1.0bb9c7ac7f982p-2",
+   "0x1.e8e6957b8bc55p-3"
+  ],
+  "var_gamma": [
+   "0x1.e38aac84f7d1dp-2",
+   "0x1.eb45fbe176a2cp-2",
+   "0x1.d9bdc599060d0p-3",
+   "0x1.841a32fcb4067p-3",
+   "0x1.530856e2beb06p-3",
+   "0x1.2ae6a3da1a1cap-3",
+   "0x1.e34a230a0a1b6p-4",
+   "0x1.ed9759c5a8c43p-4",
+   "0x1.4c7bfc627ef17p-1",
+   "0x1.2613ba1e93aadp-2",
+   "0x1.0537c96d3c516p-2",
+   "0x1.6816a1d2d0978p-3",
+   "0x1.41f6c9db50805p-3",
+   "0x1.0c39b36cac42dp-3",
+   "0x1.ef3d26fcca96bp-4",
+   "0x1.c2ae063938eabp-4",
+   "0x1.5af53fe2e387cp-1",
+   "0x1.278c4c18e39efp-2",
+   "0x1.0737a2524cdf8p-2",
+   "0x1.0024c6513610ap-2"
+  ]
+ },
+ "serbin_default": {
+  "beta": [
+   "0x1.1ae5540313481p-1",
+   "-0x1.0e1d0157b514fp-2",
+   "0x1.92790dc8d9d73p-1"
+  ],
+  "gamma": [
+   "-0x1.bfa253aac36d7p-1",
+   "0x1.52de891478869p+0",
+   "0x1.f56b972bd799fp-4",
+   "-0x1.02665f3bf2692p+0",
+   "-0x1.086494a4b1161p+0",
+   "0x1.c047a4960b108p-2",
+   "0x1.f6f53002b60d2p-5",
+   "-0x1.2bb9ca0dc3bf5p+0",
+   "-0x1.ea7e3b6738b2dp+0",
+   "-0x1.35d08ba5d2205p-1",
+   "-0x1.62d9beca57e9ep+0",
+   "-0x1.eded68b7a40ccp-3",
+   "0x1.be4a5cd8ec34fp-3",
+   "-0x1.dab5405674918p-3",
+   "-0x1.d8b066dfe4f08p-1",
+   "-0x1.bb08625a655d2p-1",
+   "0x1.304ac6b71dee3p+0",
+   "0x1.7e00c6d6ade95p-6",
+   "0x1.fe0f37fb0e18bp-1",
+   "-0x1.e5976b670ea08p+0",
+   "-0x1.4d8a5f2e9dd92p+3",
+   "0x1.3275a0d16226ep+3"
+  ]
+ },
+ "serbin_tight": {
+  "beta": [
+   "0x1.1ae554031356ep-1",
+   "-0x1.0e1d0157b514ep-2",
+   "0x1.92790dc8d9eb7p-1"
+  ],
+  "gamma": [
+   "-0x1.bfa253aac372ap-1",
+   "0x1.52de891478854p+0",
+   "0x1.f56b972bd7722p-4",
+   "-0x1.02665f3bf26c8p+0",
+   "-0x1.086494a4b11b1p+0",
+   "0x1.c047a4960b02dp-2",
+   "0x1.f6f53002b5c97p-5",
+   "-0x1.2bb9ca0dc3c51p+0",
+   "-0x1.ea7e3b6738b9bp+0",
+   "-0x1.35d08ba5d2272p-1",
+   "-0x1.62d9beca57f2bp+0",
+   "-0x1.eded68b7a41f8p-3",
+   "0x1.be4a5cd8ec27ep-3",
+   "-0x1.dab5405674a65p-3",
+   "-0x1.d8b066dfe4fd2p-1",
+   "-0x1.bb08625a65678p-1",
+   "0x1.304ac6b71decdp+0",
+   "0x1.7e00c6d6ad655p-6",
+   "0x1.fe0f37fb0e197p-1",
+   "-0x1.e5976b670ea78p+0",
+   "-0x1.4d8a5f2e9dd98p+3",
+   "0x1.3275a0d162268p+3"
+  ]
+ }
+}

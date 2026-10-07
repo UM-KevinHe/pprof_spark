@@ -29,3 +29,18 @@ r = "4.3.3"
 survival = "3.5-8"
 ubuntu_packages = ["r-base-core=4.3.3-2build2", "r-cran-survival=3.5-8-1"]
 # Needed only by later families: glmnet 4.1-8 (penalized), lme4 1.1-35.1 (random effects).
+
+[r_pprof]
+# R pprof (MIT), the R counterpart of pprof_py, from the CRAN mirror on GitHub (tag 1.0.3). Only
+# src/Fixed_effect.cpp's SerBIN (logis_BIN_fe_prov) is used: compiled with Rcpp::sourceCpp for the
+# logistic fixed-effect fixtures (D-30), with Ubuntu 24.04's r-cran-rcpp 1.0.12,
+# r-cran-rcpparmadillo 0.12.8.1.0 and r-cran-rcppparallel 5.1.7.
+repository = "https://github.com/cran/pprof"
+version = "1.0.3"
+commit = "1efc4040de386900a7eeed222e478b18b77a6ff2"
+license = "MIT"
+
+[r_pprof.sha256]
+"Fixed_effect.cpp" = "7bae54fc00c9d26450696b86a89b477b51379fa9479fb91c20dcc8394b7b2256"
+"header.h" = "70b6f61a13eeabaebda886a8e632a8841d0dc3fa702abac4489eaefba8ddea3b"
+"myomp.h" = "cdfcae72160d813e281f1df98ad3dc72e83fcf80bc0ca1d8f115c66b45888673"
