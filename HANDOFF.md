@@ -1,5 +1,18 @@
 # Handoff
 
+## Round 23 (2026-10-07): Phase 1d gate review and PROJECT_CONTEXT v2.3
+
+- `docs/gates/phase-1d.md`: all requirements met except the design-envelope run, which the
+  maintainer does on his Databricks once the whole package is done (D-28). Measured worst ratios:
+  indirect measures 1.2e-7 and direct 1.6e-6 of T-base; provider-test z 2.1e-6 of T-test, limits
+  4.5e-7 of T-base; flags exact. D-29 proposes closing Phase 1d once CI for round 22 is green.
+- CI results for rounds 20 to 22 were not reported; STATUS and the parity matrix now say so instead
+  of "green".
+- PROJECT_CONTEXT v2.3 (OI-47 closed): D-14's clarification, D-28 (scale test on the maintainer's
+  Databricks at package completion), the implemented job runner (§6.12), T9 and §10.4 updated, D-20
+  to D-29 in §16, and an Appendix A entry. Replace the claude.ai project copy with this file.
+- README status updated for the Cox package as it stands.
+
 ## Round 22 (2026-10-07): the job runner (1d-3)
 
 - `app` module (already declared in build.sbt, now with sources): `RunSpec.parse` reads a version-1

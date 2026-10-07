@@ -103,6 +103,12 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-29: Close Phase 1d at parity-verified (Proposed, round 23; the maintainer's sign-off required)
+
+`docs/gates/phase-1d.md`: every requirement is met except the end-to-end run at design-envelope
+scale, which the maintainer runs on his Databricks once the whole package is done (D-28). Proposed:
+close Phase 1d once CI for round 22 is green, on the terms of D-22, D-24 and D-26.
+
 ### D-28: Site for the Phase 1d scale test (Decided by the maintainer, 2026-10-06)
 
 The maintainer runs the scale test himself on his Databricks workspace once the whole package is

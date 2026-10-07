@@ -1,12 +1,14 @@
 # pprof_spark — Project Context
 
-**Version** 2.2 · **Date** 2026-10-06 · **Supersedes** v2.1 (2026-10-05)
+**Version** 2.3 · **Date** 2026-10-07 · **Supersedes** v2.2 (2026-10-06)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
-> **v2.2 folds in the decisions of Phase 0** (D-01 to D-19 in `DECISIONS.md`) and the corrections
-> found while building it. Recorded decisions keep precedence over this document (§0).
+> **v2.3 folds in Phases 1a to 1d** (D-20 to D-29 in `DECISIONS.md`) and the maintainer's
+> clarification of D-14: AI assistants never access his Databricks environment, and he tests
+> pprof_spark on Databricks himself, once the whole package is done (D-28). v2.2 folded in the
+> decisions of Phase 0 (D-01 to D-19). Recorded decisions keep precedence over this document (§0).
 ---
 
 ## 0. How to use this document
@@ -158,7 +160,7 @@ When a problem's sufficient statistics are small — the covariate-free stage-2 
 | 1a — Cox estimation core | Right censoring, strata, offsets, case weights, Breslow and Efron ties; coefficients, information, model-based covariance, standard errors, Wald inference, log partial likelihood; convergence and step-halving; aliasing. | Parity gate passed for these features. |
 | 1b — Counting process and baseline | (start, stop] data and left truncation; per-stratum baseline cumulative hazard and survival; prediction (linear predictor, relative hazard, cumulative hazard, survival). | Parity gate passed. |
 | 1c — Residuals and robust inference | Martingale residuals (correct under left truncation and Efron ties), score and dfbeta residuals, robust sandwich and clustered variance. | Parity gate passed. |
-| 1d — Provider workflows | Two-stage SMR and SHR; expected counts; O/E ratios; exact Poisson intervals and tests; flags; provider result tables; job-runner entry point. | Parity gate passed; end-to-end Spark application at design-envelope scale (the cluster is to be chosen; D-14). |
+| 1d — Provider workflows | Two-stage SMR and SHR; expected counts; O/E ratios; exact Poisson intervals and tests; flags; provider result tables; job-runner entry point. | Parity gate passed; end-to-end Spark application at design-envelope scale (run by the maintainer on his Databricks workspace once the whole package is done; D-28). |
 | 2 — Logistic provider models | Large-m fixed effects (SerBIN-type blocked Newton); provider tests (Wald, score, exact Poisson-binomial, bootstrap); direct and indirect standardization; then the three-stage SRR pipeline, including the stage-2 random-intercept variance estimation it needs. | Parity gate passed. |
 | 3 — Linear fixed effects | Profile (within) estimation, standardization, inference. | Parity gate passed. |
 | Later | Penalized models (elastic net, group lasso, provider-penalized), random and mixed effects, shared-frailty Cox, time-varying coefficients, discrete-time survival, competing risks (cause-specific, Fine-Gray), variable selection, inter-unit reliability, empirical-null calibration, funnel limits. | Each family enters through Phase-0-style spikes and its own gate. |
@@ -185,7 +187,7 @@ The mapping below covers `pprof_py`'s public model classes *(re-verify)*.
 
 ### 5.1 Targets and platform facts
 
-pprof_spark is a standalone Apache Spark package (D-14). It targets open-source Spark 4.1.x with Scala 2.13 and Java 17 or later, and keeps one JAR compatible with Databricks Runtime 18 LTS by construction (§5.3); Databricks itself is not tested while D-14 stands.
+pprof_spark is a standalone Apache Spark package (D-14). It targets open-source Spark 4.1.x with Scala 2.13 and Java 17 or later, and keeps one JAR compatible with Databricks Runtime 18 LTS by construction (§5.3); the maintainer tests it on Databricks himself, and AI assistants never access his Databricks environment (D-14 as clarified, D-28).
 
 | Item | Value *(as of 2026-10-06; re-verify)* |
 |---|---|
@@ -401,7 +403,7 @@ Spark ML on Spark Connect discovers estimators through Java's `ServiceLoader` an
 
 ### 6.12 Application layer and Python access
 
-The `app` module will provide plain Spark entry points, for `spark-submit`, that read a declarative, versioned run specification (input tables or paths, column mapping, model and options, outputs, reproducibility mode) and write result tables and model artifacts. Python and SQL users then work through tables and job parameters, and every run is auditable. Databricks-specific packaging (JAR tasks, Unity Catalog volumes) is deferred with D-14.
+The `app` module provides `pprof.spark.app.CoxJob`, a plain Spark entry point for `spark-submit` or a Databricks JAR task, which reads a declarative, versioned run specification (input path or table, column roles, fit options, outputs) and writes result tables, the fitted model and a run record (`docs/guide/cox-job.md`). Python and SQL users then work through tables and job parameters, and every run is auditable. Databricks deployment automation stays out of scope (D-14).
 
 There is no Python access in v1 (D-03). py4j wrappers and Spark Connect ML registration (S-04, ADR-0008) are revisited after Phase 1d. Python-facing code never reimplements statistics.
 
@@ -622,7 +624,7 @@ Converged-estimate comparisons run both implementations to a tighter criterion t
 | T6 Edge cases | Degenerate inputs, validation errors, absence of row values in messages | CI | Every pull request |
 | T7 Contracts | Parameter defaults, output schemas, persistence round trips, backward compatibility | CI | Every pull request |
 | T8 Connect | Engine suites through a Spark Connect client served in-process (ADR-0002) | CI | Every push and pull request |
-| T9 Cluster integration | Multi-node cluster with separate executor JVMs, synthetic data | A cluster; Databricks deferred (D-14) | Deferred |
+| T9 Cluster integration | Multi-node cluster with separate executor JVMs, synthetic data | The maintainer's Databricks workspace, run by him once the whole package is done (D-28) | Deferred to then |
 | T10 Scale and performance | Benchmark workloads in `bench`; regression thresholds once a cluster exists | GitHub runners by hand (`bench.yml`); a cluster later | By hand; before releases |
 | T11 Statistical validation | Simulation studies of bias, coverage, and type I error for features without an external reference | CI or a cluster | When the feature is released |
 | T12 Production-data validation | Approved CMS data inside the approved environment, compared with `pprof_py` or production outputs; only aggregate results leave the environment | The approved environment | Before production use |
@@ -678,7 +680,7 @@ Every engine test runs with at least two physical partition counts, two block si
 
 ### 9.7 Cluster integration and scale tests
 
-Deferred with D-14 (ADR-0008). When a cluster is available, integration jobs run on fresh clusters, generate synthetic data in place, and write machine-readable results for CI to collect. Scale tests sweep n, p, strata and provider counts, skew, tie density and the share of left-truncated rows, and record time per iteration, iterations, passes, shuffle bytes, bytes reduced to the driver and peak memory against regression thresholds.
+The maintainer runs these on his Databricks workspace once the whole package is done (D-28); assistants prepare the jobs, data generators and instructions and analyse the results he shares. There, integration jobs run on fresh clusters, generate synthetic data in place, and write machine-readable results for CI to collect. Scale tests sweep n, p, strata and provider counts, skew, tie density and the share of left-truncated rows, and record time per iteration, iterations, passes, shuffle bytes, bytes reduced to the driver and peak memory against regression thresholds.
 
 ### 9.8 Parity gate and traceability
 
@@ -713,7 +715,7 @@ Each algorithm's specification states its passes per iteration, shuffle volume (
 
 ### 10.4 Benchmarks and regression tracking
 
-The `bench` module holds reproducible workloads; `bench.yml` runs them by hand on GitHub's runners and shows the results on the run page. S-05's `DeterminismCost` is the first (ADR-0006). Scheduled runs on a fixed cluster with tracked regression thresholds wait for a cluster (D-14). A change that regresses a tracked metric beyond its threshold needs a written justification in its pull request.
+The `bench` module holds reproducible workloads; `bench.yml` runs them by hand on GitHub's runners and shows the results on the run page. S-05's `DeterminismCost` is the first (ADR-0006). Runs on a fixed cluster with tracked regression thresholds wait for the package-level scale test on the maintainer's Databricks (D-28). A change that regresses a tracked metric beyond its threshold needs a written justification in its pull request.
 
 ---
 
@@ -896,19 +898,28 @@ Phase 0's decisions and spikes are resolved. The outcomes are recorded in `DECIS
 | D-08 | Artifact distribution | GitHub Releases |
 | D-09 | Tolerance calibration | The §8.4 values and rule, calibrated against the Cox fixtures and enforced in CI |
 | D-10 | Root package and artifact names | `pprof.spark`; `pprof-spark-<module>_2.13` |
-| D-11 to D-19 | Raised during Phase 0 | Phase 0 exit and first Cox slice; tooling baseline; Spark Connect test topology; no Databricks work; summation; platform skeleton; fixtures; deterministic mode; Codespaces |
+| D-11 to D-19 | Raised during Phase 0 | Phase 0 exit and first Cox slice; tooling baseline; Spark Connect test topology; no assistant access to Databricks (D-14, clarified 2026-10-07); summation; platform skeleton; fixtures; deterministic mode; Codespaces |
+| D-20 to D-29 | Raised during Phases 1a to 1d | Cox specifications (D-20, D-21, D-23, D-25, D-27); phase gates closed at parity-verified (D-22, D-24, D-26, D-29); scale test on the maintainer's Databricks once the package is done (D-28) |
 
 | ID | Question | Outcome |
 |---|---|---|
-| S-01 | Does the JAR run on DBR 18 LTS while CI tests open-source Spark? | Deferred (D-14); the linkage compile guards PLAT-3 meanwhile |
+| S-01 | Does the JAR run on DBR 18 LTS while CI tests open-source Spark? | Answered by the maintainer's package-level Databricks test (D-28); the linkage compile guards PLAT-3 meanwhile |
 | S-02 | Does the Dataset backend run unchanged under Spark Connect? | Local part passed, bitwise identical to Classic (ADR-0002); Databricks legs deferred |
-| S-03 | What does table materialization cost against persist? | Deferred (D-14) |
+| S-03 | What does table materialization cost against persist? | Deferred to the package-level test (D-28) |
 | S-04 | Can third-party Spark ML models be used through Spark Connect ML? | Deferred (D-01) |
 | S-05 | What does deterministic mode cost? | Little; deterministic mode stays the default (ADR-0006) |
 | S-06 | Is Codespaces usable? | Dev container provided; the maintainer's trial is pending (ADR-0007) |
 | S-07 | Which block sizes work at envelope scale? | Deferred: needs a cluster (ADR-0008) |
 
 ## Appendix A. Changes and their rationale
+
+### v2.2 to v2.3 (Phases 1a to 1d)
+
+| Area | v2.2 | v2.3 | Why |
+|---|---|---|---|
+| Databricks | Not tested while D-14 stands | Tested by the maintainer himself; assistants never access his Databricks environment | D-14 clarified |
+| Scale test | On a cluster to be chosen, per phase | Once, on the maintainer's Databricks, when the whole package is done; phase gates close at parity-verified | D-28, D-22, D-24, D-26, D-29 |
+| Application layer | Planned | `CoxJob` and the version-1 run specification implemented | Phase 1d (D-27) |
 
 ### v2.0 to v2.2 (Phase 0)
 
