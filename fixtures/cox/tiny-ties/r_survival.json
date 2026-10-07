@@ -59,12 +59,48 @@
    "covariance": [
     "0x1.bb0cdd0e0175bp-2"
    ],
+   "dfbeta_1": [
+    "0x1.4280e095be412p-3",
+    "-0x1.686d7b9d03705p-4",
+    "-0x1.34b8e64e3314bp-3",
+    "0x1.2c0f1a5a6f7b1p-9",
+    "0x1.2d5b60723c28ap-4",
+    "0x1.e5b5dbb71c7b1p-4",
+    "-0x1.b39392807b7f1p-3",
+    "0x1.9792f712b7f67p-4"
+   ],
    "iterations": 3,
    "loglik": [
     "-0x1.2c3ca264c162cp+3"
    ],
    "loglik_null": [
     "-0x1.2d52f8e914bd4p+3"
+   ],
+   "martingale": [
+    "0x1.894d6a51fad7ep-1",
+    "0x1.79021c3d081dfp-1",
+    "-0x1.6ab4f1fec4c6fp-2",
+    "0x1.28b729173646ep-1",
+    "-0x1.3858594cc40a0p-4",
+    "0x1.9f5986fc9dce8p-3",
+    "-0x1.5622357656a9ep+0",
+    "-0x1.0a33224fb8786p-1"
+   ],
+   "robust_clustered": [
+    "0x1.09fe71c40ed18p-3"
+   ],
+   "robust_per_row": [
+    "0x1.09fe71c40ed18p-3"
+   ],
+   "score_1": [
+    "0x1.74b16ca9392d6p-2",
+    "-0x1.a084eedb2e174p-3",
+    "-0x1.64c467a2a7c16p-2",
+    "0x1.5ac1769704040p-8",
+    "0x1.5c41727b68190p-3",
+    "0x1.18a649b9ee54cp-2",
+    "-0x1.f75cf3dc9af94p-2",
+    "0x1.d700bae3444fap-3"
    ],
    "se": [
     "0x1.50c7b75521742p-1"
@@ -131,12 +167,48 @@
    "covariance": [
     "0x1.c82aef7855006p-2"
    ],
+   "dfbeta_1": [
+    "0x1.66db883ffbff1p-3",
+    "-0x1.856ba5d6234dbp-4",
+    "-0x1.4bd27c5887bcdp-3",
+    "0x1.2cd031cc47defp-9",
+    "0x1.93e47e824a88ap-5",
+    "0x1.282cac3d12a83p-3",
+    "-0x1.e140f43973898p-3",
+    "0x1.ee295d3075077p-4"
+   ],
    "iterations": 3,
    "loglik": [
     "-0x1.1ec002c41ff04p+3"
    ],
    "loglik_null": [
     "-0x1.1fd8643ff0566p+3"
+   ],
+   "martingale": [
+    "0x1.a2ec71dd1d6c5p-1",
+    "0x1.95e4849270b14p-1",
+    "-0x1.78eb3816dc489p-2",
+    "0x1.1f9064ec92504p-1",
+    "-0x1.26047096ba600p-8",
+    "0x1.0a5bec14dcfb2p-2",
+    "-0x1.6e13379854413p+0",
+    "-0x1.42a73d494acfep-1"
+   ],
+   "robust_clustered": [
+    "0x1.45df7bcb3cebcp-3"
+   ],
+   "robust_per_row": [
+    "0x1.45df7bcb3cebcp-3"
+   ],
+   "score_1": [
+    "0x1.92c795e2a680ap-2",
+    "-0x1.b51553d32dcc3p-3",
+    "-0x1.746f716a4d0d8p-2",
+    "0x1.51a18d0f191e0p-8",
+    "0x1.c553a022e48f0p-4",
+    "0x1.4c6caefb597bcp-2",
+    "-0x1.0e1404a902783p-1",
+    "0x1.1552718af35ecp-2"
    ],
    "se": [
     "0x1.55bab569eeec9p-1"

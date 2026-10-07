@@ -1,6 +1,7 @@
 # Specification: residuals and robust variance (Phase 1c)
 
-- Status: **Draft, awaiting the maintainer's approval (D-25, NN-2)**, including X-015.
+- Status: **Approved on 2026-10-06 (D-25), including X-015.** Round 17 implements the residuals (§1, §3)
+  and the fixtures (§5); round 18 implements robust variance (§2).
 - Extends the Phase 1a and 1b specifications; everything not stated here is unchanged.
 - Reference: pprof_py v0.7.0 (`inference/survival/residuals.py`: `martingale_residuals`,
   `score_residuals`, `dfbeta_residuals`; `inference/survival/robust.py`: `cluster_score_residuals`,

@@ -286,6 +286,58 @@
     ]
    }
   },
+  "residuals": {
+   "clusters": 8,
+   "dfbeta": [
+    [
+     "0x1.4280e08c02906p-3",
+     "-0x1.686d7bada798ap-4",
+     "-0x1.34b8e6532e79fp-3",
+     "0x1.2c0f18588a862p-9",
+     "0x1.2d5b604406593p-4",
+     "0x1.e5b5db9220039p-4",
+     "-0x1.b39392796cd33p-3",
+     "0x1.9792f719c4a6dp-4"
+    ]
+   ],
+   "martingale": [
+    "0x1.894d6a50466b6p-1",
+    "0x1.79021c3e29742p-1",
+    "-0x1.6ab4f209955b8p-2",
+    "0x1.28b7291751a2ap-1",
+    "-0x1.385858d4a06b0p-4",
+    "0x1.9f5986d2805c8p-3",
+    "-0x1.5622357a27361p+0",
+    "-0x1.0a332246b4718p-1"
+   ],
+   "naive_covariance": [
+    "0x1.bb0cdd0dd0e29p-2"
+   ],
+   "robust_clustered": [
+    "0x1.09fe71b9d5facp-3"
+   ],
+   "robust_clustered_from_dfbeta": [
+    "0x1.09fe71b9d5fadp-3"
+   ],
+   "robust_per_row": [
+    "0x1.09fe71b9d5facp-3"
+   ],
+   "robust_per_row_from_dfbeta": [
+    "0x1.09fe71b9d5fadp-3"
+   ],
+   "score": [
+    [
+     "0x1.74b16c9e22940p-2",
+     "-0x1.a084eeee96e6dp-3",
+     "-0x1.64c467a890bfep-2",
+     "0x1.5ac174454b820p-8",
+     "0x1.5c41724627740p-3",
+     "0x1.18a649a4ae1a0p-2",
+     "-0x1.f75cf3d4aa537p-2",
+     "0x1.d700baeb9d7e8p-3"
+    ]
+   ]
+  },
   "tight": {
    "ci_lower": [
     "-0x1.75f21e10c5f3ep+0"
@@ -604,6 +656,58 @@
      "-0x1.4c0b74e861c65p-2"
     ]
    }
+  },
+  "residuals": {
+   "clusters": 8,
+   "dfbeta": [
+    [
+     "0x1.66db883981dadp-3",
+     "-0x1.856ba5e1b8c27p-4",
+     "-0x1.4bd27c5bd04c1p-3",
+     "0x1.2cd0309764dc9p-9",
+     "0x1.93e47e4b3ae69p-5",
+     "0x1.282cac32bf22bp-3",
+     "-0x1.e140f435122fap-3",
+     "0x1.ee295d350ad18p-4"
+    ]
+   ],
+   "martingale": [
+    "0x1.a2ec71dc4acd2p-1",
+    "0x1.95e48492f8938p-1",
+    "-0x1.78eb381dbbed2p-2",
+    "0x1.1f9064ec9eed0p-1",
+    "-0x1.26046c4307100p-8",
+    "0x1.0a5bec0924494p-2",
+    "-0x1.6e13379ad245cp+0",
+    "-0x1.42a73d436be38p-1"
+   ],
+   "naive_covariance": [
+    "0x1.c82aef784794ap-2"
+   ],
+   "robust_clustered": [
+    "0x1.45df7bc54301ap-3"
+   ],
+   "robust_clustered_from_dfbeta": [
+    "0x1.45df7bc543019p-3"
+   ],
+   "robust_per_row": [
+    "0x1.45df7bc54301ap-3"
+   ],
+   "robust_per_row_from_dfbeta": [
+    "0x1.45df7bc543019p-3"
+   ],
+   "score": [
+    [
+     "0x1.92c795db6d43ap-2",
+     "-0x1.b51553e03b115p-3",
+     "-0x1.746f716e07730p-2",
+     "0x1.51a18bb471b80p-8",
+     "0x1.c5539fe5250a0p-4",
+     "0x1.4c6caeefcc30cp-2",
+     "-0x1.0e1404a6951ddp-1",
+     "0x1.1552718d8e41ap-2"
+    ]
+   ]
   },
   "tight": {
    "ci_lower": [

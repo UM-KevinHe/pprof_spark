@@ -19,7 +19,11 @@
 | Persistence | Met | Format version 2 saves the baseline as Parquet and round-trips it bit for bit; version 1 loads |
 | Documentation | Met | Specification, parity matrix, X-014 |
 | Scale test | **Not met** | As in Phase 1a: no cluster (D-14), targets after benchmarks (D-04); OI-43 (unstratified prediction) is part of it |
-| CI | Met once round 16.1 passes | Rounds 11 to 14 green. Round 15's Spark Connect job failed: one CoxBaselineSuite test passed munit's 30-second limit (run 37533252860). Round 16.1 splits the long tests and gives Spark suites two minutes |
+| CI | Met | Rounds 11 to 14 green. Round 15's Spark Connect job failed: one CoxBaselineSuite test passed munit's 30-second limit (run 37533252860). Round 16.1 splits the long tests and gives Spark suites two minutes |
+
+## Outcome
+
+**Closed on 2026-10-06** (D-24): round 16.1's CI passed and the maintainer signed off.
 
 ## Recommendation
 

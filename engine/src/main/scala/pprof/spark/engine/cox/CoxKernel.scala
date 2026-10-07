@@ -1,7 +1,7 @@
 package pprof.spark.engine.cox
 
 import pprof.spark.numerics.NeumaierSum
-import pprof.spark.numerics.kernels.{CoxStratum, CoxTotals, Fingerprint, Moments}
+import pprof.spark.numerics.kernels.{CoxResiduals, CoxStratum, CoxTotals, Fingerprint, Moments}
 
 /** One block's log partial likelihood, score and packed information at one β. */
 final case class CoxPartial(
@@ -18,6 +18,14 @@ final case class CoxBaselineRow(
     increment: Double,
     cumulativeHazard: Double,
     survival: Double
+)
+
+/** One row's residuals (Phase 1c specification §1): martingale, score and dfbeta. */
+final case class CoxResidualRow(
+    rowId: Long,
+    martingale: Double,
+    score: Array[Double],
+    dfbeta: Array[Double]
 )
 
 /** One block's counts, column sums (for centering), and fingerprint (§6.10). */
@@ -135,6 +143,58 @@ object CoxKernel {
           StrictMath.exp(-cumulative)
         )
         k += 1
+      }
+      g += 1
+    }
+    rows.result()
+  }
+
+  /** The residuals of the block's rows at `beta`; dfbeta is wᵢ·Uᵢ·V with V the packed model-based
+    * covariance (Phase 1c specification §1).
+    */
+  def residuals(
+      block: CoxBlock,
+      beta: Array[Double],
+      center: Array[Double],
+      efron: Boolean,
+      covariance: Array[Double]
+  ): Seq[CoxResidualRow] = {
+    val p = block.p
+    val rows = Vector.newBuilder[CoxResidualRow]
+    var g = 0
+    while (g < block.groupCount) {
+      val from = block.groupStart(g)
+      val until = block.groupEnd(g)
+      val (martingale, score) = CoxResiduals.stratum(
+        block.time,
+        block.entry,
+        block.entryOrder,
+        block.event,
+        block.weight,
+        block.offset,
+        block.x,
+        p,
+        from,
+        until,
+        beta,
+        center,
+        efron
+      )
+      var i = 0
+      while (i < until - from) {
+        val u = java.util.Arrays.copyOfRange(score, i * p, (i + 1) * p)
+        val w = block.weight(from + i)
+        val dfbeta = Array.tabulate(p) { j =>
+          var s = 0.0
+          var k = 0
+          while (k < p) {
+            s += w * u(k) * covariance(Moments.packedIndex(math.min(k, j), math.max(k, j), p))
+            k += 1
+          }
+          s
+        }
+        rows += CoxResidualRow(block.rowId(from + i), martingale(i), u, dfbeta)
+        i += 1
       }
       g += 1
     }

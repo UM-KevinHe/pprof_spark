@@ -1,10 +1,10 @@
 # Status
 
-Updated 2026-10-06, round 16.
+Updated 2026-10-06, round 17.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
-**Phase 1b, counting process and baseline: gate review done** (docs/gates/phase-1b.md); closing it
-needs the maintainer's sign-off (D-24). **Phase 1c:** the specification awaits approval (D-25).
+**Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance:
+in progress** (D-25): residuals done; robust variance next.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
 
@@ -34,9 +34,10 @@ needs the maintainer's sign-off (D-24). **Phase 1c:** the specification awaits a
 | 13 | Phase 1b specification: (start, stop] data, left truncation, baseline hazard, prediction (D-23, X-014) | Merged (f7aed80); approved 2026-10-06 |
 | 14 | Phase 1b fixtures (left truncation, baselines, predictions) and fitting with entry times | Merged (ac55216); CI green |
 | 15 | Baseline hazard table, prediction, and persisting the baseline (format version 2) | Merged (1453442); CI: the Spark Connect job failed on a test timeout (run 37533252860), fixed in round 16.1 |
-| 16 | Phase 1b gate review (D-24) and the Phase 1c specification (D-25, X-015) | Delivered as a patch; awaiting sign-off and approval |
-| 16.1 | Fix round 15's CI failure: one test per fixture case and tie method in the long Cox tests; Spark suites allow two minutes per test | Delivered as a patch; CI to confirm |
-| 17 | Phase 1c fixtures and implementation | After D-25 |
+| 16 | Phase 1b gate review (D-24) and the Phase 1c specification (D-25, X-015) | Merged with 16.1 (04ea163); signed off and approved |
+| 16.1 | Fix round 15's CI failure: one test per fixture case and tie method in the long Cox tests; Spark suites allow two minutes per test | Merged (04ea163); CI green |
+| 17 | Phase 1c fixtures (residuals, robust variances) and residuals | Delivered as a patch; CI to confirm |
+| 18 | Robust variance, per row and clustered; Phase 1c gate review | Planned |
 
 ## Decisions and spikes
 

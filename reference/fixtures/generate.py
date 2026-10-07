@@ -32,6 +32,7 @@ import pandas as pd
 from pprof_py.algorithms.survival.cox_likelihood import cox_partial_likelihood
 from pprof_py.data.survival_data import SurvivalData
 from pprof_py.data.survival_validation import validate_fit_inputs
+from pprof_py.inference.survival.residuals import dfbeta_residuals, score_residuals
 from pprof_py.models.survival.coxph import CoxPH
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -186,6 +187,36 @@ def pprof_baseline(df, case, ties):
     }
 
 
+CLUSTERS = 40  # cluster column for robust-variance fixtures: id mod 40 (Phase 1c specification §5)
+
+
+def pprof_residuals(df, case, ties):
+    """Residuals and robust variances of the tight fit (Phase 1c specification §1, §2, §5)."""
+    X = df[features(case)].to_numpy(dtype=float)
+    arguments = fit_arguments(df, case)
+    data = SurvivalData(**validate_fit_inputs(X, **arguments))
+    model = CoxPH(ties=ties, **TIGHT).fit(X, **arguments)
+    eta = data.X @ model.coef_ + data.offset
+    score = score_residuals(data.X, data.start, data.stop, data.event, eta, data.weight,
+                            data.strata_codes, data.strata_labels, ties=ties)
+    dfbeta = dfbeta_residuals(score, data.weight, model.naive_covariance_)
+    cluster = df["id"].to_numpy() % CLUSTERS
+    per_row = CoxPH(ties=ties, robust=True, **TIGHT).fit(X, **arguments)
+    clustered = CoxPH(ties=ties, **TIGHT).fit(X, cluster=cluster, **arguments)
+    sums = pd.DataFrame(dfbeta).groupby(cluster).sum().to_numpy()
+    return {
+        "martingale": hexes(model.martingale_residuals_),
+        "score": [hexes(score[:, j]) for j in range(score.shape[1])],
+        "dfbeta": [hexes(dfbeta[:, j]) for j in range(dfbeta.shape[1])],
+        "naive_covariance": hexes(packed(model.naive_covariance_)),
+        "robust_per_row": hexes(packed(per_row.covariance_)),
+        "robust_clustered": hexes(packed(clustered.covariance_)),
+        "robust_per_row_from_dfbeta": hexes(packed(dfbeta.T @ dfbeta)),
+        "robust_clustered_from_dfbeta": hexes(packed(sums.T @ sums)),
+        "clusters": int(clustered.n_clusters_),
+    }
+
+
 def pprof_function(df, case, ties, beta):
     clean = validate_fit_inputs(df[features(case)].to_numpy(dtype=float), **fit_arguments(df, case))
     data = SurvivalData(**clean)
@@ -286,6 +317,7 @@ def main():
                 "beta_fixed": pprof_function(df, case, ties, FIXED_BETA[:case["p"]]),
                 "iterates": pprof_iterates(df, case, ties),
                 "baseline": pprof_baseline(df, case, ties),
+                "residuals": pprof_residuals(df, case, ties),
                 "negative_controls": controls,
             }
         write_json(os.path.join(case_dir, "pprof_py.json"), reference)

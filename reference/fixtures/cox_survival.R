@@ -46,6 +46,18 @@ for (ties in c("breslow", "efron")) {
       emit(paste0(key, ".basehaz_time"), bh$time)
       emit(paste0(key, ".basehaz_hazard"), bh$hazard)
       if (stratified) emit(paste0(key, ".basehaz_stratum"), as.numeric(sub("^stratum=", "", as.character(bh$strata))))
+      # Residuals and robust variances (Phase 1c specification §5); clusters are id mod 40.
+      emit(paste0(key, ".martingale"), residuals(fit, type = "martingale"))
+      sc <- as.matrix(residuals(fit, type = "score"))
+      db <- as.matrix(residuals(fit, type = "dfbeta"))
+      for (j in seq_len(ncol(sc))) {
+        emit(paste0(key, ".score_", j), sc[, j])
+        emit(paste0(key, ".dfbeta_", j), db[, j])
+      }
+      fr <- coxph(f, data = d, weights = w, ties = ties, robust = TRUE, cluster = d$id, control = control)
+      fc <- coxph(f, data = d, weights = w, ties = ties, robust = TRUE, cluster = d$id %% 40, control = control)
+      emit(paste0(key, ".robust_per_row"), packed(fr$var))
+      emit(paste0(key, ".robust_clustered"), packed(fc$var))
     }
   }
   for (name in c("beta_zero", "beta_fixed")) {

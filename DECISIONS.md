@@ -97,14 +97,14 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-25: Phase 1c specification (Proposed, round 16; approval required, NN-2)
+### D-25: Phase 1c specification (Accepted: approved by the maintainer, 2026-10-06)
 
 `docs/spec/cox/residuals-robust.md`: martingale, score and dfbeta residuals and robust variance,
 per row or clustered, with X-015 (robust variance from score residuals, as R, where pprof_py's
 Breslow counting-process kernel disagrees with R by 11%) and residual tables keyed by the row
 identifier.
 
-### D-24: Close Phase 1b at parity-verified (Proposed, round 16; the maintainer's sign-off required)
+### D-24: Close Phase 1b at parity-verified (Accepted: signed off by the maintainer, 2026-10-06, after round 16.1's CI passed)
 
 `docs/gates/phase-1b.md`: every requirement is met except the scale test. Proposed: close Phase 1b
 on D-22's terms, with scale verification at the Phase 1d gate.

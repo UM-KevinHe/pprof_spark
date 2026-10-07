@@ -1,5 +1,34 @@
 # Handoff
 
+## Round 17 (2026-10-06): Phase 1c fixtures and residuals
+
+Round 16.1's CI passed; the maintainer closed Phase 1b (D-24) and approved the Phase 1c
+specification with X-015 (D-25).
+
+- Fixtures: for six cases and both tie methods, pprof_py's martingale, score and dfbeta residuals,
+  its naive, per-row robust and clustered robust covariances (clusters id mod 40), and sandwiches
+  of its dfbeta residuals; R's residuals and robust variances (`cluster = id` and `id %% 40`).
+  Fixtures grow from 0.9 MB to 3.0 MB; regeneration is byte-identical; calibration passes.
+- Calibration findings: residuals of pprof_py and R differ by up to 2.1e-9 for Breslow, past
+  T-res (atol 1e-9), because their tight estimates differ; at fixed estimates the computations
+  agree, so residual parity is tested at each reference's own estimates and covariance. Robust
+  variances: X-015 on both left-truncated Breslow cases (8% and 11%); the dfbeta sandwiches match
+  R everywhere (2.3e-9 or better).
+- `numerics`: `CoxResiduals.stratum`: one descending sweep for per-time h, g, the Efron dying share
+  c₀ = Σₖ (k/d)·m/Aₖ and c₁, and the mean of the k-th means; ascending running totals; per-row
+  differences over (entry, exit]. Zero-weight rows get the residuals of an at-risk row that never
+  dies (X-013).
+- `engine`: `CoxPH.residuals(df, fit)`: the row identifier, `martingale`, `score_<feature>`,
+  `dfbeta_<feature>` (wᵢ·Uᵢ·V); needs `CoxSpec.rowId`; checks the fingerprint; distributed.
+- Tests (`CoxResidualsSuite`, 15): martingale, score and dfbeta against pprof_py and R at their
+  estimates for all six cases and both tie methods, including Efron with left truncation;
+  weighted martingale residuals sum to zero per stratum and weighted score residuals to the
+  score; API checks.
+- Sandbox verification: numerics 54 and testkit 11 (JDK 17); engine non-Cox suites, CoxFitIOSuite
+  and CoxResidualsSuite on JDK 17 Classic (53) and CoxResidualsSuite on Spark Connect (15; slowest
+  test 36 s, within Spark suites' two minutes). CoxPHSuite and CoxBaselineSuite were not rerun:
+  their code is unchanged and the fixture values they read are unchanged.
+
 ## Round 16.1 (2026-10-06): fix round 15's CI failure
 
 - Round 15's Spark Connect job (run 37533252860) failed one test: `java.util.concurrent.
