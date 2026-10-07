@@ -1,7 +1,7 @@
 # Specification: provider workflows (Phase 1d)
 
 - Status: **Approved on 2026-10-06 (D-27).** Round 20 implements 1d-1 (standardized measures) and
-  round 21 1d-2 (provider tests). Scale test (D-28): the maintainer runs it on his Databricks
+  round 21 1d-2 (provider tests) and round 22 1d-3 (the job runner, `docs/guide/cox-job.md`). Scale test (D-28): the maintainer runs it on his Databricks
   workspace once the whole package is done.
 - Scope (§4, Phase 1d): two-stage SMR and SHR; expected counts; O/E ratios; exact Poisson
   intervals and tests; flags; provider result tables; a job-runner entry point. Exit: the parity

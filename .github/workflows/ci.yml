@@ -93,7 +93,7 @@ jobs:
       - uses: sbt/setup-sbt@v1
       - name: Engine suites under Spark Connect (T8)
         shell: bash
-        run: sbt -v -Dpprof.test.sparkApi=connect engine/test 2>&1 | tee sbt.log
+        run: sbt -v -Dpprof.test.sparkApi=connect engine/test app/test 2>&1 | tee sbt.log
       - name: Publish failure details (readable without signing in)
         if: failure()
         run: python3 scripts/ci_failure_report.py sbt.log

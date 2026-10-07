@@ -160,7 +160,7 @@ lazy val ml = project
     libraryDependencies += "org.apache.spark" %% "spark-mllib" % sparkVersion % Provided
   )
 
-/** Job-runner entry points (§6.12). No sources yet. */
+/** Job-runner entry points (§6.12): `pprof.spark.app.CoxJob` for `spark-submit`. */
 lazy val app = project
   .dependsOn(engine, testkit % "test->compile")
   .settings(sparkModuleSettings)

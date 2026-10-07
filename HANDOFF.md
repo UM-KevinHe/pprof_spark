@@ -1,5 +1,24 @@
 # Handoff
 
+## Round 22 (2026-10-07): the job runner (1d-3)
+
+- `app` module (already declared in build.sbt, now with sources): `RunSpec.parse` reads a version-1
+  JSON run specification with Jackson (from Spark's classpath), defaulting omitted fit options to
+  the library's and reporting every problem at once; `CoxJob.main` (`--spec <path>` read through
+  Spark, or `--spec-json <text>`) and `CoxJob.run` fit, then write the fit with its baseline
+  (`CoxFitIO`), residuals, standardized measures and provider tests as Parquet, and a one-line JSON
+  run record (specification, software, fingerprint, convergence, warnings, outputs, timings).
+  Outputs are never overwritten.
+- `CoxJobSuite` (3): on lt-weights-offset with Efron ties, every output equals the library's bit
+  for bit, the run record is right and a second run fails rather than overwriting; an invalid
+  specification lists ten problems; argument handling.
+- CI: the Spark Connect job now runs `app/test` too.
+- `docs/guide/cox-job.md`: usage with `spark-submit` and as a Databricks JAR task, the run
+  specification and the outputs.
+- Sandbox verification: the app module compiles at Scala 2.13.17 and, for linkage, 2.13.16; its suite
+  passes under Classic and Spark Connect (JDK 17). The end-to-end test takes about 70 s here, within
+  the two-minute limit for Spark suites. The engine and other modules are unchanged this round.
+
 ## Round 21 (2026-10-07): provider tests (1d-2)
 
 The maintainer prefers to run the scale test on his Databricks once the whole package is done, not
