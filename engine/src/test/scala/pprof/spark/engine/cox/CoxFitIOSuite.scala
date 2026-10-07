@@ -121,6 +121,6 @@ class CoxFitIOSuite extends SparkSuite {
     Files.deleteIfExists(parts.head.resolveSibling(s".${parts.head.getFileName}.crc"))
     val e = intercept[IllegalArgumentException](CoxFitIO.load(spark, path))
     assert(e.getMessage.contains("format version 99"), e.getMessage)
-    assert(e.getMessage.contains("format versions 1 and 2"), e.getMessage)
+    assert(e.getMessage.contains("format versions 1 to 3"), e.getMessage)
   }
 }

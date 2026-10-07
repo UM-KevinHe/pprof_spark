@@ -1,10 +1,10 @@
 # Status
 
-Updated 2026-10-06, round 17.
+Updated 2026-10-06, round 18.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance:
-in progress** (D-25): residuals done; robust variance next.
+implemented** (D-25); the gate review (docs/gates/phase-1c.md) awaits sign-off (D-26).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
 
@@ -36,8 +36,9 @@ in progress** (D-25): residuals done; robust variance next.
 | 15 | Baseline hazard table, prediction, and persisting the baseline (format version 2) | Merged (1453442); CI: the Spark Connect job failed on a test timeout (run 37533252860), fixed in round 16.1 |
 | 16 | Phase 1b gate review (D-24) and the Phase 1c specification (D-25, X-015) | Merged with 16.1 (04ea163); signed off and approved |
 | 16.1 | Fix round 15's CI failure: one test per fixture case and tie method in the long Cox tests; Spark suites allow two minutes per test | Merged (04ea163); CI green |
-| 17 | Phase 1c fixtures (residuals, robust variances) and residuals | Delivered as a patch; CI to confirm |
-| 18 | Robust variance, per row and clustered; Phase 1c gate review | Planned |
+| 17 | Phase 1c fixtures (residuals, robust variances) and residuals | Merged (09167b4) |
+| 18 | Robust variance, per row and clustered; format version 3; Phase 1c gate review (D-26) | Delivered as a patch; CI to confirm |
+| 19 | Phase 1d plan (end-to-end application and scale), after D-26 | Planned |
 
 ## Decisions and spikes
 

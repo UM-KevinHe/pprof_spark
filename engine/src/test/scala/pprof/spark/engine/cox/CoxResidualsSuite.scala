@@ -97,7 +97,8 @@ class CoxResidualsSuite extends SparkSuite {
         val coef = doubles(node, "coef")
         val at = fit.copy(
           coefficients = fit.coefficients.zip(coef).map { case (c, b) => c.copy(estimate = b) },
-          covariance = doubles(node, "covariance").toVector
+          covariance = doubles(node, "covariance").toVector,
+          naiveCovariance = doubles(node, "covariance").toVector
         )
         val rows = CoxPH.residuals(frame(name), at).orderBy("id").collect()
         val what = s"$name ${ties.name} vs $source"

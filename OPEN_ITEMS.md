@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-06, round 17. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-06, round 18. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -48,5 +48,6 @@ decision is approved.
 | OI-42 | pprof_py v0.7.0 raised "Empty risk set at an event time with positive event weight" on a five-row right-censored dataset with one zero-weight tied event (round 13 probe) | Reproduce, add to X-013's evidence, and report upstream with OI-33 |
 | OI-43 | Prediction's as-of join partitions by stratum, so unstratified prediction puts every row in one window partition | Measure before Phase 1d; if needed, bucket by time range or broadcast a small baseline |
 | OI-44 | Round 15's Spark Connect CI job failed: a CoxBaselineSuite test looping over 12 fits passed munit's default 30-second per-test limit; the sandbox's munit stand-in did not enforce that limit, so the sandbox missed it | Closed in round 16.1: long tests split per fixture case and tie method, `SparkSuite.munitTimeout` set to two minutes, and the sandbox stand-in now enforces munit's timeout |
+| OI-45 | Clustered robust variance shuffles one p-vector per row and holds each cluster's rows in one task | Measure at design-envelope scale in Phase 1d; pre-aggregate within blocks when clusters nest in strata |
 | OI-38 | Breslow kernel cost: Neumaier running sums on S₂ add about four flops per entry | Measure with the S-05 benchmark harness at p = 10 to 100 before large-p work (D-04) |
 | OI-20 | Re-verification (§3.4, §5.1): Spark/Scala pairs, DBR 18 facts and pprof_py README claims checked 2026-10-03; §3.4 rows await the pin | DISCREPANCIES.md after D-05 |

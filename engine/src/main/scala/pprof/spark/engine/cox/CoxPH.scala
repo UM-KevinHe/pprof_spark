@@ -48,7 +48,8 @@ final case class CoxOptions(
     aliasTolerance: Double = Cholesky.DefaultTolerance,
     confidenceLevel: Double = 0.95,
     maxStratumRows: Long = 1000000L,
-    blocks: BlockOptions = BlockOptions()
+    blocks: BlockOptions = BlockOptions(),
+    robust: Boolean = false
 ) {
   require(
     confidenceLevel > 0.0 && confidenceLevel < 1.0,
@@ -95,11 +96,18 @@ final case class CoxFit(
     software: SoftwareInfo,
     layout: LayoutSummary,
     fingerprint: Long,
-    featureStatus: String = CoxPH.FeatureStatus
+    featureStatus: String = CoxPH.FeatureStatus,
+    naiveCovariance: Vector[Double] = Vector.empty,
+    robust: Boolean = false,
+    clusters: Long = 0L
 ) {
   def estimates: Vector[Double] = coefficients.map(_.estimate)
   def standardErrors: Vector[Double] = coefficients.map(_.standardError)
   def ties: String = options.ties.name
+
+  /** The model-based covariance V; `covariance` is the robust one when `robust` (Phase 1c §2). */
+  def modelCovariance: Vector[Double] =
+    if (naiveCovariance.nonEmpty) naiveCovariance else covariance
 }
 
 /** Covariates that are constant or linear combinations of others (X-011). */
@@ -136,7 +144,15 @@ object CoxPH {
         }
       val factor = Cholesky.factor(result.evaluation.information, p, options.aliasTolerance)
       if (!factor.isFullRank) throw new CoxAliasingException(factor.aliased.map(spec.features))
-      val covariance = factor.inversePacked
+      val naive = factor.inversePacked
+      val robust = options.robust || spec.cluster.isDefined
+      val (covariance, clusters) =
+        if (!robust) (naive, 0L)
+        else {
+          val (meat, units) =
+            robustMeat(prepared, result.beta.toArray, options.ties, spec.cluster.isDefined)
+          (sandwich(naive, meat, p), units)
+        }
       val quantile = Normal.upperQuantile((1.0 - options.confidenceLevel) / 2.0)
       val coefficients = spec.features.indices.map { j =>
         val estimate = result.beta(j)
@@ -153,8 +169,15 @@ object CoxPH {
         )
       }.toVector
       val warnings =
-        if (result.converged) Vector.empty[String]
-        else Vector(s"the Cox fit did not converge: ${result.message}")
+        (if (result.converged) Vector.empty[String]
+         else Vector(s"the Cox fit did not converge: ${result.message}")) ++
+          (if (robust && spec.cluster.isEmpty && spec.entry.isDefined)
+             Vector(
+               "robust variance treats each row as its own cluster, but the data have entry times, " +
+                 "so a subject's rows count as independent; set CoxSpec.cluster to the subject " +
+                 "identifier (R requires cluster or id here)"
+             )
+           else Vector.empty[String])
       warnings.foreach(w => log.warn(w))
       CoxFit(
         coefficients,
@@ -176,7 +199,10 @@ object CoxPH {
         options,
         SoftwareInfo.capture(df.sparkSession),
         LayoutSummary.of(prepared.plan),
-        prepared.fingerprint
+        prepared.fingerprint,
+        naiveCovariance = naive.toVector,
+        robust = robust,
+        clusters = clusters
       )
     }
 
@@ -251,7 +277,7 @@ object CoxPH {
       val beta = fit.estimates.toArray
       val center = prepared.center.clone()
       val efron = fit.options.ties == Ties.Efron
-      val covariance = fit.covariance.toArray
+      val covariance = fit.modelCovariance.toArray
       val rows = prepared.workingSet.blocks.flatMap((block: CoxBlock) =>
         CoxKernel.residuals(block, beta, center, efron, covariance)
       )(Encoders.product[CoxResidualRow])
@@ -327,6 +353,83 @@ object CoxPH {
         )
       )
     } finally workingSet.release()
+  }
+
+  /** B = Σ_c s_c s_cᵀ (packed) and the number of clusters (Phase 1c specification §2 and §4): per
+    * row from block partials in block order, or by cluster through one shuffle, cluster sums in
+    * (block, position) order, and 256 hash buckets reduced in bucket order, so the result does
+    * not depend on Spark's partitioning (R0).
+    */
+  private def robustMeat(
+      prepared: Prepared,
+      beta: Array[Double],
+      ties: Ties,
+      clustered: Boolean
+  ): (Array[Double], Long) = {
+    val p = beta.length
+    val b = beta.clone()
+    val c = prepared.center.clone()
+    val efron = ties == Ties.Efron
+    val partials =
+      if (!clustered)
+        prepared.workingSet.blocks
+          .map((block: CoxBlock) => CoxKernel.robustPerRow(block, b, c, efron))(
+            Encoders.product[CoxRobustPartial]
+          )
+          .collect()
+      else
+        prepared.workingSet.blocks
+          .flatMap((block: CoxBlock) => CoxKernel.weightedScores(block, b, c, efron))(
+            Encoders.product[CoxScoreRow]
+          )
+          .groupByKey((row: CoxScoreRow) => row.cluster)(Encoders.STRING)
+          .mapGroups((key: String, rows: Iterator[CoxScoreRow]) =>
+            CoxKernel.clusterSum(key, rows, p)
+          )(
+            Encoders.product[CoxClusterSum]
+          )
+          .groupByKey((sum: CoxClusterSum) => sum.bucket)(Encoders.scalaInt)
+          .mapGroups((key: Int, sums: Iterator[CoxClusterSum]) =>
+            CoxKernel.bucketOuter(key, sums, p)
+          )(
+            Encoders.product[CoxRobustPartial]
+          )
+          .collect()
+    val ordered = partials.sortBy(_.key).toSeq
+    (
+      OrderedReduction.reduce(ordered.map(x => x.key -> x.outer), Moments.packedLength(p)),
+      ordered.iterator.map(_.units).sum
+    )
+  }
+
+  /** V B V as a packed upper triangle, exactly symmetric by construction. */
+  private def sandwich(v: Array[Double], b: Array[Double], p: Int): Array[Double] = {
+    def at(m: Array[Double], i: Int, j: Int) = m(
+      Moments.packedIndex(math.min(i, j), math.max(i, j), p)
+    )
+    val vb = Array.tabulate(p * p) { ij =>
+      val (i, j) = (ij / p, ij % p)
+      var s = 0.0
+      var k = 0
+      while (k < p) { s += at(v, i, k) * at(b, k, j); k += 1 }
+      s
+    }
+    val out = new Array[Double](Moments.packedLength(p))
+    var index = 0
+    var i = 0
+    while (i < p) {
+      var j = i
+      while (j < p) {
+        var s = 0.0
+        var k = 0
+        while (k < p) { s += vb(i * p + k) * at(v, k, j); k += 1 }
+        out(index) = s
+        index += 1
+        j += 1
+      }
+      i += 1
+    }
+    out
   }
 
   /** One pass: block partials combined in block order (ADR-0003). */

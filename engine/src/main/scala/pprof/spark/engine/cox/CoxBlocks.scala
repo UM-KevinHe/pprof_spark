@@ -18,7 +18,8 @@ final case class CoxRow(
     weight: Double,
     offset: Double,
     x: Array[Double],
-    entry: Double = 0.0
+    entry: Double = 0.0,
+    cluster: String = null
 )
 
 /** Whole strata in canonical order (Cox specification §6, DIST-6), covariates row-major. Stratum
@@ -36,7 +37,8 @@ final case class CoxBlock(
     offset: Array[Double],
     x: Array[Double],
     entry: Array[Double],
-    entryOrder: Array[Int]
+    entryOrder: Array[Int],
+    cluster: Array[String]
 ) {
   def rowCount: Int = rowId.length
   def groupCount: Int = groupIndex.length
@@ -69,7 +71,15 @@ object CoxBlockBuilder {
                 if (byWeight != 0) byWeight
                 else {
                   val byOffset = java.lang.Double.compare(a.offset, b.offset)
-                  if (byOffset != 0) byOffset else java.lang.Double.compare(a.entry, b.entry)
+                  if (byOffset != 0) byOffset
+                  else {
+                    val byEntry = java.lang.Double.compare(a.entry, b.entry)
+                    if (byEntry != 0) byEntry
+                    else if (a.cluster == b.cluster) 0
+                    else if (a.cluster == null) -1
+                    else if (b.cluster == null) 1
+                    else a.cluster.compareTo(b.cluster)
+                  }
                 }
               }
             }
@@ -91,6 +101,7 @@ object CoxBlockBuilder {
     val weights = new Array[Double](n)
     val offsets = new Array[Double](n)
     val entries = new Array[Double](n)
+    val clusters = new Array[String](n)
     val x = new Array[Double](n * p)
     val groups = Array.newBuilder[Int]
     val starts = Array.newBuilder[Int]
@@ -108,6 +119,7 @@ object CoxBlockBuilder {
       weights(r) = row.weight
       offsets(r) = row.offset
       entries(r) = row.entry
+      clusters(r) = row.cluster
       System.arraycopy(row.x, 0, x, r * p, p)
       r += 1
     }
@@ -136,7 +148,8 @@ object CoxBlockBuilder {
       offsets,
       x,
       entries,
-      entryOrder
+      entryOrder,
+      clusters
     )
   }
 
@@ -187,6 +200,7 @@ object CoxWorkingSet {
         col(CoxValidation.WeightColumn).as("weight"),
         col(CoxValidation.OffsetColumn).as("offset"),
         col(CoxValidation.EntryColumn).as("entry"),
+        col(CoxValidation.ClusterColumn).as("cluster"),
         col(Validation.FeaturesColumn).as("x")
       )
       .as[CoxRow](Encoders.product[CoxRow])

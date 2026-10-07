@@ -97,6 +97,11 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-26: Close Phase 1c at parity-verified (Proposed, round 18; the maintainer's sign-off required)
+
+`docs/gates/phase-1c.md`: every requirement is met except the scale test. Proposed: close Phase 1c
+on the terms of D-22 and D-24 once round 18's CI passes.
+
 ### D-25: Phase 1c specification (Accepted: approved by the maintainer, 2026-10-06)
 
 `docs/spec/cox/residuals-robust.md`: martingale, score and dfbeta residuals and robust variance,

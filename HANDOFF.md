@@ -1,5 +1,26 @@
 # Handoff
 
+## Round 18 (2026-10-06): robust variance and the Phase 1c gate review
+
+- `CoxOptions.robust` and `CoxSpec.cluster` (integral or string, no nulls; it implies robust).
+  `CoxPH.fit` computes B = Σ_c s_c s_cᵀ at β̂ from the residual kernel: per row from block partials
+  in block order; clustered through one shuffle by cluster (sums in block and position order)
+  and 256 MurmurHash3 buckets reduced in bucket order. V_rob = V B V, exactly symmetric; standard
+  errors, z, p and intervals use it; `CoxFit.naiveCovariance` keeps V, and `robust` and
+  `clusters` record the choice. Per-row robust variance on data with entry times records a
+  warning. dfbeta residuals use the model-based covariance.
+- Blocks carry the cluster key (canonical order and fingerprint include it).
+- `CoxFitIO` format version 3: cluster column, robust flags, cluster count, model-based
+  covariance; versions 1 and 2 load as model-based.
+- `CoxRobustSuite` (17): per-row and clustered robust variance against R and pprof_py (X-015 cases
+  against pprof_py's dfbeta sandwich) for six fixtures and both tie methods; clusters of one row;
+  renamed clusters; R0 bitwise; the warning; validation; persistence.
+- `docs/gates/phase-1c.md`: everything met except the scale test; D-26 proposes closing Phase 1c on
+  the terms of D-22 and D-24 once CI passes.
+- Sandbox verification: JDK 17 Classic numerics 54, testkit 11, engine 187 (all suites); Spark
+  Connect: CoxRobustSuite and CoxFitIOSuite (21), CoxPHSuite (89). Not rerun on Spark Connect:
+  CoxBaselineSuite and CoxResidualsSuite, which this round touched only through shared block code.
+
 ## Round 17 (2026-10-06): Phase 1c fixtures and residuals
 
 Round 16.1's CI passed; the maintainer closed Phase 1b (D-24) and approved the Phase 1c

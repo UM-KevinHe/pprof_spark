@@ -26,10 +26,12 @@ import pprof.spark.numerics.IterationRecord
   */
 object CoxFitIO {
 
-  val FormatVersion: Int = 2
+  val FormatVersion: Int = 3
 
-  /** Versions this release reads: 1 lacks `entryCol` and `hasBaseline`. */
-  val ReadableVersions: Set[Int] = Set(1, 2)
+  /** Versions this release reads: 1 lacks `entryCol` and `hasBaseline`; 1 and 2 lack the robust
+    * fields, so their fits load as model-based.
+    */
+  val ReadableVersions: Set[Int] = Set(1, 2, 3)
   val Kind: String = "pprof.spark.engine.cox.CoxFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -62,6 +64,11 @@ object CoxFitIO {
       field("offsetCol", StringType, nullable = true),
       field("entryCol", StringType, nullable = true),
       field("hasBaseline", BooleanType, nullable = true),
+      field("clusterCol", StringType, nullable = true),
+      field("robust", BooleanType, nullable = true),
+      field("clusters", LongType, nullable = true),
+      field("naiveCovarianceBits", ArrayType(LongType, containsNull = false), nullable = true),
+      field("robustOption", BooleanType, nullable = true),
       field("ties", StringType),
       field("maxIterations", IntegerType),
       field("epsBits", LongType),
@@ -133,6 +140,11 @@ object CoxFitIO {
       fit.spec.offset.orNull,
       fit.spec.entry.orNull,
       baseline.isDefined,
+      fit.spec.cluster.orNull,
+      fit.robust,
+      fit.clusters,
+      bits(fit.modelCovariance),
+      o.robust,
       o.ties.name,
       o.maxIterations,
       bit(o.eps),
@@ -201,7 +213,7 @@ object CoxFitIO {
       kind.contains(Kind) && version.exists(v => ReadableVersions.exists(_ == v)),
       s"$path holds ${kind.getOrElse("an unknown kind")} of format version " +
         s"${version.getOrElse("unknown")}; this release reads $Kind of format versions " +
-        s"${ReadableVersions.toSeq.sorted.mkString(" and ")}"
+        s"${ReadableVersions.min} to ${ReadableVersions.max}"
     )
     r
   }
@@ -222,7 +234,8 @@ object CoxFitIO {
       optional("rowIdCol"),
       optional("weightCol"),
       optional("offsetCol"),
-      optional("entryCol")
+      optional("entryCol"),
+      optional("clusterCol")
     )
     val options = CoxOptions(
       Ties.fromName(r.getAs[String]("ties")),
@@ -237,7 +250,8 @@ object CoxFitIO {
         r.getAs[Int]("maxGroupsOnDriver"),
         r.getAs[Long]("driverBudgetBytes"),
         r.getAs[String]("storageLevel")
-      )
+      ),
+      Option(r.getAs[Any]("robustOption")).contains(true)
     )
     val (estimate, se, z, p, lower, upper) = (
       doubles("estimateBits"),
@@ -288,7 +302,12 @@ object CoxFitIO {
         r.getAs[Long]("smallestBlockRows")
       ),
       r.getAs[Long]("fingerprint"),
-      r.getAs[String]("featureStatus")
+      r.getAs[String]("featureStatus"),
+      naiveCovariance =
+        if (r.isNullAt(r.fieldIndex("naiveCovarianceBits"))) doubles("covarianceBits")
+        else doubles("naiveCovarianceBits"),
+      robust = Option(r.getAs[Any]("robust")).contains(true),
+      clusters = if (r.isNullAt(r.fieldIndex("clusters"))) 0L else r.getAs[Long]("clusters")
     )
   }
 }
