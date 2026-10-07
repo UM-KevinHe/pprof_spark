@@ -101,6 +101,18 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 28 (2026-10-07): logistic persistence and the slice 2a review
+
+The maintainer asked for one-line commit messages.
+
+- `logistic.LogisticFitIO`: save and load a `LogisticFit` bit for bit (format version 1): one JSON
+  metadata record with doubles as 64-bit patterns, the providers in Parquet; never overwrites;
+  other kinds and versions fail with a message naming both. `LogisticFitIOSuite` (3) passes under
+  Classic Spark and Spark Connect (JDK 17).
+- `docs/gates/phase-2a.md`: slice 2a meets every requirement in the sandbox except CI (rounds 27
+  and 28), the correlation warning and the scale test. D-32 proposes closing it at parity-verified
+  once CI is green and X-021 (the warning's scope: fitted rows, class C, recommended) is decided.
+
 ## Round 27 (2026-10-07): the logistic fixed-effect estimator (slice 2a)
 
 The maintainer approved the py4j schedule (ADR-0009 after this estimator, then the Cox wrappers,

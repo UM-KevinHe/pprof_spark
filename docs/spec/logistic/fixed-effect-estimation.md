@@ -254,5 +254,6 @@ provider with at most 10 records added: the fit of the others unchanged within T
    start point); there S is checked through C, b and h, the iterates and the estimates.
 4. Wald p-values are compared where pprof_py's 2(1 − Φ(abs(z))) is accurate to a tenth of T-test
    (p ≥ 1e-6); below that its absolute error of a few ε dominates, and z decides (T-p).
-5. Not yet implemented: the pairwise-correlation warning of §4 (OI-54) and persistence (§8),
-   planned for round 28.
+5. Persistence (§8): `LogisticFitIO`, format version 1 (round 28): one JSON metadata record with
+   doubles as 64-bit patterns and the providers in Parquet.
+6. The pairwise-correlation warning of §4 is not implemented: its scope awaits X-021 (round 28).

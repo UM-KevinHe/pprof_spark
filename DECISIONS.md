@@ -103,6 +103,13 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-32: Close slice 2a at parity-verified (Proposed, 2026-10-07)
+
+`docs/gates/phase-2a.md`: every requirement is met in the sandbox except CI for rounds 27 and 28,
+the correlation warning and the scale test (D-28). Proposed: close slice 2a at parity-verified once
+CI is green for rounds 27 and 28 and the correlation warning lands as decided under X-021, whose
+recommended option computes it on the fitted rows (class C). The feature stays `Experimental`.
+
 ### D-31: Python access through py4j wrappers (Approved by the maintainer, 2026-10-07)
 
 Revisiting D-03 after Phase 1d, the maintainer chose py4j wrappers: Python calls the Scala engine
