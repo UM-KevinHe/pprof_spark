@@ -101,6 +101,20 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 31 (2026-10-07): the slice 2b specification
+
+- `docs/spec/logistic/covariate-inference.md` (D-34, awaiting approval), read from pprof_py v0.7.0's
+  `covariates.py` (Wald variants, LR and score tests by refits, the cluster-robust sandwich and its
+  two provider forms), `fit` (AUC) and `predict`: formulas, conventions, a distributed plan (two
+  passes for the robust variances, refits on the working set for the tests, an exact integer AUC
+  from one sort), outputs, edge cases and the validation plan.
+- Probes (sandbox; lfe-base with patients `id div 3`): pprof_py at tol 1e-13 against R: LR 4.3e-15
+  (`glm`), score 2.4e-13 (`anova`, Rao), robust β 3.6e-15 and the case-mix robust variance 2.1e-14
+  (`vcovCL` with `interaction(..., drop = TRUE)`; with unused levels it differed), fixed-β variance
+  5.6e-16, AUC exact, predictions 4.0e-16. pprof_py's `predict` gives an unknown provider a
+  neighbour's effect (X-022); clusters are nested in providers (X-023). sandwich 3.1-0 installed
+  from Ubuntu's archive.
+
 ## Round 30 (2026-10-07): Python access, the Cox wrappers
 
 The maintainer approved ADR-0009 (D-33).
