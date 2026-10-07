@@ -14,7 +14,7 @@ force.
 |---|---|---|---|
 | D-01 | Supported compute tiers for v1 | Approved (delegated), 2026-10-06 | Classic Spark only; `engine` kept Connect-compatible (PLAT-2) and tested under Spark Connect (T8) |
 | D-02 | Target and secondary runtimes | Approved (delegated), 2026-10-06 | Spark 4.1.0, Scala 2.13.16, Java 17 bytecode: one JAR for open-source Spark 4.1.x and Databricks Runtime 18 LTS; tested on open-source Spark only (D-14) |
-| D-03 | Python access in v1 | Approved (delegated), 2026-10-06 | None in v1; revisit after Phase 1d (job-based access was deferred by D-14) |
+| D-03 | Python access in v1 | Approved (delegated), 2026-10-06 | None in v1; revisit after Phase 1d (job-based access was deferred by D-14). Revisited 2026-10-07 (round 25): asked whether to keep v1 without Python access or plan py4j wrappers or Spark Connect ML registration into Phase 2, the maintainer replied "Continue"; recorded as no change |
 | D-04 | Design envelope and performance targets | Approved (delegated), 2026-10-06 | §2.3 ranges as planning assumptions; targets set after the first benchmarks; OI-02 resolved before large-p work |
 | D-05 | pprof_py pin and reference versions | Approved (delegated), 2026-10-05 | pprof_py v0.7.0, commit 9320766 (see below) |
 | D-06 | Default Cox tie method | Approved (delegated), 2026-10-06 | Breslow, the reference default; every fit records its tie method |
@@ -102,6 +102,16 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 ### D-19: Codespaces development container (Approved, delegated, 2026-10-06; ADR-0007)
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
+
+### D-30: Phase 2 plan and the first-slice specification (Proposed, 2026-10-07)
+
+`docs/spec/logistic/plan.md` (slices 2a to 2f with their references, fixtures, tolerance classes
+and distributed design) and `docs/spec/logistic/fixed-effect-estimation.md` (slice 2a: SerBIN
+estimation of the logistic fixed-effect model, screening, degenerate providers, model-based
+variances, the Wald test for β). Discrepancy decisions to approve with it: X-004 resolved at
+v0.7.0; X-016, X-017 and X-018 follow the reference, with degenerate providers flagged; X-019
+fails at validation (class C); X-020 follows the behavior (class E). Awaiting the maintainer's
+approval; no Phase 2 code before it (NN-2).
 
 ### D-29: Close Phase 1d at parity-verified (Accepted: signed off by the maintainer, 2026-10-07, with round 22's CI green)
 

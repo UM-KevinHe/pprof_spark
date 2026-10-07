@@ -22,7 +22,7 @@ and 21, under Classic Spark and Spark Connect (T8). The authoritative context is
 | 1b, counting process and baseline | Closed (D-24) |
 | 1c, residuals and robust variance | Closed (D-26) |
 | 1d, provider workflows | Closed (D-29) |
-| 2, logistic provider models | Not started |
+| 2, logistic provider models | Plan and 2a specification proposed (round 25, D-30) |
 
 Every closed phase passed its parity gate at parity-verified; its features stay `Experimental`
 until the package-level scale test, which the maintainer runs himself on his Databricks workspace
@@ -84,7 +84,7 @@ clone at `9320766`; R 4.3.3 with survival 3.5-8.
 
 ### 7. Open questions to carry into Phase 2
 
-- D-03 (Python access) was to be revisited after Phase 1d, which is now; ask the maintainer.
+- D-03 (Python access) was revisited in round 25: unchanged.
 - OI-02 and OI-38 (large p), OI-03 (TimeRange for very large strata), OI-29 (distributed result
   tables at large m), OI-40 (CI check of the parity matrix), OI-41 (per-release model fixtures),
   OI-43, OI-45 and OI-46 (scale costs), OI-33 and OI-42 (reports to pprof_py), OI-13 (lme4
@@ -100,6 +100,27 @@ implementations at the pin, then propose a Phase 2 plan in slices with the first
 specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
+
+## Round 25 (2026-10-07): Phase 2 plan and the first-slice specification
+
+- New session. The sandbox was rebuilt from `sandbox-tools.zip` on a one-CPU, 3 GB machine
+  (OpenJDK 17.0.20.1 and 21.0.10): `compile-only.sh` passes (123 s); numerics 60 and testkit 11
+  pass on JDK 17 and 21 (Classic) and testkit under Spark Connect; five engine suites (29 tests)
+  pass under Classic and Spark Connect. The zip lacks the optional `probe/Probe.scala`, so that
+  informational step reports a missing file.
+- D-03 revisited as planned after Phase 1d: the maintainer replied "Continue"; recorded as no
+  change (no Python access in v1).
+- Read pprof_py v0.7.0's logistic models (fixed effects, provider tests, standardization, the
+  three-stage pipeline) and R pprof 1.0.3 (MIT). `docs/spec/logistic/plan.md` proposes slices 2a
+  to 2f with references, fixtures, tolerance classes and the distributed design;
+  `docs/spec/logistic/fixed-effect-estimation.md` specifies slice 2a (D-30, awaiting approval).
+- Probes (sandbox, not fixtures): pprof_py's logistic suites pass at the pin (175 passed);
+  pprof_py at tol 1e-13 agrees with `glm` within 1.4e-13 for estimates and variances, with equal
+  ℓ; R pprof's SerBIN differs by 2.2e-10 (X-017); feature shifts change β̂ by 5.6e-15 (X-004
+  resolved); 30 row orders vary β̂ by 2.2e-16; degenerate providers end at med(γ) ∓ 10 (X-018);
+  edge cases in the specification's §9 (X-019); binomial rows equal expanded Bernoulli rows (X-020).
+- PROJECT_CONTEXT §7.4's account of the three-stage model does not match the reference (OI-48).
+  New open items OI-48 to OI-52. Documents only; no code changed.
 
 ## Round 23 (2026-10-07): Phase 1d gate review and PROJECT_CONTEXT v2.3
 

@@ -1,10 +1,10 @@
 # Status
 
-Updated 2026-10-07, round 24.
+Updated 2026-10-07, round 25.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
-models: not started**; it begins in a new session from HANDOFF.md. The maintainer runs the
+models: plan and first-slice specification proposed** (round 25, D-30), awaiting approval. The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -44,8 +44,9 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 21 | Provider tests (1d-2): Poisson numerics, exact and mid-p tests, flags, result tables | Merged (7d17f65); covered by round 22's green CI |
 | 22 | Job runner (1d-3): `app` module, JSON run specification, outputs and run record | Merged (1b1971a); CI green |
 | 23 | Phase 1d gate review (D-29); PROJECT_CONTEXT v2.3 | Merged; Phase 1d closed |
-| 24 | Phase 1 closed; session handoff for Phase 2 (HANDOFF.md) | Delivered as a patch |
-| 25 | Phase 2 plan and first-slice specification (new session) | Planned |
+| 24 | Phase 1 closed; session handoff for Phase 2 (HANDOFF.md) | Merged (c34eab7) |
+| 25 | Phase 2 plan and the 2a specification (D-30, X-016 to X-020); D-03 revisited | Delivered as a patch; awaiting approval |
+| 26 | Phase 2a fixtures and calibration, after D-30 | Planned |
 
 ## Decisions and spikes
 

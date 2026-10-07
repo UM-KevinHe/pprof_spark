@@ -24,6 +24,16 @@ approval.
 | X-014 | Baseline hazard reference point: pprof_py's public `baseline_hazard_` and R's `basehaz(fit, centered = FALSE)` equal the hazard at x = 0 and offset 0 times exp(weighted mean offset); pprof_py's predictions use the raw baseline | Read in pprof_py v0.7.0's source and probed | C | Report the raw baseline and document the factor (Phase 1b specification §2). Approved 2026-10-06 (D-23) |
 | X-015 | Robust variance, Breslow ties, (start, stop] data: pprof_py's differs from R's by 11% (lt-weights-offset, 40 clusters) while a sandwich of its own dfbeta residuals matches R to 7e-12; right-censored data and Efron agree | Probed in round 16 | B | Compute the sandwich from score residuals, as R does; report upstream. Approved 2026-10-06 (D-25). Round 17's fixtures show it on both left-truncated cases (8% and 11%) |
 
+## Registered for Phase 2 (round 25, 2026-10-07)
+
+| ID | Discrepancy | Evidence | Class | Decision |
+|---|---|---|---|---|
+| X-016 | Provider screening: pprof_py keeps providers with more than `cutoff` records (as R's `glmm.data.prep`); R pprof 1.0.3's `logis_fe` keeps those with at least `cutoff` (`included <- 1 * (prov.size.long >= cutoff)`) | Read in both sources; probe: pprof_py excludes a provider of 10 records | — (not a pprof_spark difference) | pprof_spark follows pprof_py; R comparisons are given pprof_py's screened rows |
+| X-017 | R pprof's SerBIN line search has no below-noise rule (pprof_py's C3), so near convergence it can shrink the last step towards zero and stop up to one step earlier | Read in both sources. Probe, 30 providers, tol = 1e-8: β̂ differs from pprof_py's by 2.2e-10, about the size of pprof_py's last step (3.4e-10), which fits the explanation; not traced step by step. With degenerate providers the two agree to 4e-16 | — (not a pprof_spark difference) | R SerBIN outputs are compared under T-coef; pprof_spark follows pprof_py's rule |
+| X-018 | Providers with no events or only events: pprof_py and R pprof hold their effects at med(γ) ∓ 10, where their records still enter the β score (about e^−10 each), so β̂ is not the maximum-likelihood estimate without them | Probe: both such providers end exactly 10 from the median; β̂ differs from `glm` without them by 3.5e-9 | — (the reference's bounding rule) | Follow the reference (§7.4) and flag those providers; `glm` comparisons use cases without them (proposed with D-30) |
+| X-019 | Inputs pprof_py mishandles: non-integer outcomes or trials (accepted, then the outcome is truncated to an integer), no features (a broadcast error), no events or only events overall (an infinite start; β = 0 after one step with NaN warnings), features aliased with the provider effects or with each other (a `LinAlgError` from the Cholesky) | Probed at v0.7.0 | C | pprof_spark fails at validation, naming the problem or the aliased features (proposed with D-30) |
+| X-020 | pprof_py's README says `fit(n_var=...)` still validates the response as 0/1; at v0.7.0 binomial counts with 0 ≤ y ≤ n are accepted and fitted | Probe: binomial rows give the expanded Bernoulli fit within 1.1e-16 | E | Follow the behavior; ask upstream to correct the README (OI-33) |
+
 ## Known reference limitations to verify at the pinned commit (§3.4)
 
 Classes are proposals. Each row is re-verified against the pinned reference, pprof_py v0.7.0
@@ -34,7 +44,7 @@ Classes are proposals. Each row is re-verified against the pinned reference, ppr
 | X-001 | `CoxPH(fit_intercept=True)` fits, but every `predict_*` method raises | Reject an intercept at validation | C |
 | X-002 | `CoxPH` does not warn when `max_iter` is reached | Resolved at v0.7.0: `CoxPH` warns; pprof_spark warns too | — |
 | X-003 | `FineGrayPH` with left truncation differs from R `finegray()` (about 3e-3 in coefficients) | Choose the parity target before the competing-risks phase | B |
-| X-004 | SerBIN can stop at a near-null fit when covariates are far from zero (upstream C27) | Center internally; confirm with a dedicated fixture | B |
+| X-004 | SerBIN can stop at a near-null fit when covariates are far from zero (upstream C27) | Resolved at v0.7.0: SerBIN uses the joint Newton direction as R does. Round 25 probe: shifting two features by +50 and −30 changes β̂ by 5.6e-15 and γ̂ + cᵀβ̂ by 4.7e-15, in the same five steps. The lfe-shifted fixture keeps it as a regression case (proposed with D-30) | — |
 | X-005 | `LogisticThreeStageModel.sigma_sensitivity()` fails when σ̂ = 0 | Define the boundary in the three-stage specification | B |
 | X-006 | Unresolved differences with internal R code (`IUR.fac`, `cal_SMR_pro_adj`) | Not parity-gated until resolved | B (provisional) |
 | X-007 | R-comparison suite: 26 documented failures | Resolved 2026-10-06: at v0.7.0 the survival suite passes with the committed R results (275 passed, 1 skipped for the optional lifelines package), and R 4.3.3 with survival 3.5-8 regenerates those results byte for byte; no Cox feature is excluded | — |
