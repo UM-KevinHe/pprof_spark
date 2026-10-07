@@ -17,7 +17,11 @@
 | Persistence | Met | Format version 3 keeps the robust and model-based covariances, the cluster column and the cluster count; versions 1 and 2 load as model-based |
 | Documentation | Met | Specification, parity matrix, X-015 |
 | Scale test | **Not met** | As in Phases 1a and 1b; the clustered variance shuffles one p-vector per row |
-| CI | Round 17 merged; round 18 to confirm | Sandbox: JDK 17 Classic (numerics 54, testkit 11, engine 187) and Spark Connect for the robust, persistence and CoxPH suites |
+| CI | Met: round 18 green | Sandbox: JDK 17 Classic (numerics 54, testkit 11, engine 187) and Spark Connect for the robust, persistence and CoxPH suites |
+
+## Outcome
+
+**Closed on 2026-10-06** (D-26): round 18's CI passed and the maintainer signed off.
 
 ## Recommendation
 

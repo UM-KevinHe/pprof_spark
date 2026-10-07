@@ -97,7 +97,19 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-26: Close Phase 1c at parity-verified (Proposed, round 18; the maintainer's sign-off required)
+### D-28: Site for the Phase 1d scale test (Open, round 19; the maintainer's choice)
+
+Options in `docs/spec/cox/provider-workflows.md` §6: a university HPC cluster running Spark in
+standalone mode, a managed cloud service billed per run, or one large machine (scale without
+distribution). D-14 rules out Databricks.
+
+### D-27: Phase 1d specification (Proposed, round 19; approval required, NN-2)
+
+`docs/spec/cox/provider-workflows.md`: indirect and direct standardized ratios (two-stage SMR and
+SHR) with pprof_py's conventions, exact and mid-p provider tests with the theoretical null,
+flags and result tables, a job runner, and scale validation. The empirical null stays deferred.
+
+### D-26: Close Phase 1c at parity-verified (Accepted: signed off by the maintainer, 2026-10-06, after round 18's CI passed)
 
 `docs/gates/phase-1c.md`: every requirement is met except the scale test. Proposed: close Phase 1c
 on the terms of D-22 and D-24 once round 18's CI passes.

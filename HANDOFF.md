@@ -1,5 +1,20 @@
 # Handoff
 
+## Round 19 (2026-10-06): Phase 1c closed; Phase 1d specification
+
+- Round 18's CI passed and the maintainer closed Phase 1c (D-26).
+- `docs/spec/cox/provider-workflows.md` (D-27, awaiting approval), read from pprof_py v0.7.0's
+  `calculate_standardized_measures`, `cox_standardized_expectations`, `test`,
+  `poisson_exact_test` and `poisson_midp_zscore`: indirect (Oⱼ/Eⱼ, national Breslow baseline with η
+  as offset) and direct (E⁽ʲ⁾/O) ratios; Breslow baselines whatever the ties and no case weights,
+  as pprof_py; exact Poisson tests (p clipped at 0.999; χ² limits below E = 100, Byar above) and
+  mid-p tests (p floor 1e-6, limits by root finding) with the theoretical null; flags and
+  `PROVIDER_TEST_COLUMNS`; a JSON-driven `spark-submit` job runner; a distributed plan (national
+  baseline from time-keyed partials, K-scale on the driver; provider sums by keyed reduction;
+  provider-local blocks for E⁽ʲ⁾); scale validation with synthetic data up to n = 10⁹.
+- D-28 asks where the scale test runs: a university HPC cluster with Spark standalone, a managed
+  cloud service, or one large machine.
+
 ## Round 18 (2026-10-06): robust variance and the Phase 1c gate review
 
 - `CoxOptions.robust` and `CoxSpec.cluster` (integral or string, no nulls; it implies robust).
