@@ -1,6 +1,6 @@
 # ADR-0009: Python access through py4j wrappers
 
-- Status: Proposed
+- Status: Accepted (2026-10-07, D-33)
 - Date: 2026-10-07
 - Decisions: D-31 (py4j wrappers, approved), D-33 (this design, proposed)
 - Spike: round 29, in the assistant's sandbox
@@ -22,7 +22,7 @@ pass `Option.empty()`, and call the hidden default getter `LogisticFE$.MODULE$.f
 | 3. Spark Connect ML registration | Would reach Connect clients, but needs the `ml` adapters and server-side registration (S-04, deferred) |
 | 4. Reimplement in Python | Rejected by §6.12 |
 
-## Decision (proposed, D-33)
+## Decision (approved, D-33)
 
 - JVM side: `pprof.spark.app.python.PythonApi` in the `app` module, which already parses the JSON
   run specification. Methods take only Java types and `Dataset[Row]` and return DataFrames, JSON

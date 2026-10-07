@@ -22,3 +22,8 @@ derby.log
 # Python bytecode (scripts/)
 __pycache__/
 *.pyc
+
+# Python (python/)
+__pycache__/
+*.egg-info/
+.venv/

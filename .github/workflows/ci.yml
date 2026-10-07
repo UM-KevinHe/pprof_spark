@@ -107,3 +107,34 @@ jobs:
           name: test-reports-connect
           path: "**/target/test-reports/*.xml"
           if-no-files-found: warn
+
+  python:
+    # The py4j wrappers (ADR-0009): their tests run in PySpark 4.1.0, local Classic mode, against
+    # the JARs this commit builds.
+    name: Python wrappers (PySpark Classic)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: sbt
+      - uses: sbt/setup-sbt@v1
+      - name: Build the JARs
+        shell: bash
+        run: sbt -v numerics/package engine/package app/package 2>&1 | tee sbt.log
+      - name: Python tests
+        shell: bash
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install pyspark==4.1.0 pytest==8.4.2
+          .venv/bin/pip install -e python
+          export PPROF_SPARK_JARS=$(ls numerics/target/scala-2.13/pprof-spark-numerics_2.13-*.jar \
+            engine/target/scala-2.13/pprof-spark-engine_2.13-*.jar app/target/scala-2.13/pprof-spark-app_2.13-*.jar | paste -sd, -)
+          echo "JARs: $PPROF_SPARK_JARS"
+          cd python && ../.venv/bin/python -m pytest tests -q
+      - name: Publish failure details (readable without signing in)
+        if: failure()
+        run: python3 scripts/ci_failure_report.py sbt.log

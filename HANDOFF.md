@@ -101,6 +101,21 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 30 (2026-10-07): Python access, the Cox wrappers
+
+The maintainer approved ADR-0009 (D-33).
+
+- `app`: `pprof.spark.app.python.PythonApi`, the py4j facade: Cox fit (column roles and options as
+  the job runner's JSON, through `RunSpec`'s parser), a JSON summary with hexadecimal doubles,
+  baseline, predictions, residuals, standardized measures, provider tests, save and load.
+  `PythonApiSuite` (3): facade results equal the engine's bit for bit, under Classic Spark and Spark
+  Connect.
+- `python/`: the `pprof_spark` package (`CoxPH`, `CoxPHModel`, `api`): Classic sessions only, a
+  version check against the JARs, errors as PySpark's captured exceptions. `python/tests` (6) pass
+  in PySpark 4.1.0 with JARs built from this tree.
+- CI: a `python` job builds the JARs with sbt and runs the Python tests (not yet run on GitHub).
+- `docs/guide/python.md`; OI-55 (a wheel bundling the JARs, with the release workflow).
+
 ## Round 29 (2026-10-07): the correlation warning and ADR-0009
 
 The maintainer approved D-32 with X-021 option (a).

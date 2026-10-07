@@ -103,13 +103,13 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-33: Python wrappers' design, ADR-0009 (Proposed, 2026-10-07)
+### D-33: Python wrappers' design, ADR-0009 (Accepted: approved by the maintainer, 2026-10-07)
 
 `docs/adr/0009-py4j-wrappers.md`: a Java-friendly facade `pprof.spark.app.python.PythonApi` in `app`
 (DataFrames, strings and numbers in; DataFrames, JSON summaries and opaque fit handles out), a
 pure-Python package `pprof_spark` in `python/`, PySpark Classic sessions only, a wheel version-locked
 to the JAR, and a CI job running the Python tests against PySpark 4.1.0. The round 29 spike reached
-`LogisticFE` from PySpark through py4j. Awaiting the maintainer's approval.
+`LogisticFE` from PySpark through py4j. Approved; the Cox wrappers followed in round 30.
 
 ### D-32: Close slice 2a at parity-verified (Accepted: approved by the maintainer, 2026-10-07)
 

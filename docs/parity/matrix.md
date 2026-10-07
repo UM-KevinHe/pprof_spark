@@ -23,3 +23,4 @@ calibration is in [cox-calibration.md](cox-calibration.md).
 | Logistic standardization (2d) | same | `calculate_standardized_measures`, `standardized_measure` | planned | — | T-meas, T-test | planned |
 | Logistic job runner (2e) | same | — | planned | — | bitwise against the library | planned |
 | Three-stage SRR (2f) | same | `LogisticThreeStageModel` and its three stages | planned | — | to calibrate | planned |
+| Python access: Cox wrappers (ADR-0009) | [adr/0009-py4j-wrappers.md](../adr/0009-py4j-wrappers.md); guide [python.md](../guide/python.md) | — (the engine's Cox API) | `fixtures/cox` (rc-stratified) | `pprof.spark.app.python.PythonApi`, Python `pprof_spark.CoxPH`; tests `PythonApiSuite`, `python/tests/test_cox.py` | bitwise against the engine; T-coef against pprof_py | implemented (round 30): results equal the engine's bit for bit; sandbox only, CI job `python` new |
