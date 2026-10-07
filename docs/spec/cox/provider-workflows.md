@@ -1,7 +1,8 @@
 # Specification: provider workflows (Phase 1d)
 
 - Status: **Approved on 2026-10-06 (D-27).** Round 20 implements 1d-1 (standardized measures) and
-  its fixtures. Scale-test site settled (D-28): the maintainer runs it on his Databricks workspace.
+  round 21 1d-2 (provider tests). Scale test (D-28): the maintainer runs it on his Databricks
+  workspace once the whole package is done.
 - Scope (§4, Phase 1d): two-stage SMR and SHR; expected counts; O/E ratios; exact Poisson
   intervals and tests; flags; provider result tables; a job-runner entry point. Exit: the parity
   gate, and an end-to-end Spark application at design-envelope scale.
@@ -97,8 +98,8 @@ across block sizes. Targets are set from the first results (D-04). Known limits 
 strata above `maxStratumRows` (TimeRange, OI-03), unstratified prediction (OI-43), clustered robust
 variance (OI-45), large p (OI-02, OI-38).
 
-Site (D-28): the maintainer runs the scale test himself on his Databricks workspace, once the code
-is ready; AI assistants never access that environment (D-14 as clarified). The assistant supplies
+Site (D-28): the maintainer runs the scale test himself on his Databricks workspace once the whole
+package is done, not phase by phase; AI assistants never access that environment (D-14 as clarified). The assistant supplies
 the JARs, run specifications, the data generator and instructions, and analyses the results the
 maintainer shares. Databricks Runtime 18 LTS runs Spark 4.1.0 with Scala 2.13.16 and JDK 21, which
 the linkage checks already target; a dedicated (single-user) cluster runs Classic Spark, and a

@@ -245,6 +245,29 @@ def pprof_measures(df, case, ties):
     }
 
 
+def pprof_tests(df, case, ties):
+    """Provider tests of the tight fit, mid-p and exact at level 0.95 (Phase 1d specification §2)."""
+    X = df[features(case)].to_numpy(dtype=float)
+    arguments = fit_arguments(df, case)
+    model = CoxPH(ties=ties, **TIGHT).fit(X, **arguments)
+    measure_arguments = {k: v for k, v in arguments.items() if k in ("duration", "event", "start", "stop", "offset")}
+    out = {}
+    for method in ("midp", "exact"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            res = model.test(X, provider_id=providers_of(df, case), test_method=method, level=0.95, **measure_arguments)
+        out[method] = {
+            "provider": [int(v) for v in res.index],
+            "estimate": hexes(res["estimate"].to_numpy()),
+            "z_raw": hexes(res["z_raw"].to_numpy()),
+            "p_value": hexes(res["p_value"].to_numpy()),
+            "flag": [int(v) for v in res["flag"].to_numpy(dtype=int)],
+            "ci_lower": hexes(res["ci_lower"].to_numpy()),
+            "ci_upper": hexes(res["ci_upper"].to_numpy()),
+        }
+    return out
+
+
 def pprof_function(df, case, ties, beta):
     clean = validate_fit_inputs(df[features(case)].to_numpy(dtype=float), **fit_arguments(df, case))
     data = SurvivalData(**clean)
@@ -347,6 +370,7 @@ def main():
                 "baseline": pprof_baseline(df, case, ties),
                 "residuals": pprof_residuals(df, case, ties),
                 "measures": pprof_measures(df, case, ties),
+                "tests": pprof_tests(df, case, ties),
                 "negative_controls": controls,
             }
         write_json(os.path.join(case_dir, "pprof_py.json"), reference)

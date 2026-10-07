@@ -105,9 +105,11 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 ### D-28: Site for the Phase 1d scale test (Decided by the maintainer, 2026-10-06)
 
-The maintainer runs the scale test himself on his Databricks workspace once the code is ready. AI
-assistants never access that environment; they prepare the JARs, run specifications, generator and
-instructions, and analyse shared results.
+The maintainer runs the scale test himself on his Databricks workspace once the whole package is
+done, not phase by phase (his preference, stated 2026-10-07). AI assistants never access that
+environment; they prepare the JARs, run specifications, generator and instructions, and analyse
+shared results. Phase gates therefore close at parity-verified, as Phases 1a to 1c did, and scale
+verification happens once for the package.
 
 ### D-27: Phase 1d specification (Accepted: approved by the maintainer, 2026-10-06)
 

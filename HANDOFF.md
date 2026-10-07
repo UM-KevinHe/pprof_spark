@@ -1,5 +1,25 @@
 # Handoff
 
+## Round 21 (2026-10-07): provider tests (1d-2)
+
+The maintainer prefers to run the scale test on his Databricks once the whole package is done, not
+per phase (D-28 updated): phase gates close at parity-verified and scale verification happens once.
+
+- Fixtures: pprof_py's `CoxPH.test` for every case and tie method, mid-p and exact at level 0.95:
+  estimate, z_raw, p_value, flag, limits (p-values down to 1.4e-25; flags +1, −1 and 0).
+- `numerics`: `Brent.root` (zeroin); `Gamma.logGamma` (Lanczos g = 7) and `Gamma.regularized`
+  (series and continued fraction, smaller tail direct); `Poisson.cdf`, `atLeast`, `pmf`,
+  `chiSquareQuantile`; `PoissonTests.midpZ`, `exactP`, `exactLimits` (χ² below E = 100, Byar
+  above), `midpLimits` (pprof_py's bracketing and tolerances) and `test`. `PoissonSuite` checks them
+  against mpmath, scipy and pprof_py's own functions.
+- `engine.cox.CoxProviderTests.test(df, fit, provider, method, level, providers)`: indirect
+  measures, then a Scala UDF per provider; pprof_py's `PROVIDER_TEST_COLUMNS` plus observed,
+  expected and person-time; columns pprof_py leaves empty for Poisson tests are NaN or null.
+- `CoxProviderTestsSuite` (13): both methods for every case and tie method at pprof_py's estimates;
+  the column list; level validation.
+- Sandbox verification: JDK 17 Classic numerics 60, testkit 11, engine 215 (all suites); Spark
+  Connect: CoxProviderTestsSuite (13), so the Scala UDF works there.
+
 ## Round 20 (2026-10-06): Phase 1d fixtures and standardized measures
 
 The maintainer approved the Phase 1d specification (D-27) and settled the scale-test site: he runs
