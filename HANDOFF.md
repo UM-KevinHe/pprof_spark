@@ -1,5 +1,35 @@
 # Handoff
 
+## Round 16.1 (2026-10-06): fix round 15's CI failure
+
+- Round 15's Spark Connect job (run 37533252860) failed one test: `java.util.concurrent.
+  TimeoutException: test timed out after 30 seconds`, from munit's default per-test limit, in a
+  CoxBaselineSuite test that looped over twelve fits. The sandbox missed it because its munit
+  stand-in did not enforce timeouts; it now does, as munit does (OI-44).
+- Fix: the long Cox tests register one test per fixture case and tie method (CoxPHSuite 23 to 89
+  tests, CoxBaselineSuite 6 to 28), and `SparkSuite` allows two minutes per test for whole-fit
+  Spark tests. The slowest test in the sandbox's Spark Connect run took 33 s, the first of the
+  suite including session start-up; the rest took at most 9 s.
+- Engine tests now number 155 per job (Spark Connect included); numerics 54, testkit 11.
+- Records corrected: rounds 11 to 14 are green; Phase 1a's closure (D-22) depended on rounds 11
+  and 12 and stands; Phase 1b's CI evidence waits on this round.
+
+## Round 16 (2026-10-06): Phase 1a closed, Phase 1b gate review, Phase 1c specification
+
+- The maintainer confirmed CI green for rounds 11 to 15, which closes Phase 1a (D-22).
+- `docs/gates/phase-1b.md`: everything met except the scale test; worst T-base ratios 3.2e-6 for
+  the baseline and predictions against pprof_py (at its estimates) and 3.8e-8 against R's
+  `basehaz`. D-24 proposes closing Phase 1b on Phase 1a's terms.
+- `docs/spec/cox/residuals-robust.md` (D-25, awaiting approval): martingale, score and dfbeta
+  residuals as R's agmart3 and agscore3 and pprof_py; robust variance V(Σ s_c s_cᵀ)V per row or
+  clustered; residual tables keyed by the row identifier; a deterministic clustered reduction over
+  256 hash buckets; fixtures and tests.
+- Probe of pprof_py v0.7.0 against R (lt-weights-offset, 40 clusters): martingale, score and dfbeta
+  residuals agree to 2e-11 (Breslow) and 8e-15 (Efron); robust variances agree to 3e-14 for Efron
+  and to 3e-10 for right-censored Breslow, but pprof_py's Breslow robust variance on (start, stop]
+  data is 11% off R's, while the sandwich of its own dfbeta residuals matches R to 7e-12 (X-015).
+  R refuses per-row robust variance for (start, stop] data without `cluster` or `id`.
+
 ## Round 15 (2026-10-06): baseline hazard, prediction, and format version 2
 
 - `numerics`: `CoxStratum.baseline` returns each stratum's event times and increments at β with

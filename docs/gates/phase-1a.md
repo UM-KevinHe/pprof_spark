@@ -32,8 +32,10 @@
 
 ## Outcome
 
-Signed off on 2026-10-06 (D-22): the maintainer replied "Continue" to the sign-off question. Phase 1a
-closes when CI confirms rounds 11 and 12 (main at f619e9b and 094fd5b); CI as read in round 13:
+Signed off on 2026-10-06 (D-22): the maintainer replied "Continue" to the sign-off question. **Closed
+on 2026-10-06**: CI is green for rounds 11 to 14, including rounds 11 and 12 on which closure
+depended. Round 15's Spark Connect job then failed on a test timeout, fixed in round 16.1. Earlier note: Phase 1a was to
+close when CI confirmed rounds 11 and 12 (main at f619e9b and 094fd5b); CI as read in round 13:
 not readable from the sandbox.
 
 ## Recommendation

@@ -97,115 +97,131 @@ class CoxPHSuite extends SparkSuite {
 
   private def bits(values: Seq[Double]): Seq[Long] = values.map(java.lang.Double.doubleToLongBits)
 
-  test("function-level parity at beta = 0 and the fixed beta, both tie methods (T-fn)") {
-    for (name <- cases; ties <- methods; point <- Seq("beta_zero", "beta_fixed")) {
-      val beta = doubles(reference(name, "pprof_py", ties).get(point), "beta")
-      val e = CoxPH.evaluateAt(frame(name), spec(name), beta, CoxOptions(ties = ties))
-      for (source <- Seq("pprof_py", "r_survival")) {
-        val node = reference(name, source, ties).get(point)
-        val what = s"$name ${ties.name} $point vs $source"
-        check("T-fn", s"$what loglik", Seq(e.value), doubles(node, "loglik"))
-        check("T-fn", s"$what score", e.gradient.toSeq, doubles(node, "score"))
-        check("T-fn", s"$what information", e.information.toSeq, doubles(node, "information"))
+  for (name <- cases; ties <- methods)
+    test(
+      s"function-level parity at beta = 0 and the fixed beta, both tie methods (T-fn): $name, ${ties.name}"
+    ) {
+      for (point <- Seq("beta_zero", "beta_fixed")) {
+        val beta = doubles(reference(name, "pprof_py", ties).get(point), "beta")
+        val e = CoxPH.evaluateAt(frame(name), spec(name), beta, CoxOptions(ties = ties))
+        for (source <- Seq("pprof_py", "r_survival")) {
+          val node = reference(name, source, ties).get(point)
+          val what = s"$name ${ties.name} $point vs $source"
+          check("T-fn", s"$what loglik", Seq(e.value), doubles(node, "loglik"))
+          check("T-fn", s"$what score", e.gradient.toSeq, doubles(node, "score"))
+          check("T-fn", s"$what information", e.information.toSeq, doubles(node, "information"))
+        }
       }
     }
-  }
 
-  test("tight fits match pprof_py and R, both tie methods (T-coef, T-var, T-fn)") {
-    for (name <- cases; ties <- methods) {
-      val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
-      assert(fit.converged, s"$name ${ties.name}: ${fit.message}")
-      for (source <- Seq("pprof_py", "r_survival")) {
-        val node = reference(name, source, ties).get("tight")
-        val what = s"$name ${ties.name} vs $source"
-        check("T-coef", s"$what coefficients", fit.estimates, doubles(node, "coef"))
-        check("T-var", s"$what standard errors", fit.standardErrors, doubles(node, "se"))
-        check("T-var", s"$what covariance", fit.covariance, doubles(node, "covariance"))
-        val information =
-          Cholesky.factor(doubles(node, "covariance"), features(name).size).inversePacked
-        check("T-var", s"$what information", fit.information, information)
-        check("T-fn", s"$what loglik", Seq(fit.logLikelihood), doubles(node, "loglik"))
-        check(
-          "T-fn",
-          s"$what null loglik",
-          Seq(fit.logLikelihoodNull),
-          doubles(node, "loglik_null")
-        )
-      }
-    }
-  }
-
-  test("default fits stop where pprof_py stops, within T-coef of its estimates") {
-    for (name <- cases; ties <- methods) {
-      val fit = CoxPH.fit(frame(name), spec(name), CoxOptions(ties = ties))
-      val node = reference(name, "pprof_py", ties).get("default")
-      assert(fit.converged, s"$name ${ties.name}: ${fit.message}")
-      assertEquals(fit.iterations, node.get("iterations").asInt, s"$name ${ties.name} iterations")
-      check(
-        "T-coef",
-        s"$name ${ties.name} default coefficients",
-        fit.estimates,
-        doubles(node, "coef")
-      )
-    }
-  }
-
-  test("lockstep: iterates before the final one match pprof_py's (T-iter)") {
-    for (name <- cases; ties <- methods) {
-      val fit = CoxPH.fit(frame(name), spec(name), CoxOptions(ties = ties))
-      val iterates = reference(name, "pprof_py", ties).get("iterates")
-      val compared =
-        (1 until fit.iterations).filter(k => iterates.get(k - 1).get("iterations").asInt == k)
-      assert(compared.nonEmpty, s"$name ${ties.name}: no iterate to compare")
-      for (k <- compared)
-        check(
-          "T-iter",
-          s"$name ${ties.name} iterate $k",
-          fit.iterationLog(k - 1).beta,
-          doubles(iterates.get(k - 1), "beta")
-        )
-    }
-  }
-
-  test("Wald statistics, p-values and intervals (T-test, T-p, T-fn)") {
-    val threshold = Tolerances.number("T-p.log10.threshold")
-    val atol = Tolerances.number("T-p.log10.atol")
-    val q = Normal.upperQuantile(0.025)
-    for (name <- cases; ties <- methods) {
-      val py = reference(name, "pprof_py", ties).get("tight")
-      val (coef, se, z, p) =
-        (doubles(py, "coef"), doubles(py, "se"), doubles(py, "z"), doubles(py, "p"))
-      for (j <- coef.indices) {
-        val ours = Normal.twoSidedPValue(z(j))
-        if (p(j) < threshold)
-          assert(math.abs(StrictMath.log10(ours) - StrictMath.log10(p(j))) <= atol, s"$name p $j")
-        else assert(Tolerances("T-test").accepts(ours, p(j)), s"$name p $j: $ours vs ${p(j)}")
-      }
-      val lower = coef.indices.map(j => coef(j) - q * se(j))
-      val upper = coef.indices.map(j => coef(j) + q * se(j))
-      check("T-fn", s"$name ${ties.name} lower bounds", lower, doubles(py, "ci_lower"))
-      check("T-fn", s"$name ${ties.name} upper bounds", upper, doubles(py, "ci_upper"))
-      val r = reference(name, "r_survival", ties).get("tight")
-      val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
-      val rz = doubles(r, "coef").zip(doubles(r, "se")).map { case (b, s) => b / s }
-      check("T-test", s"$name ${ties.name} z vs R", fit.coefficients.map(_.z), rz)
-    }
-  }
-
-  test("negative controls: the other tie method and shifted ties lie outside T-coef") {
-    for (name <- cases; ties <- methods) {
-      val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
-      val controls = reference(name, "pprof_py", ties).get("negative_controls")
-      for (control <- Seq("other_ties", "shifted_tie")) {
-        val ratio =
-          Tolerances("T-coef").worstRatio(
-            fit.estimates.toArray,
-            doubles(controls.get(control), "coef")
+  for (name <- cases; ties <- methods)
+    test(
+      s"tight fits match pprof_py and R, both tie methods (T-coef, T-var, T-fn): $name, ${ties.name}"
+    ) {
+      {
+        val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
+        assert(fit.converged, s"$name ${ties.name}: ${fit.message}")
+        for (source <- Seq("pprof_py", "r_survival")) {
+          val node = reference(name, source, ties).get("tight")
+          val what = s"$name ${ties.name} vs $source"
+          check("T-coef", s"$what coefficients", fit.estimates, doubles(node, "coef"))
+          check("T-var", s"$what standard errors", fit.standardErrors, doubles(node, "se"))
+          check("T-var", s"$what covariance", fit.covariance, doubles(node, "covariance"))
+          val information =
+            Cholesky.factor(doubles(node, "covariance"), features(name).size).inversePacked
+          check("T-var", s"$what information", fit.information, information)
+          check("T-fn", s"$what loglik", Seq(fit.logLikelihood), doubles(node, "loglik"))
+          check(
+            "T-fn",
+            s"$what null loglik",
+            Seq(fit.logLikelihoodNull),
+            doubles(node, "loglik_null")
           )
-        assert(ratio > 10.0, s"$name ${ties.name} $control: ratio $ratio")
+        }
       }
     }
-  }
+
+  for (name <- cases; ties <- methods)
+    test(
+      s"default fits stop where pprof_py stops, within T-coef of its estimates: $name, ${ties.name}"
+    ) {
+      {
+        val fit = CoxPH.fit(frame(name), spec(name), CoxOptions(ties = ties))
+        val node = reference(name, "pprof_py", ties).get("default")
+        assert(fit.converged, s"$name ${ties.name}: ${fit.message}")
+        assertEquals(fit.iterations, node.get("iterations").asInt, s"$name ${ties.name} iterations")
+        check(
+          "T-coef",
+          s"$name ${ties.name} default coefficients",
+          fit.estimates,
+          doubles(node, "coef")
+        )
+      }
+    }
+
+  for (name <- cases; ties <- methods)
+    test(
+      s"lockstep: iterates before the final one match pprof_py's (T-iter): $name, ${ties.name}"
+    ) {
+      {
+        val fit = CoxPH.fit(frame(name), spec(name), CoxOptions(ties = ties))
+        val iterates = reference(name, "pprof_py", ties).get("iterates")
+        val compared =
+          (1 until fit.iterations).filter(k => iterates.get(k - 1).get("iterations").asInt == k)
+        assert(compared.nonEmpty, s"$name ${ties.name}: no iterate to compare")
+        for (k <- compared)
+          check(
+            "T-iter",
+            s"$name ${ties.name} iterate $k",
+            fit.iterationLog(k - 1).beta,
+            doubles(iterates.get(k - 1), "beta")
+          )
+      }
+    }
+
+  for (name <- cases; ties <- methods)
+    test(s"Wald statistics, p-values and intervals (T-test, T-p, T-fn): $name, ${ties.name}") {
+      val threshold = Tolerances.number("T-p.log10.threshold")
+      val atol = Tolerances.number("T-p.log10.atol")
+      val q = Normal.upperQuantile(0.025)
+      locally {
+        val py = reference(name, "pprof_py", ties).get("tight")
+        val (coef, se, z, p) =
+          (doubles(py, "coef"), doubles(py, "se"), doubles(py, "z"), doubles(py, "p"))
+        for (j <- coef.indices) {
+          val ours = Normal.twoSidedPValue(z(j))
+          if (p(j) < threshold)
+            assert(math.abs(StrictMath.log10(ours) - StrictMath.log10(p(j))) <= atol, s"$name p $j")
+          else assert(Tolerances("T-test").accepts(ours, p(j)), s"$name p $j: $ours vs ${p(j)}")
+        }
+        val lower = coef.indices.map(j => coef(j) - q * se(j))
+        val upper = coef.indices.map(j => coef(j) + q * se(j))
+        check("T-fn", s"$name ${ties.name} lower bounds", lower, doubles(py, "ci_lower"))
+        check("T-fn", s"$name ${ties.name} upper bounds", upper, doubles(py, "ci_upper"))
+        val r = reference(name, "r_survival", ties).get("tight")
+        val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
+        val rz = doubles(r, "coef").zip(doubles(r, "se")).map { case (b, s) => b / s }
+        check("T-test", s"$name ${ties.name} z vs R", fit.coefficients.map(_.z), rz)
+      }
+    }
+
+  for (name <- cases; ties <- methods)
+    test(
+      s"negative controls: the other tie method and shifted ties lie outside T-coef: $name, ${ties.name}"
+    ) {
+      {
+        val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
+        val controls = reference(name, "pprof_py", ties).get("negative_controls")
+        for (control <- Seq("other_ties", "shifted_tie")) {
+          val ratio =
+            Tolerances("T-coef").worstRatio(
+              fit.estimates.toArray,
+              doubles(controls.get(control), "coef")
+            )
+          assert(ratio > 10.0, s"$name ${ties.name} $control: ratio $ratio")
+        }
+      }
+    }
 
   test("R0: row order and partitioning leave every bit unchanged, with weights and offsets") {
     val name = "rc-stratified-weights-offset"

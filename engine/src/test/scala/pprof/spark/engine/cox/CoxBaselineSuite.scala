@@ -101,58 +101,59 @@ class CoxBaselineSuite extends SparkSuite {
 
   private def rows(table: DataFrame): Array[Row] = table.orderBy("stratum", "time").collect()
 
-  test(
-    "baseline: pprof_py's raw and public baselines at its estimates, and R's end to end (T-base)"
-  ) {
-    for (name <- cases; ties <- methods) {
-      val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
-      val py = reference(name, "pprof_py", ties).get("baseline")
-      val raw = py.get("raw")
-      val ours = rows(CoxPH.baseline(frame(name), atReference(fit, name, ties)))
-      val what = s"$name ${ties.name}"
-      assertEquals(ours.map(_.getAs[Double]("time")).toSeq, doubles(raw, "time").toSeq, what)
-      val strata = raw.get("stratum")
-      assertEquals(
-        ours.map(_.getAs[Long]("stratum")).toSeq,
-        (0 until strata.size).map(strata.get(_).asLong)
-      )
-      val cumulative = ours.map(_.getAs[Double]("cumulative_hazard")).toSeq
-      check(
-        "T-base",
-        s"$what cumulative hazard vs raw",
-        cumulative,
-        doubles(raw, "cumulative_hazard")
-      )
-      check(
-        "T-base",
-        s"$what survival vs raw",
-        ours.map(_.getAs[Double]("survival")).toSeq,
-        doubles(raw, "survival")
-      )
-      val factor = math.exp(doubles(py, "offset_mean")(0))
-      check(
-        "T-base",
-        s"$what public",
-        cumulative.map(_ * factor),
-        doubles(py, "public_cumulative_hazard")
-      )
-      val own = rows(CoxPH.baseline(frame(name), fit))
-      val r = reference(name, "r_survival", ties).get("tight")
-      val rTime = doubles(r, "basehaz_time")
-      val rStratum =
-        if (r.has("basehaz_stratum")) doubles(r, "basehaz_stratum")
-        else Array.fill(rTime.length)(0.0)
-      val lookup = rStratum.zip(rTime).zip(doubles(r, "basehaz_hazard")).toMap
-      val expected =
-        own.map(row => lookup((row.getAs[Long]("stratum").toDouble, row.getAs[Double]("time"))))
-      check(
-        "T-base",
-        s"$what vs R basehaz",
-        own.map(_.getAs[Double]("cumulative_hazard") * factor).toSeq,
-        expected
-      )
+  for (name <- cases; ties <- methods)
+    test(
+      s"baseline: pprof_py's raw and public baselines at its estimates, and R's end to end (T-base): $name, ${ties.name}"
+    ) {
+      {
+        val fit = CoxPH.fit(frame(name), spec(name), tight(ties))
+        val py = reference(name, "pprof_py", ties).get("baseline")
+        val raw = py.get("raw")
+        val ours = rows(CoxPH.baseline(frame(name), atReference(fit, name, ties)))
+        val what = s"$name ${ties.name}"
+        assertEquals(ours.map(_.getAs[Double]("time")).toSeq, doubles(raw, "time").toSeq, what)
+        val strata = raw.get("stratum")
+        assertEquals(
+          ours.map(_.getAs[Long]("stratum")).toSeq,
+          (0 until strata.size).map(strata.get(_).asLong)
+        )
+        val cumulative = ours.map(_.getAs[Double]("cumulative_hazard")).toSeq
+        check(
+          "T-base",
+          s"$what cumulative hazard vs raw",
+          cumulative,
+          doubles(raw, "cumulative_hazard")
+        )
+        check(
+          "T-base",
+          s"$what survival vs raw",
+          ours.map(_.getAs[Double]("survival")).toSeq,
+          doubles(raw, "survival")
+        )
+        val factor = math.exp(doubles(py, "offset_mean")(0))
+        check(
+          "T-base",
+          s"$what public",
+          cumulative.map(_ * factor),
+          doubles(py, "public_cumulative_hazard")
+        )
+        val own = rows(CoxPH.baseline(frame(name), fit))
+        val r = reference(name, "r_survival", ties).get("tight")
+        val rTime = doubles(r, "basehaz_time")
+        val rStratum =
+          if (r.has("basehaz_stratum")) doubles(r, "basehaz_stratum")
+          else Array.fill(rTime.length)(0.0)
+        val lookup = rStratum.zip(rTime).zip(doubles(r, "basehaz_hazard")).toMap
+        val expected =
+          own.map(row => lookup((row.getAs[Long]("stratum").toDouble, row.getAs[Double]("time"))))
+        check(
+          "T-base",
+          s"$what vs R basehaz",
+          own.map(_.getAs[Double]("cumulative_hazard") * factor).toSeq,
+          expected
+        )
+      }
     }
-  }
 
   private def profiles(name: String, ties: Ties, stratum: Long, times: Seq[Double]): DataFrame = {
     val node = reference(name, "pprof_py", ties).get("baseline").get("profiles")
@@ -173,67 +174,75 @@ class CoxBaselineSuite extends SparkSuite {
     spark.createDataFrame(rows.asJava, schema)
   }
 
-  test("predictions match pprof_py on its grids, with a right-continuous step between (T-base)") {
-    for (name <- cases; ties <- methods) {
-      val fit = atReference(CoxPH.fit(frame(name), spec(name), tight(ties)), name, ties)
-      val baseline = CoxPH.baseline(frame(name), fit)
-      val py = reference(name, "pprof_py", ties).get("baseline")
-      val what = s"$name ${ties.name}"
-      val first = py.get("predictions").get(0)
-      val single = profiles(name, ties, first.get("stratum").asLong, Seq(1.0))
-      val scores = CoxPrediction
-        .relativeHazard(fit, CoxPrediction.linearPredictor(fit, single))
-        .orderBy("profile")
-        .collect()
-      check(
-        "T-base",
-        s"$what linear predictor",
-        scores.map(_.getAs[Double](CoxPrediction.LinearPredictor)).toSeq,
-        doubles(py.get("profiles"), "linear")
-      )
-      check(
-        "T-base",
-        s"$what relative hazard",
-        scores.map(_.getAs[Double](CoxPrediction.RelativeHazard)).toSeq,
-        doubles(py.get("profiles"), "relative_hazard")
-      )
-      for (i <- 0 until py.get("predictions").size) {
-        val block = py.get("predictions").get(i)
-        val grid = doubles(block, "time").toSeq
-        val between = grid.zip(grid.drop(1)).map { case (a, b) => (a + b) / 2 }
-        val probe = grid ++ between ++ Seq(grid.head - 0.5, grid.last + 10.0)
-        val predicted = CoxPrediction
-          .survival(fit, baseline, profiles(name, ties, block.get("stratum").asLong, probe), "time")
+  for (name <- cases; ties <- methods)
+    test(
+      s"predictions match pprof_py on its grids, with a right-continuous step between (T-base): $name, ${ties.name}"
+    ) {
+      {
+        val fit = atReference(CoxPH.fit(frame(name), spec(name), tight(ties)), name, ties)
+        val baseline = CoxPH.baseline(frame(name), fit)
+        val py = reference(name, "pprof_py", ties).get("baseline")
+        val what = s"$name ${ties.name}"
+        val first = py.get("predictions").get(0)
+        val single = profiles(name, ties, first.get("stratum").asLong, Seq(1.0))
+        val scores = CoxPrediction
+          .relativeHazard(fit, CoxPrediction.linearPredictor(fit, single))
+          .orderBy("profile")
           .collect()
-          .map(r =>
-            (r.getAs[Int]("profile"), r.getAs[Double]("time")) -> (
-              r.getAs[Double](CoxPrediction.CumulativeHazard),
-              r.getAs[Double](CoxPrediction.Survival)
+        check(
+          "T-base",
+          s"$what linear predictor",
+          scores.map(_.getAs[Double](CoxPrediction.LinearPredictor)).toSeq,
+          doubles(py.get("profiles"), "linear")
+        )
+        check(
+          "T-base",
+          s"$what relative hazard",
+          scores.map(_.getAs[Double](CoxPrediction.RelativeHazard)).toSeq,
+          doubles(py.get("profiles"), "relative_hazard")
+        )
+        for (i <- 0 until py.get("predictions").size) {
+          val block = py.get("predictions").get(i)
+          val grid = doubles(block, "time").toSeq
+          val between = grid.zip(grid.drop(1)).map { case (a, b) => (a + b) / 2 }
+          val probe = grid ++ between ++ Seq(grid.head - 0.5, grid.last + 10.0)
+          val predicted = CoxPrediction
+            .survival(
+              fit,
+              baseline,
+              profiles(name, ties, block.get("stratum").asLong, probe),
+              "time"
             )
-          )
-          .toMap
-        for (k <- 0 until block.get("cumulative_hazard").size) {
-          check(
-            "T-base",
-            s"$what stratum ${block.get("stratum")} profile $k hazard",
-            grid.map(t => predicted((k, t))._1),
-            Fixtures.doubles(block.get("cumulative_hazard").get(k))
-          )
-          check(
-            "T-base",
-            s"$what profile $k survival",
-            grid.map(t => predicted((k, t))._2),
-            Fixtures.doubles(block.get("survival").get(k))
-          )
-          grid.zip(between).foreach { case (t, m) =>
-            assertEquals(predicted((k, m)), predicted((k, t)))
+            .collect()
+            .map(r =>
+              (r.getAs[Int]("profile"), r.getAs[Double]("time")) -> (
+                r.getAs[Double](CoxPrediction.CumulativeHazard),
+                r.getAs[Double](CoxPrediction.Survival)
+              )
+            )
+            .toMap
+          for (k <- 0 until block.get("cumulative_hazard").size) {
+            check(
+              "T-base",
+              s"$what stratum ${block.get("stratum")} profile $k hazard",
+              grid.map(t => predicted((k, t))._1),
+              Fixtures.doubles(block.get("cumulative_hazard").get(k))
+            )
+            check(
+              "T-base",
+              s"$what profile $k survival",
+              grid.map(t => predicted((k, t))._2),
+              Fixtures.doubles(block.get("survival").get(k))
+            )
+            grid.zip(between).foreach { case (t, m) =>
+              assertEquals(predicted((k, m)), predicted((k, t)))
+            }
+            assertEquals(predicted((k, grid.head - 0.5))._1, 0.0)
+            assertEquals(predicted((k, grid.last + 10.0)), predicted((k, grid.last)))
           }
-          assertEquals(predicted((k, grid.head - 0.5))._1, 0.0)
-          assertEquals(predicted((k, grid.last + 10.0)), predicted((k, grid.last)))
         }
       }
     }
-  }
 
   test("R0: the baseline is bitwise identical across row orders and partitions") {
     val name = "lt-weights-offset"

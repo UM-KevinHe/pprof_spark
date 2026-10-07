@@ -7,6 +7,14 @@ import org.apache.spark.sql.SparkSession
   */
 abstract class SparkSuite extends munit.FunSuite {
 
+  /** munit fails any test that runs longer than `munitTimeout`, 30 seconds by default. Spark tests
+    * run whole fits, and on CI's Spark Connect job one CoxBaselineSuite test passed that limit
+    * (round 15, run 37533252860), so Spark suites allow two minutes. Tests still stay small: one
+    * fixture case and tie method each.
+    */
+  override val munitTimeout: scala.concurrent.duration.Duration =
+    scala.concurrent.duration.Duration(2, java.util.concurrent.TimeUnit.MINUTES)
+
   /** The shared session. A stable identifier, so suites can `import spark.implicits._`. */
   protected final lazy val spark: SparkSession = TestSessions.current
 
