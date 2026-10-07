@@ -1,10 +1,10 @@
 # Status
 
-Updated 2026-10-07, round 23.
+Updated 2026-10-07, round 24.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
-**Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: in progress**
-(D-27): all slices done; the gate review (docs/gates/phase-1d.md) awaits sign-off (D-29). The maintainer runs the
+**Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
+models: not started**; it begins in a new session from HANDOFF.md. The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -40,11 +40,12 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 17 | Phase 1c fixtures (residuals, robust variances) and residuals | Merged (09167b4) |
 | 18 | Robust variance, per row and clustered; format version 3; Phase 1c gate review (D-26) | Merged (1f2ed5c); CI green |
 | 19 | Phase 1d specification (D-27) and the scale-test site question (D-28) | Merged (3ebf680); approved; site decided |
-| 20 | Phase 1d fixtures and standardized measures (1d-1) | Merged (bafd12f); CI not reported |
-| 21 | Provider tests (1d-2): Poisson numerics, exact and mid-p tests, flags, result tables | Merged (7d17f65); CI not reported |
-| 22 | Job runner (1d-3): `app` module, JSON run specification, outputs and run record | Merged (1b1971a); CI not reported |
-| 23 | Phase 1d gate review (D-29); PROJECT_CONTEXT v2.3 | Delivered as a patch; awaiting sign-off |
-| 24 | Phase 2 specification: logistic provider models (first slice) | After D-29 |
+| 20 | Phase 1d fixtures and standardized measures (1d-1) | Merged (bafd12f); covered by round 22's green CI |
+| 21 | Provider tests (1d-2): Poisson numerics, exact and mid-p tests, flags, result tables | Merged (7d17f65); covered by round 22's green CI |
+| 22 | Job runner (1d-3): `app` module, JSON run specification, outputs and run record | Merged (1b1971a); CI green |
+| 23 | Phase 1d gate review (D-29); PROJECT_CONTEXT v2.3 | Merged; Phase 1d closed |
+| 24 | Phase 1 closed; session handoff for Phase 2 (HANDOFF.md) | Delivered as a patch |
+| 25 | Phase 2 plan and first-slice specification (new session) | Planned |
 
 ## Decisions and spikes
 

@@ -18,7 +18,13 @@
 | Reproducibility | Met | Deterministic reductions (time-keyed partials in block order, provider-local blocks); Classic and Spark Connect agree |
 | Documentation | Met | Specification, user guide, parity matrix; PROJECT_CONTEXT v2.3 |
 | End-to-end at design-envelope scale (1d-4) | **Deferred** | The maintainer runs it on his Databricks workspace once the whole package is done (D-28) |
-| CI | To confirm | Rounds 20 to 22 are merged; their CI results have not been reported here |
+| CI | Met | Round 22 green, reported by the maintainer; it covers `main` with rounds 20 and 21 |
+
+## Outcome
+
+**Closed on 2026-10-07** (D-29): the maintainer reported round 22's CI green and signed off. With
+Phases 1a to 1c, this completes Phase 1; every Cox feature is parity-verified and `Experimental`
+until the package-level scale test (D-28).
 
 ## Open items carried forward
 
