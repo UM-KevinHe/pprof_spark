@@ -39,4 +39,30 @@ class MomentsSuite extends munit.FunSuite {
     assertNotEquals(Fingerprint.row(1, 8L, values, 3, p), base, "row identifier")
     assertEquals(Fingerprint.row(1, 7L, values.clone(), 3, p), base)
   }
+
+  test("centred co-moments merge exactly as a direct computation, and give correlations (X-021)") {
+    val random = new scala.util.Random(17L)
+    val p = 3
+    val rows = 40
+    val values = Array.tabulate(rows * p) { i =>
+      val r = i / p
+      if (i % p == 2) 2.0 * r / 7.0 + 100.0
+      else math.rint(random.nextGaussian() * 64) / 64 + 100.0 * (i % p)
+    }
+    val whole = Moments.centred(values, p, 0, rows)
+    val merged =
+      Moments.merge(Moments.centred(values, p, 0, 13), Moments.centred(values, p, 13, rows))
+    assertEquals(merged.count, rows.toLong)
+    whole.comoments.indices.foreach { k =>
+      val scale = whole.comoments.map(math.abs).max
+      assert(math.abs(merged.comoments(k) - whole.comoments(k)) <= 1e-12 * scale, s"co-moment $k")
+    }
+    val r = Moments.correlations(whole)
+    assert(math.abs(r(Moments.packedIndex(0, 0, p)) - 1.0) <= 1e-15)
+    assert(math.abs(r(Moments.packedIndex(0, 1, p))) < 0.9)
+    assertEquals(
+      Moments.merge(whole, Moments.Centred(0L, new Array[Double](p), new Array[Double](6))),
+      whole
+    )
+  }
 }

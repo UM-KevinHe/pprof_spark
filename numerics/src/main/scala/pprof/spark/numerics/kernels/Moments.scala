@@ -1,6 +1,6 @@
 package pprof.spark.numerics.kernels
 
-import pprof.spark.numerics.Summation
+import pprof.spark.numerics.{NeumaierVector, Summation}
 
 /** Column sums and cross products of rows stored row-major in a primitive array: the toy kernel of
   * the platform skeleton (D-11). Every sum runs over the rows in their stored, canonical order with
@@ -61,6 +61,96 @@ object Moments {
       i += 1
     }
     packed
+  }
+
+  /** Count, mean and centred co-moments Σ(x − x̄)(x − x̄)ᵀ (packed) of a set of rows. */
+  final case class Centred(count: Long, mean: Array[Double], comoments: Array[Double])
+
+  /** [[Centred]] of rows `from` until `until`: the mean, then the centred sums, both compensated, so
+    * nothing cancels (Chan, Golub and LeVeque, 1983).
+    */
+  def centred(values: Array[Double], p: Int, from: Int, until: Int): Centred = {
+    checkRows(values, p, from, until)
+    val n = until - from
+    val sums = new NeumaierVector(p)
+    var r = from
+    while (r < until) {
+      var j = 0
+      while (j < p) {
+        sums.addAt(j, values(r * p + j))
+        j += 1
+      }
+      r += 1
+    }
+    val mean = if (n == 0) new Array[Double](p) else sums.values.map(_ / n)
+    val m2 = new NeumaierVector(packedLength(p))
+    val d = new Array[Double](p)
+    r = from
+    while (r < until) {
+      var j = 0
+      while (j < p) {
+        d(j) = values(r * p + j) - mean(j)
+        j += 1
+      }
+      var i = 0
+      var index = 0
+      while (i < p) {
+        j = i
+        while (j < p) {
+          m2.addAt(index, d(i) * d(j))
+          index += 1
+          j += 1
+        }
+        i += 1
+      }
+      r += 1
+    }
+    Centred(n.toLong, mean, m2.values)
+  }
+
+  /** The [[Centred]] moments of the union of two disjoint sets of rows (Chan, Golub and LeVeque). */
+  def merge(a: Centred, b: Centred): Centred =
+    if (a.count == 0L) b
+    else if (b.count == 0L) a
+    else {
+      val p = a.mean.length
+      val n = a.count + b.count
+      val delta = Array.tabulate(p)(j => b.mean(j) - a.mean(j))
+      val weight = a.count.toDouble * b.count.toDouble / n.toDouble
+      val mean = Array.tabulate(p)(j => a.mean(j) + delta(j) * (b.count.toDouble / n.toDouble))
+      val comoments = new Array[Double](packedLength(p))
+      var i = 0
+      var index = 0
+      while (i < p) {
+        var j = i
+        while (j < p) {
+          comoments(index) = a.comoments(index) + b.comoments(index) + delta(i) * delta(j) * weight
+          index += 1
+          j += 1
+        }
+        i += 1
+      }
+      Centred(n, mean, comoments)
+    }
+
+  /** Pearson correlations (packed; NaN where a column does not vary). */
+  def correlations(c: Centred): Array[Double] = {
+    val p = c.mean.length
+    val out = new Array[Double](packedLength(p))
+    var i = 0
+    var index = 0
+    while (i < p) {
+      var j = i
+      while (j < p) {
+        out(index) = c.comoments(index) / math.sqrt(
+          c.comoments(packedIndex(i, i, p)) * c.comoments(packedIndex(j, j, p))
+        )
+        index += 1
+        j += 1
+      }
+      i += 1
+    }
+    out
   }
 
   private def checkRows(values: Array[Double], p: Int, from: Int, until: Int): Unit =

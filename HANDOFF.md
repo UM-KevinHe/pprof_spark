@@ -101,6 +101,20 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 29 (2026-10-07): the correlation warning and ADR-0009
+
+The maintainer approved D-32 with X-021 option (a).
+
+- Correlation warning: `Moments.centred`, `merge` and `correlations` (numerics); the summary pass
+  adds each block's centred co-moments, merged in block order on the driver; a warning names the
+  feature pairs above `LogisticOptions.correlationThreshold` (0.9) on the fitted rows. `LogisticFitIO`
+  format version 2 saves the threshold; version 1 loads with 0.9.
+- ADR-0009 (D-33, proposed): the py4j wrappers' facade, Python package, supported sessions,
+  packaging and CI. Spike: PySpark 4.1.0 reached `LogisticFE` through py4j; β within 5.6e-17 of
+  pprof_py on lfe-base; JVM errors arrive as `pyspark.errors.IllegalArgumentException`.
+- Sandbox: numerics 71 (JDK 17 and 21); `LogisticBehaviourSuite` 7 and `LogisticFitIOSuite` 3 under
+  Classic Spark and Spark Connect; `LogisticFESuite` and `LogisticKernelParitySuite` under Classic.
+
 ## Round 28 (2026-10-07): logistic persistence and the slice 2a review
 
 The maintainer asked for one-line commit messages.

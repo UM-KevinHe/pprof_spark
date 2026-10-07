@@ -76,8 +76,7 @@ calibration (OI-51), never by relaxing a class (NN-9).
 ## 6. Python access (D-31)
 
 The maintainer chose py4j wrappers for Python access (D-31, superseding D-03). Python code calls
-the Scala engine through PySpark's JVM gateway and never reimplements statistics (§6.12). Proposed
-shape, to be settled in ADR-0009 before any wrapper code:
+the Scala engine through PySpark's JVM gateway and never reimplements statistics (§6.12). The design is ADR-0009 (`docs/adr/0009-py4j-wrappers.md`, D-33, proposed); its summary:
 
 | Topic | Proposal |
 |---|---|

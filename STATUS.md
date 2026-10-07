@@ -1,11 +1,11 @@
 # Status
 
-Updated 2026-10-07, round 28.
+Updated 2026-10-07, round 29.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
 models: in progress**: plan and slice 2a specification approved (D-30); 2a fixtures and calibration in
-round 26; the 2a estimator in round 27; persistence and the slice review (D-32, proposed) in round 28. Python access: py4j wrappers (D-31). The maintainer runs the
+round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, proposed) in round 29. Python access: py4j wrappers (D-31). The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -49,8 +49,9 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 25 | Phase 2 plan and the 2a specification (D-30, X-016 to X-020); D-03 revisited | Merged (2a3f813); D-30 approved 2026-10-07; CI not reported |
 | 26 | Phase 2a fixtures (`fixtures/logistic`), calibration, R pprof pin; D-31 (py4j wrappers) | Merged (fcbe03c); CI not reported |
 | 27 | Slice 2a: SerBIN kernels and iteration (numerics), the distributed estimator (engine), parity tests | Merged (c9640f3); CI not reported |
-| 28 | Slice 2a: persistence (`LogisticFitIO`), slice review (D-32), X-021 | Delivered as a patch |
-| 29 | ADR-0009: py4j wrappers (D-31); the correlation warning as decided under X-021 | Planned |
+| 28 | Slice 2a: persistence (`LogisticFitIO`), slice review (D-32), X-021 | Merged (1022efc); CI not reported |
+| 29 | The correlation warning (X-021, a); `LogisticFitIO` format version 2; ADR-0009 (D-33) with a py4j spike | Delivered as a patch |
+| 30 | Cox py4j wrappers (after D-33) | Planned |
 
 ## Decisions and spikes
 

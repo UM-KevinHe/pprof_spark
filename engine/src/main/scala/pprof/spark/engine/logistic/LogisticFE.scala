@@ -123,6 +123,16 @@ object LogisticFE {
         .reduce(summaries.toSeq.map(s => s.blockId -> s.weightedX), p)
         .map(_ / trials)
       val yBar = events / trials
+      val correlations = Moments.correlations(
+        summaries
+          .map(s => Moments.Centred(s.rows, s.featureMean, s.featureComoments))
+          .reduceLeft(Moments.merge)
+      )
+      val correlated = for {
+        i <- 0 until p
+        j <- i + 1 until p
+        if math.abs(correlations(Moments.packedIndex(i, j, p))) > options.correlationThreshold
+      } yield s"(${spec.features(i)}, ${spec.features(j)})"
       val passes = new SparkPasses(workingSet.blocks, providersOfBlock, p)
       val result =
         try
@@ -200,6 +210,9 @@ object LogisticFE {
       }.toVector
       val parameters = (p + m).toDouble
       val warnings = Vector.newBuilder[String]
+      if (correlated.nonEmpty)
+        warnings += s"features ${correlated.mkString(", ")} have an absolute correlation above " +
+          s"${options.correlationThreshold} on the fitted rows (X-021)"
       if (excluded.nonEmpty)
         warnings += s"${excluded.size} out of ${sizes.size} providers have at most ${options.minRecords} " +
           "records and were not fitted"
@@ -322,12 +335,15 @@ object LogisticFE {
       }
       g += 1
     }
+    val moments = Moments.centred(block.x, p, 0, block.rowId.length)
     LogisticSummary(
       block.blockId,
       block.rowId.length.toLong,
       events,
       trials,
       weighted.values,
+      moments.mean,
+      moments.comoments,
       fingerprint,
       records,
       providerEvents,

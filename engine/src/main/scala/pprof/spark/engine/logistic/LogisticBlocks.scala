@@ -43,6 +43,8 @@ final case class LogisticSummary(
     events: Double,
     trials: Double,
     weightedX: Array[Double],
+    featureMean: Array[Double],
+    featureComoments: Array[Double],
     fingerprint: Long,
     records: Array[Long],
     providerEvents: Array[Double],

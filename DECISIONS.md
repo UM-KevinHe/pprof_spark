@@ -103,12 +103,22 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-32: Close slice 2a at parity-verified (Proposed, 2026-10-07)
+### D-33: Python wrappers' design, ADR-0009 (Proposed, 2026-10-07)
+
+`docs/adr/0009-py4j-wrappers.md`: a Java-friendly facade `pprof.spark.app.python.PythonApi` in `app`
+(DataFrames, strings and numbers in; DataFrames, JSON summaries and opaque fit handles out), a
+pure-Python package `pprof_spark` in `python/`, PySpark Classic sessions only, a wheel version-locked
+to the JAR, and a CI job running the Python tests against PySpark 4.1.0. The round 29 spike reached
+`LogisticFE` from PySpark through py4j. Awaiting the maintainer's approval.
+
+### D-32: Close slice 2a at parity-verified (Accepted: approved by the maintainer, 2026-10-07)
 
 `docs/gates/phase-2a.md`: every requirement is met in the sandbox except CI for rounds 27 and 28,
 the correlation warning and the scale test (D-28). Proposed: close slice 2a at parity-verified once
 CI is green for rounds 27 and 28 and the correlation warning lands as decided under X-021, whose
 recommended option computes it on the fitted rows (class C). The feature stays `Experimental`.
+Approved with X-021 option (a); the warning landed in round 29, so the slice closes once CI is
+green for rounds 27 to 29.
 
 ### D-31: Python access through py4j wrappers (Approved by the maintainer, 2026-10-07)
 

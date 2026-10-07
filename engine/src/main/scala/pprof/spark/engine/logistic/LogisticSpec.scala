@@ -26,6 +26,7 @@ final case class LogisticOptions(
     screen: Boolean = true,
     minRecords: Long = 10L,
     confidenceLevel: Double = 0.95,
+    correlationThreshold: Double = 0.9,
     maxProvidersOnDriver: Int = LogisticOptions.DefaultMaxProvidersOnDriver,
     aliasTolerance: Double = Cholesky.DefaultTolerance,
     blocks: BlockOptions = BlockOptions()
@@ -36,6 +37,10 @@ final case class LogisticOptions(
     s"confidenceLevel must lie strictly between 0 and 1, got $confidenceLevel"
   )
   require(maxProvidersOnDriver > 0, "maxProvidersOnDriver must be positive")
+  require(
+    correlationThreshold >= 0.0 && correlationThreshold <= 1.0,
+    s"correlationThreshold must lie in [0, 1], got $correlationThreshold"
+  )
 
   def serbin: SerbinOptions = SerbinOptions(tol, maxIter, bound, backtrack)
 }

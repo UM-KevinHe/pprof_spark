@@ -134,4 +134,15 @@ class LogisticBehaviourSuite extends SparkSuite {
     assertEquals(rows.count(_.getAs[Boolean]("zero_events")), 1)
     assertEquals(rows.count(_.getAs[Boolean]("all_events")), 1)
   }
+
+  test("the correlation warning names features correlated above 0.9 on the fitted rows (X-021)") {
+    val df = frame(spark, "lfe-base").withColumn("x4", col("x1") + (col("id") % 7) * 0.03125)
+    val fit = LogisticFE.fit(df, spec("lfe-base").copy(features = Features :+ "x4"))
+    assert(
+      fit.warnings.exists(w => w.contains("(x1, x4)") && w.contains("X-021")),
+      fit.warnings.mkString("; ")
+    )
+    val plain = LogisticFE.fit(frame(spark, "lfe-base"), spec("lfe-base"))
+    assert(!plain.warnings.exists(_.contains("X-021")), plain.warnings.mkString("; "))
+  }
 }

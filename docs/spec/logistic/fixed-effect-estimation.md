@@ -59,8 +59,8 @@ arithmetic and do not depend on the covariates' origin.
 | row identifier | integral, optional | Unique; fixes the canonical order (DIST-6) |
 
 Validation runs once, before screening, over every input row, in the reference's order: missing
-values, outcome and trial rules, zero variance, then pairwise correlation (a warning when the
-absolute correlation of two features exceeds 0.9). Messages carry column names and counts, never
+values, outcome and trial rules, zero variance; then pairwise correlation (a warning when the
+absolute correlation of two features exceeds 0.9, computed on the fitted rows, X-021). Messages carry column names and counts, never
 values (T6). pprof_py accepts non-integer counts and its solver then truncates the outcome to an
 integer; pprof_spark rejects them (X-019).
 
@@ -256,4 +256,6 @@ provider with at most 10 records added: the fit of the others unchanged within T
    (p ≥ 1e-6); below that its absolute error of a few ε dominates, and z decides (T-p).
 5. Persistence (§8): `LogisticFitIO`, format version 1 (round 28): one JSON metadata record with
    doubles as 64-bit patterns and the providers in Parquet.
-6. The pairwise-correlation warning of §4 is not implemented: its scope awaits X-021 (round 28).
+6. The pairwise-correlation warning of §4 (X-021, D-32): centred co-moments of the fitted rows from
+   the summary pass, merged in block order; `LogisticOptions.correlationThreshold` (0.9) is saved
+   from format version 2, and version-1 fits load with 0.9 (round 29).

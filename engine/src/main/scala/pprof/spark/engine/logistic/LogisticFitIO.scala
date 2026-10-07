@@ -29,8 +29,10 @@ import pprof.spark.numerics.SerbinStep
   */
 object LogisticFitIO {
 
-  val FormatVersion: Int = 1
-  val ReadableVersions: Set[Int] = Set(1)
+  val FormatVersion: Int = 2
+
+  /** Version 1 lacks `correlationThresholdBits`; its fits load with the default threshold. */
+  val ReadableVersions: Set[Int] = Set(1, 2)
   val Kind: String = "pprof.spark.engine.logistic.LogisticFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -67,6 +69,7 @@ object LogisticFitIO {
       field("screen", BooleanType),
       field("minRecords", LongType),
       field("confidenceLevelBits", LongType),
+      field("correlationThresholdBits", LongType, nullable = true),
       field("maxProvidersOnDriver", IntegerType),
       field("aliasToleranceBits", LongType),
       field("targetBlockBytes", LongType),
@@ -148,6 +151,7 @@ object LogisticFitIO {
       o.screen,
       o.minRecords,
       bit(o.confidenceLevel),
+      bit(o.correlationThreshold),
       o.maxProvidersOnDriver,
       bit(o.aliasTolerance),
       o.blocks.targetBlockBytes,
@@ -251,6 +255,9 @@ object LogisticFitIO {
       screen = r.getAs[Boolean]("screen"),
       minRecords = r.getAs[Long]("minRecords"),
       confidenceLevel = double("confidenceLevelBits"),
+      correlationThreshold = Option(r.getAs[Any]("correlationThresholdBits"))
+        .map(v => java.lang.Double.longBitsToDouble(v.asInstanceOf[Long]))
+        .getOrElse(LogisticOptions().correlationThreshold),
       maxProvidersOnDriver = r.getAs[Int]("maxProvidersOnDriver"),
       aliasTolerance = double("aliasToleranceBits"),
       blocks = BlockOptions(

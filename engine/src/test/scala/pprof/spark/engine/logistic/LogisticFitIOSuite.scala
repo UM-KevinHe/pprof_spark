@@ -92,9 +92,20 @@ class LogisticFitIOSuite extends SparkSuite {
     val failure = intercept[IllegalArgumentException](LogisticFitIO.load(spark, other))
     assert(
       failure.getMessage.contains("format version 99") && failure.getMessage.contains(
-        "versions 1 to 1"
+        "versions 1 to 2"
       )
     )
+    val version1 = freshPath()
+    spark.read
+      .schema(LogisticFitIO.MetadataSchema)
+      .json(s"$path/metadata")
+      .withColumn("formatVersion", lit(1))
+      .withColumn("correlationThresholdBits", lit(null).cast("long"))
+      .coalesce(1)
+      .write
+      .json(s"$version1/metadata")
+    spark.read.parquet(s"$path/providers").coalesce(1).write.parquet(s"$version1/providers")
+    assertEquals(LogisticFitIO.load(spark, version1).options.correlationThreshold, 0.9)
     assertSameFit(LogisticFitIO.load(spark, path), fit)
   }
 }
