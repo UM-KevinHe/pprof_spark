@@ -1,11 +1,11 @@
 # Status
 
-Updated 2026-10-07, round 26.
+Updated 2026-10-07, round 27.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
 models: in progress**: plan and slice 2a specification approved (D-30); 2a fixtures and calibration in
-round 26. Python access: py4j wrappers (D-31). The maintainer runs the
+round 26; the 2a estimator in round 27. Python access: py4j wrappers (D-31). The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -47,8 +47,10 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 23 | Phase 1d gate review (D-29); PROJECT_CONTEXT v2.3 | Merged; Phase 1d closed |
 | 24 | Phase 1 closed; session handoff for Phase 2 (HANDOFF.md) | Merged (c34eab7) |
 | 25 | Phase 2 plan and the 2a specification (D-30, X-016 to X-020); D-03 revisited | Merged (2a3f813); D-30 approved 2026-10-07; CI not reported |
-| 26 | Phase 2a fixtures (`fixtures/logistic`), calibration, R pprof pin; D-31 (py4j wrappers) | Delivered as a patch |
-| 27 | Slice 2a: SerBIN kernel and estimator, parity tests | Planned |
+| 26 | Phase 2a fixtures (`fixtures/logistic`), calibration, R pprof pin; D-31 (py4j wrappers) | Merged (fcbe03c); CI not reported |
+| 27 | Slice 2a: SerBIN kernels and iteration (numerics), the distributed estimator (engine), parity tests | Delivered as a patch |
+| 28 | Slice 2a: persistence, the correlation warning (OI-54), gate review | Planned |
+| 29 | ADR-0009: py4j wrappers (D-31) | Planned |
 
 ## Decisions and spikes
 

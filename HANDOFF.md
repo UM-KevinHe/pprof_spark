@@ -101,6 +101,29 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 27 (2026-10-07): the logistic fixed-effect estimator (slice 2a)
+
+The maintainer approved the py4j schedule (ADR-0009 after this estimator, then the Cox wrappers,
+then each logistic slice) and asked for a commit message with every patch.
+
+- numerics: `kernels.LogisticFE` (per block: the centred Schur system, Δγ with ℓ at several step
+  lengths, the uncentred terms for function-level parity, variances), `Serbin` (pprof_py's step
+  control, bound, stopping rule and both loop forms) and `InMemorySerbinPasses`;
+  `NeumaierSum.reset`.
+- engine: `logistic.LogisticFE.fit` and `providerTable`, `LogisticSpec`, `LogisticOptions`,
+  `LogisticFit`, validation with counts (new `InputProblem`s), ProviderLocal blocks with γ shipped
+  per block through a broadcast join, partials reduced in block order, γ on the driver under
+  `maxProvidersOnDriver`.
+- Tests, sandbox: numerics 70 (new `LogisticFESuite`: derivatives, the Schur and Newton identities,
+  origin invariance, median and bound, loop forms, degenerate and aliased providers);
+  `LogisticKernelParitySuite` 15 (function level, iterates of steps 1 to 5, in-memory fits);
+  `LogisticFESuite` 5 (every case against pprof_py's default and tight fits, `glm` and R SerBIN;
+  steps exact); `LogisticBehaviourSuite` 6 (bitwise row-order and partitioning invariance, block
+  sizes within T-part, binomial against expanded Bernoulli rows, validation, aliasing, degenerate
+  and screened providers, the provider table). JDK 17, Classic Spark and Spark Connect.
+- Two comparisons are restricted by the reference's accuracy (spec §14): pprof_py's subtracted S on
+  lfe-shifted, and its Wald p-values below 1e-6.
+
 ## Round 26 (2026-10-07): Phase 2a fixtures and calibration; py4j wrappers chosen
 
 The maintainer approved D-30 (the plan, the 2a specification and the decisions on X-004 and X-016

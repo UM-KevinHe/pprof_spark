@@ -240,3 +240,19 @@ provider with at most 10 records added: the fit of the others unchanged within T
 | X-018 | Providers with no events or only events end at med(γ) ∓ 10, so β̂ is not the MLE without them | — | Follow the reference's bounding rule and flag those providers |
 | X-019 | Inputs pprof_py mishandles: non-integer counts, no features, no or only events overall, aliased features | C | Fail at validation, naming the problem |
 | X-020 | pprof_py's README says `n_var` responses are still validated as 0/1; binomial counts are accepted and fitted | E | Follow the behavior; report the README (OI-33) |
+
+## 14. Implementation notes (round 27; no statistical change)
+
+1. Without backtracking, pprof_py's loop runs while the step count is below `maxIter` and the
+   criterion is above tol, so at most `maxIter` steps, and it counts as converged at criterion ≤
+   tol. pprof_spark follows this; with backtracking §5 holds as written.
+2. The engine is `pprof.spark.engine.logistic.LogisticFE` (`fit`, `providerTable`), on the
+   numerics kernels `kernels.LogisticFE` and the iteration `Serbin`, which also runs on in-memory
+   blocks (`InMemorySerbinPasses`) for lockstep tests.
+3. Function-level parity compares S with pprof_py's except on lfe-shifted, where pprof_py's
+   subtraction C − Σ bbᵀ/h cancels about three digits (1.38 of T-fn against the centred S at the
+   start point); there S is checked through C, b and h, the iterates and the estimates.
+4. Wald p-values are compared where pprof_py's 2(1 − Φ(abs(z))) is accurate to a tenth of T-test
+   (p ≥ 1e-6); below that its absolute error of a few ε dominates, and z decides (T-p).
+5. Not yet implemented: the pairwise-correlation warning of §4 (OI-54) and persistence (§8),
+   planned for round 28.

@@ -57,6 +57,18 @@ object InputProblem {
       extends InputProblem(name, s"has $count values other than 0 and 1")
   case object NoEvents
       extends InputProblem("", "the input has no events, so the partial likelihood is constant")
+  final case class EventsExceedTrials(name: String, trials: String, count: Long)
+      extends InputProblem(name, s"has $count values above column $trials")
+  final case class ConstantFeature(name: String)
+      extends InputProblem(name, "has the same value in every row (zero variance)")
+  case object NoFeatures extends InputProblem("", "the model needs at least one feature (X-019)")
+  final case class NoOutcomeVariation(events: Long, trials: Long)
+      extends InputProblem(
+        "",
+        s"the fitted rows have $events events in $trials trials, so no effect is finite (X-019)"
+      )
+  final case class NoProvidersFitted(name: String, minRecords: Long)
+      extends InputProblem(name, s"has no provider with more than $minRecords records")
 }
 
 /** The input violates its data contract; `problems` lists every violation found. */

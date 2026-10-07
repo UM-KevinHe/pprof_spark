@@ -76,6 +76,12 @@ final class NeumaierSum {
   }
 
   def value: Double = if (java.lang.Double.isFinite(sum)) sum + compensation else sum
+
+  /** Starts again from zero. */
+  def reset(): Unit = {
+    sum = 0.0
+    compensation = 0.0
+  }
 }
 
 /** Element-wise Neumaier sums of equal-length vectors, such as score vectors or packed symmetric

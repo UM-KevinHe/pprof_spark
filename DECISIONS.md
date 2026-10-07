@@ -108,7 +108,8 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 Revisiting D-03 after Phase 1d, the maintainer chose py4j wrappers: Python calls the Scala engine
 through PySpark's JVM gateway; Python code never reimplements statistics (§6.12). Supersedes D-03.
 Design (facade, packaging, CI, supported compute) in ADR-0009 before any wrapper code; schedule in
-`docs/spec/logistic/plan.md` §6 (OI-53).
+`docs/spec/logistic/plan.md` §6 (OI-53). Order approved by the maintainer on 2026-10-07: ADR-0009 once
+the slice 2a estimator lands, then wrappers for the Cox API, then each logistic slice.
 
 ### D-30: Phase 2 plan and the first-slice specification (Accepted: approved by the maintainer, 2026-10-07)
 
