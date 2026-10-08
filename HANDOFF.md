@@ -101,6 +101,17 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 40 (2026-10-08): the slice 2e specification
+
+The maintainer pushed rounds 37 to 39 to main.
+
+- `docs/spec/logistic/job-runner.md` (D-37, awaiting approval): the run specification (version 1) gains
+  `model` (`cox` by default, `logistic`); `LogisticJob` (`--spec`, `--spec-json`) writes the fit, the
+  provider table, covariate tests, provider tests, standardized measures, tests on measures and
+  predictions as requested, never overwriting, and a run record; `CoxJob` and `LogisticJob` refuse
+  each other's specifications; validation as `CoxJobSuite`, under Classic Spark and Spark Connect. No
+  statistical change, so no discrepancies.
+
 ## Round 39 (2026-10-08): slice 2d code
 
 Rounds 37 and 38 were not yet on main; this round's patch applies after them.
