@@ -109,6 +109,17 @@ class LogisticFixedEffectModel:
         names = json.dumps(list(covariates) if covariates else [])
         return _tests(api(self._spark).logisticTests(df._jdf, self._handle, method, names))
 
+    def provider_tests(self, df: DataFrame, method: str = "poibin_exact", reference="median",
+                       alternative: str = "two_sided", level: float = 0.95, critical: Optional[float] = None,
+                       providers: Optional[Sequence] = None, n_resample: int = 10000, seed: int = 0) -> DataFrame:
+        """Provider tests (slice 2c): `poibin_exact`, `score`, `wald` or `bootstrap_exact` against the
+        reference effect (`median`, `mean` or a number); one row per provider with pprof_py's
+        `PROVIDER_TEST_COLUMNS` plus observed, expected, trials and records."""
+        names = json.dumps([str(p) for p in providers]) if providers else ""
+        return self._frame(api(self._spark).logisticProviderTests(
+            df._jdf, self._handle, method, str(reference), alternative, float(level),
+            float("nan") if critical is None else float(critical), names, int(n_resample), int(seed)))
+
     def predict(self, df: DataFrame) -> DataFrame:
         """`df` with `linear_predictor` and `probability`; rows of providers not in the fit raise."""
         return self._frame(api(self._spark).logisticPredict(df._jdf, self._handle))

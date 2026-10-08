@@ -110,3 +110,20 @@ Negative controls: γ₀ shifted by 0.01, one outcome flipped, the one-sided alt
 |---|---|---|---|
 | X-024 | pprof_py's exact upper tails are 1 − cdf + pmf/2 from an FFT distribution, accurate only to about 1e-16 absolute: relative error 1.4e-5 at 6.4e-11, none left at 1.3e-25 (§3); lower tails and the flags at usual levels are unaffected | B | Correct it: compute the smaller tail directly; compare with mpmath where pprof_py's upper tail is below 1e-7 |
 | X-025 | The bootstrap draws cannot be numpy's: pprof_spark's generator is counter-based and partition-invariant (STAT-2) | C | Distributional parity only, as planned (plan §3) |
+
+## 9. Implementation notes (round 36; no statistical change)
+
+1. Engine: `LogisticProviderTests.test(df, fit, method, reference, alternative, level, critical,
+   providers, nResample, seed)` with `EffectReference` (`Median`, `Mean`, `Value`); numerics
+   `PoissonBinomial` (tails, z, inversion, bootstrap); Python `LogisticFixedEffectModel.provider_tests`.
+2. One-sided z reads a tail above one half from its small complement: P(X ≥ o) = 1 − P(X < o) and
+   P(X ≤ o) = 1 − P(X > o), with the complement from the recursion. pprof_py and R read such tails
+   directly, so their z loses accuracy when the complement is below about 1e-7: the same loss as X-024,
+   now recorded there.
+3. X-024 in the fixtures: on lfe-binomial, providers 20 and 27 lie far above their expected counts;
+   the recursion gives z 10.277 and 7.194, pprof_py 10.339 and 7.196. The tests compare z with
+   pprof_py where its tail is at least 1e-7 (z ≤ 5.2 for two-sided and `less` tests, abs(z) ≤ 5.2 for
+   `greater`) and with R where both of its tails are (abs(z) ≤ 5.2, `less` z ≤ 5.2); the tails
+   themselves are checked against mpmath.
+4. The bootstrap keys its draws on the provider's position among the fitted providers in key order,
+   not on the key; draws stay deterministic and partition-invariant.

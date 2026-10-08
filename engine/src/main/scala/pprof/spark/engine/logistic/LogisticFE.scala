@@ -537,6 +537,56 @@ object LogisticFE {
     } finally workingSet.release()
   }
 
+  /** The working set of `df` laid out as the fit's, after checking that `df` is the fit's training data
+    * (fingerprint, API-3); with each block's providers in key order. The caller releases it.
+    */
+  private[logistic] def trainingWorkingSet(
+      df: DataFrame,
+      fit: LogisticFit
+  ): (LogisticWorkingSet, Array[Array[Int]]) = {
+    val p = fit.spec.features.size
+    val input = LogisticValidation.validate(df, fit.spec)
+    val providers = fit.providers
+    val plan = LayoutPlan.create(
+      providers.keys.indices.map(k => providers.keys(k) -> providers.records(k)).toVector,
+      fit.options.blocks.targetRowsPerBlock(p + 2)
+    )
+    val providersOfBlock = {
+      val lists = Array.fill(plan.blockCount)(Array.newBuilder[Int])
+      plan.placements.sortBy(_.groupIndex).foreach(g => lists(g.blockId) += g.groupIndex)
+      lists.map(_.result())
+    }
+    val workingSet = LogisticWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel)
+    val fingerprint =
+      try
+        workingSet.blocks
+          .map((block: LogisticBlock) => summarize(block))(Encoders.product[LogisticSummary])
+          .collect()
+          .iterator
+          .map(_.fingerprint)
+          .sum
+      catch {
+        case e: Throwable =>
+          workingSet.release()
+          throw e
+      }
+    if (fingerprint != fit.fingerprint) {
+      workingSet.release()
+      throw new IllegalArgumentException(
+        "the data differ from the fit's (fingerprint); provider and covariate tests need the training data (API-3)"
+      )
+    }
+    (workingSet, providersOfBlock)
+  }
+
+  /** The blocks with each provider's effect from `gamma` (§6.7). */
+  private[logistic] def withEffects(
+      blocks: Dataset[LogisticBlock],
+      providersOfBlock: Array[Array[Int]],
+      p: Int,
+      gamma: Array[Double]
+  ): Dataset[LogisticBlock] = new SparkPasses(blocks, providersOfBlock, p).withGamma(gamma)
+
   /** The rows of `df` with `linear_predictor` and `probability` (Phase 2b §4): γ̂ⱼ + xᵀβ̂ and its inverse
     * logit, with Spark's StrictMath-based `exp`. Rows of providers not in the fit fail with counts
     * (X-022).

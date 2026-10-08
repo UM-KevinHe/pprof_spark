@@ -7,10 +7,12 @@ import pprof.spark.app.RunSpec
 import pprof.spark.engine.BuildInfo
 import pprof.spark.engine.layout.GroupKey
 import pprof.spark.engine.logistic.{
+  EffectReference,
   LogisticFE,
   LogisticFit,
   LogisticFitIO,
   LogisticOptions,
+  LogisticProviderTests,
   LogisticSpec,
   LogisticTest
 }
@@ -377,6 +379,52 @@ object PythonApi {
     require(node.isArray, "the covariates must be a JSON array of names")
     testsJson(
       LogisticFE.covariateTests(df, fit, method, (0 until node.size).map(i => node.get(i).asText()))
+    )
+  }
+
+  /** Provider tests (slice 2c): `reference` is `median`, `mean` or a number; `critical` NaN for the
+    * default; `providersJson` a JSON array of provider keys, or empty for all.
+    */
+  def logisticProviderTests(
+      df: DataFrame,
+      fit: LogisticFit,
+      method: String,
+      reference: String,
+      alternative: String,
+      level: Double,
+      critical: Double,
+      providersJson: String,
+      nResample: Int,
+      seed: Long
+  ): DataFrame = {
+    val effect = reference match {
+      case "median" => EffectReference.Median
+      case "mean"   => EffectReference.Mean
+      case other    =>
+        EffectReference.Value(
+          other.toDoubleOption.getOrElse(
+            throw new IllegalArgumentException("reference must be median, mean or a number")
+          )
+        )
+    }
+    val providers =
+      if (providersJson == null || providersJson.isEmpty) None
+      else {
+        val node = new ObjectMapper().readTree(providersJson)
+        require(node.isArray, "the providers must be a JSON array")
+        if (node.size == 0) None else Some((0 until node.size).map(i => node.get(i).asText()))
+      }
+    LogisticProviderTests.test(
+      df,
+      fit,
+      method,
+      effect,
+      alternative,
+      level,
+      if (critical.isNaN) None else Some(critical),
+      providers,
+      nResample,
+      seed
     )
   }
 

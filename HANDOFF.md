@@ -101,6 +101,25 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 36 (2026-10-08): slice 2c code
+
+- numerics `PoissonBinomial`: exact tails by the smaller-tail recursion with binomial trials, z from
+  tails (one-sided tails above one half read from their complements), inversion as pprof_py's
+  `invert_decreasing` with Brent's method, and a counter-based bootstrap (SplitMix64 of seed,
+  provider position, replicate and trial). `PoissonBinomialSuite` (5): enumeration, trials, z, inversion,
+  bootstrap; numerics 76 on JDK 17 and 21.
+- engine `LogisticProviderTests.test` (exact, score, Wald, bootstrap; median, mean or fixed
+  reference; flags and inversion or Wald limits; providers subset); the data are checked against the
+  fit's fingerprint. `LogisticProviderTestsSuite` (5) and `LogisticProviderTestsMoreSuite` (3): every
+  case against pprof_py and R pprof, tails against mpmath, bootstrap p within four Monte Carlo
+  standard errors of the exact test's and bitwise invariant to row order and partitioning; Classic
+  Spark and Spark Connect.
+- X-024 seen in the fixtures (lfe-binomial providers 20 and 27); comparisons restricted to reliable
+  tails (spec §9). The first bootstrap check used the standard error of a tail for a two-sided
+  p-value (twice the smaller tail); corrected.
+- Python: `PythonApi.logisticProviderTests`, `LogisticFixedEffectModel.provider_tests`; facade suite 4
+  (both APIs); Python tests 11.
+
 ## Round 35 (2026-10-08): slice 2c fixtures and calibration
 
 The maintainer approved D-35 with X-024 and X-025 as recommended.

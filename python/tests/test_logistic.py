@@ -70,3 +70,13 @@ def test_unknown_providers_and_invalid_models_raise(fit, data):
         fit.predict(data.withColumn("provider", data["provider"] + 1000))
     with pytest.raises(IllegalArgumentException, match="columns.features"):
         LogisticFixedEffect("y", [], "provider").fit(data)
+
+
+def test_provider_tests_match_pprof_py(fit, data):
+    expected = reference()["provider_tests"]["exact_two_sided_median"]
+    table = fit.provider_tests(data).orderBy("provider")
+    rows = table.collect()
+    assert within([row["z_raw"] for row in rows], expected["z"], 1e-8)
+    assert [row["flag"] for row in rows] == expected["flag"]
+    assert {"p_value", "ci_lower", "ci_upper", "observed", "expected"} <= set(table.columns)
+    assert fit.provider_tests(data, method="wald", providers=[1, 2]).count() == 2

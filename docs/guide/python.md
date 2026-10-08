@@ -60,9 +60,10 @@ fit.coefficients, fit.covariance, fit.robust_covariance, fit.auc, fit.excluded
 fit.providers()                                    # effects, variances, flags per facility
 fit.wald_tests(null=0.0, alternative="two_sided", robust=True)
 fit.covariate_tests(df, "lr")                      # or "score": refits on the training data
+fit.provider_tests(df, method="poibin_exact", reference="median")  # flags and limits per facility
 fit.predict(new_rows)                              # linear_predictor and probability
 fit.save("/path/fit"); LogisticFixedEffectModel.load(spark, "/path/fit")
 ```
 
-Its arguments follow `LogisticSpec` and `LogisticOptions` (docs/spec/logistic/). Provider tests and
-standardized measures join as their slices land (plan §6).
+Its arguments follow `LogisticSpec` and `LogisticOptions` (docs/spec/logistic/). Standardized measures
+join with their slice (plan §6).
