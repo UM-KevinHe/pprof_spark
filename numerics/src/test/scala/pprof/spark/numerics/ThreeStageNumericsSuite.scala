@@ -84,4 +84,25 @@ class ThreeStageNumericsSuite extends munit.FunSuite {
       near(soft, direct, 1e-13 * direct, s"Σ log(1 + e) at $eta")
     }
   }
+
+  test("the bounded quasi-Newton finds interior and boundary minima") {
+    val rosenbrock =
+      (x: Array[Double]) => 100.0 * math.pow(x(1) - x(0) * x(0), 2) + math.pow(1.0 - x(0), 2)
+    val free = BoundedQuasiNewton.minimize(
+      rosenbrock,
+      Array(-1.2, 1.0),
+      Array(Double.NegativeInfinity, Double.NegativeInfinity)
+    )
+    assert(
+      free.converged && math.abs(free.x(0) - 1.0) < 1e-4 && math.abs(free.x(1) - 1.0) < 1e-4,
+      free.x.mkString(",")
+    )
+    val bowl = (x: Array[Double]) => math.pow(x(0) + 1.0, 2) + math.pow(x(1) - 2.0, 2)
+    val bounded =
+      BoundedQuasiNewton.minimize(bowl, Array(3.0, 3.0), Array(0.0, Double.NegativeInfinity))
+    assert(
+      bounded.converged && bounded.x(0) == 0.0 && math.abs(bounded.x(1) - 2.0) < 1e-6,
+      bounded.x.mkString(",")
+    )
+  }
 }

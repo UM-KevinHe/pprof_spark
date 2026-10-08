@@ -1,7 +1,7 @@
 # Specification: three-stage model — stage 2, the crossed random-intercept GLMM (Phase 2f-3)
 
 - Status: Approved by the maintainer, 2026-10-08 (D-41), with X-030 and OI-59 as proposed; T-opt's values
-  proposed in D-42.
+  approved in D-42.
 - Builds on: [three-stage-spike.md](three-stage-spike.md) (D-38), 2f-1 (prepared records) and 2f-2
   (compressed cells, X-029).
 - Decision references: D-41; X-030; OI-59.
@@ -107,3 +107,22 @@ than 1e-9 relative). Negative controls: an offset shifted by 0.01, one outcome f
    likelihood treats non-integer successes differently, so `glmer` is informational for such cases;
    pprof_py's continuous `y_adj` is the reference. On integral outcomes lme4's deviance function is within
    its PIRLS tolerance of pprof_py's (5.9e-4 at most at the fixed points).
+
+## 10. Implementation notes (round 52; no statistical change)
+
+1. numerics: `BoundedQuasiNewton` (projected BFGS, central differences with a relative step of 1e-4,
+   forward differences at an active bound, Armijo search; convergence when the projected gradient is below
+   1e-7·max(1, D), or when D stops changing with steps below 1e-10) and `kernels.ThreeStageGlmm` (PIRLS from
+   u = 0 with pprof_py's step rule to a relative change of 1e-12, the Schur complement onto the smaller set
+   of levels with a dense Cholesky that also gives log|H|, and the optimizer from (1, 1, μ₀), μ₀ the logit
+   of the mean outcome minus the mean offset).
+2. engine: `ThreeStage.stage2` (from compressed cells or prepared records), `ThreeStage.laplace`,
+   `ThreeStageStage2` with `start` for stage 3.
+3. pprof_py floors each record's weight p(1 − p) at 1e-12; the compressed cells give each cell's Σp(1 − p)
+   without a per-record floor, which differs only for records with abs(η) above about 27.6.
+4. pprof_py's nAGQ = 0 stage only supplies a start; the start above leads to the same optimum (D is the
+   same function).
+5. Round 52 measurements (sandbox): on ts-golden the optimum is 5.5e-7 and 6.7e-7 from pprof_py's tight run
+   in σₚ and σ_c, with D 1.5e-10 above pprof_py's (within the 1e-9 relative check); ts-synthetic 9e-9 and
+   2e-8 (D 4.5e-13 above); ts-shuffled 3.8e-7 and 6e-8 (D 2.1e-11 above); 10 to 20 iterations, 97 to 169
+   evaluations of D, under one second each on the driver.

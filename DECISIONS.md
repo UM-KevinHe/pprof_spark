@@ -103,13 +103,13 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-42: The T-opt tolerance class (Proposed, 2026-10-08)
+### D-42: The T-opt tolerance class (Accepted: approved by the maintainer, 2026-10-08)
 
 For optimizer-limited estimates (three-stage stage 2's variance components, intercept and BLUPs; X-030):
 rtol 2e-4, atol 1e-6 under the element-wise rule of D-09, added to `tolerances.conf`. Justification and
 negative controls (NN-9): `docs/parity/three-stage-calibration.md` (round 51): pprof_py's tight run against
 `glmer` at most 0.48 of it on integral outcomes, pprof_py's default run against its tight run at most
-1.7e-4 of it, the controls at least 23.9 times outside. Awaiting the maintainer's approval.
+1.7e-4 of it, the controls at least 23.9 times outside. Approved as proposed.
 
 ### D-41: Slice 2f-3 specification (Accepted: approved by the maintainer, 2026-10-08)
 

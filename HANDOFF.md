@@ -101,6 +101,22 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 52 (2026-10-08): slice 2f-3 code
+
+The maintainer approved D-42 (T-opt: rtol 2e-4, atol 1e-6).
+
+- numerics: `BoundedQuasiNewton`, `kernels.ThreeStageGlmm` (PIRLS on compressed cells from u = 0, the
+  Schur complement and its Cholesky for the solve and log|H|, the Laplace deviance, the optimizer).
+  `ThreeStageNumericsSuite` gains a test (Rosenbrock, and a bound-constrained bowl); numerics 82 on JDK 17
+  and 21.
+- engine: `ThreeStage.stage2`, `ThreeStage.laplace`, `ThreeStageStage2(.start)`. `ThreeStageStage2Suite` (4):
+  on ts-golden, ts-synthetic and ts-shuffled with pprof_py's β, D at three fixed points (T-fn) and û (T-coef),
+  the optimum against pprof_py's tight run (T-opt), our D not above pprof_py's by more than 1e-9 relative,
+  against `glmer` on integral outcomes (T-opt); bitwise invariance to row order and partitioning. Classic
+  Spark 4/4 and Spark Connect 4/4. The stage 2 fixtures now record pprof_py's β (regenerated; calibration
+  unchanged).
+- Measured: σ within 6.7e-7 of pprof_py's tight optimum at worst (ts-golden), D at most 1.5e-10 above.
+
 ## Round 51 (2026-10-08): slice 2f-3 fixtures and calibration
 
 The maintainer approved D-41 with X-030 and OI-59 as proposed.

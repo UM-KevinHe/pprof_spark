@@ -29507,6 +29507,13 @@
   }
  },
  "stage2": {
+  "beta": [
+   "0x1.1e65e4265dfe3p-2",
+   "0x1.03c430e1e4713p-3",
+   "0x1.30525af5f4ab8p-2",
+   "0x1.7ceefcec7afd8p-3",
+   "-0x1.52016cadaed49p-3"
+  ],
   "default": {
    "blup_clusters": [
     "0x1.f90e1d37e41cbp-2",

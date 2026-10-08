@@ -16,7 +16,7 @@ import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.backend.{BlockOptions, DriverGuards}
 import pprof.spark.engine.layout.GroupKey
 import pprof.spark.numerics.{GaussHermite, NeumaierSum, NeumaierVector, TaylorBins}
-import pprof.spark.numerics.kernels.ThreeStageKernel
+import pprof.spark.numerics.kernels.{ThreeStageGlmm, ThreeStageKernel}
 
 /** Column roles of He et al. (2013)'s three-stage model: a binary outcome, features, the provider
   * (facility) and the cluster (hospital) (docs/spec/logistic/three-stage-preparation.md §2).
@@ -105,6 +105,42 @@ final case class ThreeStageStage3(
     bins: Long,
     options: ThreeStageStage3Options
 )
+
+/** Stage 2's options (docs/spec/logistic/three-stage-stage2.md §2). */
+final case class ThreeStageStage2Options(
+    pirlsTolerance: Double = 1e-12,
+    pirlsMaxIterations: Int = 100,
+    gradientTolerance: Double = 1e-7,
+    maxIterations: Int = 200,
+    blocks: BlockOptions = BlockOptions()
+) {
+  def kernel: ThreeStageGlmm.Options =
+    ThreeStageGlmm.Options(
+      pirlsTolerance,
+      pirlsMaxIterations,
+      pprof.spark.numerics.BoundedQuasiNewton.Options(gradientTolerance, maxIterations)
+    )
+}
+
+/** Stage 2's fit: the SDs, the intercept, and the BLUPs in provider and cluster key order. */
+final case class ThreeStageStage2(
+    providers: Vector[GroupKey],
+    clusters: Vector[GroupKey],
+    sigmaProvider: Double,
+    sigmaCluster: Double,
+    intercept: Double,
+    blupProviders: Array[Double],
+    blupClusters: Array[Double],
+    deviance: Double,
+    converged: Boolean,
+    iterations: Int,
+    evaluations: Int,
+    projectedGradient: Double
+) {
+
+  /** Stage 3's start: each provider's BLUP plus the intercept (pprof_py's `_values_from_stages`). */
+  def start: Array[Double] = blupProviders.map(_ + intercept)
+}
 
 /** One prepared record, by provider and cluster index. */
 final case class ThreeStageRecord(provider: Int, cluster: Int, y: Double, offset: Double)
@@ -558,6 +594,58 @@ object ThreeStage {
       cells.bins,
       options
     )
+  }
+
+  /** Stage 2 on compressed cells (Phase 2f-3): the Laplace deviance's optimum over (σₚ, σ_c, μ). */
+  def stage2(cells: ThreeStageCells, options: ThreeStageStage2Options): ThreeStageStage2 = {
+    val m = cells.providers.size
+    val h = cells.clusters.size
+    val r = ThreeStageGlmm.fit(cells.cells, m, h, options.kernel)
+    ThreeStageStage2(
+      cells.providers,
+      cells.clusters,
+      r.sigmaProvider,
+      r.sigmaCluster,
+      r.mu,
+      r.u.take(m).map(_ * r.sigmaProvider),
+      r.u.drop(m).map(_ * r.sigmaCluster),
+      r.deviance,
+      r.converged,
+      r.iterations,
+      r.evaluations,
+      r.projectedGradient
+    )
+  }
+
+  def stage2(
+      prepared: DataFrame,
+      spec: ThreeStageSpec,
+      options: ThreeStageStage2Options = ThreeStageStage2Options(),
+      offsetColumn: String = "stage1_offset"
+  ): ThreeStageStage2 =
+    stage2(
+      compress(prepared, spec, ThreeStageStage3Options(blocks = options.blocks), offsetColumn),
+      options
+    )
+
+  /** The Laplace deviance and û (providers, then clusters) at fixed (σₚ, σ_c, μ). */
+  def laplace(
+      cells: ThreeStageCells,
+      sigmaProvider: Double,
+      sigmaCluster: Double,
+      intercept: Double,
+      options: ThreeStageStage2Options = ThreeStageStage2Options()
+  ): (Double, Array[Double]) = {
+    val e = ThreeStageGlmm.evaluate(
+      cells.cells,
+      cells.providers.size,
+      cells.clusters.size,
+      sigmaProvider,
+      sigmaCluster,
+      intercept,
+      options.kernel
+    )
+    (e.deviance, e.u)
   }
 
   /** The marginal log-likelihood and score at γ, with each cluster's nodes centred for γ (pprof_py's

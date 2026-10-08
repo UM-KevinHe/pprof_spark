@@ -287,7 +287,8 @@ def stage2_outputs(df, features, case_dir):
         r[key] = values.split(",") if key.endswith("_levels") else hexes([float.fromhex(v) for v in values.split(",")])
     for path in (data_path, points_path, os.path.join(case_dir, "glmer.txt")):
         os.remove(path)
-    return ({"default": summary(default), "tight": t, "function": function,
+    beta = np.asarray(pipeline.stage1_.coefficients_["beta"], dtype=float).ravel()
+    return ({"beta": hexes(beta), "default": summary(default), "tight": t, "function": function,
              "negative_controls": {"offset_plus_0.01": summary(fit(shifted, tol_outer=1e-12, max_iter_outer=5000)),
                                    "five_events_flipped": summary(fit(flipped, tol_outer=1e-12, max_iter_outer=5000))}}, r)
 
