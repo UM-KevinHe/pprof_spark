@@ -101,6 +101,17 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 37 (2026-10-08): the slice 2d specification
+
+- `docs/spec/logistic/standardization.md` (D-36, awaiting approval), read from pprof_py v0.7.0's
+  `calculate_standardized_measures`, `standardized_measure` and `test_standardized` (with
+  `z_statistic`): indirect and direct ratios and rates, standard errors, tests on identity, logit and
+  log scales, R's extreme observations; R pprof's `SM_output.logis_fe` as the R reference.
+- OI-49: direct sums by binned Taylor expansions (bins of 0.1 on η, order 8). The remainder is below
+  4.2e-17 per unit weight (abs(σ⁽⁹⁾) ≤ 7.75); probe against the exact sums: 8.8e-16 relative at worst
+  on lfe-many and a 200,000-row synthetic population, 11 times faster there in numpy, and independent
+  of n·m at scale (X-026, class C). OI-58: external standard populations deferred.
+
 ## Round 36 (2026-10-08): slice 2c code
 
 - numerics `PoissonBinomial`: exact tails by the smaller-tail recursion with binomial trials, z from
