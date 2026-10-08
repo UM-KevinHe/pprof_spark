@@ -101,6 +101,19 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 53 (2026-10-08): the slice 2f-4 specification
+
+- `docs/spec/logistic/three-stage-pipeline.md` (D-43, awaiting approval), read from pprof_py v0.7.0: the
+  pipeline; stage 3's tests (`exact`: each cluster's effect drawn once from its posterior, Gauss–Hermite
+  mixtures of Poisson-binomial counts convolved across clusters, tails summed directly; `poibin_exact`;
+  `resampling` with exact tails at the floor), measures (indirect and direct with the clusters' posterior
+  means; the measures' `mean` reference is unweighted, the tests' size-weighted, as pprof_py) and intervals
+  (test inversion, mapped for measures); `sigma_sensitivity` (σ_c's profile interval, refits at both ends,
+  flag stability); persistence, the job runner and Python; sub-rounds 2f-4a and 2f-4b.
+- Probes (golden data): `exact` 1.1 s, `poibin_exact` 0.16 s, `resampling` 2.2 s for 40 providers;
+  `sigma_sensitivity` 5.1 s, interval (0.2458, 0.7280), 34 of 40 flags stable. No new discrepancy: pprof_py's
+  clustered tails sum the distribution's entries, so X-024 does not arise for `exact`.
+
 ## Round 52 (2026-10-08): slice 2f-3 code
 
 The maintainer approved D-42 (T-opt: rtol 2e-4, atol 1e-6).
