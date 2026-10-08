@@ -294,4 +294,60 @@ class FixturesSuite extends munit.FunSuite {
       ).foreach(control => assert(ratio("T-test", control, auto) >= Margin, name))
     }
   }
+
+  test(
+    "three-stage slice 2f-1: preparation matches R's glmm.data.prep; stage 1 agrees with R; controls"
+  ) {
+    def ratio(cls: String, actual: Array[Double], expected: Array[Double]): Double =
+      Tolerances(cls).worstRatio(actual, expected)
+    def texts(node: JsonNode): Seq[String] = (0 until node.size).map(node.get(_).asText())
+    val cases = Fixtures.cases("three-stage")
+    assertEquals(cases, Seq("ts-golden-prep", "ts-golden", "ts-synthetic"))
+    cases.foreach { name =>
+      val py = Fixtures.json(s"three-stage/$name/pprof_py.json")
+      val r = Fixtures.json(s"three-stage/$name/r_threestage.json")
+      val prep = py.get("preparation")
+      val tight = py.get("stage1").get("tight")
+      if (r.has("prep")) {
+        val rp = r.get("prep")
+        Seq("rid", "cell", "included").foreach(f =>
+          assertEquals(texts(prep.get(f)), texts(rp.get(f)), s"$name $f")
+        )
+        assert(
+          ratio(
+            "T-meas",
+            Fixtures.doubles(prep.get("y_adj")),
+            Fixtures.doubles(rp.get("y_adj"))
+          ) <= 1.0
+        )
+        assertEquals(prep.get("cells").asInt, rp.get("cells_present").asInt)
+      }
+      val beta = Fixtures.doubles(tight.get("beta"))
+      assert(
+        ratio("T-coef", beta, Fixtures.doubles(r.get("glm_stage1").get("beta"))) <= 1.0,
+        s"$name beta vs glm"
+      )
+      if (r.has("stage23"))
+        assert(
+          ratio("T-coef", beta, Fixtures.doubles(r.get("stage23").get("beta"))) <= 1.0,
+          s"$name beta vs R"
+        )
+      val controls = py.get("negative_controls")
+      val cutoff = controls.get("cutoff_11")
+      assert(
+        (cutoff.get("kept").asInt, cutoff.get("included_cells").asInt) != (
+          prep.get("kept").asInt,
+          prep.get("included_cells").asInt
+        )
+      )
+      assert(
+        ratio(
+          "T-coef",
+          Fixtures.doubles(controls.get("flipped_outcome").get("beta")),
+          beta
+        ) >= Margin,
+        name
+      )
+    }
+  }
 }

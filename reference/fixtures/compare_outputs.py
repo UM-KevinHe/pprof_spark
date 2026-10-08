@@ -24,13 +24,16 @@ def values(node, path=()):
         for key, value in node.items():
             yield from values(value, path + (key,))
     elif isinstance(node, list) and node and isinstance(node[0], str):
-        yield path, np.array([float.fromhex(v) for v in node])
+        try:
+            yield path, np.array([float.fromhex(v) for v in node])
+        except ValueError:  # lists of keys (three-stage cells, providers): compared exactly
+            yield path, list(node)
 
 
 def main(regenerated, committed):
     manifest = json.load(open(os.path.join(committed, "manifest.json"), encoding="utf-8"))
     worst, failures = 0.0, []
-    families = (("cox", ("pprof_py.json", "r_survival.json")), ("logistic", ("pprof_py.json", "r_logistic.json")))
+    families = (("cox", ("pprof_py.json", "r_survival.json")), ("logistic", ("pprof_py.json", "r_logistic.json")), ("three-stage", ("pprof_py.json", "r_threestage.json")))
     cases = [(f, c, n) for f, n in families for c in manifest["cases"].get(f, [])]
     # Family-level reference files (logistic/poibin-tails.json, slice 2c) have no input.csv.
     shared = [(f, None, tuple(sorted(n for n in os.listdir(os.path.join(committed, f)) if n.endswith(".json"))))
@@ -47,6 +50,10 @@ def main(regenerated, committed):
                 continue
             for key, expected in old.items():
                 actual = new[key]
+                if isinstance(expected, list):
+                    if actual != expected:
+                        failures.append(f"{base}/{name} {'.'.join(key)}: keys differ")
+                    continue
                 scale = float(np.max(np.abs(expected[np.isfinite(expected)]), initial=0.0))
                 allowed = RTOL * np.maximum(np.abs(expected), scale)
                 diff = np.where(actual == expected, 0.0, np.abs(actual - expected))  # equal infinities

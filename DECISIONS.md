@@ -103,13 +103,13 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-39: Slice 2f-1 specification (Proposed, 2026-10-08)
+### D-39: Slice 2f-1 specification (Accepted: approved by the maintainer, 2026-10-08)
 
 `docs/spec/logistic/three-stage-preparation.md`: pprof_py's `glmm_data_prep` (screening at more than
 `cutoff` records, `y_adj`, provider × cluster cells, `included`) and stage 1 (slice 2a on the included
 cells without screening), the offset xβ̂, the outputs, the distributed plan and validation. Decision to
-approve with it: X-028 (no dense provider × cluster table; class C). Awaiting the maintainer's approval;
-no 2f-1 code before it (NN-2).
+approve with it: X-028 (no dense provider × cluster table; class C). Approved as written; fixtures in
+round 44.
 
 ### D-38: Slice 2f direction after the three-stage spike (Accepted: approved by the maintainer, 2026-10-08)
 

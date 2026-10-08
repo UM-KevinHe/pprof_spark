@@ -1,0 +1,11 @@
+{
+ "cutoff": 10,
+ "events": 181,
+ "features": [
+  "age"
+ ],
+ "id": "ts-golden-prep",
+ "r_prep": true,
+ "rows": 903,
+ "source": "glmm_prep/raw.csv"
+}

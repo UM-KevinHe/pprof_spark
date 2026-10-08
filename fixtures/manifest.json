@@ -15,6 +15,11 @@
    "lfe-binomial",
    "lfe-many",
    "lfe-clustered"
+  ],
+  "three-stage": [
+   "ts-golden-prep",
+   "ts-golden",
+   "ts-synthetic"
   ]
  },
  "files": {
@@ -66,7 +71,19 @@
   "logistic/lfe-shifted/input.csv": "b795403e68b6b03340f32ae5c4264489d85cc5c785aac0fadb21133b5acb1b8f",
   "logistic/lfe-shifted/pprof_py.json": "6b64365836c5be82257945b68dc1936b99f9dc8f2dfb27ff017cc5067a6c967f",
   "logistic/lfe-shifted/r_logistic.json": "471d1291c818d921f084d812b9d692eec19441f795491148334380778f9dd7d7",
-  "logistic/poibin-tails.json": "00434ff369d537fd813128714b073abae4a611921e0881750e42b3b60461a72c"
+  "logistic/poibin-tails.json": "00434ff369d537fd813128714b073abae4a611921e0881750e42b3b60461a72c",
+  "three-stage/ts-golden-prep/case.json": "89f295097380411e0871ef0c150b8f37f20483071f3809f2cb758868c750282e",
+  "three-stage/ts-golden-prep/input.csv": "bd683ab395f317a4659334047d2650f4bf080e459596db9d8edbd86f3179080a",
+  "three-stage/ts-golden-prep/pprof_py.json": "7ccd5c64f139f5d229be5b74725ef753cdf2ef9df172d53845d6c225876fa4b8",
+  "three-stage/ts-golden-prep/r_threestage.json": "4fbb739953318dd2cdd4949a71a96cf4be540594d1408d1ee557f046f6c58295",
+  "three-stage/ts-golden/case.json": "6516ce0814148b0ae50b892bdddf9e88d98b2ee6401f4f137da3fbf48063f4a0",
+  "three-stage/ts-golden/input.csv": "29567fb8f7801d2c32cd0b6031d4c7e0ded8a3387adff68c025088664999f76b",
+  "three-stage/ts-golden/pprof_py.json": "690ec613ded9266b2ca2c71050d96232fb6408ae0e08a8a86772696f64e1c7c7",
+  "three-stage/ts-golden/r_threestage.json": "6cb89d19c2f248b0fe7ccb7beb99d5c1ba64af02d9c4352d0f46291ee1684037",
+  "three-stage/ts-synthetic/case.json": "6d5f4042fec28b709b057b5c5b0a179b9a8fca6b040a115a668586d557d64eaf",
+  "three-stage/ts-synthetic/input.csv": "716dffab729e9e1e5aa38be7333a9eee91a56d7db0672242a31d83281d4c0ddb",
+  "three-stage/ts-synthetic/pprof_py.json": "6ad3b255466c0b5bfd7c9162344f1709e2ed7f23624f16aa19185c019652f964",
+  "three-stage/ts-synthetic/r_threestage.json": "b84b1221a2acfd7899256aefbcf732dd9530c81ed6f9ca5687ba9a55bf189142"
  },
  "formatVersion": 1,
  "generator": "reference/fixtures/generate.py",
@@ -91,6 +108,16 @@
   "r_tight_control": "coxph.control(eps = 1e-11, iter.max = 100)",
   "r_timefix": true,
   "r_variance": "model-based: coxph(robust = FALSE)",
+  "three-stage": {
+   "cutoff": 10,
+   "golden": "pprof_py tests/data/glmm_prep (R glmm.data.prep) and tests/data/three_stage (R stage 1 beta, glmer sigma, glmm.fac.hosp gamma and SRR), files checked against REFERENCE.lock",
+   "preparation": "pprof_py glmm_data_prep(data, 'Y', 'fac', 'hosp', cutoff=10); cells keyed hosp U+001F fac",
+   "r_stage1": "glm(Y ~ 0 + cell + features, binomial, epsilon 1e-15, maxit 200) on the included rows",
+   "stage1": "LogisticFixedEffectModel(use_dataprep=False, screen_providers=False).fit(included rows, provider_var='cell_id'), default and tol 1e-13; offset = features @ beta (default fit)",
+   "tight": {
+    "tol": 1e-13
+   }
+  },
   "ties": [
    "breslow",
    "efron"

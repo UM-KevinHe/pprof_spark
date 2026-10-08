@@ -1,6 +1,6 @@
 # Specification: three-stage model — preparation and stage 1 (Phase 2f-1)
 
-- Status: Draft, awaiting approval (D-39). No 2f-1 code is written before approval (NN-2).
+- Status: Approved by the maintainer, 2026-10-08 (D-39), with X-028 as recommended.
 - Builds on: [three-stage-spike.md](three-stage-spike.md) (D-38) and slice 2a
   ([fixed-effect-estimation.md](fixed-effect-estimation.md)).
 - Decision references: D-39; X-028.
@@ -79,7 +79,8 @@ Nothing n-scale reaches the driver; results are bitwise invariant to partitionin
 
 ## 7. Validation plan
 
-Fixtures (next round): pprof_py's golden `glmm_prep/raw.csv` (903 records, 23 providers, 8 clusters)
+Fixtures (round 44, `fixtures/three-stage`, calibrated in
+[three-stage-calibration.md](../../parity/three-stage-calibration.md)): pprof_py's golden `glmm_prep/raw.csv` (903 records, 23 providers, 8 clusters)
 with R's `glmm.data.prep` output, and `three_stage/raw.csv` (2,637 records, 40 providers, 12 clusters)
 with R's stage 1 β, copied with their provenance (pprof_py's MIT-licensed synthetic test data); and a
 generated case with text keys, providers without events and with only events, and providers at the

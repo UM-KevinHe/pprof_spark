@@ -54,3 +54,8 @@ license = "MIT"
 repository = "https://github.com/cran/poibin"
 version = "1.6"
 commit = "495606131efd7d3ae35eb718a68b373929e80fef"
+
+[pprof_py_test_data]
+# pprof_py's own synthetic test data with R outputs (slice 2f-1 fixtures, D-39), read at the pinned
+# commit from pprof_py/tests/data/ on GitHub and checked against these digests.
+sha256 = { "glmm_prep/raw.csv" = "bd683ab395f317a4659334047d2650f4bf080e459596db9d8edbd86f3179080a", "glmm_prep/prep_R.csv" = "d40636ca978fb7384dc71eba8a2c00c80333025bf7054eb99d23ab44f3812854", "glmm_prep/prep_R.json" = "85b08913b378ee8a9fc654ea43db35832995382dd6f9d3cab47d1d3320b54a30", "three_stage/raw.csv" = "f3118464144a95cbe3f0d72fd94964e147f6bb7b18b9fac7adebc0f0857d6f32", "three_stage/r_stage23.json" = "e85377d7b4881a34370f5c7dd3968223356fc205981060b5d7851c3f4db484f8" }

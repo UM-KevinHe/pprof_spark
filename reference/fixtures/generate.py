@@ -30,6 +30,7 @@ from importlib import metadata
 import numpy as np
 import pandas as pd
 import logistic_fixtures
+import three_stage_fixtures
 from pprof_py.algorithms.survival.cox_likelihood import cox_partial_likelihood
 from pprof_py.data.survival_data import SurvivalData
 from pprof_py.data.survival_validation import validate_fit_inputs
@@ -329,7 +330,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", default=os.path.join(ROOT, "fixtures"))
     parser.add_argument("--inputs", help="copy input.csv files from this fixture tree")
-    parser.add_argument("--family", choices=("all", "cox", "logistic"), default="all",
+    parser.add_argument("--family", choices=("all", "cox", "logistic", "three-stage"), default="all",
                         help="regenerate one family only; the manifest still covers every file")
     options = parser.parse_args()
     out = options.out
@@ -383,8 +384,10 @@ def main():
         write_json(os.path.join(case_dir, "pprof_py.json"), reference)
         write_json(os.path.join(case_dir, "r_survival.json"), r_outputs(case_dir, case))
         cases.append(case["id"])
-    logistic_cases = ([case["id"] for case in logistic_fixtures.CASES] if options.family == "cox"
+    logistic_cases = ([case["id"] for case in logistic_fixtures.CASES] if options.family in ("cox", "three-stage")
                       else logistic_fixtures.generate(out, options.inputs, lock, write_json))
+    three_stage_cases = ([case["id"] for case in three_stage_fixtures.CASES] if options.family in ("cox", "logistic")
+                         else three_stage_fixtures.generate(out, options.inputs, lock, write_json))
 
     files = {}
     for directory, _, names in os.walk(out):
@@ -397,7 +400,7 @@ def main():
     write_json(os.path.join(out, "manifest.json"), {
         "formatVersion": FORMAT_VERSION,
         "generator": "reference/fixtures/generate.py",
-        "cases": {"cox": cases, "logistic": logistic_cases},
+        "cases": {"cox": cases, "logistic": logistic_cases, "three-stage": three_stage_cases},
         "reference": {"pprof_py": {"version": installed, "commit": lock["pprof_py"]["commit"]},
                       "python": sys.version.split()[0],
                       "packages": {name: metadata.version(name) for name in packages},
@@ -408,10 +411,12 @@ def main():
                     "r_tight_control": "coxph.control(eps = 1e-11, iter.max = 100)",
                     "function_level": "R: coxph(init = beta, control = coxph.control(iter.max = 0))",
                     "r_variance": "model-based: coxph(robust = FALSE)",
-                    "logistic": logistic_fixtures.OPTIONS},
+                    "logistic": logistic_fixtures.OPTIONS,
+                    "three-stage": three_stage_fixtures.OPTIONS},
         "files": dict(sorted(files.items())),
     })
-    print(f"wrote {len(files)} fixture files for {len(cases)} Cox and {len(logistic_cases)} logistic cases to {out}")
+    print(f"wrote {len(files)} fixture files for {len(cases)} Cox, {len(logistic_cases)} logistic and "
+          f"{len(three_stage_cases)} three-stage cases to {out}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,15 @@
+{
+ "cutoff": 10,
+ "events": 672,
+ "features": [
+  "age",
+  "diabetes",
+  "chf",
+  "comorb",
+  "female"
+ ],
+ "id": "ts-golden",
+ "r_stage23": true,
+ "rows": 2637,
+ "source": "three_stage/raw.csv"
+}

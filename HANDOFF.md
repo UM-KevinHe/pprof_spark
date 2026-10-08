@@ -101,6 +101,26 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 44 (2026-10-08): slice 2f-1 fixtures and calibration
+
+The maintainer approved D-39 with X-028 as recommended.
+
+- A third fixture family, `fixtures/three-stage` (`reference/fixtures/three_stage_fixtures.py`,
+  `three_stage_r.R`, `generate.py --family three-stage`): ts-golden-prep and ts-golden are pprof_py's
+  golden data (`glmm_prep`, `three_stage`) with their R outputs, read at the pinned commit from
+  `pprof_py/tests/data` and checked against new digests in REFERENCE.lock (`[pprof_py_test_data]`; a
+  record identifier `rid` added where missing); ts-synthetic has text keys, providers at the cutoff
+  (10 and 11 records) and providers without events and with only events. pprof_py: preparation
+  (kept records, `y_adj`, cells keyed hospital␟facility, `included`, excluded providers) and stage 1 (β,
+  its covariance, cell effects, the offset) at the default and a tight tolerance; controls: `cutoff`
+  11 and one flipped outcome. R: `glm` stage 1 on the included cells for every case.
+- Calibration (`docs/parity/three-stage-calibration.md`) passes: pprof_py's preparation equals R's
+  `glmm.data.prep` (records, cells, `included`; `y_adj` within 3.3e-8 of T-meas); stage 1's β against
+  `glm` within 0.683 of T-coef at worst (ts-golden-prep) and against R's golden β within 4.7e-6; controls
+  change the counts or miss by at least 6e5 times T-coef. Regeneration byte-identical; the full run
+  with copied inputs reproduces every file; `compare_outputs.py` compares key lists exactly.
+- `FixturesSuite` checks the family; testkit 17 pass under Classic Spark and Spark Connect.
+
 ## Round 43 (2026-10-08): the slice 2f-1 specification
 
 The maintainer approved D-38 with X-005 as recommended.
