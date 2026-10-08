@@ -1,11 +1,11 @@
 # Status
 
-Updated 2026-10-08, round 40.
+Updated 2026-10-08, round 41.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
 models: in progress**: plan and slice 2a specification approved (D-30); 2a fixtures and calibration in
-round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification (D-37, proposed) in round 40. Python access: py4j wrappers (D-31). The maintainer runs the
+round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification in round 40 (D-37, approved); `LogisticJob` in round 41. Python access: py4j wrappers (D-31). The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -61,8 +61,9 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 37 | Slice 2d specification: standardization (D-36, X-026, OI-49) | Merged (90a2f04); D-36 approved |
 | 38 | Slice 2d fixtures (standardized measures, R pprof's `SM_output.logis_fe`) and calibration | Merged (a01c824); CI not reported |
 | 39 | Slice 2d code: indirect and direct measures, binned direct sums, tests on measures; Python | Merged (8c651d9); CI not reported |
-| 40 | Slice 2e specification: the logistic job runner (D-37) | Delivered as a patch |
-| 41 | Slice 2e code: `LogisticJob`, the run specification's `model`, the guide | Planned |
+| 40 | Slice 2e specification: the logistic job runner (D-37) | Merged (27fefc8); D-37 approved |
+| 41 | Slice 2e code: `LogisticJob`, the run specification's `model`, the guide | Delivered as a patch |
+| 42 | Slice 2f: stage 2/3 spike for the three-stage SRR model (OI-51), then its specification | Planned |
 
 ## Decisions and spikes
 

@@ -103,13 +103,13 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-37: Slice 2e specification (Proposed, 2026-10-08)
+### D-37: Slice 2e specification (Accepted: approved by the maintainer, 2026-10-08)
 
 `docs/spec/logistic/job-runner.md`: a logistic job runner. The run specification (version 1) gains a
 top-level `model` (`cox` by default, or `logistic`); `pprof.spark.app.LogisticJob` (`--spec` or
 `--spec-json`) fits the model and writes the fit, the provider table, covariate tests, provider tests,
 standardized measures, tests on measures and predictions as requested, never overwriting, with a run
-record. No statistical change. Awaiting the maintainer's approval; no 2e code before it (NN-2).
+record. No statistical change. Approved as written; implemented in round 41.
 
 ### D-36: Slice 2d specification (Accepted: approved by the maintainer, 2026-10-08)
 

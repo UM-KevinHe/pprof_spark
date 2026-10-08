@@ -98,6 +98,16 @@ object RunSpec {
         problems += s"version ${v.asText()} is not supported; this release reads version $Version"
       case None => problems += "version is required"
     }
+    node(root, "model").foreach { v =>
+      if (!v.isTextual) problems += "model must be a string"
+      else
+        v.asText() match {
+          case "cox"      => ()
+          case "logistic" =>
+            problems += "model logistic: run this specification with pprof.spark.app.LogisticJob"
+          case other => problems += s"model must be cox or logistic, got $other"
+        }
+    }
 
     val input = node(root, "input").orNull
     if (input == null) problems += "input is required"

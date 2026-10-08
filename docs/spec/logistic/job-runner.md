@@ -1,6 +1,6 @@
 # Specification: logistic fixed-effect model — job runner (Phase 2e)
 
-- Status: Draft, awaiting approval (D-37). No 2e code is written before approval (NN-2).
+- Status: Approved by the maintainer, 2026-10-08 (D-37).
 - Builds on: slices 2a to 2d ([plan.md](plan.md)) and the Cox job runner (Phase 1d, round 22;
   [docs/guide/cox-job.md](../../guide/cox-job.md)).
 - Decision references: D-37. No statistical change: the job calls the library and writes its results.
@@ -97,3 +97,14 @@ than overwriting; an invalid specification lists all its problems; `CoxJob` and 
 each other's specifications; existing Cox specifications without `model` still parse; argument
 handling. Classic Spark and Spark Connect (CI's Connect job already runs the `app` tests). A user guide,
 `docs/guide/logistic-job.md`, as for Cox.
+
+## 7. Implementation notes (round 41)
+
+1. `LogisticRunSpec.parse`, `LogisticJob` (`main`, `specification`, `run`, `testsTable`); `RunSpec.parse`
+   (Cox) now reads `model` and refuses `logistic`. Problems are reported in the Cox parser's format.
+2. The run record holds the specification as given plus the fit options used (with defaults), rather
+   than a re-serialized specification; output requests' defaults are those of the user guide.
+3. An existing `outputs.path` fails at the first write (Spark's `errorifexists`), as `CoxJob` does,
+   after the fit rather than before reading data: the Spark API that works under Spark Connect has no
+   existence check. Nothing is overwritten either way.
+4. User guide: [docs/guide/logistic-job.md](../../guide/logistic-job.md).

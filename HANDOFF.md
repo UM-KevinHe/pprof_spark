@@ -101,6 +101,20 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 41 (2026-10-08): slice 2e code
+
+The maintainer approved D-37.
+
+- `app`: `LogisticRunSpec` (version 1 with `model` `logistic`; every problem at once, including fields
+  that do not belong to a logistic specification and robust options without a cluster column) and
+  `LogisticJob` (`--spec`, `--spec-json`; fit, provider table, covariate tests, provider tests,
+  standardized measures, tests on measures and predictions as requested; the run record written last).
+  `RunSpec.parse` (Cox) reads `model` and refuses `logistic`. Guide: `docs/guide/logistic-job.md`.
+- `LogisticJobSuite` (5): on lfe-clustered with every output, each table equals the library's bit for bit
+  and the fit loads back bit for bit; the run record; a second run fails; an invalid specification
+  lists 13 problems; each job refuses the other's specification; existing Cox specifications parse;
+  arguments. Classic Spark and Spark Connect; `CoxJobSuite` (3) rerun under both.
+
 ## Round 40 (2026-10-08): the slice 2e specification
 
 The maintainer pushed rounds 37 to 39 to main.
