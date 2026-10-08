@@ -1,6 +1,7 @@
 # Specification: three-stage model — stage 2, the crossed random-intercept GLMM (Phase 2f-3)
 
-- Status: Draft, awaiting approval (D-41). No 2f-3 code is written before approval (NN-2).
+- Status: Approved by the maintainer, 2026-10-08 (D-41), with X-030 and OI-59 as proposed; T-opt's values
+  proposed in D-42.
 - Builds on: [three-stage-spike.md](three-stage-spike.md) (D-38), 2f-1 (prepared records) and 2f-2
   (compressed cells, X-029).
 - Decision references: D-41; X-030; OI-59.
@@ -75,7 +76,8 @@ are OI-59.
 
 ## 7. Validation plan
 
-Fixtures (next round), on ts-golden, ts-synthetic and a case with hospital labels shuffled (σ_c near 0):
+Fixtures (round 51, calibrated in [three-stage-calibration.md](../../parity/three-stage-calibration.md)), on ts-golden,
+ts-synthetic and ts-shuffled (hospital labels shuffled, σ_c near 0.09):
 pprof_py's stage 2 at its default and tight (`tol_outer` 1e-12) settings (σ's, μ, BLUPs, D); D and û at
 three fixed parameter points with its PIRLS converged to 1e-14 (function level); `glmer`'s optimum at
 bobyqa `rhoend` 1e-12 (σ's, μ, BLUPs) and its deviance function at the same points (with the saturated
@@ -90,3 +92,18 @@ than 1e-9 relative). Negative controls: an offset shifted by 0.01, one outcome f
 |---|---|---|---|
 | X-030 | Stage 2's optimum: pprof_py stops Nelder–Mead on changes of D of 1e-7 and lme4 differs from it by 7.8e-6 in σ_c; pprof_spark minimizes the exactly converged Laplace deviance to a gradient tolerance | D (with a new tolerance class) | Accept; define T-opt from the fixtures' calibration, for approval under NN-9 |
 | OI-59 | The Schur complement is dense on the smaller set of levels; at the envelope (thousands of hospitals and facilities) a sparse factorization or an executor path may be needed | — | Measure at package scale (D-28) |
+
+## 9. Calibration findings (round 51)
+
+1. T-opt (D-42): rtol 2e-4, atol 1e-6 under the element-wise rule. pprof_py's tight run against `glmer` is
+   at most 0.48 of it (ts-shuffled's cluster BLUPs) on the cases with integral outcomes; its default run
+   against its tight run at most 1.7e-4 of it; the controls (offsets + 0.01; the first five events
+   flipped) at least 23.9 times outside. A single flipped outcome moved σ only 6 times T-opt on
+   ts-shuffled, so the control flips five events.
+2. lme4 with fractional outcomes: on ts-synthetic, whose providers without events or with only events
+   get a fractional `y_adj`, `glmer`'s deviance function differs from pprof_py's by a parameter-dependent
+   amount (0.262, 0.298 and 0.320 at the three points after its saturated constant) and its optimum by
+   8.6e-4 in σₚ; tightening lme4's `tolPwrss` to 1e-13 changes this by less than 1e-5. lme4's binomial
+   likelihood treats non-integer successes differently, so `glmer` is informational for such cases;
+   pprof_py's continuous `y_adj` is the reference. On integral outcomes lme4's deviance function is within
+   its PIRLS tolerance of pprof_py's (5.9e-4 at most at the fixed points).

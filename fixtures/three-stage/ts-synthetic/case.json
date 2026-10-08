@@ -9,5 +9,6 @@
  "id": "ts-synthetic",
  "rows": 1776,
  "seed": 31,
+ "stage2": true,
  "stage3": true
 }

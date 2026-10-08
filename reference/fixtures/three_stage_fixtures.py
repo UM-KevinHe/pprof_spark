@@ -28,8 +28,10 @@ CUTOFF = 10
 CASES = (
     {"id": "ts-golden-prep", "source": "glmm_prep/raw.csv", "features": ["age"], "r_prep": True},
     {"id": "ts-golden", "source": "three_stage/raw.csv", "features": ["age", "diabetes", "chf", "comorb", "female"],
-     "r_stage23": True, "stage3": True},
-    {"id": "ts-synthetic", "seed": 31, "features": ["x1", "x2", "x3"], "stage3": True},
+     "r_stage23": True, "stage3": True, "stage2": True},
+    {"id": "ts-synthetic", "seed": 31, "features": ["x1", "x2", "x3"], "stage3": True, "stage2": True},
+    {"id": "ts-shuffled", "source": "three_stage/raw.csv", "shuffle_hosp_seed": 5,
+     "features": ["age", "diabetes", "chf", "comorb", "female"], "stage2": True},
 )
 OPTIONS = {
     "cutoff": CUTOFF, "tight": TIGHT,
@@ -42,6 +44,12 @@ OPTIONS = {
               "1 to 3; marginal log-likelihood and score at the start and at start + 0.05 (k mod 5 - 2); sigma 1e-4 and the "
               "sigma = 0 limit (Newton in numpy); controls sigma + 0.01 and one y_adj flipped; Gauss-Hermite rules "
               "from mpmath (50 digits) and numpy's hermgauss",
+    "stage2": "slice 2f-3: LogisticRandomEffectModel(provider fac, cluster hosp, offset stage1_offset, y_adj) on the "
+              "pipeline's prepared data, defaults and tol_outer 1e-12 with max_iter_outer 5000: sigmas, intercept, BLUPs, "
+              "the Laplace deviance there; deviance and u at three fixed points with tol_pirls 1e-14 from u = 0; "
+              "controls: offsets + 0.01 and the first five events flipped (tight); ts-shuffled permutes hosp (seed 5)",
+    "r_stage2": "glmer(y_adj ~ 1 + (1 | fac) + (1 | hosp) + offset(stage1_offset), binomial, nAGQ = 1, bobyqa rhoend "
+                "1e-12): theta, intercept, ranef; its deviance function at the fixed points; the saturated constant",
     "golden": "pprof_py tests/data/glmm_prep (R glmm.data.prep) and tests/data/three_stage (R stage 1 beta, "
               "glmer sigma, glmm.fac.hosp gamma and SRR), files checked against REFERENCE.lock",
 }
@@ -218,6 +226,72 @@ def stage3_outputs(df, features):
                                   "flipped_y_adj": hexes(fit(tol=1e-10, data=flipped).gamma_)}}
 
 
+def stage2_outputs(df, features, case_dir):
+    """Slice 2f-3 (docs/spec/logistic/three-stage-stage2.md): pprof_py's stage 2 on its pipeline's data, and
+    lme4's glmer and deviance function on the same data (R's outputs returned separately)."""
+    from pprof_py import LogisticThreeStageModel
+    from pprof_py.models.logistic.random_effect import LogisticRandomEffectModel
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        pipeline = LogisticThreeStageModel().fit(df, "Y", list(features), "fac", "hosp")
+    d = pipeline.data_
+
+    def fit(data=d, **control):
+        model = LogisticRandomEffectModel(verbose=False, **control)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            model.fit(data, y_var="y_adj", x_vars=None, provider_var="fac", cluster_vars=["hosp"],
+                      offset_var="stage1_offset", verbose=False)
+        return model
+
+    def exact(model, sigma, mu):
+        model.tol_pirls, model.max_iter_pirls = 1e-14, 500
+        state = model._pirls(sigma=np.asarray(sigma, dtype=float), beta0=np.array([mu]), u0=np.zeros(model._q), update_beta=False)
+        return float(model._laplace_deviance(np.asarray(sigma, dtype=float), np.array([mu]), state.u)), state.u
+
+    def summary(model):
+        sigma = [model.get_sigma("fac"), model.get_sigma("hosp")]
+        mu = float(model.coefficients_["beta"]["(Intercept)"])
+        fac, hosp = model.get_random_effects("fac"), model.get_random_effects("hosp")
+        return {"sigma": hexes(sigma), "intercept": hexes([mu]),
+                "providers": [str(v) for v in fac.index], "blup_providers": hexes(fac.to_numpy(float)),
+                "clusters": [str(v) for v in hosp.index], "blup_clusters": hexes(hosp.to_numpy(float)),
+                "deviance": hexes([exact(model, sigma, mu)[0]])}
+
+    default, tight = fit(), fit(tol_outer=1e-12, max_iter_outer=5000)
+    t = summary(tight)
+    sigma_t = [float.fromhex(v) for v in t["sigma"]]
+    mu_t = float.fromhex(t["intercept"][0])
+    points = [("optimum", sigma_t, mu_t), ("fixed", [0.5, 0.3], -0.2), ("boundary", [0.3, 0.0], mu_t)]
+    function = {}
+    for name, sigma, mu in points:
+        dev, u = exact(tight, sigma, mu)
+        function[name] = {"sigma": hexes(sigma), "intercept": hexes([mu]), "deviance": hexes([dev]), "u": hexes(u)}
+    shifted = d.assign(stage1_offset=d["stage1_offset"] + 0.01)
+    flipped = d.copy()  # the first five events become non-events (one flip, or mixed flips, move too little)
+    events = flipped.index[flipped["y_adj"].to_numpy() >= 0.5][:5]
+    flipped.loc[events, "y_adj"] = 1.0 - flipped.loc[events, "y_adj"].to_numpy()
+    data_path = os.path.join(case_dir, "stage2.csv")
+    out = d[["fac", "hosp", "y_adj", "stage1_offset"]].copy()
+    out["fac"], out["hosp"] = out["fac"].astype(str), out["hosp"].astype(str)
+    out.to_csv(data_path, index=False)
+    points_path = os.path.join(case_dir, "points.txt")
+    with open(points_path, "w") as handle:
+        for _, sigma, mu in points:
+            handle.write(",".join(float(v).hex() for v in (*sigma, mu)) + "\n")
+    subprocess.run(["Rscript", os.path.join(HERE, "three_stage_glmer.R"), data_path, points_path,
+                    os.path.join(case_dir, "glmer.txt")], check=True)
+    r = {}
+    for line in open(os.path.join(case_dir, "glmer.txt")):
+        key, values = line.rstrip("\n").split("\t")
+        r[key] = values.split(",") if key.endswith("_levels") else hexes([float.fromhex(v) for v in values.split(",")])
+    for path in (data_path, points_path, os.path.join(case_dir, "glmer.txt")):
+        os.remove(path)
+    return ({"default": summary(default), "tight": t, "function": function,
+             "negative_controls": {"offset_plus_0.01": summary(fit(shifted, tol_outer=1e-12, max_iter_outer=5000)),
+                                   "five_events_flipped": summary(fit(flipped, tol_outer=1e-12, max_iter_outer=5000))}}, r)
+
+
 def gauss_hermite():
     """Gauss-Hermite rules for weight e^(-t^2): mpmath at 50 digits, and numpy's hermgauss beside them."""
     import mpmath
@@ -257,6 +331,8 @@ def generate(out, inputs, lock, write_json):
             shutil.copyfile(os.path.join(inputs, "three-stage", case["id"], "input.csv"), os.path.join(case_dir, "input.csv"))
         elif "source" in case:
             df = pd.read_csv(golden_file(lock, case["source"]))
+            if "shuffle_hosp_seed" in case:  # hospital labels carry no effect, so sigma_c is near 0
+                df["hosp"] = np.random.Generator(np.random.PCG64(case["shuffle_hosp_seed"])).permutation(df["hosp"].to_numpy())
             if "rid" not in df.columns:
                 df.insert(0, "rid", np.arange(1, len(df) + 1))
             df.to_csv(os.path.join(case_dir, "input.csv"), index=False)
@@ -274,7 +350,14 @@ def generate(out, inputs, lock, write_json):
             reference = json.load(open(os.path.join(case_dir, "pprof_py.json")))
             reference["stage3"] = stage3_outputs(df, features)
             write_json(os.path.join(case_dir, "pprof_py.json"), reference)
+        r_stage2 = None
+        if case.get("stage2"):
+            reference = json.load(open(os.path.join(case_dir, "pprof_py.json")))
+            reference["stage2"], r_stage2 = stage2_outputs(df, features, case_dir)
+            write_json(os.path.join(case_dir, "pprof_py.json"), reference)
         r = r_golden(lock, case, df)
+        if r_stage2 is not None:
+            r["glmer_stage2"] = r_stage2
         r["glm_stage1"] = {"beta": r_stage1(df, features, case_dir)}
         write_json(os.path.join(case_dir, "r_threestage.json"), r)
         names.append(case["id"])

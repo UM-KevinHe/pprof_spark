@@ -19,7 +19,8 @@
   "three-stage": [
    "ts-golden-prep",
    "ts-golden",
-   "ts-synthetic"
+   "ts-synthetic",
+   "ts-shuffled"
   ]
  },
  "files": {
@@ -77,14 +78,18 @@
   "three-stage/ts-golden-prep/input.csv": "bd683ab395f317a4659334047d2650f4bf080e459596db9d8edbd86f3179080a",
   "three-stage/ts-golden-prep/pprof_py.json": "b2b260183392cde16dadc0b222df69feb14dbe0aabb6eec84d54362bf9c75811",
   "three-stage/ts-golden-prep/r_threestage.json": "4fbb739953318dd2cdd4949a71a96cf4be540594d1408d1ee557f046f6c58295",
-  "three-stage/ts-golden/case.json": "b5ea62940b227253e52eb2c6addb32e2f8ca9aa78f74537ccc76907f58ec618a",
+  "three-stage/ts-golden/case.json": "de9c4cb95486d6cbfb9eeb8648da1900fa86614dba0e8e6ce649579d2ad37590",
   "three-stage/ts-golden/input.csv": "29567fb8f7801d2c32cd0b6031d4c7e0ded8a3387adff68c025088664999f76b",
-  "three-stage/ts-golden/pprof_py.json": "76986850b2cb1b9453d7c4e1c2cfd5e0ebf786abc21bd5d6ec446a3a6e56c4e4",
-  "three-stage/ts-golden/r_threestage.json": "6cb89d19c2f248b0fe7ccb7beb99d5c1ba64af02d9c4352d0f46291ee1684037",
-  "three-stage/ts-synthetic/case.json": "afabfcbba2d883158ea6749088438bc05838be71f7cb8b3657aec8e51df55551",
+  "three-stage/ts-golden/pprof_py.json": "d1fb0b8553453fc1fb575d621df966dec4b2e34648d5799a473f6a0e1abb2057",
+  "three-stage/ts-golden/r_threestage.json": "91c595676516865fb40f16b482cd766701e01c10c0f2d11ed2e760c2574c9092",
+  "three-stage/ts-shuffled/case.json": "978929c98d4f77f0937b8d5bc1c61f0feee61295c1145444c43fcfa83a97c805",
+  "three-stage/ts-shuffled/input.csv": "dc9e656810f807c857acbd84fe5b20094d7459c72e70de15cea9249b690f4326",
+  "three-stage/ts-shuffled/pprof_py.json": "13026ada0db602b09c0bfbeaa74b0ba3bbdea954bf21e5da9fdf1e8b7a420734",
+  "three-stage/ts-shuffled/r_threestage.json": "f530feeed10bfc606c074caf230b172de65a7f03a5b8bb4c68dacdd31eefcebd",
+  "three-stage/ts-synthetic/case.json": "79dfda01fbf795346d819ed2b405794cbf9a0ce0fe501d363ca244b5dcd40bdf",
   "three-stage/ts-synthetic/input.csv": "716dffab729e9e1e5aa38be7333a9eee91a56d7db0672242a31d83281d4c0ddb",
-  "three-stage/ts-synthetic/pprof_py.json": "3c2f0b895615915a1403ad1e9fa3ebca20fb91b1c903812c254b881d215b03c8",
-  "three-stage/ts-synthetic/r_threestage.json": "b84b1221a2acfd7899256aefbcf732dd9530c81ed6f9ca5687ba9a55bf189142"
+  "three-stage/ts-synthetic/pprof_py.json": "561c60a0300b2456eb277ffe55b8bca4319f0dca3e9a10518d9559db056d87a1",
+  "three-stage/ts-synthetic/r_threestage.json": "c0dfd51e3f83a76a59c4a97fb1dc83c50ff8e61ab3f2454089d451ef7f3cd5d6"
  },
  "formatVersion": 1,
  "generator": "reference/fixtures/generate.py",
@@ -114,7 +119,9 @@
    "golden": "pprof_py tests/data/glmm_prep (R glmm.data.prep) and tests/data/three_stage (R stage 1 beta, glmer sigma, glmm.fac.hosp gamma and SRR), files checked against REFERENCE.lock",
    "preparation": "pprof_py glmm_data_prep(data, 'Y', 'fac', 'hosp', cutoff=10); cells keyed hosp U+001F fac",
    "r_stage1": "glm(Y ~ 0 + cell + features, binomial, epsilon 1e-15, maxit 200) on the included rows",
+   "r_stage2": "glmer(y_adj ~ 1 + (1 | fac) + (1 | hosp) + offset(stage1_offset), binomial, nAGQ = 1, bobyqa rhoend 1e-12): theta, intercept, ranef; its deviance function at the fixed points; the saturated constant",
    "stage1": "LogisticFixedEffectModel(use_dataprep=False, screen_providers=False).fit(included rows, provider_var='cell_id'), default and tol 1e-13; offset = features @ beta (default fit)",
+   "stage2": "slice 2f-3: LogisticRandomEffectModel(provider fac, cluster hosp, offset stage1_offset, y_adj) on the pipeline's prepared data, defaults and tol_outer 1e-12 with max_iter_outer 5000: sigmas, intercept, BLUPs, the Laplace deviance there; deviance and u at three fixed points with tol_pirls 1e-14 from u = 0; controls: offsets + 0.01 and the first five events flipped (tight); ts-shuffled permutes hosp (seed 5)",
    "stage3": "slice 2f-2: LogisticThreeStageModel() (marginal) gives beta, sigma and the start; LogisticFERandomClusterModel(tol=1e-5 and 1e-10).fit(beta=, sigma=, gamma_init=); iterates by max_iter 1 to 3; marginal log-likelihood and score at the start and at start + 0.05 (k mod 5 - 2); sigma 1e-4 and the sigma = 0 limit (Newton in numpy); controls sigma + 0.01 and one y_adj flipped; Gauss-Hermite rules from mpmath (50 digits) and numpy's hermgauss",
    "tight": {
     "tol": 1e-13
@@ -143,6 +150,7 @@
   },
   "python": "3.12.3",
   "r": {
+   "lme4": "1.1.35.1",
    "rcpp": "1.0.12",
    "rcpparmadillo": "0.12.8.1.0",
    "sandwich": "3.1.0",

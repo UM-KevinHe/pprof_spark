@@ -77,6 +77,7 @@ object Tolerances {
     "T-res",
     "T-meas",
     "T-test",
+    "T-opt",
     "T-part.objective",
     "T-part.parameters"
   )

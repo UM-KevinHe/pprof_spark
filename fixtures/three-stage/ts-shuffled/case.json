@@ -8,10 +8,9 @@
   "comorb",
   "female"
  ],
- "id": "ts-golden",
- "r_stage23": true,
+ "id": "ts-shuffled",
  "rows": 2637,
+ "shuffle_hosp_seed": 5,
  "source": "three_stage/raw.csv",
- "stage2": true,
- "stage3": true
+ "stage2": true
 }

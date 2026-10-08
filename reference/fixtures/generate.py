@@ -342,7 +342,7 @@ def main():
     r_version = subprocess.run(
         ["Rscript", "-e", 'cat(R.version$major, R.version$minor, as.character(packageVersion("survival")), '
          'as.character(packageVersion("Rcpp")), as.character(packageVersion("RcppArmadillo")), '
-         'as.character(packageVersion("sandwich")), sep=" ")'],
+         'as.character(packageVersion("sandwich")), as.character(packageVersion("lme4")), sep=" ")'],
         check=True, capture_output=True, text=True).stdout.split()
 
     cases = [case["id"] for case in CASES]
@@ -405,7 +405,7 @@ def main():
                       "python": sys.version.split()[0],
                       "packages": {name: metadata.version(name) for name in packages},
                       "r": {"version": f"{r_version[0]}.{r_version[1]}", "survival": r_version[2],
-                            "rcpp": r_version[3], "rcpparmadillo": r_version[4], "sandwich": r_version[5]},
+                            "rcpp": r_version[3], "rcpparmadillo": r_version[4], "sandwich": r_version[5], "lme4": r_version[6]},
                       "r_pprof": {"version": lock["r_pprof"]["version"], "commit": lock["r_pprof"]["commit"]}},
         "options": {"ties": list(TIES), "tight": TIGHT, "r_timefix": True,
                     "r_tight_control": "coxph.control(eps = 1e-11, iter.max = 100)",

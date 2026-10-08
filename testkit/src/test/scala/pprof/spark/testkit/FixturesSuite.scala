@@ -302,7 +302,7 @@ class FixturesSuite extends munit.FunSuite {
       Tolerances(cls).worstRatio(actual, expected)
     def texts(node: JsonNode): Seq[String] = (0 until node.size).map(node.get(_).asText())
     val cases = Fixtures.cases("three-stage")
-    assertEquals(cases, Seq("ts-golden-prep", "ts-golden", "ts-synthetic"))
+    assertEquals(cases, Seq("ts-golden-prep", "ts-golden", "ts-synthetic", "ts-shuffled"))
     cases.foreach { name =>
       val py = Fixtures.json(s"three-stage/$name/pprof_py.json")
       val r = Fixtures.json(s"three-stage/$name/r_threestage.json")
@@ -384,6 +384,42 @@ class FixturesSuite extends munit.FunSuite {
           Fixtures.doubles(rule.getValue.get(part))
         )
         assert(agreement <= 1.0, s"${rule.getKey} $part")
+      }
+    }
+  }
+
+  test(
+    "three-stage slice 2f-3: stage 2 agrees with glmer under T-opt on integral outcomes; controls fall outside"
+  ) {
+    def ratio(cls: String, actual: Array[Double], expected: Array[Double]): Double =
+      Tolerances(cls).worstRatio(actual, expected)
+    Seq("ts-golden", "ts-synthetic", "ts-shuffled").foreach { name =>
+      val s2 = Fixtures.json(s"three-stage/$name/pprof_py.json").get("stage2")
+      val r = Fixtures.json(s"three-stage/$name/r_threestage.json").get("glmer_stage2")
+      val tight = s2.get("tight")
+      val fractional = Fixtures.doubles(r.get("saturated"))(0) != 0.0
+      Seq("sigma", "intercept", "blup_providers", "blup_clusters").foreach { q =>
+        if (!fractional)
+          assert(
+            ratio("T-opt", Fixtures.doubles(tight.get(q)), Fixtures.doubles(r.get(q))) <= 1.0,
+            s"$name $q"
+          )
+        assert(
+          ratio(
+            "T-opt",
+            Fixtures.doubles(s2.get("default").get(q)),
+            Fixtures.doubles(tight.get(q))
+          ) <= 1.0,
+          s"$name $q default"
+        )
+      }
+      val reference =
+        Fixtures.doubles(tight.get("sigma")) ++ Fixtures.doubles(tight.get("intercept"))
+      s2.get("negative_controls").properties().asScala.foreach { control =>
+        val moved = Fixtures.doubles(control.getValue.get("sigma")) ++ Fixtures.doubles(
+          control.getValue.get("intercept")
+        )
+        assert(ratio("T-opt", moved, reference) >= Margin, s"$name ${control.getKey}")
       }
     }
   }

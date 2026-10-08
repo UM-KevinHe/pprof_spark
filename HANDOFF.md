@@ -101,6 +101,26 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 51 (2026-10-08): slice 2f-3 fixtures and calibration
+
+The maintainer approved D-41 with X-030 and OI-59 as proposed.
+
+- Generator: a fourth three-stage case, ts-shuffled (the golden data with hospital labels permuted, seed 5,
+  σ_c ≈ 0.086). On ts-golden, ts-synthetic and ts-shuffled: pprof_py's stage 2 on its pipeline's data at
+  its defaults and at `tol_outer` 1e-12 (σ's, μ, BLUPs, the exactly converged deviance), the deviance and û
+  at three fixed points (the optimum, (0.5, 0.3, −0.2), and σ_c = 0) with PIRLS to 1e-14 from zero, and two
+  controls (offsets + 0.01; the first five events flipped); `glmer` at bobyqa `rhoend` 1e-12 and its
+  deviance function at the points (`three_stage_glmer.R`; lme4 1.1-35.1 pinned in REFERENCE.lock, the
+  manifest and `fixtures.yml`).
+- T-opt (D-42, proposed): rtol 2e-4, atol 1e-6, added to `tolerances.conf` and testkit's classes. Calibration
+  passes: pprof_py against `glmer` at most 0.48 of T-opt on integral outcomes, default against tight at most
+  1.7e-4 of it, controls at least 23.9 times outside (a single flipped outcome moved σ only 6 times on
+  ts-shuffled, hence five events). On ts-synthetic (fractional `y_adj`) lme4's likelihood differs from
+  pprof_py's by a parameter-dependent amount (σₚ 8.6e-4 apart), unchanged by a tighter `tolPwrss`, so `glmer`
+  is informational there.
+- `FixturesSuite` checks slice 2f-3; testkit 19 pass under Classic Spark and Spark Connect; `ThreeStageSuite`
+  6/6 with ts-shuffled. Regeneration byte-identical; the full run with copied inputs reproduces every file.
+
 ## Round 50 (2026-10-08): the slice 2f-3 specification
 
 - `docs/spec/logistic/three-stage-stage2.md` (D-41, awaiting approval), read from pprof_py v0.7.0's
