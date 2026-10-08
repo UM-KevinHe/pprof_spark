@@ -142,6 +142,32 @@ def logistic(tol, manifest, fixtures):
             if not ok:
                 failures.append((case, label))
             rows.append((case, f"negative {label}", "T-test", f"{miss:.3g}", "yes" if ok else "**no**"))
+        # Slice 2d (D-36): pprof_py's standardized measures against R pprof's SM_output.logis_fe; controls.
+        standard = py["standardization"]
+        if "r_sm" in r:
+            table = standard["measures"]["median"]
+            for name, theirs in (("indirect_ratio", "indirect"), ("indirect_rate", "indirect"),
+                                 ("direct_ratio", "direct"), ("direct_rate", "direct")):
+                agreement = ratio(tol, "T-meas", table[theirs][name], r["r_sm"][name])
+                ok = agreement <= 1.0
+                if not ok:
+                    failures.append((case, f"{name} vs R"))
+                rows.append((case, f"{name} vs R SM_output.logis_fe", "T-meas", f"{agreement:.3g}", "yes" if ok else "**no**"))
+        controls2d = py["standardization_controls"]
+        targets = [("control reference_shifted: indirect expected", "T-meas",
+                    controls2d["reference_shifted"]["indirect_expected"], standard["measures"]["median"]["indirect"]["expected"]),
+                   ("control reference_shifted: direct-rate test z", "T-test",
+                    controls2d["reference_shifted"]["direct_rate_z"], standard["tests"]["direct_rate_auto"]["z"]),
+                   ("control flipped_outcome: direct-rate test z", "T-test",
+                    controls2d["flipped_outcome"]["direct_rate_z"], standard["tests"]["direct_rate_auto"]["z"]),
+                   ("control log scale for the logit: direct-rate test z", "T-test",
+                    standard["tests"]["direct_rate_log"]["z"], standard["tests"]["direct_rate_auto"]["z"])]
+        for label, cls, a, e in targets:
+            miss = ratio(tol, cls, a, e)
+            ok = miss >= MARGIN
+            if not ok:
+                failures.append((case, label))
+            rows.append((case, f"negative {label}", cls, f"{miss:.3g}", "yes" if ok else "**no**"))
         if "glm_nondegenerate" in r:
             informational.append(f"- {case}: pprof_py's tight β̂ against `glm` without the degenerate providers is "
                                  f"{ratio(tol, 'T-coef', py['tight']['beta'], r['glm_nondegenerate']['beta']):.3g} of T-coef "

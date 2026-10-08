@@ -1,6 +1,6 @@
 # Specification: logistic fixed-effect model — standardized measures (Phase 2d)
 
-- Status: Draft, awaiting approval (D-36). No 2d code is written before approval (NN-2).
+- Status: Approved by the maintainer, 2026-10-08 (D-36), with X-026 as recommended.
 - Builds on: slices 2a to 2c ([plan.md](plan.md)).
 - Decision references: D-36; X-026; OI-49, OI-58.
 - Reference: pprof_py v0.7.0 (`9320766`): `measures/logistic/fixed_effect.py`
@@ -100,7 +100,7 @@ the fit's (fingerprint, API-3). Python: `LogisticFixedEffectModel.standardized_m
 
 ## 7. Validation plan
 
-Fixtures (next round), every case: `calculate_standardized_measures` (indirect and direct; median,
+Fixtures (round 38, calibrated in [logistic-calibration.md](../../parity/logistic-calibration.md)), every case: `calculate_standardized_measures` (indirect and direct; median,
 mean and a number; with and without extreme observations), `standardized_measure` for the five
 measures (`model`; `robust` and `robust_fixed_beta` on lfe-clustered; indirect `null` and
 `fitted`), and `test_standardized` for each measure with its automatic scale and on the identity

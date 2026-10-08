@@ -29,7 +29,8 @@ FEATURES = ("x1", "x2", "x3")
 TRUE_BETA = (0.5, -0.3, 0.8)
 FIXED_BETA = (0.375, -0.1875, 0.0625)
 TIGHT = {"tol": 1e-13}
-R_PPROF_FILES = {"Fixed_effect.cpp": "src", "header.h": "src", "myomp.h": "src", "test.logis_fe.R": "R"}
+R_PPROF_FILES = {"Fixed_effect.cpp": "src", "header.h": "src", "myomp.h": "src", "test.logis_fe.R": "R",
+                 "SM_output.logis_fe.R": "R"}
 BASE_SIZES = [11 + (7 * j) % 50 for j in range(30)]
 
 CASES = (
@@ -60,6 +61,12 @@ OPTIONS = {
     "provider_tests": "slice 2c at the default fit: test() for poibin_exact (two_sided, greater, less; reference median, "
                       "mean and -0.5), score (median, mean), wald (median), bootstrap_exact (seed 1); controls with the "
                       "reference shifted by 0.01 and one outcome flipped; poibin-tails.json: mpmath tails at 60 digits",
+    "standardization": "slice 2d at the default fit: calculate_standardized_measures (indirect and direct; reference "
+                       "median, mean, -0.5; extreme observations with 50 trials), standardized_measure (five measures; "
+                       "model, robust and robust_fixed_beta variances; indirect variance null and fitted), "
+                       "test_standardized (each measure on its automatic scale, and on others); controls",
+    "r_standardization": "Bernoulli cases: R pprof's SM_output.logis_fe (sourced at the pinned commit) on the R SerBIN fit "
+                         "at tol 1e-8: indirect and direct, rate and ratio, null median",
     "r_tests": "Bernoulli cases: R pprof's test.logis_fe (sourced at the pinned commit; poibin 1.6) on the R SerBIN fit "
                "at tol 1e-8: exact.poisbinom (two.sided, greater, less) and the modified score test, null median",
     "serbin": "R pprof logis_BIN_fe_prov(threads = 1, max_iter = 10000, bound = 10, backtrack = TRUE, "
@@ -259,6 +266,63 @@ def provider_test_controls(model, df, case):
     return controls
 
 
+MEASURES = ("direct_rate", "direct_ratio", "indirect_ratio", "indirect_rate", "gamma")
+
+
+def standardization(model, case):
+    """Slice 2d (docs/spec/logistic/standardization.md) at the default fit: pprof_py's
+    calculate_standardized_measures, standardized_measure and test_standardized."""
+    from pprof_py.inference.standardized import standardized_measure
+    out = {"measures": {}, "measure": {}, "tests": {}}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for label, options in (("median", {}), ("mean", {"reference": "mean"}), ("value", {"reference": -0.5}),
+                               ("extreme", {"include_extreme_obs": True, "extreme_obs_total_n": 50.0})):
+            r = model.calculate_standardized_measures(stdz=["indirect", "direct"], **options)
+            out["measures"][label] = {
+                "indirect": {c: hexes(r["indirect"][c]) for c in ("indirect_ratio", "indirect_rate", "observed", "expected")},
+                "direct": {c: hexes(r["direct"][c]) for c in ("direct_ratio", "direct_rate", "observed", "expected", "n_pop")}}
+        variants = [(m, "model", "null") for m in MEASURES]
+        variants += [("indirect_ratio", "model", "fitted"), ("indirect_rate", "model", "fitted")]
+        if model.robust_variances_ is not None:
+            variants += [(m, v, "null") for m in ("direct_rate", "direct_ratio", "gamma") for v in ("robust", "robust_fixed_beta")]
+        for measure, variance, indirect_variance in variants:
+            f = standardized_measure(model, measure, variance=variance, indirect_variance=indirect_variance)
+            out["measure"][f"{measure}_{variance}_{indirect_variance}"] = {
+                "estimate": hexes(f.estimate), "se": hexes(f.se), "reference_value": hexes([f.reference_value])}
+        tests = [(m, "auto") for m in MEASURES] + [(m, "identity") for m in ("direct_rate", "direct_ratio")]
+        tests += [("direct_rate", "log")]
+        for measure, transform in tests:
+            t = model.test_standardized(measure, transform=transform)
+            out["tests"][f"{measure}_{transform}"] = {
+                "z": hexes(t["z_raw"]), "p": hexes(t["p_value"]),
+                "flag": [None if pd.isna(v) else int(v) for v in t["flag"]],
+                "ci_lower": hexes(t["ci_lower"]), "ci_upper": hexes(t["ci_upper"])}
+    return out
+
+
+def standardization_controls(model, df, case):
+    """Negative controls of slice 2d: the reference shifted by 0.01, and one outcome flipped."""
+    gamma = np.asarray(model.coefficients_["gamma"], dtype=float).ravel()
+    shifted = float(np.median(gamma)) + 0.01
+    out = {}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        r = model.calculate_standardized_measures(stdz=["indirect"], reference=shifted)
+        out["reference_shifted"] = {
+            "indirect_expected": hexes(r["indirect"]["expected"]),
+            "direct_rate_z": hexes(model.test_standardized("direct_rate", reference=shifted)["z_raw"])}
+        flipped = df.copy()
+        row = int(np.flatnonzero(flipped["provider"].to_numpy() == 1)[0])
+        if "n" in flipped.columns:
+            y, n = int(flipped.at[row, "y"]), int(flipped.at[row, "n"])
+            flipped.at[row, "y"] = y + 1 if y < n else y - 1
+        else:
+            flipped.at[row, "y"] = 1 - int(flipped.at[row, "y"])
+        out["flipped_outcome"] = {"direct_rate_z": hexes(fit(flipped).test_standardized("direct_rate")["z_raw"])}
+    return out
+
+
 def poibin_tail_fixture():
     """Function-level references: Poisson-binomial tails of fixed probability vectors from mpmath at 60
     digits (the exact recursion), with pprof_py's `poibin_tails` beside them (X-024)."""
@@ -380,7 +444,9 @@ def generate(out, inputs, lock, write_json):
             "default": default, "tight": tight, "iterates": iterates(df),
             "function": {"start": start, "fixed": fixed}, "negative_controls": negative_controls(df, case),
             "inference": {"default": inference(model, df), "tight": inference(tight_model, df)},
-            "provider_tests": provider_tests(model), "provider_test_controls": provider_test_controls(model, df, case)})
+            "provider_tests": provider_tests(model), "provider_test_controls": provider_test_controls(model, df, case),
+            "standardization": standardization(model, case),
+            "standardization_controls": standardization_controls(model, df, case)})
         write_json(os.path.join(case_dir, "r_logistic.json"), r_outputs(case_dir, case, default["excluded"], sources))
         names.append(case["id"])
     write_json(os.path.join(root, "poibin-tails.json"), poibin_tail_fixture())

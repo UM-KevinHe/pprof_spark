@@ -101,6 +101,23 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 38 (2026-10-08): slice 2d fixtures and calibration
+
+The maintainer approved D-36 with X-026 as recommended. Round 37 was not yet on main, so this
+round's patch applies after round 37's.
+
+- Generator: pprof_py's `calculate_standardized_measures` (indirect and direct; reference median, mean
+  and −0.5; R's extreme observations with 50 trials), `standardized_measure` (five measures; model,
+  robust and β-known variances where clusters exist; indirect variance at γ₀ and at γ̂ⱼ) and
+  `test_standardized` (each measure on its automatic scale, the direct ones also on the identity
+  scale, the direct rate also on the log scale), at the default fit; controls with the reference
+  shifted by 0.01 and one outcome flipped. R pprof's `SM_output.logis_fe` (sourced at the pinned commit,
+  checksum in REFERENCE.lock) on the R SerBIN fit for Bernoulli cases.
+- Calibration passes: pprof_py against R within 0.169 of T-meas (lfe-clustered's direct measures);
+  controls at least 4.4e5 times outside, including the log scale against the logit for the direct
+  rate. Regeneration byte-identical; the full run with copied inputs reproduces every file.
+- `FixturesSuite` checks slice 2d; testkit 16 pass under Classic Spark and Spark Connect.
+
 ## Round 37 (2026-10-08): the slice 2d specification
 
 - `docs/spec/logistic/standardization.md` (D-36, awaiting approval), read from pprof_py v0.7.0's

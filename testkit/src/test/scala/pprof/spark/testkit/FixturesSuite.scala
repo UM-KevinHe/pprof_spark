@@ -250,4 +250,48 @@ class FixturesSuite extends munit.FunSuite {
       }
     }
   }
+
+  test("logistic slice 2d: standardized measures agree with R pprof; controls fall far outside") {
+    def ratio(cls: String, actual: Array[Double], expected: Array[Double]): Double =
+      Tolerances(cls).worstRatio(actual, expected)
+    Fixtures.cases("logistic").foreach { name =>
+      val py = Fixtures.json(s"logistic/$name/pprof_py.json")
+      val r = Fixtures.json(s"logistic/$name/r_logistic.json")
+      val standard = py.get("standardization")
+      if (r.has("r_sm")) {
+        val table = standard.get("measures").get("median")
+        Seq(
+          "indirect_ratio" -> "indirect",
+          "indirect_rate" -> "indirect",
+          "direct_ratio" -> "direct",
+          "direct_rate" -> "direct"
+        )
+          .foreach { case (measure, kind) =>
+            val agreement =
+              ratio(
+                "T-meas",
+                Fixtures.doubles(table.get(kind).get(measure)),
+                Fixtures.doubles(r.get("r_sm").get(measure))
+              )
+            assert(agreement <= 1.0, s"$name $measure vs R: $agreement")
+          }
+      }
+      val controls = py.get("standardization_controls")
+      val auto = Fixtures.doubles(standard.get("tests").get("direct_rate_auto").get("z"))
+      val expected =
+        Fixtures.doubles(standard.get("measures").get("median").get("indirect").get("expected"))
+      assert(
+        ratio(
+          "T-meas",
+          Fixtures.doubles(controls.get("reference_shifted").get("indirect_expected")),
+          expected
+        ) >= Margin
+      )
+      Seq(
+        Fixtures.doubles(controls.get("reference_shifted").get("direct_rate_z")),
+        Fixtures.doubles(controls.get("flipped_outcome").get("direct_rate_z")),
+        Fixtures.doubles(standard.get("tests").get("direct_rate_log").get("z"))
+      ).foreach(control => assert(ratio("T-test", control, auto) >= Margin, name))
+    }
+  }
 }

@@ -123,5 +123,21 @@ if (!binomial) {
     emit(paste0("r_tests_", name, ".p"), r[["p value"]])
     emit(paste0("r_tests_", name, ".flag"), as.numeric(as.character(r$flag)))
   }
+  # Slice 2d: R pprof's SM_output.logis_fe on the same fit.
+  source(file.path(src, "SM_output.logis_fe.R"))
+  sm_object <- structure(list(
+    char_list = list(Y.char = "y", Z.char = features, ProvID.char = "provider"),
+    coefficient = list(gamma = matrix(as.vector(serbin_default$gamma), ncol = 1,
+                                      dimnames = list(names(table(e$provider)), "gamma")),
+                       beta = as.vector(serbin_default$beta)),
+    data_include = e[, c("y", features, "provider")],
+    linear_pred = as.vector(as.matrix(e[, features]) %*% as.vector(serbin_default$beta)),
+    obs = e$y), class = "logis_fe")
+  sm <- SM_output.logis_fe(sm_object, stdz = c("indirect", "direct"), measure = c("rate", "ratio"),
+                           null = "median", threads = 1)
+  emit("r_sm.indirect_ratio", sm$indirect.ratio)
+  emit("r_sm.indirect_rate", sm$indirect.rate)
+  emit("r_sm.direct_ratio", sm$direct.ratio)
+  emit("r_sm.direct_rate", sm$direct.rate)
 }
 writeLines(out, file.path(case_dir, "r_logistic.txt"))

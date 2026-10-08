@@ -103,14 +103,14 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-36: Slice 2d specification (Proposed, 2026-10-08)
+### D-36: Slice 2d specification (Accepted: approved by the maintainer, 2026-10-08)
 
 `docs/spec/logistic/standardization.md`: indirect and direct standardized ratios and rates, their
 standard errors (model-based, robust, β known; indirect variance at γ₀ or γ̂ⱼ), tests on a measure
 (identity, logit and log scales), R's extreme observations, the distributed plan, and the decision
 on OI-49: direct sums by binned Taylor expansions (bins of 0.1 on η, order 8), whose remainder is
-below rounding. Decision to approve with it: X-026 (class C). Awaiting the maintainer's approval;
-no 2d code before it (NN-2).
+below rounding. Decision to approve with it: X-026 (class C). Approved as written; fixtures and
+calibration in round 38.
 
 ### D-35: Slice 2c specification (Accepted: approved by the maintainer, 2026-10-08)
 
