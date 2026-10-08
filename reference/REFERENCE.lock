@@ -28,6 +28,8 @@ llvmlite = "0.50.0"
 r = "4.3.3"
 survival = "3.5-8"
 ubuntu_packages = ["r-base-core=4.3.3-2build2", "r-cran-survival=3.5-8-1"]
+# The logistic slice 2b fixtures (D-34) use sandwich 3.1-0 for the cluster-robust references.
+sandwich = "3.1-0"
 # Needed only by later families: glmnet 4.1-8 (penalized), lme4 1.1-35.1 (random effects).
 
 [r_pprof]

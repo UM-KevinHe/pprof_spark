@@ -39,6 +39,7 @@ CASES = (
     {"id": "lfe-shifted", "seed": 21, "sizes": BASE_SIZES, "shift": [50.0, -30.0, 0.0]},
     {"id": "lfe-binomial", "seed": 24, "sizes": [11 + (3 * j) % 30 for j in range(30)], "max_trials": 20},
     {"id": "lfe-many", "seed": 25, "sizes": [20 + j % 20 for j in range(500)]},
+    {"id": "lfe-clustered", "seed": 26, "sizes": BASE_SIZES, "patients": 3},
 )
 
 OPTIONS = {
@@ -49,6 +50,13 @@ OPTIONS = {
     "function_level": "SerbinAlgorithm._compute_scores_and_info and _loglikelihood at 'start' and 'fixed'",
     "glm": "glm(cbind(y, n - y) ~ 0 + factor(provider) + x1 + x2 + x3, binomial, "
            "control = glm.control(epsilon = 1e-15, maxit = 200)); loglik without sum(lchoose(n, y))",
+    "inference": "slice 2b at the default and tight fits: summary(test_method='lr' and 'score'), summary(null=0.25, "
+                 "alternative='greater' and 'less'), auc_, predict for the first 100 rows of fitted providers; with "
+                 "obs_id_var='patient' (lfe-clustered) robust_variances_ and summary(variance_type='robust')",
+    "r_inference": "glm cases: 2 (logLik(full) - logLik(reduced)), anova(reduced, full, test = 'Rao'), the Mann-Whitney "
+                   "AUC with rank() for Bernoulli rows, fitted values of the first 100 fitted rows; lfe-clustered: "
+                   "sandwich::vcovCL(full, cluster = interaction(provider, patient, drop = TRUE), type = 'HC0', "
+                   "cadjust = FALSE) and the beta-known variance A0 / I^2 from glm's residuals",
     "serbin": "R pprof logis_BIN_fe_prov(threads = 1, max_iter = 10000, bound = 10, backtrack = TRUE, "
               "stop = 'beta'), tol = 1e-8 (default) and 1e-13 (tight), on pprof_py's screened rows "
               "(binomial rows expanded to Bernoulli rows)",
@@ -102,6 +110,8 @@ def make_data(case):
     for name, shift in zip(FEATURES, case.get("shift", (0.0, 0.0, 0.0))):
         df[name] = df[name] + shift
     df.insert(0, "id", np.arange(len(df)))
+    if "patients" in case:  # rows id // 3 share a patient; patients at a boundary span two providers
+        df.insert(2, "patient", df["id"] // case["patients"])
     return df
 
 
@@ -110,7 +120,8 @@ def fit(df, **control):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         model.fit(df, x_vars=list(FEATURES), y_var="y", provider_var="provider",
-                  n_var="n" if "n" in df.columns else None, **control)
+                  n_var="n" if "n" in df.columns else None,
+                  obs_id_var="patient" if "patient" in df.columns else None, **control)
     return model
 
 
@@ -174,6 +185,32 @@ def function_values(model, gamma, beta):
             "schur": hexes(packed(schur))}
 
 
+def inference(model, df):
+    """Slice 2b (docs/spec/logistic/covariate-inference.md): LR and score tests, Wald variants, AUC,
+    predictions for the first 100 rows of fitted providers, and robust variances with clusters."""
+    out = {}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for test in ("lr", "score"):
+            s = model.summary(test_method=test)
+            out[test] = {"stat": hexes(s["stat"]), "p": hexes(s["p_value"])}
+        for alternative in ("greater", "less"):
+            s = model.summary(null=0.25, alternative=alternative)
+            out[f"wald_{alternative}"] = {"stat": hexes(s["stat"]), "p": hexes(s["p_value"]),
+                                          "ci_lower": hexes(s["ci_lower"]), "ci_upper": hexes(s["ci_upper"])}
+        out["auc"] = [] if model.auc_ is None else hexes([model.auc_])
+        rows = df[df["provider"].isin(model.provider_ids_)].head(100)
+        out["predict_ids"] = [int(i) for i in rows["id"]]
+        out["predict"] = hexes(model.predict(rows, x_vars=list(FEATURES), provider_var="provider"))
+        if model.robust_variances_ is not None:
+            robust = model.robust_variances_
+            out["robust"] = {"var_beta": hexes(packed(robust["beta"])), "var_case_mix": hexes(robust["gamma"]),
+                             "var_fixed_beta": hexes(robust["gamma_fixed_beta"])}
+            s = model.summary(variance_type="robust")
+            out["wald_robust"] = {"stat": hexes(s["stat"]), "p": hexes(s["p_value"]), "se": hexes(s["std_error"])}
+    return out
+
+
 def negative_controls(df, case):
     controls = {}
     flipped = df.copy()
@@ -183,13 +220,21 @@ def negative_controls(df, case):
         flipped.at[row, "y"] = y + 1 if y < n else y - 1
     else:
         flipped.at[row, "y"] = 1 - int(flipped.at[row, "y"])
-    controls["flipped_outcome"] = fitted(flipped, **TIGHT)[1]
+    flipped_model, controls["flipped_outcome"] = fitted(flipped, **TIGHT)
+    controls["flipped_outcome"]["inference"] = inference(flipped_model, flipped)
     if case.get("zero_events") or case.get("all_events"):
-        controls["bound_5"] = fitted(df, bound=5.0, **TIGHT)[1]
+        bound_model, controls["bound_5"] = fitted(df, bound=5.0, **TIGHT)
+        controls["bound_5"]["inference"] = inference(bound_model, df)
     if "n" in df.columns:
         added = df.copy()
         added.at[0, "n"] = int(added.at[0, "n"]) + 1
-        controls["one_trial_added"] = fitted(added, **TIGHT)[1]
+        added_model, controls["one_trial_added"] = fitted(added, **TIGHT)
+        controls["one_trial_added"]["inference"] = inference(added_model, added)
+    if "patient" in df.columns:
+        shifted = df.copy()
+        shifted["patient"] = (shifted["id"] + 1) // case["patients"]
+        shifted_model, controls["cluster_shifted"] = fitted(shifted, **TIGHT)
+        controls["cluster_shifted"]["inference"] = inference(shifted_model, shifted)
     return controls
 
 
@@ -213,7 +258,8 @@ def r_pprof_sources(lock, directory):
 def r_outputs(case_dir, case, excluded, sources):
     degenerate = case.get("zero_events", []) + case.get("all_events", [])
     subprocess.run(["Rscript", os.path.join(HERE, "logistic_r.R"), case_dir, str("max_trials" in case).lower(),
-                    sources, ",".join(map(str, excluded)), ",".join(map(str, degenerate))], check=True)
+                    sources, ",".join(map(str, excluded)), ",".join(map(str, degenerate)),
+                    str("patients" in case).lower()], check=True)
     path = os.path.join(case_dir, "r_logistic.txt")
     result = {}
     with open(path, encoding="utf-8") as handle:
@@ -253,7 +299,8 @@ def generate(out, inputs, lock, write_json):
         write_json(os.path.join(case_dir, "case.json"), definition)
         write_json(os.path.join(case_dir, "pprof_py.json"), {
             "default": default, "tight": tight, "iterates": iterates(df),
-            "function": {"start": start, "fixed": fixed}, "negative_controls": negative_controls(df, case)})
+            "function": {"start": start, "fixed": fixed}, "negative_controls": negative_controls(df, case),
+            "inference": {"default": inference(model, df), "tight": inference(tight_model, df)}})
         write_json(os.path.join(case_dir, "r_logistic.json"), r_outputs(case_dir, case, default["excluded"], sources))
         names.append(case["id"])
     return names

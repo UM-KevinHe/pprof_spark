@@ -103,14 +103,14 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-34: Slice 2b specification (Proposed, 2026-10-07)
+### D-34: Slice 2b specification (Accepted: approved by the maintainer, 2026-10-07)
 
 `docs/spec/logistic/covariate-inference.md`: Wald variants (null, sidedness, robust), likelihood-ratio
 and score tests by refits on the working set, cluster-robust variances of β̂ and of the provider
 effects (at the average case mix and with β known), prediction and AUC, with their distributed
 plan and validation. Decisions to approve with it: X-022 (fail with counts for unknown providers;
 no AUC for two outcome values other than 0 and 1; class C) and X-023 (clusters nested in providers,
-following pprof_py). Awaiting the maintainer's approval; no 2b code before it (NN-2).
+following pprof_py). Approved as written; fixtures and calibration in round 32.
 
 ### D-33: Python wrappers' design, ADR-0009 (Accepted: approved by the maintainer, 2026-10-07)
 

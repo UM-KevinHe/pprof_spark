@@ -101,6 +101,23 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 32 (2026-10-07): slice 2b fixtures and calibration
+
+The maintainer approved D-34 with X-022 and X-023 as recommended.
+
+- Generator: a sixth case, lfe-clustered (lfe-base's design with `patient = id div 3`, so patients
+  repeat and 25 span two providers); for every case pprof_py's LR and score tests, Wald variants
+  (null 0.25, `greater` and `less`), AUC, predictions of the first 100 fitted rows, at the default
+  and tight fits, and with clusters its robust variances; R's `glm` LR, Rao score, AUC and
+  predictions, and `vcovCL` (provider-patient clusters, `drop = TRUE`) with the β-known variance.
+  Controls gain those outputs; lfe-clustered adds a shifted-cluster control. sandwich 3.1-0 pinned
+  (REFERENCE.lock, `fixtures.yml`, manifest).
+- Round 26's values are unchanged; regeneration and the full run with copied inputs are
+  byte-identical. Calibration passes: worst 2b agreement 2.1e-4 of T-test (score against Rao,
+  lfe-many), robust variances within 1.3e-7 of T-var; every control at least ten times outside.
+- `FixturesSuite` checks slice 2b in CI; testkit 14 pass; the engine's logistic parity suites pass on
+  the six cases (24).
+
 ## Round 31 (2026-10-07): the slice 2b specification
 
 - `docs/spec/logistic/covariate-inference.md` (D-34, awaiting approval), read from pprof_py v0.7.0's

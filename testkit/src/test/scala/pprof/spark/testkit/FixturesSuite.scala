@@ -122,10 +122,61 @@ class FixturesSuite extends munit.FunSuite {
         val agreement = ratio("T-coef", py.get(fit).get(q), r.get(s"serbin_$fit").get(q))
         assert(agreement <= 1.0, s"$name $fit $q: pprof_py vs R SerBIN is $agreement of T-coef")
       }
-      py.get("negative_controls").properties().asScala.foreach { control =>
-        quantities.foreach { case (q, cls) =>
-          val miss = ratio(cls, control.getValue.get(q), py.get("tight").get(q))
-          assert(miss >= Margin, s"$name $q: ${control.getKey} is $miss of $cls")
+      py.get("negative_controls")
+        .properties()
+        .asScala
+        .filter(_.getKey != "cluster_shifted")
+        .foreach { control =>
+          quantities.foreach { case (q, cls) =>
+            val miss = ratio(cls, control.getValue.get(q), py.get("tight").get(q))
+            assert(miss >= Margin, s"$name $q: ${control.getKey} is $miss of $cls")
+          }
+        }
+    }
+  }
+
+  test(
+    "logistic slice 2b: tests, AUC, predictions and robust variances agree with R; controls fall far outside"
+  ) {
+    def ratio(cls: String, actual: JsonNode, expected: JsonNode): Double =
+      Tolerances(cls).worstRatio(Fixtures.doubles(actual), Fixtures.doubles(expected))
+    val robust = Seq("var_beta", "var_case_mix", "var_fixed_beta")
+    Fixtures.cases("logistic").foreach { name =>
+      val inference = Fixtures.json(s"logistic/$name/pprof_py.json").get("inference").get("tight")
+      val py = Fixtures.json(s"logistic/$name/pprof_py.json")
+      val r = Fixtures.json(s"logistic/$name/r_logistic.json")
+      if (r.has("glm_tests")) {
+        val t = r.get("glm_tests")
+        val checks = Seq(
+          ("LR", "T-test", inference.get("lr").get("stat"), t.get("lr")),
+          ("score", "T-test", inference.get("score").get("stat"), t.get("rao")),
+          ("predictions", "T-meas", inference.get("predict"), t.get("predict"))
+        ) ++ (if (t.has("auc")) Seq(("AUC", "T-meas", inference.get("auc"), t.get("auc")))
+              else Seq.empty) ++
+          (if (r.has("glm_robust"))
+             robust
+               .map(q => (q, "T-var", inference.get("robust").get(q), r.get("glm_robust").get(q)))
+           else Seq.empty)
+        checks.foreach { case (what, cls, a, e) =>
+          val agreement = ratio(cls, a, e)
+          assert(agreement <= 1.0, s"$name $what: pprof_py vs R is $agreement of $cls")
+        }
+      }
+      py.get("negative_controls").properties().asScala.foreach { entry =>
+        val c = entry.getValue.get("inference")
+        val targets =
+          if (entry.getKey == "cluster_shifted")
+            robust.map(q => (q, "T-var", c.get("robust").get(q), inference.get("robust").get(q)))
+          else
+            Seq(
+              ("LR", "T-test", c.get("lr").get("stat"), inference.get("lr").get("stat")),
+              ("score", "T-test", c.get("score").get("stat"), inference.get("score").get("stat"))
+            ) ++ (if (entry.getKey == "flipped_outcome" && inference.get("auc").size > 0)
+                    Seq(("AUC", "T-meas", c.get("auc"), inference.get("auc")))
+                  else Seq.empty)
+        targets.foreach { case (what, cls, a, e) =>
+          val miss = ratio(cls, a, e)
+          assert(miss >= Margin, s"$name ${entry.getKey} $what: $miss of $cls")
         }
       }
     }

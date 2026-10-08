@@ -44,10 +44,45 @@ glm_outputs <- function(dd, label) {
   emit(paste0(label, ".loglik"), as.numeric(logLik(f)) - sum(lchoose(dd$n, dd$y)))
   emit(paste0(label, ".iterations"), f$iter)
 }
+clustered <- length(args) >= 6 && args[[6]] == "true"
+inference_outputs <- function(dd) {
+  # Slice 2b: LR and Rao score tests, AUC (Bernoulli rows), predictions, cluster-robust variances.
+  dd$provider <- factor(dd$provider)
+  ctl <- glm.control(epsilon = 1e-15, maxit = 200)
+  full <- glm(cbind(y, n - y) ~ 0 + provider + x1 + x2 + x3, family = binomial(), data = dd, control = ctl)
+  reduced <- lapply(features, function(v) update(full, as.formula(paste(". ~ . -", v))))
+  emit("glm_tests.lr", sapply(reduced, function(r) 2 * (as.numeric(logLik(full)) - as.numeric(logLik(r)))))
+  emit("glm_tests.rao", sapply(reduced, function(r) anova(r, full, test = "Rao")$Rao[2]))
+  if (all(dd$n == 1)) {
+    ranks <- rank(fitted(full))
+    positive <- dd$y == 1
+    emit("glm_tests.auc", (sum(ranks[positive]) - sum(positive) * (sum(positive) + 1) / 2) /
+           (sum(positive) * sum(!positive)))
+  }
+  emit("glm_tests.predict", unname(fitted(full)[seq_len(min(100, nrow(dd)))]))
+  if (clustered) {
+    k <- nlevels(dd$provider)
+    b <- (k + 1):(k + length(features))
+    V <- sandwich::vcovCL(full, cluster = interaction(dd$provider, dd$patient, drop = TRUE),
+                          type = "HC0", cadjust = FALSE)
+    xbar <- colSums(dd$n * as.matrix(dd[, features])) / sum(dd$n)
+    emit("glm_robust.var_beta", packed(V[b, b]))
+    emit("glm_robust.var_case_mix", sapply(seq_len(k), function(j)
+      V[j, j] + 2 * sum(xbar * V[b, j]) + drop(t(xbar) %*% V[b, b] %*% xbar)))
+    p <- fitted(full)
+    residual <- dd$y - dd$n * p
+    information <- dd$n * p * (1 - p)
+    emit("glm_robust.var_fixed_beta", sapply(levels(dd$provider), function(j) {
+      rows <- dd$provider == j
+      sum(tapply(residual[rows], dd$patient[rows], sum)^2) / sum(information[rows])^2
+    }))
+  }
+}
 if (length(degenerate)) {
   glm_outputs(d[!(d$provider %in% degenerate), ], "glm_nondegenerate")
 } else {
   glm_outputs(d, "glm")
+  inference_outputs(d)
 }
 
 suppressMessages(Rcpp::sourceCpp(file.path(src, "Fixed_effect.cpp"), cacheDir = file.path(src, "cache"),

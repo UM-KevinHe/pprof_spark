@@ -43,9 +43,9 @@ def main(regenerated, committed):
                 continue
             for key, expected in old.items():
                 actual = new[key]
-                scale = float(np.max(np.abs(expected)))
+                scale = float(np.max(np.abs(expected[np.isfinite(expected)]), initial=0.0))
                 allowed = RTOL * np.maximum(np.abs(expected), scale)
-                diff = np.abs(actual - expected)
+                diff = np.where(actual == expected, 0.0, np.abs(actual - expected))  # equal infinities
                 ratio = float(np.max(np.where(diff == 0.0, 0.0, diff / np.where(allowed == 0.0, 1e-300, allowed))))
                 worst = max(worst, ratio)
                 if ratio > 1.0:

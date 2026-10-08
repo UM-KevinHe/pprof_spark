@@ -1,6 +1,6 @@
 # Specification: logistic fixed-effect model — covariate tests, robust variance, prediction (Phase 2b)
 
-- Status: Draft, awaiting approval (D-34). No 2b code is written before approval (NN-2).
+- Status: Approved by the maintainer, 2026-10-07 (D-34), with X-022 and X-023 as recommended.
 - Builds on: [fixed-effect-estimation.md](fixed-effect-estimation.md) (2a, D-30); plan
   [plan.md](plan.md) (slice 2b).
 - Decision references: D-34; discrepancies X-022 and X-023.
@@ -128,7 +128,8 @@ the score statistics and robust variances within 1.1e-15.
 
 ## 9. Validation plan
 
-Fixtures (next round): every 2a case gains pprof_py's Wald variants (null 0.25 with `greater` and
+Fixtures (round 32, calibrated in
+[logistic-calibration.md](../../parity/logistic-calibration.md)): every 2a case gains pprof_py's Wald variants (null 0.25 with `greater` and
 `less`), LR and score statistics and p-values, AUC (Bernoulli cases) and predictions, and R's LR,
 Rao score, AUC and predictions where `glm` applies (not lfe-degenerate). A new case, lfe-clustered,
 has a patient column with repeated rows and patients seen by two providers, and adds pprof_py's
