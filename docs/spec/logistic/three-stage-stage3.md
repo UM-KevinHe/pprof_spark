@@ -111,3 +111,22 @@ differ by 9.0e-8, so parity uses the tight fits.
 |---|---|---|---|
 | X-029 | Stage 3's sums come from per-cell offset-bin moments (X-026's expansion) instead of pprof_py's sums over every record; remainder below 1.2e-16 per record | C | Use the compressed cells, which keeps every iteration independent of n |
 | X-005 | pprof_py divides by zero at σ = 0 | B | Approved with D-38; the limit is specified in §5 |
+
+## 11. Implementation notes (round 48; no statistical change)
+
+1. numerics: `GaussHermite.rule` (Newton on the normalized Hermite recurrence, ascending, exact +0 middle
+   node), `SparseSymmetric` (triplets summed in order; Jacobi-preconditioned conjugate gradients on an
+   active block), `kernels.ThreeStageKernel` (compressed-cell sums, cluster modes, terms with the sparse
+   negative Hessian, the σ = 0 limit, and the projected Newton of §2).
+2. engine: `ThreeStage.compress` (one pass and a shuffle by cell; within a cell, records in offset order),
+   `ThreeStage.stage3` (from prepared records, or from compressed cells) and `ThreeStage.marginal`
+   (ℓ and score at given effects). The API takes σ and the start; β is the preparation's, through
+   `stage1_offset`.
+3. Cluster modes stop per cluster when that cluster's step falls below 1e-10; pprof_py iterates all
+   clusters until the largest step does. The extra steps move a mode by less than 1e-10, within T-iter
+   (the lockstep iterates agree).
+4. At the tight fit both implementations' scores are rounding noise around zero, so the tests check
+   optimality (max abs(score) ≤ 1e-9) there instead of a relative comparison.
+5. This round runs stage 3 on the driver, with the compressed cells under the driver budget. The
+   cluster-local executor path for larger tables (§7) and the per-record fitted probabilities follow in
+   round 49.

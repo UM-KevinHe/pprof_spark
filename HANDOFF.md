@@ -101,6 +101,24 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 48 (2026-10-08): slice 2f-2 code, the driver path
+
+- numerics: `GaussHermite`, `SparseSymmetric` (conjugate gradients), `kernels.ThreeStageKernel` (sums from
+  compressed cells, cluster modes, quadrature terms with the sparse negative Hessian, the σ = 0 limit,
+  pprof_py's projected Newton). `ThreeStageNumericsSuite` (3): rules integrate exactly and are symmetric,
+  the solver on a sparse SPD block, compressed sums against record sums to 1e-13; numerics 81 on JDK 17
+  and 21.
+- engine: `ThreeStage.compress`, `ThreeStage.stage3` (prepared records or compressed cells),
+  `ThreeStage.marginal`. `ThreeStageStage3Suite` (4): on ts-golden and ts-synthetic with pprof_py's β,
+  σ and start, ℓ (T-fn) at three points and the score (T-fn) at two, iterates 1 to 3 (T-iter), the
+  tight fit's effects (T-coef), log-likelihood and cluster posterior moments, the default fit, σ = 1e-4
+  and the σ = 0 limit (T-coef); Gauss–Hermite rules against mpmath; bitwise invariance to row order and
+  partitioning. Classic Spark 4/4 and Spark Connect 4/4.
+- Found while testing: a test expected one-node rules to integrate t² (they are exact to degree 1);
+  the score at the tight fit is rounding noise in both implementations, so it is checked for optimality.
+- Still to come (round 49): the cluster-local executor path for compressed tables above the driver budget,
+  and per-record fitted probabilities.
+
 ## Round 47 (2026-10-08): slice 2f-2 fixtures and calibration
 
 The maintainer approved D-40 with X-029 as recommended.

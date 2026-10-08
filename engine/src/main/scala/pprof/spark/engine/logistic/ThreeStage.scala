@@ -1,10 +1,13 @@
 package pprof.spark.engine.logistic
 
-import org.apache.spark.sql.{Column, DataFrame}
+import org.apache.spark.sql.{Column, DataFrame, Encoders}
 import org.apache.spark.sql.functions.{broadcast, col, concat, count, lit, sum, when}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StringType}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
+import pprof.spark.engine.backend.{BlockOptions, DriverGuards}
 import pprof.spark.engine.layout.GroupKey
+import pprof.spark.numerics.{NeumaierSum, NeumaierVector, TaylorBins}
+import pprof.spark.numerics.kernels.ThreeStageKernel
 
 /** Column roles of He et al. (2013)'s three-stage model: a binary outcome, features, the provider
   * (facility) and the cluster (hospital) (docs/spec/logistic/three-stage-preparation.md §2).
@@ -39,6 +42,58 @@ final case class ThreeStagePreparation(
     includedCells: Long,
     excluded: Vector[(GroupKey, Long)]
 )
+
+/** Stage 3's options (docs/spec/logistic/three-stage-stage3.md §2): pprof_py's defaults. */
+final case class ThreeStageStage3Options(
+    nNodes: Int = 20,
+    maxIter: Int = 10000,
+    tol: Double = 1e-5,
+    bound: Double = 10.0,
+    boundMode: String = "relative",
+    blocks: BlockOptions = BlockOptions()
+) {
+  require(
+    boundMode == "relative" || boundMode == "absolute",
+    s"boundMode must be relative or absolute, got $boundMode"
+  )
+  require(
+    nNodes >= 1 && maxIter >= 0 && tol > 0.0 && bound > 0.0,
+    "nNodes, maxIter, tol and bound must be positive"
+  )
+  def kernel: ThreeStageKernel.Options =
+    ThreeStageKernel.Options(nNodes, maxIter, tol, bound, boundMode == "relative")
+}
+
+/** A prepared data set compressed into (cluster, provider) cells with offset-bin moments (X-029). */
+final case class ThreeStageCells(
+    providers: Vector[GroupKey],
+    clusters: Vector[GroupKey],
+    cells: Array[ThreeStageKernel.Cell]
+) {
+  def bins: Long = cells.iterator.map(_.bins.length.toLong).sum
+}
+
+/** Stage 3's fit: provider effects in `providers` order and cluster posterior moments in `clusters` order. */
+final case class ThreeStageStage3(
+    providers: Vector[GroupKey],
+    clusters: Vector[GroupKey],
+    gamma: Array[Double],
+    sigma: Double,
+    converged: Boolean,
+    stalled: Boolean,
+    iterations: Int,
+    criterion: Double,
+    loglik: Double,
+    alphaMean: Array[Double],
+    alphaVar: Array[Double],
+    held: Array[Boolean],
+    cells: Int,
+    bins: Long,
+    options: ThreeStageStage3Options
+)
+
+/** One prepared record, by provider and cluster index. */
+final case class ThreeStageRecord(provider: Int, cluster: Int, y: Double, offset: Double)
 
 /** Preparation and stage 1 of the three-stage model (Phase 2f-1), as pprof_py's `glmm_data_prep` and
   * the first stage of `LogisticThreeStageModel`.
@@ -144,6 +199,171 @@ object ThreeStage {
       sizes.unpersist()
       ()
     }
+  }
+
+  /** Compresses prepared records (2f-1's `data`) into cells: one pass, a shuffle by cell, and per cell
+    * Σ`y_adj`, Σ`y_adj`·offset and the offsets' bin moments, accumulated in a canonical order (X-029).
+    */
+  def compress(
+      prepared: DataFrame,
+      spec: ThreeStageSpec,
+      options: ThreeStageStage3Options = ThreeStageStage3Options(),
+      offsetColumn: String = "stage1_offset"
+  ): ThreeStageCells = {
+    val missing =
+      Seq(spec.provider, spec.cluster, "y_adj", offsetColumn).filterNot(prepared.columns.contains)
+    if (missing.nonEmpty) throw new InvalidInputException(missing.map(InputProblem.MissingColumn))
+    def keys(name: String): Vector[GroupKey] = {
+      val text = prepared.schema(name).dataType == StringType
+      val values = prepared.select(Validation.column(name)).distinct().collect()
+      require(
+        values.length.toLong <= options.blocks.maxGroupsOnDriver.toLong,
+        s"${values.length} distinct $name values exceed maxGroupsOnDriver ${options.blocks.maxGroupsOnDriver}"
+      )
+      values
+        .map(r =>
+          if (text) GroupKey.Text(r.getString(0)): GroupKey
+          else GroupKey.Integral(r.getAs[Number](0).longValue)
+        )
+        .sorted
+        .toVector
+    }
+    val providers = keys(spec.provider)
+    val clusters = keys(spec.cluster)
+    val providerIndex = providers.map(k => GroupKey.value(k).toString).zipWithIndex.toMap
+    val clusterIndex = clusters.map(k => GroupKey.value(k).toString).zipWithIndex.toMap
+    val m = providers.size.toLong
+    val cells = prepared
+      .select(
+        Validation.column(spec.provider).cast(StringType),
+        Validation.column(spec.cluster).cast(StringType),
+        col("y_adj").cast(DoubleType),
+        Validation.column(offsetColumn).cast(DoubleType)
+      )
+      .as(
+        Encoders.tuple(Encoders.STRING, Encoders.STRING, Encoders.scalaDouble, Encoders.scalaDouble)
+      )
+      .map { case (p, h, y, o) => ThreeStageRecord(providerIndex(p), clusterIndex(h), y, o) }(
+        Encoders.product[ThreeStageRecord]
+      )
+      .groupByKey((r: ThreeStageRecord) => r.cluster.toLong * m + r.provider)(Encoders.scalaLong)
+      .mapGroups { (_: Long, rows: Iterator[ThreeStageRecord]) =>
+        val sorted = rows.toArray.sortBy(r => (r.offset, r.y))
+        val events = new NeumaierSum
+        val yOffset = new NeumaierSum
+        val bins = scala.collection.mutable.TreeMap.empty[Long, NeumaierVector]
+        sorted.foreach { r =>
+          events.add(r.y)
+          yOffset.add(r.y * r.offset)
+          val b = TaylorBins.bin(r.offset)
+          bins
+            .getOrElseUpdate(b, new NeumaierVector(TaylorBins.Order + 1))
+            .add(TaylorBins.rowMoments(r.offset, 1.0, b))
+        }
+        ThreeStageKernel.Cell(
+          sorted.head.cluster,
+          sorted.head.provider,
+          events.value,
+          yOffset.value,
+          bins.keys.toArray,
+          bins.values.flatMap(_.values).toArray
+        )
+      }(Encoders.product[ThreeStageKernel.Cell])
+      .collect()
+      .sortBy(c => (c.cluster, c.provider))
+    val compressed = ThreeStageCells(providers, clusters, cells)
+    DriverGuards.requireWithinBudget(
+      s"${compressed.bins} compressed cell bins",
+      compressed.bins * (TaylorBins.Order + 1) * 8L,
+      options.blocks
+    )
+    compressed
+  }
+
+  /** Stage 3 with σ fixed, from `start` (one effect per provider in key order) (Phase 2f-2). */
+  def stage3(
+      prepared: DataFrame,
+      spec: ThreeStageSpec,
+      sigma: Double,
+      start: Array[Double],
+      options: ThreeStageStage3Options = ThreeStageStage3Options(),
+      offsetColumn: String = "stage1_offset"
+  ): ThreeStageStage3 =
+    stage3(compress(prepared, spec, options, offsetColumn), sigma, start, options)
+
+  def stage3(
+      cells: ThreeStageCells,
+      sigma: Double,
+      start: Array[Double],
+      options: ThreeStageStage3Options
+  ): ThreeStageStage3 = {
+    require(
+      start.length == cells.providers.size,
+      s"the start has ${start.length} effects for ${cells.providers.size} providers"
+    )
+    val r = ThreeStageKernel.fit(
+      cells.cells,
+      cells.providers.size,
+      cells.clusters.size,
+      sigma,
+      start,
+      options.kernel
+    )
+    ThreeStageStage3(
+      cells.providers,
+      cells.clusters,
+      r.gamma,
+      sigma,
+      r.converged,
+      r.stalled,
+      r.iterations,
+      r.criterion,
+      r.loglik,
+      r.alphaMean,
+      r.alphaVar,
+      r.held,
+      cells.cells.length,
+      cells.bins,
+      options
+    )
+  }
+
+  /** The marginal log-likelihood and score at γ, with each cluster's nodes centred for γ (pprof_py's
+    * `_cluster_modes` from zero, then `_marginal_terms`); σ = 0 takes the limit.
+    */
+  def marginal(
+      cells: ThreeStageCells,
+      sigma: Double,
+      gamma: Array[Double],
+      nNodes: Int = 20
+  ): (Double, Array[Double]) = {
+    val m = cells.providers.size
+    val t =
+      if (sigma == 0.0) ThreeStageKernel.limitTerms(cells.cells, m, gamma, hessian = false)
+      else {
+        val groups = ThreeStageKernel.byCluster(cells.cells, cells.clusters.size)
+        val (center, scale) = ThreeStageKernel.modes(
+          cells.cells,
+          groups,
+          gamma,
+          sigma,
+          new Array[Double](cells.clusters.size)
+        )
+        val rule = pprof.spark.numerics.GaussHermite.rule(nNodes)
+        ThreeStageKernel.terms(
+          cells.cells,
+          groups,
+          m,
+          gamma,
+          sigma,
+          center,
+          scale,
+          rule,
+          rule.adaptiveLogWeights,
+          hessian = false
+        )
+      }
+    (t.loglik, t.score)
   }
 
   /** Every problem with the input at once, as counts (spec 2f-1 §2). */
