@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.types.DoubleType
+import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.layout.GroupKey
 import pprof.spark.engine.logistic.LogisticFixtures.check
 import pprof.spark.numerics.GaussHermite
@@ -116,5 +117,59 @@ class ThreeStageStage3Suite extends SparkSuite {
     )
     intercept[IllegalArgumentException](ThreeStage.stage3(a, spec(name), -1.0, start))
     intercept[IllegalArgumentException](ThreeStage.stage3(a, spec(name), sigma, start.drop(1)))
+  }
+
+  test(
+    "the executor path equals the driver path bit for bit, also at sigma = 0; fitted probabilities match pprof_py"
+  ) {
+    def bits(values: Seq[Double]): Seq[Long] = values.map(java.lang.Double.doubleToRawLongBits)
+    Seq("ts-golden", "ts-synthetic").foreach { name =>
+      val ref = Fixtures.json(s"three-stage/$name/pprof_py.json").get("stage3")
+      val data = prepared(name, ref)
+      val sigma = d(ref.get("sigma"))(0)
+      Seq(sigma -> d(ref.get("start")), 0.0 -> d(ref.get("zero_sigma_limit"))).foreach {
+        case (s, start) =>
+          val driver = ThreeStage.stage3(
+            data,
+            spec(name),
+            s,
+            start,
+            ThreeStageStage3Options(tol = 1e-10, path = "driver")
+          )
+          val executors = ThreeStage.stage3(
+            data,
+            spec(name),
+            s,
+            start,
+            ThreeStageStage3Options(
+              tol = 1e-10,
+              path = "executors",
+              blocks = BlockOptions(targetBlockBytes = 2048L)
+            )
+          )
+          assertEquals(bits(executors.gamma.toSeq), bits(driver.gamma.toSeq), s"$name sigma $s")
+          assertEquals(bits(Seq(executors.loglik)), bits(Seq(driver.loglik)))
+          assertEquals(
+            bits(executors.alphaMean.toSeq ++ executors.alphaVar.toSeq),
+            bits(driver.alphaMean.toSeq ++ driver.alphaVar.toSeq)
+          )
+          assertEquals(executors.iterations, driver.iterations)
+          if (s > 0.0) {
+            val fitted = ThreeStage
+              .fitted(data, spec(name), driver)
+              .orderBy("rid")
+              .select("fitted")
+              .collect()
+              .map(_.getDouble(0))
+              .toSeq
+            check(
+              "T-meas",
+              s"$name fitted probabilities",
+              fitted,
+              d(ref.get("tight").get("fitted"))
+            )
+          }
+      }
+    }
   }
 }

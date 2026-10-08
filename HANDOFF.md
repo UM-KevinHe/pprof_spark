@@ -101,6 +101,20 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 49 (2026-10-08): slice 2f-2 code, the executor path
+
+- numerics: `ThreeStageKernel` reorganized per cluster (`clusterMode`, `clusterTerms`, `assemble` in
+  cluster order) behind `Passes` (`InMemoryPasses`); numerics 81 on JDK 17 and 21, and round 48's
+  parity tests still pass.
+- engine: the compressed cells stay distributed; `ThreeStageStage3Options.path` (`auto`, `driver`,
+  `executors`); the executor path packs whole clusters into blocks in cluster order and runs each
+  iteration's modes, terms and Hessian entries per cluster (`SparkThreeStagePasses`), the driver
+  assembling and solving; `ThreeStage.fitted` adds stage 3's fitted probability per record.
+- `ThreeStageStage3Suite` (5): a new test shows the executor path (blocks of about 2 KB of moments)
+  equal to the driver path bit for bit in effects, log-likelihood, posterior moments and iterations, at
+  σ̂ and at σ = 0, and the fitted probabilities equal to pprof_py's (T-meas). Classic Spark 5/5 and Spark
+  Connect 5/5.
+
 ## Round 48 (2026-10-08): slice 2f-2 code, the driver path
 
 - numerics: `GaussHermite`, `SparseSymmetric` (conjugate gradients), `kernels.ThreeStageKernel` (sums from

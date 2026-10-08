@@ -1,12 +1,21 @@
 package pprof.spark.engine.logistic
 
-import org.apache.spark.sql.{Column, DataFrame, Encoders}
+import scala.jdk.CollectionConverters._
+
+import org.apache.spark.sql.{Column, DataFrame, Dataset, Encoders, Row}
 import org.apache.spark.sql.functions.{broadcast, col, concat, count, lit, sum, when}
-import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StringType}
+import org.apache.spark.sql.types.{
+  DoubleType,
+  IntegerType,
+  LongType,
+  StringType,
+  StructField,
+  StructType
+}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.backend.{BlockOptions, DriverGuards}
 import pprof.spark.engine.layout.GroupKey
-import pprof.spark.numerics.{NeumaierSum, NeumaierVector, TaylorBins}
+import pprof.spark.numerics.{GaussHermite, NeumaierSum, NeumaierVector, TaylorBins}
 import pprof.spark.numerics.kernels.ThreeStageKernel
 
 /** Column roles of He et al. (2013)'s three-stage model: a binary outcome, features, the provider
@@ -50,8 +59,13 @@ final case class ThreeStageStage3Options(
     tol: Double = 1e-5,
     bound: Double = 10.0,
     boundMode: String = "relative",
-    blocks: BlockOptions = BlockOptions()
+    blocks: BlockOptions = BlockOptions(),
+    path: String = "auto"
 ) {
+  require(
+    Seq("auto", "driver", "executors").contains(path),
+    s"path must be auto, driver or executors, got $path"
+  )
   require(
     boundMode == "relative" || boundMode == "absolute",
     s"boundMode must be relative or absolute, got $boundMode"
@@ -94,6 +108,68 @@ final case class ThreeStageStage3(
 
 /** One prepared record, by provider and cluster index. */
 final case class ThreeStageRecord(provider: Int, cluster: Int, y: Double, offset: Double)
+
+/** Whole clusters of compressed cells for the executor path (spec 2f-2 §7); cells in (cluster, provider) order. */
+final case class ThreeStageClusterBlock(
+    blockId: Int,
+    clusters: Array[Int],
+    cells: Array[ThreeStageKernel.Cell]
+)
+
+final case class ThreeStageClusterPartial(blockId: Int, terms: Array[ThreeStageKernel.ClusterTerms])
+
+final case class ThreeStageClusterSize(cluster: Int, bins: Long)
+
+/** Stage 3's per-cluster work on executors: closures carry γ and the clusters' centres (§6.7). */
+final class SparkThreeStagePasses(
+    blocks: Dataset[ThreeStageClusterBlock],
+    val providers: Int,
+    val clusters: Int,
+    sigma: Double,
+    nNodes: Int
+) extends ThreeStageKernel.Passes {
+
+  private def run(
+      gamma: Array[Double],
+      start: Array[Double],
+      fixed: Option[(Array[Double], Array[Double])],
+      hessian: Boolean
+  ) = {
+    val g = gamma.clone()
+    val st = start.clone()
+    val fx = fixed.map { case (c, s) => (c.clone(), s.clone()) }
+    val sig = sigma
+    val n = nNodes
+    val parts = blocks
+      .map { (b: ThreeStageClusterBlock) =>
+        val rule = GaussHermite.rule(n)
+        val logWeights = rule.adaptiveLogWeights
+        val terms = b.clusters.map { h =>
+          val cells = b.cells.filter(_.cluster == h)
+          ThreeStageKernel.clusterTerms(
+            h,
+            cells,
+            g,
+            sig,
+            st(h),
+            fx.map { case (c, s) => (c(h), s(h)) },
+            rule,
+            logWeights,
+            hessian
+          )
+        }
+        ThreeStageClusterPartial(b.blockId, terms)
+      }(Encoders.product[ThreeStageClusterPartial])
+      .collect()
+    ThreeStageKernel.assemble(parts.toSeq.flatMap(_.terms.toSeq), providers, clusters, hessian)
+  }
+
+  def full(gamma: Array[Double], start: Array[Double]): ThreeStageKernel.Terms =
+    run(gamma, start, None, hessian = true)
+
+  def value(gamma: Array[Double], center: Array[Double], scale: Array[Double]): Double =
+    run(gamma, center, Some((center, scale)), hessian = false).loglik
+}
 
 /** Preparation and stage 1 of the three-stage model (Phase 2f-1), as pprof_py's `glmm_data_prep` and
   * the first stage of `LogisticThreeStageModel`.
@@ -210,6 +286,24 @@ object ThreeStage {
       options: ThreeStageStage3Options = ThreeStageStage3Options(),
       offsetColumn: String = "stage1_offset"
   ): ThreeStageCells = {
+    val (providers, clusters, cellData) = compressed(prepared, spec, options, offsetColumn)
+    val cells = cellData.collect().sortBy(c => (c.cluster, c.provider))
+    val result = ThreeStageCells(providers, clusters, cells)
+    DriverGuards.requireWithinBudget(
+      s"${result.bins} compressed cell bins",
+      result.bins * (TaylorBins.Order + 1) * 8L,
+      options.blocks
+    )
+    result
+  }
+
+  /** The keys and the distributed compressed cells (spec 2f-2 §3, §7). */
+  private def compressed(
+      prepared: DataFrame,
+      spec: ThreeStageSpec,
+      options: ThreeStageStage3Options,
+      offsetColumn: String
+  ): (Vector[GroupKey], Vector[GroupKey], Dataset[ThreeStageKernel.Cell]) = {
     val missing =
       Seq(spec.provider, spec.cluster, "y_adj", offsetColumn).filterNot(prepared.columns.contains)
     if (missing.nonEmpty) throw new InvalidInputException(missing.map(InputProblem.MissingColumn))
@@ -269,15 +363,7 @@ object ThreeStage {
           bins.values.flatMap(_.values).toArray
         )
       }(Encoders.product[ThreeStageKernel.Cell])
-      .collect()
-      .sortBy(c => (c.cluster, c.provider))
-    val compressed = ThreeStageCells(providers, clusters, cells)
-    DriverGuards.requireWithinBudget(
-      s"${compressed.bins} compressed cell bins",
-      compressed.bins * (TaylorBins.Order + 1) * 8L,
-      options.blocks
-    )
-    compressed
+    (providers, clusters, cells)
   }
 
   /** Stage 3 with σ fixed, from `start` (one effect per provider in key order) (Phase 2f-2). */
@@ -288,8 +374,154 @@ object ThreeStage {
       start: Array[Double],
       options: ThreeStageStage3Options = ThreeStageStage3Options(),
       offsetColumn: String = "stage1_offset"
-  ): ThreeStageStage3 =
-    stage3(compress(prepared, spec, options, offsetColumn), sigma, start, options)
+  ): ThreeStageStage3 = {
+    val (providers, clusters, cellData) = compressed(prepared, spec, options, offsetColumn)
+    val cells = cellData.persist(options.blocks.resolvedStorageLevel)
+    try {
+      val bins = cells
+        .map((c: ThreeStageKernel.Cell) => c.bins.length.toLong)(Encoders.scalaLong)
+        .collect()
+        .sum
+      val fits = bins * (TaylorBins.Order + 1) * 8L <= options.blocks.driverBudgetBytes
+      if (options.path == "driver" || (options.path == "auto" && fits)) {
+        DriverGuards.requireWithinBudget(
+          s"$bins compressed cell bins",
+          bins * (TaylorBins.Order + 1) * 8L,
+          options.blocks
+        )
+        stage3(
+          ThreeStageCells(
+            providers,
+            clusters,
+            cells.collect().sortBy(c => (c.cluster, c.provider))
+          ),
+          sigma,
+          start,
+          options
+        )
+      } else onExecutors(providers, clusters, cells, bins, sigma, start, options)
+    } finally {
+      cells.unpersist()
+      ()
+    }
+  }
+
+  /** Stage 3 with the compressed cells kept on executors in cluster-local blocks (spec 2f-2 §7). */
+  private def onExecutors(
+      providers: Vector[GroupKey],
+      clusters: Vector[GroupKey],
+      cells: Dataset[ThreeStageKernel.Cell],
+      bins: Long,
+      sigma: Double,
+      start: Array[Double],
+      options: ThreeStageStage3Options
+  ): ThreeStageStage3 = {
+    require(
+      start.length == providers.size,
+      s"the start has ${start.length} effects for ${providers.size} providers"
+    )
+    val sizes = cells
+      .map((c: ThreeStageKernel.Cell) => ThreeStageClusterSize(c.cluster, c.bins.length.toLong))(
+        Encoders.product[ThreeStageClusterSize]
+      )
+      .groupByKey((s: ThreeStageClusterSize) => s.cluster)(Encoders.scalaInt)
+      .mapGroups((h: Int, rows: Iterator[ThreeStageClusterSize]) =>
+        ThreeStageClusterSize(h, rows.map(_.bins).sum)
+      )(
+        Encoders.product[ThreeStageClusterSize]
+      )
+      .collect()
+      .sortBy(_.cluster)
+    val target = math.max(1L, options.blocks.targetBlockBytes / ((TaylorBins.Order + 1) * 8L))
+    val blockOf = new Array[Int](clusters.size)
+    var block = 0
+    var filled = 0L
+    sizes.foreach { s =>
+      if (filled > 0L && filled + s.bins > target) {
+        block += 1
+        filled = 0L
+      }
+      blockOf(s.cluster) = block
+      filled += s.bins
+    }
+    val assignment = blockOf.clone()
+    val blocks = cells
+      .groupByKey((c: ThreeStageKernel.Cell) => assignment(c.cluster))(Encoders.scalaInt)
+      .mapGroups { (id: Int, rows: Iterator[ThreeStageKernel.Cell]) =>
+        val sorted = rows.toArray.sortBy(c => (c.cluster, c.provider))
+        ThreeStageClusterBlock(id, sorted.map(_.cluster).distinct, sorted)
+      }(Encoders.product[ThreeStageClusterBlock])
+      .persist(options.blocks.resolvedStorageLevel)
+    try {
+      val passes =
+        new SparkThreeStagePasses(blocks, providers.size, clusters.size, sigma, options.nNodes)
+      val r = ThreeStageKernel.fit(passes, sigma, start, options.kernel)
+      ThreeStageStage3(
+        providers,
+        clusters,
+        r.gamma,
+        sigma,
+        r.converged,
+        r.stalled,
+        r.iterations,
+        r.criterion,
+        r.loglik,
+        r.alphaMean,
+        r.alphaVar,
+        r.held,
+        sizes.length,
+        bins,
+        options
+      )
+    } finally {
+      blocks.unpersist()
+      ()
+    }
+  }
+
+  /** The prepared records with `fitted` = σ(γⱼ + E_post[aₕ] + o), stage 3's fitted probability (§2). */
+  def fitted(
+      prepared: DataFrame,
+      spec: ThreeStageSpec,
+      fit: ThreeStageStage3,
+      offsetColumn: String = "stage1_offset"
+  ): DataFrame = {
+    val spark = prepared.sparkSession
+    def table(
+        keys: Vector[GroupKey],
+        values: Array[Double],
+        keyColumn: String,
+        valueColumn: String,
+        text: Boolean
+    ): DataFrame =
+      spark.createDataFrame(
+        keys.indices.map(i => Row(GroupKey.value(keys(i)), values(i))).asJava,
+        StructType(
+          Seq(
+            StructField(keyColumn, if (text) StringType else LongType, nullable = false),
+            StructField(valueColumn, DoubleType, nullable = false)
+          )
+        )
+      )
+    val providerText = prepared.schema(spec.provider).dataType == StringType
+    val clusterText = prepared.schema(spec.cluster).dataType == StringType
+    val effects = table(fit.providers, fit.gamma, "__pprof_p", "__pprof_gamma", providerText)
+    val alphas = table(fit.clusters, fit.alphaMean, "__pprof_h", "__pprof_alpha", clusterText)
+    val provider = Validation.column(spec.provider)
+    val cluster = Validation.column(spec.cluster)
+    val eta = (col("__pprof_gamma") + col("__pprof_alpha")) + Validation.column(offsetColumn)
+    prepared
+      .join(
+        broadcast(effects),
+        (if (providerText) provider else provider.cast(LongType)) === col("__pprof_p")
+      )
+      .join(
+        broadcast(alphas),
+        (if (clusterText) cluster else cluster.cast(LongType)) === col("__pprof_h")
+      )
+      .withColumn("fitted", lit(1.0) / (lit(1.0) + org.apache.spark.sql.functions.exp(-eta)))
+      .drop("__pprof_p", "__pprof_gamma", "__pprof_h", "__pprof_alpha")
+  }
 
   def stage3(
       cells: ThreeStageCells,
@@ -337,32 +569,14 @@ object ThreeStage {
       gamma: Array[Double],
       nNodes: Int = 20
   ): (Double, Array[Double]) = {
-    val m = cells.providers.size
-    val t =
-      if (sigma == 0.0) ThreeStageKernel.limitTerms(cells.cells, m, gamma, hessian = false)
-      else {
-        val groups = ThreeStageKernel.byCluster(cells.cells, cells.clusters.size)
-        val (center, scale) = ThreeStageKernel.modes(
-          cells.cells,
-          groups,
-          gamma,
-          sigma,
-          new Array[Double](cells.clusters.size)
-        )
-        val rule = pprof.spark.numerics.GaussHermite.rule(nNodes)
-        ThreeStageKernel.terms(
-          cells.cells,
-          groups,
-          m,
-          gamma,
-          sigma,
-          center,
-          scale,
-          rule,
-          rule.adaptiveLogWeights,
-          hessian = false
-        )
-      }
+    val t = new ThreeStageKernel.InMemoryPasses(
+      cells.cells,
+      cells.providers.size,
+      cells.clusters.size,
+      sigma,
+      nNodes
+    )
+      .full(gamma, new Array[Double](cells.clusters.size))
     (t.loglik, t.score)
   }
 

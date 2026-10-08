@@ -127,6 +127,11 @@ differ by 9.0e-8, so parity uses the tight fits.
    (the lockstep iterates agree).
 4. At the tight fit both implementations' scores are rounding noise around zero, so the tests check
    optimality (max abs(score) ≤ 1e-9) there instead of a relative comparison.
-5. This round runs stage 3 on the driver, with the compressed cells under the driver budget. The
-   cluster-local executor path for larger tables (§7) and the per-record fitted probabilities follow in
-   round 49.
+5. Round 48 ran stage 3 on the driver only; round 49 adds the executor path and fitted probabilities.
+6. Round 49: the kernel works per cluster (`clusterTerms`), and `Passes` runs it in memory or on executors
+   (`SparkThreeStagePasses` over `ThreeStageClusterBlock`s: whole clusters packed in cluster order to
+   `targetBlockBytes`, with γ and the centres carried by closure). Clusters' terms are assembled in cluster
+   order, so the two paths give bitwise identical results. `ThreeStageStage3Options.path` is `auto` (the
+   driver when the compressed cells fit `driverBudgetBytes`), `driver` or `executors`.
+   `ThreeStage.fitted` adds σ((γⱼ + E_post[aₕ]) + o) per record, with the provider and cluster tables
+   broadcast.
