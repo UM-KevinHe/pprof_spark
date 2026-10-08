@@ -103,6 +103,16 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-40: Slice 2f-2 specification (Proposed, 2026-10-08)
+
+`docs/spec/logistic/three-stage-stage3.md`: stage 3 with β and σ fixed, as pprof_py's `marginal`
+estimator (adaptive Gauss–Hermite quadrature at each cluster's posterior mode, projected Newton with a
+sparse Hessian, Armijo line search, bounds), computed from per-cell offset-bin moments; the σ = 0 limit
+(X-005); conjugate-gradient Newton steps and Newton-computed Gauss–Hermite rules (class D); outputs,
+the distributed plan (compression, then the driver or cluster-local executors) and validation. Decision
+to approve with it: X-029 (compressed cells for stage 3; class C). Awaiting the maintainer's approval; no
+2f-2 code before it (NN-2).
+
 ### D-39: Slice 2f-1 specification (Accepted: approved by the maintainer, 2026-10-08)
 
 `docs/spec/logistic/three-stage-preparation.md`: pprof_py's `glmm_data_prep` (screening at more than

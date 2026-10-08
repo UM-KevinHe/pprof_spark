@@ -101,6 +101,20 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 46 (2026-10-08): the slice 2f-2 specification
+
+- `docs/spec/logistic/three-stage-stage3.md` (D-40, awaiting approval), read from pprof_py v0.7.0's
+  `LogisticFERandomClusterModel` (`marginal`): the marginal likelihood with β and σ fixed; adaptive
+  Gauss–Hermite quadrature at each cluster's posterior mode; the projected Newton with a sparse Hessian
+  (posterior cell-score covariances and curvatures), Armijo line search, relative or absolute bounds;
+  sums from per-cell offset-bin moments (X-029, class C); conjugate-gradient steps and Newton-computed
+  Gauss–Hermite rules (class D); the σ = 0 limit (X-005); `ThreeStage.stage3` and its outputs; the
+  distributed plan (compression, then the driver or cluster-local executors); validation.
+- Probes (golden data): stage 3 alone with pprof_py's β, σ and start reproduces the pipeline's γ exactly,
+  4 iterations at `tol` 1e-5 and 5 at 1e-10, differing by 9.0e-8 (parity on tight fits); as σ → 0 the
+  estimates approach the fixed-effect limit as σ² (1.1e-3, 1.2e-5, 1.2e-7 at σ = 0.01, 0.001, 0.0001),
+  and σ = 0 raises `ZeroDivisionError`.
+
 ## Round 45 (2026-10-08): slice 2f-1 code
 
 - engine `ThreeStage.prepare`: validation (missing columns, reserved output names, types, then counts of
