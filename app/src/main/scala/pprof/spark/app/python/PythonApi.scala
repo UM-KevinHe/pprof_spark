@@ -1,5 +1,7 @@
 package pprof.spark.app.python
 
+import scala.jdk.CollectionConverters._
+
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -14,6 +16,7 @@ import pprof.spark.engine.logistic.{
   LogisticOptions,
   LogisticProviderTests,
   LogisticSpec,
+  LogisticStandardization,
   LogisticTest
 }
 import pprof.spark.engine.cox.{
@@ -427,6 +430,105 @@ object PythonApi {
       seed
     )
   }
+
+  private def effectReference(reference: String): EffectReference = reference match {
+    case "median" => EffectReference.Median
+    case "mean"   => EffectReference.Mean
+    case other    =>
+      EffectReference.Value(
+        other.toDoubleOption.getOrElse(
+          throw new IllegalArgumentException("reference must be median, mean or a number")
+        )
+      )
+  }
+
+  private def stringList(json: String, what: String): Option[Seq[String]] =
+    if (json == null || json.isEmpty) None
+    else {
+      val node = new ObjectMapper().readTree(json)
+      require(node.isArray, s"the $what must be a JSON array")
+      if (node.size == 0) None else Some((0 until node.size).map(i => node.get(i).asText()))
+    }
+
+  /** Standardized measures (slice 2d), as pprof_py's `calculate_standardized_measures`: a map from
+    * `indirect` and `direct` to their tables.
+    */
+  def logisticStandardizedMeasures(
+      df: DataFrame,
+      fit: LogisticFit,
+      kindsJson: String,
+      reference: String,
+      providersJson: String,
+      extremeTrials: Double,
+      method: String
+  ): java.util.Map[String, DataFrame] =
+    LogisticStandardization
+      .measures(
+        df,
+        fit,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect", "direct")),
+        effectReference(reference),
+        stringList(providersJson, "providers"),
+        extremeTrials,
+        method
+      )
+      .asJava
+
+  /** One measure's estimates, standard errors and reference value (pprof_py's `standardized_measure`). */
+  def logisticStandardizedMeasure(
+      df: DataFrame,
+      fit: LogisticFit,
+      measure: String,
+      reference: String,
+      variance: String,
+      indirectVariance: String,
+      method: String
+  ): DataFrame =
+    LogisticStandardization.measureTable(
+      df.sparkSession,
+      fit,
+      LogisticStandardization.measure(
+        df,
+        fit,
+        measure,
+        effectReference(reference),
+        variance,
+        indirectVariance,
+        method
+      )
+    )
+
+  /** Tests on a measure (pprof_py's `test_standardized`); `nullValue` and `critical` NaN for the defaults. */
+  def logisticTestStandardized(
+      df: DataFrame,
+      fit: LogisticFit,
+      measure: String,
+      nullValue: Double,
+      transform: String,
+      reference: String,
+      variance: String,
+      indirectVariance: String,
+      alternative: String,
+      level: Double,
+      critical: Double,
+      providersJson: String,
+      method: String
+  ): DataFrame =
+    LogisticStandardization.test(
+      df,
+      fit,
+      measure,
+      if (nullValue.isNaN) None else Some(nullValue),
+      transform,
+      effectReference(reference),
+      variance,
+      indirectVariance,
+      alternative,
+      level,
+      if (critical.isNaN) None else Some(critical),
+      stringList(providersJson, "providers"),
+      method
+    )
 
   def logisticPredict(df: DataFrame, fit: LogisticFit): DataFrame = LogisticFE.predict(df, fit)
 

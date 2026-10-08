@@ -114,3 +114,19 @@ Negative controls: γ₀ shifted by 0.01, one outcome flipped, the logit and log
 | ID | Summary | Class | Proposed decision (D-36) |
 |---|---|---|---|
 | X-026 | Direct sums by binned Taylor expansions (h = 0.1, order 8) instead of pprof_py's exact sum over every row: a remainder below 1.2e-16 per unit weight; probe differences up to 8.8e-16 relative | C | Use the binned sums by default, record the method and bound with the result, keep `exact` as an option; §7.4's rule (approximations only where the reference uses them) yields here because the remainder is below rounding |
+
+## 9. Implementation notes (round 39; no statistical change)
+
+1. Engine: `LogisticStandardization.measures` (pprof_py's tables), `measure` (estimates, standard errors,
+   reference value; `measureTable` as a DataFrame) and `test`; numerics `TaylorBins` (derivative
+   polynomials, bins, row moments, sums). Python: `standardized_measures`, `standardized_measure`,
+   `test_standardized`.
+2. Bins are keyed by rint(η/0.1) (halves to even); a block's bins are accumulated in canonical row order,
+   shuffled by bin, and summed in block order; the providers' sums run on executors in chunks of 10,000
+   effects with the bins' moments captured by closure. Observed counts and the population's trials and
+   events come from the fit.
+3. Flags follow pprof_py's rule (p below 1 − level, signed by z) unless a critical value is given; an
+   untestable provider (non-finite working-scale estimate or standard error) has NaN z, p and limits and a
+   null flag.
+4. Measured in the tests: the binned direct rate and its standard error equal the `exact` method's
+   within T-part on lfe-many.

@@ -101,6 +101,26 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 39 (2026-10-08): slice 2d code
+
+Rounds 37 and 38 were not yet on main; this round's patch applies after them.
+
+- numerics `TaylorBins`: σ⁽ᵏ⁾ as polynomials in σ, bins of 0.1 on η, row moments to order 8, and the sums
+  of σ and σ′ from them. `TaylorBinsSuite` (2): derivatives against closed forms and finite differences,
+  binned sums against direct sums to 1e-13 relative; numerics 78 on JDK 17 and 21.
+- engine `LogisticStandardization`: `measures` (pprof_py's tables; percent rates clipped; extreme
+  observations), `measure` (five measures; model, robust and β-known variances; indirect variance at γ₀ or
+  γ̂ⱼ; `binned` or `exact` direct sums) and `test` (identity, logit, log; reference or given null; flags,
+  intervals, bounds). `LogisticStandardizationSuite` (4) and `LogisticStandardizationMoreSuite` (3): every
+  case against pprof_py (measures, standard errors, reference values, tests) and R pprof
+  (`SM_output.logis_fe`), binned against exact; Classic Spark and Spark Connect.
+- While testing: kryo encoders (unsupported by Spark Connect) were replaced by product encoders before
+  the Connect runs; a test's non-exhaustive match warning failed the -Werror compile; munit's
+  `assertEqualsDouble` is not in the sandbox's stand-in, so the suite uses plain tolerance checks.
+- Python: `standardized_measures`, `standardized_measure`, `test_standardized` through
+  `PythonApi.logisticStandardized*` and `logisticTestStandardized`; facade suite 4 (both APIs); Python
+  tests 12.
+
 ## Round 38 (2026-10-08): slice 2d fixtures and calibration
 
 The maintainer approved D-36 with X-026 as recommended. Round 37 was not yet on main, so this

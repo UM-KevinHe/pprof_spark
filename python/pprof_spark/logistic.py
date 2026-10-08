@@ -120,6 +120,36 @@ class LogisticFixedEffectModel:
             df._jdf, self._handle, method, str(reference), alternative, float(level),
             float("nan") if critical is None else float(critical), names, int(n_resample), int(seed)))
 
+    def standardized_measures(self, df: DataFrame, kinds: Sequence[str] = ("indirect", "direct"),
+                              reference="median", providers: Optional[Sequence] = None, extreme_trials: float = 0.0,
+                              method: str = "binned") -> dict:
+        """Indirect and direct standardized ratios and rates (rates in percent), as pprof_py's
+        `calculate_standardized_measures`; `method` is `binned` (X-026) or `exact`."""
+        names = json.dumps([str(p) for p in providers]) if providers else ""
+        tables = api(self._spark).logisticStandardizedMeasures(
+            df._jdf, self._handle, json.dumps(list(kinds)), str(reference), names, float(extreme_trials), method)
+        return {kind: self._frame(tables.get(kind)) for kind in kinds}
+
+    def standardized_measure(self, df: DataFrame, measure: str = "direct_rate", reference="median",
+                             variance: str = "model", indirect_variance: str = "null",
+                             method: str = "binned") -> DataFrame:
+        """One measure per provider: estimate, se and the reference value (pprof_py's `standardized_measure`)."""
+        return self._frame(api(self._spark).logisticStandardizedMeasure(
+            df._jdf, self._handle, measure, str(reference), variance, indirect_variance, method))
+
+    def test_standardized(self, df: DataFrame, measure: str = "direct_rate", null_value: Optional[float] = None,
+                          transform: str = "auto", reference="median", variance: str = "model",
+                          indirect_variance: str = "null", alternative: str = "two_sided", level: float = 0.95,
+                          critical: Optional[float] = None, providers: Optional[Sequence] = None,
+                          method: str = "binned") -> DataFrame:
+        """Tests on a standardized measure (pprof_py's `test_standardized`, theoretical null)."""
+        names = json.dumps([str(p) for p in providers]) if providers else ""
+        nan = float("nan")
+        return self._frame(api(self._spark).logisticTestStandardized(
+            df._jdf, self._handle, measure, nan if null_value is None else float(null_value), transform,
+            str(reference), variance, indirect_variance, alternative, float(level),
+            nan if critical is None else float(critical), names, method))
+
     def predict(self, df: DataFrame) -> DataFrame:
         """`df` with `linear_predictor` and `probability`; rows of providers not in the fit raise."""
         return self._frame(api(self._spark).logisticPredict(df._jdf, self._handle))

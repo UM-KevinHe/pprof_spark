@@ -80,3 +80,14 @@ def test_provider_tests_match_pprof_py(fit, data):
     assert [row["flag"] for row in rows] == expected["flag"]
     assert {"p_value", "ci_lower", "ci_upper", "observed", "expected"} <= set(table.columns)
     assert fit.provider_tests(data, method="wald", providers=[1, 2]).count() == 2
+
+
+def test_standardized_measures_and_tests_match_pprof_py(fit, data):
+    standard = reference()["standardization"]
+    tables = fit.standardized_measures(data)
+    indirect = tables["indirect"].orderBy("provider").collect()
+    assert within([row["indirect_ratio"] for row in indirect], standard["measures"]["median"]["indirect"]["indirect_ratio"], 1e-8)
+    direct = fit.standardized_measure(data, "gamma", variance="robust").orderBy("provider").collect()
+    assert within([row["se"] for row in direct], standard["measure"]["gamma_robust_null"]["se"], 1e-8)
+    tested = fit.test_standardized(data, "direct_rate").orderBy("provider").collect()
+    assert within([row["z_raw"] for row in tested], standard["tests"]["direct_rate_auto"]["z"], 1e-8)

@@ -61,9 +61,11 @@ fit.providers()                                    # effects, variances, flags p
 fit.wald_tests(null=0.0, alternative="two_sided", robust=True)
 fit.covariate_tests(df, "lr")                      # or "score": refits on the training data
 fit.provider_tests(df, method="poibin_exact", reference="median")  # flags and limits per facility
+fit.standardized_measures(df)["indirect"]          # O/E ratios and rates; also "direct"
+fit.test_standardized(df, "direct_rate")           # tests on a measure (logit scale by default)
 fit.predict(new_rows)                              # linear_predictor and probability
 fit.save("/path/fit"); LogisticFixedEffectModel.load(spark, "/path/fit")
 ```
 
-Its arguments follow `LogisticSpec` and `LogisticOptions` (docs/spec/logistic/). Standardized measures
-join with their slice (plan §6).
+Its arguments follow `LogisticSpec` and `LogisticOptions` (docs/spec/logistic/). The three-stage model
+joins with its slice (plan §6).
