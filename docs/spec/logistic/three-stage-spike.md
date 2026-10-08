@@ -2,7 +2,7 @@
 
 - Status: Spike report; its direction and sub-slices approved by the maintainer, 2026-10-08 (D-38).
   Each sub-slice gets its own specification before code (NN-2); 2f-1: [three-stage-preparation.md](three-stage-preparation.md);
-  2f-2: [three-stage-stage3.md](three-stage-stage3.md).
+  2f-2: [three-stage-stage3.md](three-stage-stage3.md); 2f-3: [three-stage-stage2.md](three-stage-stage2.md).
 - Reference: pprof_py v0.7.0 (`9320766`): `models/logistic/three_stage.py`
   (`LogisticThreeStageModel`), `data/glmm_prep.py` (`glmm_data_prep`), `models/logistic/random_effect.py`
   (`LogisticRandomEffectModel`), `models/logistic/fe_random_cluster.py` (`LogisticFERandomClusterModel`),

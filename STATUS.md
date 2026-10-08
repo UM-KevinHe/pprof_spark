@@ -1,11 +1,11 @@
 # Status
 
-Updated 2026-10-08, round 49.
+Updated 2026-10-08, round 50.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
 models: in progress**: plan and slice 2a specification approved (D-30); 2a fixtures and calibration in
-round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification in round 40 (D-37, approved); `LogisticJob` in round 41; the three-stage spike and 2f direction in round 42 (D-38, approved); the 2f-1 specification in round 43 (D-39, approved); its fixtures in round 44; `ThreeStage.prepare` in round 45; the 2f-2 specification in round 46 (D-40, approved); its fixtures in round 47; its driver path in round 48 and its executor path in round 49. Python access: py4j wrappers (D-31). The maintainer runs the
+round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification in round 40 (D-37, approved); `LogisticJob` in round 41; the three-stage spike and 2f direction in round 42 (D-38, approved); the 2f-1 specification in round 43 (D-39, approved); its fixtures in round 44; `ThreeStage.prepare` in round 45; the 2f-2 specification in round 46 (D-40, approved); its fixtures in round 47; its driver path in round 48 and its executor path in round 49; the 2f-3 specification (D-41, proposed) in round 50. Python access: py4j wrappers (D-31). The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -70,8 +70,9 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 46 | Slice 2f-2 specification: stage 3 on compressed cells (D-40, X-029) | Merged (dabaeb4); D-40 approved |
 | 47 | Slice 2f-2 fixtures (stage 3, Gauss–Hermite rules) and calibration | Merged (f11dd9d); CI not reported |
 | 48 | Slice 2f-2 code, driver path: compression, Gauss–Hermite rules, sparse CG, `ThreeStage.stage3` | Merged (91f9347); CI not reported |
-| 49 | Slice 2f-2 code, executor path for large compressed tables; fitted probabilities | Delivered as a patch |
-| 50 | Slice 2f-3 specification: stage 2, the crossed random-intercept GLMM | Planned |
+| 49 | Slice 2f-2 code, executor path for large compressed tables; fitted probabilities | Merged (a81ca26); CI not reported |
+| 50 | Slice 2f-3 specification: stage 2, the crossed random-intercept GLMM (D-41, X-030, OI-59) | Delivered as a patch |
+| 51 | Slice 2f-3 fixtures and calibration, with T-opt's proposed values (after D-41) | Planned |
 
 ## Decisions and spikes
 

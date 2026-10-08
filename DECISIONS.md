@@ -103,6 +103,16 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-41: Slice 2f-3 specification (Proposed, 2026-10-08)
+
+`docs/spec/logistic/three-stage-stage2.md`: stage 2, the crossed random-intercept logistic GLMM with the
+stage 1 offset (lme4's nAGQ = 1 Laplace deviance), on 2f-2's compressed cells: PIRLS converged from zero at
+every evaluation, the joint system eliminated onto the smaller set of levels, and a bounded quasi-Newton
+on (σₚ, σ_c, μ) to a gradient tolerance instead of pprof_py's Nelder–Mead (X-030, with a new
+optimizer-limited tolerance class T-opt to be calibrated and approved under NN-9); outputs, the driver
+plan (OI-59 for very large level sets) and validation. Awaiting the maintainer's approval; no 2f-3 code
+before it (NN-2).
+
 ### D-40: Slice 2f-2 specification (Accepted: approved by the maintainer, 2026-10-08)
 
 `docs/spec/logistic/three-stage-stage3.md`: stage 3 with β and σ fixed, as pprof_py's `marginal`

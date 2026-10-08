@@ -101,6 +101,19 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 50 (2026-10-08): the slice 2f-3 specification
+
+- `docs/spec/logistic/three-stage-stage2.md` (D-41, awaiting approval), read from pprof_py v0.7.0's
+  `LogisticRandomEffectModel`: crossed random intercepts with the stage 1 offset, PIRLS on the joint system,
+  the nAGQ = 0 stage then Nelder–Mead on the Laplace deviance (lme4's, without the saturated constant).
+  Proposed: PIRLS from zero to 1e-12 at every evaluation, sums from 2f-2's compressed cells, the joint system
+  eliminated onto the smaller set of levels (dense Schur complement, OI-59), and a bounded quasi-Newton to a
+  gradient tolerance (X-030) with a new optimizer-limited tolerance class T-opt to calibrate.
+- Probes (golden data): pprof_py's σ_c 0.422943038 at its defaults and 0.422943033 at `tol_outer` 1e-12;
+  `glmer` at bobyqa `rhoend` 1e-12 0.422935194 (7.8e-6 away); lme4's deviance function 1.6e-8 lower at its
+  optimum than at pprof_py's, and 5.9e-4 above pprof_py's tightly converged D at (0.5, 0.3, −0.2) (lme4's
+  PIRLS tolerance); the golden data have no fractional `y_adj`, so the saturated constant is 0 there.
+
 ## Round 49 (2026-10-08): slice 2f-2 code, the executor path
 
 - numerics: `ThreeStageKernel` reorganized per cluster (`clusterMode`, `clusterTerms`, `assemble` in
