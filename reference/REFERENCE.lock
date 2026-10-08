@@ -46,3 +46,10 @@ license = "MIT"
 "Fixed_effect.cpp" = "7bae54fc00c9d26450696b86a89b477b51379fa9479fb91c20dcc8394b7b2256"
 "header.h" = "70b6f61a13eeabaebda886a8e632a8841d0dc3fa702abac4489eaefba8ddea3b"
 "myomp.h" = "cdfcae72160d813e281f1df98ad3dc72e83fcf80bc0ca1d8f115c66b45888673"
+"test.logis_fe.R" = "01c04a465b9660bd3205dea07dd3000c860ec2d4566ceabe5b9a53be3729db75"
+
+[r_poibin]
+# poibin (GPL-2; run only, never ported), needed by R pprof's exact test for the slice 2c fixtures (D-35).
+repository = "https://github.com/cran/poibin"
+version = "1.6"
+commit = "495606131efd7d3ae35eb718a68b373929e80fef"

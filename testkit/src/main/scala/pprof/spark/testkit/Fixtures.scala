@@ -73,7 +73,15 @@ object Fixtures {
   /** An array of hexadecimal floating-point strings (Python's `float.hex`, R's `%a`). */
   def doubles(node: JsonNode): Array[Double] = {
     require(node != null && node.isArray, "expected an array of hexadecimal doubles")
-    Array.tabulate(node.size)(i => java.lang.Double.parseDouble(node.get(i).asText()))
+    Array.tabulate(node.size)(i => parseDouble(node.get(i).asText()))
+  }
+
+  /** A hexadecimal double as Python's `float.hex` writes it, including `inf`, `-inf` and `nan`. */
+  def parseDouble(text: String): Double = text match {
+    case "inf"  => Double.PositiveInfinity
+    case "-inf" => Double.NegativeInfinity
+    case "nan"  => Double.NaN
+    case other  => java.lang.Double.parseDouble(other)
   }
 
   /** A table of numbers with a header row. */

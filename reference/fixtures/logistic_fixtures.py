@@ -29,7 +29,7 @@ FEATURES = ("x1", "x2", "x3")
 TRUE_BETA = (0.5, -0.3, 0.8)
 FIXED_BETA = (0.375, -0.1875, 0.0625)
 TIGHT = {"tol": 1e-13}
-R_PPROF_FILES = ("Fixed_effect.cpp", "header.h", "myomp.h")
+R_PPROF_FILES = {"Fixed_effect.cpp": "src", "header.h": "src", "myomp.h": "src", "test.logis_fe.R": "R"}
 BASE_SIZES = [11 + (7 * j) % 50 for j in range(30)]
 
 CASES = (
@@ -57,6 +57,11 @@ OPTIONS = {
                    "AUC with rank() for Bernoulli rows, fitted values of the first 100 fitted rows; lfe-clustered: "
                    "sandwich::vcovCL(full, cluster = interaction(provider, patient, drop = TRUE), type = 'HC0', "
                    "cadjust = FALSE) and the beta-known variance A0 / I^2 from glm's residuals",
+    "provider_tests": "slice 2c at the default fit: test() for poibin_exact (two_sided, greater, less; reference median, "
+                      "mean and -0.5), score (median, mean), wald (median), bootstrap_exact (seed 1); controls with the "
+                      "reference shifted by 0.01 and one outcome flipped; poibin-tails.json: mpmath tails at 60 digits",
+    "r_tests": "Bernoulli cases: R pprof's test.logis_fe (sourced at the pinned commit; poibin 1.6) on the R SerBIN fit "
+               "at tol 1e-8: exact.poisbinom (two.sided, greater, less) and the modified score test, null median",
     "serbin": "R pprof logis_BIN_fe_prov(threads = 1, max_iter = 10000, bound = 10, backtrack = TRUE, "
               "stop = 'beta'), tol = 1e-8 (default) and 1e-13 (tight), on pprof_py's screened rows "
               "(binomial rows expanded to Bernoulli rows)",
@@ -211,6 +216,80 @@ def inference(model, df):
     return out
 
 
+PROVIDER_TESTS = (
+    ("exact_two_sided_median", {"test_method": "poibin_exact"}),
+    ("exact_greater_median", {"test_method": "poibin_exact", "alternative": "greater"}),
+    ("exact_less_median", {"test_method": "poibin_exact", "alternative": "less"}),
+    ("exact_two_sided_mean", {"test_method": "poibin_exact", "reference": "mean"}),
+    ("exact_two_sided_value", {"test_method": "poibin_exact", "reference": -0.5}),
+    ("score_two_sided_median", {"test_method": "score"}),
+    ("score_two_sided_mean", {"test_method": "score", "reference": "mean"}),
+    ("wald_two_sided_median", {"test_method": "wald"}),
+    ("bootstrap_two_sided_median", {"test_method": "bootstrap_exact", "seed": 1}),
+)
+
+
+def provider_tests(model, which=PROVIDER_TESTS):
+    """Slice 2c (docs/spec/logistic/provider-tests.md): pprof_py's `test` at the default fit."""
+    out = {}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for name, options in which:
+            r = model.test(**options)
+            out[name] = {"z": hexes(r["z_raw"]), "p": hexes(r["p_value"]), "flag": [int(v) for v in r["flag"]],
+                         "ci_lower": hexes(r["ci_lower"]), "ci_upper": hexes(r["ci_upper"]),
+                         "null_value": hexes([r["null_value"].iloc[0]])}
+    return out
+
+
+def provider_test_controls(model, df, case):
+    """Negative controls of slice 2c: the reference shifted by 0.01, and one outcome flipped."""
+    gamma = np.asarray(model.coefficients_["gamma"], dtype=float).ravel()
+    shifted = float(np.median(gamma)) + 0.01
+    controls = {"reference_shifted": provider_tests(
+        model, (("exact_two_sided_median", {"test_method": "poibin_exact", "reference": shifted}),))}
+    flipped = df.copy()
+    row = int(np.flatnonzero(flipped["provider"].to_numpy() == 1)[0])
+    if "n" in flipped.columns:
+        y, n = int(flipped.at[row, "y"]), int(flipped.at[row, "n"])
+        flipped.at[row, "y"] = y + 1 if y < n else y - 1
+    else:
+        flipped.at[row, "y"] = 1 - int(flipped.at[row, "y"])
+    controls["flipped_outcome"] = provider_tests(fit(flipped), PROVIDER_TESTS[:1])
+    return controls
+
+
+def poibin_tail_fixture():
+    """Function-level references: Poisson-binomial tails of fixed probability vectors from mpmath at 60
+    digits (the exact recursion), with pprof_py's `poibin_tails` beside them (X-024)."""
+    import mpmath
+    from pprof_py.inference.effect_tests import poibin_tails
+    mpmath.mp.dps = 60
+    vectors = (
+        ("wide", np.random.Generator(np.random.PCG64(3)).uniform(0.1, 0.3, 500), (0, 5, 40, 100, 160, 200, 500)),
+        ("rare", np.random.Generator(np.random.PCG64(4)).uniform(1e-6, 1e-3, 60), (0, 1, 3, 10)),
+        ("common", np.random.Generator(np.random.PCG64(5)).uniform(0.9, 0.999, 40), (40, 39, 30, 20)),
+        ("binomial", np.repeat(np.array([0.2, 0.35, 0.5, 0.05, 0.6]), [3, 1, 4, 2, 5]), (0, 7, 15)),
+    )
+    out = {}
+    for name, probs, counts in vectors:
+        pmf = [mpmath.mpf(1)] + [mpmath.mpf(0)] * len(probs)
+        for i, pi in enumerate(probs):
+            pi = mpmath.mpf(float(pi))
+            for k in range(i + 1, 0, -1):
+                pmf[k] = pmf[k] * (1 - pi) + pmf[k - 1] * pi
+            pmf[0] *= 1 - pi
+        rows = []
+        for o in counts:
+            below, at = mpmath.fsum(pmf[:o]), pmf[o]
+            above = mpmath.fsum(pmf[o + 1:])
+            exact = [above + at / 2, below + at / 2, above + at, below + at]
+            rows.append({"observed": int(o), "mpmath": hexes([float(v) for v in exact]),
+                         "pprof_py": hexes(poibin_tails(o, probs))})
+        out[name] = {"probabilities": hexes(probs), "tails": rows}
+    return out
+
+
 def negative_controls(df, case):
     controls = {}
     flipped = df.copy()
@@ -245,7 +324,7 @@ def r_pprof_sources(lock, directory):
     for name in R_PPROF_FILES:
         path = os.path.join(directory, name)
         if not os.path.exists(path):
-            url = f"https://raw.githubusercontent.com/cran/pprof/{pin['commit']}/src/{name}"
+            url = f"https://raw.githubusercontent.com/cran/pprof/{pin['commit']}/{R_PPROF_FILES[name]}/{name}"
             with urllib.request.urlopen(url, timeout=60) as response, open(path, "wb") as handle:
                 handle.write(response.read())
         with open(path, "rb") as handle:
@@ -300,7 +379,9 @@ def generate(out, inputs, lock, write_json):
         write_json(os.path.join(case_dir, "pprof_py.json"), {
             "default": default, "tight": tight, "iterates": iterates(df),
             "function": {"start": start, "fixed": fixed}, "negative_controls": negative_controls(df, case),
-            "inference": {"default": inference(model, df), "tight": inference(tight_model, df)}})
+            "inference": {"default": inference(model, df), "tight": inference(tight_model, df)},
+            "provider_tests": provider_tests(model), "provider_test_controls": provider_test_controls(model, df, case)})
         write_json(os.path.join(case_dir, "r_logistic.json"), r_outputs(case_dir, case, default["excluded"], sources))
         names.append(case["id"])
+    write_json(os.path.join(root, "poibin-tails.json"), poibin_tail_fixture())
     return names

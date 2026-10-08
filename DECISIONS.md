@@ -103,14 +103,14 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-35: Slice 2c specification (Proposed, 2026-10-08)
+### D-35: Slice 2c specification (Accepted: approved by the maintainer, 2026-10-08)
 
 `docs/spec/logistic/provider-tests.md`: provider tests on the logistic effects (exact Poisson-binomial
 with mid-p tails and test-inversion limits, score, Wald, bootstrap), the reference effect, flags and
 the result table, the exact algorithm (OI-52: the smaller tail by the exact recursion), the
 distributed plan and validation. Decisions to approve with it: X-024 (correct pprof_py's upper
-tails, class B) and X-025 (bootstrap parity distributional, class C). Awaiting the maintainer's
-approval; no 2c code before it (NN-2).
+tails, class B) and X-025 (bootstrap parity distributional, class C). Approved as written; fixtures
+and calibration in round 35.
 
 ### D-34: Slice 2b specification (Accepted: approved by the maintainer, 2026-10-07)
 

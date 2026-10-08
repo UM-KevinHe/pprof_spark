@@ -181,4 +181,73 @@ class FixturesSuite extends munit.FunSuite {
       }
     }
   }
+
+  test(
+    "logistic slice 2c: provider tests agree with R pprof; controls fall far outside; tails match mpmath"
+  ) {
+    def ratio(cls: String, actual: Array[Double], expected: Array[Double]): Double =
+      Tolerances(cls).worstRatio(actual, expected)
+    val pairs = Seq(
+      "exact_two_sided_median" -> "r_tests_exact_two_sided",
+      "exact_greater_median" -> "r_tests_exact_greater",
+      "exact_less_median" -> "r_tests_exact_less",
+      "score_two_sided_median" -> "r_tests_score_two_sided"
+    )
+    Fixtures.cases("logistic").foreach { name =>
+      val py = Fixtures.json(s"logistic/$name/pprof_py.json")
+      val r = Fixtures.json(s"logistic/$name/r_logistic.json")
+      val tests = py.get("provider_tests")
+      pairs.filter(pair => r.has(pair._2)).foreach { case (mine, theirs) =>
+        val za = Fixtures.doubles(tests.get(mine).get("z"))
+        val ze = Fixtures.doubles(r.get(theirs).get("z"))
+        val finite = ze.indices.filter(k => ze(k).isFinite)
+        assert(
+          ratio("T-test", finite.map(za).toArray, finite.map(ze).toArray) <= 1.0,
+          s"$name $mine z"
+        )
+        assert(
+          ze.indices
+            .filterNot(finite.contains)
+            .forall(k => math.signum(za(k)) == math.signum(ze(k)) && math.abs(za(k)) > 37.0)
+        )
+        val flags = tests.get(mine).get("flag")
+        assertEquals(
+          (0 until flags.size).map(flags.get(_).asInt).toVector,
+          Fixtures.doubles(r.get(theirs).get("flag")).toVector.map(_.toInt)
+        )
+      }
+      val exact = Fixtures.doubles(tests.get("exact_two_sided_median").get("z"))
+      val controls = py.get("provider_test_controls")
+      Seq(
+        Fixtures.doubles(controls.get("reference_shifted").get("exact_two_sided_median").get("z")),
+        Fixtures.doubles(controls.get("flipped_outcome").get("exact_two_sided_median").get("z"))
+      ).foreach(control => assert(ratio("T-test", control, exact) >= Margin, name))
+      val greater = Fixtures.doubles(tests.get("exact_greater_median").get("z"))
+      assert(
+        ratio(
+          "T-test",
+          Fixtures.doubles(tests.get("exact_less_median").get("z")),
+          greater
+        ) >= Margin,
+        name
+      )
+    }
+    val tails = Fixtures.json("logistic/poibin-tails.json")
+    tails.properties().asScala.foreach { vector =>
+      val rows = vector.getValue.get("tails")
+      (0 until rows.size).foreach { i =>
+        val exact = Fixtures.doubles(rows.get(i).get("mpmath"))
+        val theirs = Fixtures.doubles(rows.get(i).get("pprof_py"))
+        assert(exact.forall(v => v >= 0.0 && v <= 1.0), vector.getKey)
+        exact.indices
+          .filter(k => exact(k) > 0.0 && (k == 1 || k == 3 || exact(k) >= 1e-7))
+          .foreach { k =>
+            assert(
+              math.abs(theirs(k) - exact(k)) <= 1e-8 * exact(k),
+              s"${vector.getKey} row $i tail $k (X-024)"
+            )
+          }
+      }
+    }
+  }
 }

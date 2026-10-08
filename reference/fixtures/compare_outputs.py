@@ -31,9 +31,13 @@ def main(regenerated, committed):
     manifest = json.load(open(os.path.join(committed, "manifest.json"), encoding="utf-8"))
     worst, failures = 0.0, []
     families = (("cox", ("pprof_py.json", "r_survival.json")), ("logistic", ("pprof_py.json", "r_logistic.json")))
-    for family, case, names in ((f, c, n) for f, n in families for c in manifest["cases"].get(f, [])):
-        base = os.path.join(family, case)
-        if not filecmp.cmp(os.path.join(regenerated, base, "input.csv"), os.path.join(committed, base, "input.csv"), shallow=False):
+    cases = [(f, c, n) for f, n in families for c in manifest["cases"].get(f, [])]
+    # Family-level reference files (logistic/poibin-tails.json, slice 2c) have no input.csv.
+    shared = [(f, None, tuple(sorted(n for n in os.listdir(os.path.join(committed, f)) if n.endswith(".json"))))
+              for f, _ in families if os.path.isdir(os.path.join(committed, f))]
+    for family, case, names in cases + shared:
+        base = os.path.join(family, case) if case else family
+        if case and not filecmp.cmp(os.path.join(regenerated, base, "input.csv"), os.path.join(committed, base, "input.csv"), shallow=False):
             failures.append(f"{base}/input.csv differs")
         for name in names:
             new = dict(values(json.load(open(os.path.join(regenerated, base, name), encoding="utf-8"))))

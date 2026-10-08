@@ -11,6 +11,7 @@ Writes docs/parity/cox-calibration.md and logistic-calibration.md. Usage: python
 """
 
 import json
+import math
 import os
 import sys
 
@@ -110,6 +111,37 @@ def logistic(tol, manifest, fixtures):
                 if not ok:
                     failures.append((case, f"{name} {label}"))
                 rows.append((case, f"negative control {name}: {label}", cls, f"{miss:.3g}", "yes" if ok else "**no**"))
+        # Slice 2c (D-35): pprof_py's provider tests against R pprof's test.logis_fe; their controls.
+        tests = py["provider_tests"]
+        for mine, theirs in (("exact_two_sided_median", "r_tests_exact_two_sided"), ("exact_greater_median", "r_tests_exact_greater"),
+                             ("exact_less_median", "r_tests_exact_less"), ("score_two_sided_median", "r_tests_score_two_sided")):
+            if theirs not in r:
+                continue
+            a, e = tests[mine], r[theirs]
+            za = [float.fromhex(v) for v in a["z"]]
+            ze = [float.fromhex(v) for v in e["z"]]
+            finite = [k for k in range(len(ze)) if math.isfinite(ze[k])]
+            # R does not cap z; pprof_py caps abs(z) at the normal quantile of 1e-300 (spec 2c §2).
+            capped = all(math.copysign(1.0, za[k]) == math.copysign(1.0, ze[k]) and abs(za[k]) > 37.0
+                         for k in range(len(ze)) if not math.isfinite(ze[k]))
+            agreement = ratio(tol, "T-test", [a["z"][k] for k in finite], [e["z"][k] for k in finite])
+            flags = [int(v) for v in a["flag"]] == [int(float.fromhex(v)) for v in e["flag"]]
+            ok = agreement <= 1.0 and flags and capped
+            if not ok:
+                failures.append((case, f"{mine} vs R"))
+            rows.append((case, f"{mine} z vs R test.logis_fe (flags {'equal' if flags else 'DIFFER'})", "T-test",
+                         f"{agreement:.3g}", "yes" if ok else "**no**"))
+        targets = [(f"control reference_shifted: exact z", tests["exact_two_sided_median"]["z"],
+                    py["provider_test_controls"]["reference_shifted"]["exact_two_sided_median"]["z"]),
+                   (f"control flipped_outcome: exact z", tests["exact_two_sided_median"]["z"],
+                    py["provider_test_controls"]["flipped_outcome"]["exact_two_sided_median"]["z"]),
+                   (f"control greater against less: exact z", tests["exact_greater_median"]["z"], tests["exact_less_median"]["z"])]
+        for label, a, e in targets:
+            miss = ratio(tol, "T-test", e, a)
+            ok = miss >= MARGIN
+            if not ok:
+                failures.append((case, label))
+            rows.append((case, f"negative {label}", "T-test", f"{miss:.3g}", "yes" if ok else "**no**"))
         if "glm_nondegenerate" in r:
             informational.append(f"- {case}: pprof_py's tight β̂ against `glm` without the degenerate providers is "
                                  f"{ratio(tol, 'T-coef', py['tight']['beta'], r['glm_nondegenerate']['beta']):.3g} of T-coef "
@@ -122,6 +154,18 @@ def logistic(tol, manifest, fixtures):
              f"every negative control, compared with pprof_py's tight fit, at least {MARGIN:g}.", "",
              "| Case | Comparison | Class | Ratio | OK |", "|---|---|---|---|---|"]
     lines += [f"| {case} | {label} | {cls} | {value} | {ok} |" for case, label, cls, value, ok in rows]
+    tails = json.load(open(os.path.join(fixtures, "logistic", "poibin-tails.json"), encoding="utf-8"))
+    for name, vector in sorted(tails.items()):
+        for row in vector["tails"]:
+            exact = [float.fromhex(v) for v in row["mpmath"]]
+            theirs = [float.fromhex(v) for v in row["pprof_py"]]
+            for k, label in enumerate(("upper mid-p", "lower mid-p", "P(X >= o)", "P(X <= o)")):
+                if exact[k] == 0.0:
+                    continue
+                error = abs(theirs[k] - exact[k]) / exact[k]
+                region = "reliable" if k in (1, 3) or exact[k] >= 1e-7 else "X-024"
+                informational.append(f"- poibin-tails {name}, o = {row['observed']}, {label}: mpmath {exact[k]:.3g}, "
+                                     f"pprof_py relative error {error:.2g} ({region})")
     lines += [""] + informational + ["", f"Result: {'all checks pass' if not failures else f'{len(failures)} checks fail'}."]
     with open(os.path.join(ROOT, "docs", "parity", "logistic-calibration.md"), "w", encoding="utf-8") as handle:
         handle.write("\n".join(lines) + "\n")

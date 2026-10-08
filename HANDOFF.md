@@ -101,6 +101,25 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 35 (2026-10-08): slice 2c fixtures and calibration
+
+The maintainer approved D-35 with X-024 and X-025 as recommended.
+
+- Generator: pprof_py's `test` at the default fit for every case: `poibin_exact` (two-sided,
+  `greater`, `less`; reference median, mean and −0.5), `score` (median, mean), `wald`, and
+  `bootstrap_exact` (seed 1); controls with the reference shifted by 0.01 and one outcome flipped.
+  R pprof's `test.logis_fe` (sourced at the pinned commit, `poibin` 1.6 from the CRAN mirror, both
+  pinned) on the R SerBIN fit for Bernoulli cases: exact (three alternatives) and modified score.
+  `fixtures/logistic/poibin-tails.json`: tails of four probability vectors from mpmath at 60 digits,
+  with pprof_py's beside them.
+- Calibration passes: pprof_py against R within 0.0076 of T-test with equal flags (R's z is
+  uncapped where pprof_py caps it at the normal quantile of 1e-300); controls at least 6e5 times
+  outside; pprof_py's tails against mpmath within 7.1e-11 in the lower tails and down to 1e-7 in
+  the upper, with X-024's losses listed below that. Regeneration byte-identical; the full run with
+  copied inputs reproduces every file.
+- testkit: `Fixtures.parseDouble` reads Python's `inf`, `-inf` and `nan`; FixturesSuite checks slice
+  2c; 15 pass under Classic Spark and Spark Connect. `compare_outputs.py` covers family-level files.
+
 ## Round 34 (2026-10-08): the slice 2c specification
 
 - `docs/spec/logistic/provider-tests.md` (D-35, awaiting approval), read from pprof_py v0.7.0's

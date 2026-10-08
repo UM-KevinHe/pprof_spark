@@ -1,6 +1,6 @@
 # Specification: logistic fixed-effect model — provider tests (Phase 2c)
 
-- Status: Draft, awaiting approval (D-35). No 2c code is written before approval (NN-2).
+- Status: Approved by the maintainer, 2026-10-08 (D-35), with X-024 and X-025 as recommended.
 - Builds on: [fixed-effect-estimation.md](fixed-effect-estimation.md) (2a) and
   [covariate-inference.md](covariate-inference.md) (2b); plan [plan.md](plan.md) (slice 2c).
 - Decision references: D-35; X-024 and X-025; OI-52.
@@ -94,7 +94,7 @@ wrapper gains `provider_tests(...)`.
 
 ## 7. Validation plan
 
-Fixtures (next round), for every case: pprof_py's `test` for `poibin_exact` (two-sided, `greater`,
+Fixtures (round 35, calibrated in [logistic-calibration.md](../../parity/logistic-calibration.md)), for every case: pprof_py's `test` for `poibin_exact` (two-sided, `greater`,
 `less`; reference `median`, `mean` and a number), `score`, `wald` and `bootstrap_exact` (seeded);
 R pprof's `test.logis_fe` for `exact.poisbinom`, `score` and `wald` where its sourcing works; and,
 function-level, Poisson-binomial tails of fixed probability vectors from mpmath at 60 digits,

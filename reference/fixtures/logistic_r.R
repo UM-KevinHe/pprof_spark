@@ -103,5 +103,25 @@ for (label in c("default", "tight")) {
                          message = FALSE, backtrack = TRUE, stop = "beta")
   emit(paste0("serbin_", label, ".beta"), s$beta)
   emit(paste0("serbin_", label, ".gamma"), s$gamma)
+  if (label == "default") serbin_default <- s
+}
+if (!binomial) {
+  # Slice 2c: R pprof's test.logis_fe on the R SerBIN fit (Bernoulli data only, as R's test).
+  source(file.path(src, "test.logis_fe.R"))
+  fit_object <- structure(list(
+    char_list = list(Y.char = "y", Z.char = features, ProvID.char = "provider"),
+    data_include = e[, c("y", features, "provider")],
+    coefficient = list(gamma = as.vector(serbin_default$gamma), beta = as.vector(serbin_default$beta)),
+    variance = list(gamma = rep(NA_real_, length(n_prov)))), class = "logis_fe")
+  runs <- list(exact_two_sided = list("exact.poisbinom", "two.sided"),
+               exact_greater = list("exact.poisbinom", "greater"),
+               exact_less = list("exact.poisbinom", "less"),
+               score_two_sided = list("score", "two.sided"))
+  for (name in names(runs)) {
+    r <- test.logis_fe(fit_object, test = runs[[name]][[1]], null = "median", alternative = runs[[name]][[2]])
+    emit(paste0("r_tests_", name, ".z"), r$stat)
+    emit(paste0("r_tests_", name, ".p"), r[["p value"]])
+    emit(paste0("r_tests_", name, ".flag"), as.numeric(as.character(r$flag)))
+  }
 }
 writeLines(out, file.path(case_dir, "r_logistic.txt"))

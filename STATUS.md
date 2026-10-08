@@ -1,11 +1,11 @@
 # Status
 
-Updated 2026-10-08, round 34.
+Updated 2026-10-08, round 35.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
 models: in progress**: plan and slice 2a specification approved (D-30); 2a fixtures and calibration in
-round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification (D-35, proposed) in round 34. Python access: py4j wrappers (D-31). The maintainer runs the
+round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35. Python access: py4j wrappers (D-31). The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -55,8 +55,9 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 31 | Slice 2b specification (D-34, X-022, X-023) | Merged (45e38b1); D-34 approved |
 | 32 | Slice 2b fixtures (`lfe-clustered`; tests, AUC, predictions, robust variances) and calibration | Merged (a956da7); CI not reported |
 | 33 | Slice 2b code (robust variances, Wald variants, LR and score tests, prediction, AUC, `LogisticFitIO` v3); logistic Python wrappers | Merged (e917a68); CI not reported |
-| 34 | Slice 2c specification: provider tests (D-35, X-024, X-025) | Delivered as a patch |
-| 35 | Slice 2c fixtures and calibration (after D-35) | Planned |
+| 34 | Slice 2c specification: provider tests (D-35, X-024, X-025) | Merged (c493084); D-35 approved |
+| 35 | Slice 2c fixtures (provider tests, R pprof's `test.logis_fe`, mpmath tails) and calibration | Delivered as a patch |
+| 36 | Slice 2c code; the Python `provider_tests` | Planned |
 
 ## Decisions and spikes
 

@@ -24,6 +24,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends r-base-core=4.3.3-2build2 r-cran-survival=3.5-8-1 \
             r-base-dev=4.3.3-2build2 r-cran-rcpp=1.0.12-1 r-cran-rcpparmadillo=0.12.8.1.0-1build1 \
             r-cran-rcppparallel=5.1.7+dfsg-3ubuntu1 r-cran-sandwich=3.1-0-1
+      - name: Install poibin 1.6 (CRAN mirror, the commit pinned in REFERENCE.lock)
+        run: |
+          curl -sSL -o poibin.tar.gz https://codeload.github.com/cran/poibin/tar.gz/495606131efd7d3ae35eb718a68b373929e80fef
+          sudo R CMD INSTALL poibin.tar.gz
       - name: Install the pinned pprof_py and its pinned dependencies
         run: |
           python3 -m venv .venv
