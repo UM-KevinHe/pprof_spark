@@ -101,3 +101,16 @@ events and with only events.
 | ID | Summary | Class | Proposed decision (D-39) |
 |---|---|---|---|
 | X-028 | R's `glmm.data.prep` (and pprof_py's `cell_sizes`) returns a dense provider × cluster table of every combination's size; at the envelope that is 10⁷ to 10⁸ entries, nearly all zero | C | Return the cells present only; the dense table is derivable from them |
+
+## 9. Implementation notes (round 45; no statistical change)
+
+1. Engine: `ThreeStage.prepare(df, spec, options)` with `ThreeStageSpec`, `ThreeStageOptions` (default
+   stage 1 options `LogisticOptions(screen = false)`) and `ThreeStagePreparation`; a new input problem,
+   `ReservedColumn`.
+2. `y_adj` is computed in pprof_py's order, (y + a) − b with a and b the two 0.01/nⱼ terms, so it equals
+   pprof_py's bit for bit when the records do.
+3. Provider and cell sizes are broadcast-joined when there are at most `maxProvidersOnDriver` of them and
+   shuffle-joined otherwise; the excluded providers are collected under the same guard.
+4. Round 44's fixtures recorded the excluded providers' sizes in place of their identifiers (pprof_py's
+   exclusion record is indexed by provider); round 45 corrects them and adds the sizes as
+   `excluded_records`.

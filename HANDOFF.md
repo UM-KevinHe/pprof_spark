@@ -101,6 +101,21 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 45 (2026-10-08): slice 2f-1 code
+
+- engine `ThreeStage.prepare`: validation (missing columns, reserved output names, types, then counts of
+  null and non-binary outcomes, null keys, invalid features, all at once), provider sizes and events
+  (one aggregation, joined back), `y_adj` in pprof_py's arithmetic order, cells keyed cluster␟provider
+  with their sizes and `included`, stage 1 (slice 2a on included cells, no screening), the offset, counts
+  and the excluded providers; `InputProblem.ReservedColumn`.
+- `ThreeStageSuite` (5): every three-stage case against pprof_py (counts, excluded providers and their
+  sizes, `y_adj`, cells, `included` and offset by record; β, covariance and cell effects) and R (`glm`
+  and R's golden stage 1 β, tight fits); bitwise invariance to row order and partitioning; the strict
+  cutoff; validation failures. Classic Spark 5/5 and Spark Connect 5/5.
+- Fixture correction: round 44's `excluded` held the excluded providers' sizes (pprof_py's exclusion
+  record is indexed by provider, and the generator read its first column); now the identifiers, with
+  the sizes as `excluded_records`. Regeneration byte-identical; testkit 17 under both APIs.
+
 ## Round 44 (2026-10-08): slice 2f-1 fixtures and calibration
 
 The maintainer approved D-39 with X-028 as recommended.

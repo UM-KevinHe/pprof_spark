@@ -2643,6 +2643,7 @@
    "cells": 94,
    "clusters": 12,
    "excluded": [],
+   "excluded_records": [],
    "included": [
     1,
     1,
@@ -15999,6 +16000,7 @@
   "cells": 94,
   "clusters": 12,
   "excluded": [],
+  "excluded_records": [],
   "included": [
    1,
    1,

@@ -1761,8 +1761,12 @@
    "cells": 83,
    "clusters": 8,
    "excluded": [
-    "10",
-    "11"
+    "F28",
+    "F29"
+   ],
+   "excluded_records": [
+    10,
+    11
    ],
    "included": [
     1,
@@ -10717,7 +10721,10 @@
   "cells": 87,
   "clusters": 8,
   "excluded": [
-   "10"
+   "F28"
+  ],
+  "excluded_records": [
+   10
   ],
   "included": [
    1,

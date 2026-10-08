@@ -97,11 +97,11 @@ def prepared(df, cutoff=CUTOFF):
 def preparation(df, cutoff=CUTOFF):
     prep, d = prepared(df, cutoff)
     rows = d.sort_values("rid")
-    excluded = prep.excluded_providers
-    excluded = excluded if isinstance(excluded, pd.DataFrame) else pd.DataFrame(excluded)
+    excluded = prep.excluded_providers  # indexed by provider_id, with n_records and reason
     return {"kept": len(d), "providers": int(prep.n_providers), "clusters": int(prep.n_clusters),
             "cells": int(d["cell"].nunique()), "included_cells": int(d.loc[d["included"] == 1, "cell"].nunique()),
-            "excluded": sorted([str(v) for v in excluded.iloc[:, 0]]) if len(excluded) else [],
+            "excluded": sorted(str(v) for v in excluded.index),
+            "excluded_records": [int(excluded.loc[v, "n_records"]) for v in sorted(excluded.index, key=str)],
             "rid": [int(v) for v in rows["rid"]], "y_adj": hexes(rows["y_adj"]),
             "cell": [str(v) for v in rows["cell"]], "included": [int(v) for v in rows["included"]]}
 
