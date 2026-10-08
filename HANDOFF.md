@@ -101,6 +101,19 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 34 (2026-10-08): the slice 2c specification
+
+- `docs/spec/logistic/provider-tests.md` (D-35, awaiting approval), read from pprof_py v0.7.0's
+  `test`, `count_test`, `poibin_tails`, `z_from_tails`, `effect_test`, `invert_decreasing` and
+  `provider_test`: the four methods, the reference effect, tails to z, flags, inversion limits,
+  binomial expansion (20,000 trials), the bootstrap, the distributed plan and validation.
+- OI-52 proposal: the smaller tail by the exact recursion, truncated at the observed count. Probe
+  against mpmath (500 rows): the recursion keeps about 1e-15 relative accuracy in both tails, while
+  pprof_py's upper tails (1 − cdf) lose it: 1.4e-5 at 6.4e-11, none at 1.3e-25 (X-024). pprof_py's
+  tests on the fixtures reach p of 1e-5 at least, where it is accurate. X-025: bootstrap parity is
+  distributional. R pprof's `test.logis_fe` needs `poibin` 1.6 (GPL-2; to run only) for the R
+  reference.
+
 ## Round 33 (2026-10-08): slice 2b code and the logistic Python wrappers
 
 - numerics: kernels for the cluster meat, the robust provider variances, the score test's terms,
