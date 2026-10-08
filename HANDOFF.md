@@ -101,6 +101,22 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 47 (2026-10-08): slice 2f-2 fixtures and calibration
+
+The maintainer approved D-40 with X-029 as recommended.
+
+- Generator (`three_stage_fixtures.py`): on ts-golden and ts-synthetic, pprof_py's pipeline gives β, σ and
+  the start; `LogisticFERandomClusterModel` (marginal) with them at `tol` 1e-5 and 1e-10 gives γ,
+  iterations, criterion, log-likelihood, cluster posterior means and variances and fitted probabilities;
+  iterates 1 to 3 (by `max_iter`); ℓ and the score at the start, at start + 0.05·(k mod 5 − 2) and at the
+  tight fit; σ = 1e-4 and the σ = 0 limit (numpy); controls σ + 0.01 and one `y_adj` flipped.
+  `fixtures/three-stage/gauss-hermite.json`: rules for 5, 10, 20 and 40 nodes from mpmath (50 digits)
+  with numpy's `hermgauss` beside them.
+- Calibration passes: max abs(score) at the tight fits 7.7e-13 and 1.5e-13; σ = 1e-4 within 1.15e-7 of the
+  σ = 0 limit (below 100σ²); controls at least 1.5e5 times T-coef; numpy's rules against mpmath within
+  1.2e-4 of T-fn. Regeneration byte-identical; the full run with copied inputs reproduces every file.
+- `FixturesSuite` checks slice 2f-2; testkit 18 pass under Classic Spark and Spark Connect.
+
 ## Round 46 (2026-10-08): the slice 2f-2 specification
 
 - `docs/spec/logistic/three-stage-stage3.md` (D-40, awaiting approval), read from pprof_py v0.7.0's

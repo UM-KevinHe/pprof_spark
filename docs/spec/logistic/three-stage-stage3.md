@@ -1,6 +1,6 @@
 # Specification: three-stage model — stage 3 given β and σ (Phase 2f-2)
 
-- Status: Draft, awaiting approval (D-40). No 2f-2 code is written before approval (NN-2).
+- Status: Approved by the maintainer, 2026-10-08 (D-40), with X-029 as recommended.
 - Builds on: [three-stage-spike.md](three-stage-spike.md) (D-38), [three-stage-preparation.md](three-stage-preparation.md)
   (2f-1) and [standardization.md](standardization.md) §3 (binned Taylor sums, X-026).
 - Decision references: D-40; X-005, X-029.
@@ -90,7 +90,8 @@ Results are bitwise invariant to partitioning (R0).
 
 ## 9. Validation plan
 
-Fixtures (next round), on ts-golden and ts-synthetic: pprof_py's stage 3 with β, σ and the start from its
+Fixtures (round 47, calibrated in [three-stage-calibration.md](../../parity/three-stage-calibration.md)), on ts-golden
+and ts-synthetic: pprof_py's stage 3 with β, σ and the start from its
 own pipeline, at `tol` 1e-5 and 1e-10: γ, iterations, criterion, log-likelihood, cluster posterior
 means and variances, fitted probabilities; the first three Newton iterates from the same start
 (lockstep); ℓ and the score at the start and at a fixed γ (function level); fits at σ = 1e-4 and the

@@ -28,8 +28,8 @@ CUTOFF = 10
 CASES = (
     {"id": "ts-golden-prep", "source": "glmm_prep/raw.csv", "features": ["age"], "r_prep": True},
     {"id": "ts-golden", "source": "three_stage/raw.csv", "features": ["age", "diabetes", "chf", "comorb", "female"],
-     "r_stage23": True},
-    {"id": "ts-synthetic", "seed": 31, "features": ["x1", "x2", "x3"]},
+     "r_stage23": True, "stage3": True},
+    {"id": "ts-synthetic", "seed": 31, "features": ["x1", "x2", "x3"], "stage3": True},
 )
 OPTIONS = {
     "cutoff": CUTOFF, "tight": TIGHT,
@@ -37,6 +37,11 @@ OPTIONS = {
     "stage1": "LogisticFixedEffectModel(use_dataprep=False, screen_providers=False).fit(included rows, provider_var="
               "'cell_id'), default and tol 1e-13; offset = features @ beta (default fit)",
     "r_stage1": "glm(Y ~ 0 + cell + features, binomial, epsilon 1e-15, maxit 200) on the included rows",
+    "stage3": "slice 2f-2: LogisticThreeStageModel() (marginal) gives beta, sigma and the start; "
+              "LogisticFERandomClusterModel(tol=1e-5 and 1e-10).fit(beta=, sigma=, gamma_init=); iterates by max_iter "
+              "1 to 3; marginal log-likelihood and score at the start and at start + 0.05 (k mod 5 - 2); sigma 1e-4 and the "
+              "sigma = 0 limit (Newton in numpy); controls sigma + 0.01 and one y_adj flipped; Gauss-Hermite rules "
+              "from mpmath (50 digits) and numpy's hermgauss",
     "golden": "pprof_py tests/data/glmm_prep (R glmm.data.prep) and tests/data/three_stage (R stage 1 beta, "
               "glmer sigma, glmm.fac.hosp gamma and SRR), files checked against REFERENCE.lock",
 }
@@ -153,6 +158,87 @@ def r_golden(lock, case, df):
     return out
 
 
+def stage3_outputs(df, features):
+    """Slice 2f-2 (docs/spec/logistic/three-stage-stage3.md): pprof_py's stage 3 with beta, sigma and the
+    start from its own pipeline."""
+    from pprof_py import LogisticThreeStageModel
+    from pprof_py.models.logistic.fe_random_cluster import (LogisticFERandomClusterModel, _adaptive_rule,
+                                                             _cluster_modes, _marginal_terms)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        pipeline = LogisticThreeStageModel().fit(df, "Y", list(features), "fac", "hosp")
+    beta, sigma, start = pipeline.stage3_._values_from_stages(pipeline.stage1_, pipeline.stage2_, list(features),
+                                                              "fac", "hosp")
+    d = pipeline.data_
+
+    def fit(tol=1e-5, sig=sigma, gamma0=start, max_iter=10000, data=d):
+        model = LogisticFERandomClusterModel(tol=tol, max_iter=max_iter)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            model.fit(data, "y_adj", list(features), "fac", "hosp", beta=beta, sigma=sig, gamma_init=np.array(gamma0),
+                      obs_var="Y", verbose=False)
+        return model
+
+    def summary(m):
+        rows = d.assign(fitted=m.fitted_).sort_values("rid")
+        return {"gamma": hexes(m.gamma_), "iterations": int(m.iterations_), "converged": bool(m.converged_),
+                "criterion": hexes([m.convergence_]), "loglik": hexes([m.loglik_]),
+                "alpha_mean": hexes(m.alpha_mean_cluster_), "alpha_var": hexes(m.alpha_var_cluster_),
+                "fitted": hexes(rows["fitted"])}
+
+    default, tight = fit(), fit(tol=1e-10)
+    t_nodes, log_wt = _adaptive_rule(20)
+    prov, clust, xb, y = tight._provider_idx, tight._cluster_idx, tight.xbeta_, tight._y
+
+    def function(gamma):
+        center, scale = _cluster_modes(gamma, xb, y, prov, clust, sigma, tight.n_clusters_)
+        loglik, score, *_ = _marginal_terms(gamma, xb, y, prov, clust, t_nodes, log_wt, sigma, center, scale,
+                                            tight.n_providers_, tight.n_clusters_)
+        return {"gamma": hexes(gamma), "loglik": hexes([loglik]), "score": hexes(score)}
+
+    fixed = np.asarray(start, dtype=float) + 0.05 * (np.arange(len(start)) % 5 - 2)
+    limit = np.asarray(start, dtype=float).copy()
+    for _ in range(200):  # sigma = 0: each provider's root of sum(y_adj - p) = 0 (X-005)
+        p = 1.0 / (1.0 + np.exp(-(limit[prov] + xb)))
+        step = np.bincount(prov, weights=y - p, minlength=limit.size) / np.bincount(prov, weights=p * (1 - p), minlength=limit.size)
+        limit = limit + step
+        if np.max(np.abs(step)) < 1e-15:
+            break
+    flipped = d.copy()
+    flipped.loc[flipped.index[0], "y_adj"] = 1.0 - flipped["y_adj"].iloc[0]
+    return {"providers": [str(v) for v in tight.provider_ids_], "clusters": [str(v) for v in tight.cluster_ids_],
+            "beta": hexes(beta), "sigma": hexes([sigma]), "start": hexes(start),
+            "default": summary(default), "tight": summary(tight),
+            "iterates": [hexes(fit(tol=1e-14, max_iter=k).gamma_) for k in (1, 2, 3)],
+            "function": {"start": function(np.asarray(start, dtype=float)), "fixed": function(fixed),
+                         "tight": function(tight.gamma_)},
+            "small_sigma": {"sigma": hexes([1e-4]), "gamma": hexes(fit(tol=1e-10, sig=1e-4, gamma0=limit).gamma_)},
+            "zero_sigma_limit": hexes(limit),
+            "negative_controls": {"sigma_plus_0.01": hexes(fit(tol=1e-10, sig=sigma + 0.01).gamma_),
+                                  "flipped_y_adj": hexes(fit(tol=1e-10, data=flipped).gamma_)}}
+
+
+def gauss_hermite():
+    """Gauss-Hermite rules for weight e^(-t^2): mpmath at 50 digits, and numpy's hermgauss beside them."""
+    import mpmath
+    mpmath.mp.dps = 50
+    out = {}
+    for n in (5, 10, 20, 40):
+        nodes, weights = mpmath.gauss_quadrature(n, "hermite") if hasattr(mpmath, "gauss_quadrature") else (None, None)
+        if nodes is None:
+            # Golub-Welsch at 50 digits: eigenvalues of the Jacobi matrix with off-diagonals sqrt(k/2)
+            J = mpmath.matrix(n, n)
+            for k in range(1, n):
+                J[k, k - 1] = J[k - 1, k] = mpmath.sqrt(mpmath.mpf(k) / 2)
+            E, Q = mpmath.eigsy(J)
+            pairs = sorted((E[i], mpmath.sqrt(mpmath.pi) * Q[0, i] ** 2) for i in range(n))
+            nodes, weights = [p[0] for p in pairs], [p[1] for p in pairs]
+        t_np, w_np = np.polynomial.hermite.hermgauss(n)
+        out[str(n)] = {"nodes": hexes([float(v) for v in nodes]), "weights": hexes([float(v) for v in weights]),
+                       "numpy_nodes": hexes(t_np), "numpy_weights": hexes(w_np)}
+    return out
+
+
 def flipped(df):
     _, d = prepared(df)
     rid = int(d.loc[d["included"] == 1].sort_values("rid")["rid"].iloc[0])
@@ -184,8 +270,13 @@ def generate(out, inputs, lock, write_json):
             "stage1": {"default": stage1(df, features), "tight": stage1(df, features, **TIGHT)},
             "negative_controls": {"cutoff_11": preparation(df, cutoff=11),
                                   "flipped_outcome": stage1(flipped(df), features, **TIGHT)}})
+        if case.get("stage3"):
+            reference = json.load(open(os.path.join(case_dir, "pprof_py.json")))
+            reference["stage3"] = stage3_outputs(df, features)
+            write_json(os.path.join(case_dir, "pprof_py.json"), reference)
         r = r_golden(lock, case, df)
         r["glm_stage1"] = {"beta": r_stage1(df, features, case_dir)}
         write_json(os.path.join(case_dir, "r_threestage.json"), r)
         names.append(case["id"])
+    write_json(os.path.join(root, "gauss-hermite.json"), gauss_hermite())
     return names

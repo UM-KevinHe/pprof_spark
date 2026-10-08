@@ -350,4 +350,41 @@ class FixturesSuite extends munit.FunSuite {
       )
     }
   }
+
+  test(
+    "three-stage slice 2f-2: stage 3 is optimal at its tight fit, tends to the sigma = 0 limit; controls; rules"
+  ) {
+    def ratio(cls: String, actual: Array[Double], expected: Array[Double]): Double =
+      Tolerances(cls).worstRatio(actual, expected)
+    Seq("ts-golden", "ts-synthetic").foreach { name =>
+      val s3 = Fixtures.json(s"three-stage/$name/pprof_py.json").get("stage3")
+      assert(
+        Fixtures
+          .doubles(s3.get("function").get("tight").get("score"))
+          .forall(v => math.abs(v) <= 1e-9),
+        name
+      )
+      val small = Fixtures.doubles(s3.get("small_sigma").get("gamma"))
+      val limit = Fixtures.doubles(s3.get("zero_sigma_limit"))
+      assert(small.indices.forall(i => math.abs(small(i) - limit(i)) <= 1e-6), name)
+      val tight = Fixtures.doubles(s3.get("tight").get("gamma"))
+      s3.get("negative_controls").properties().asScala.foreach { control =>
+        assert(
+          ratio("T-coef", Fixtures.doubles(control.getValue), tight) >= Margin,
+          s"$name ${control.getKey}"
+        )
+      }
+    }
+    val rules = Fixtures.json("three-stage/gauss-hermite.json")
+    rules.properties().asScala.foreach { rule =>
+      Seq("nodes", "weights").foreach { part =>
+        val agreement = ratio(
+          "T-fn",
+          Fixtures.doubles(rule.getValue.get(s"numpy_$part")),
+          Fixtures.doubles(rule.getValue.get(part))
+        )
+        assert(agreement <= 1.0, s"${rule.getKey} $part")
+      }
+    }
+  }
 }

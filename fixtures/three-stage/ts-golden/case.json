@@ -11,5 +11,6 @@
  "id": "ts-golden",
  "r_stage23": true,
  "rows": 2637,
- "source": "three_stage/raw.csv"
+ "source": "three_stage/raw.csv",
+ "stage3": true
 }
