@@ -101,6 +101,19 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 43 (2026-10-08): the slice 2f-1 specification
+
+The maintainer approved D-38 with X-005 as recommended.
+
+- `docs/spec/logistic/three-stage-preparation.md` (D-39, awaiting approval): pprof_py's `glmm_data_prep`
+  (providers with more than `cutoff` records, `y_adj`, provider × cluster cells, `included`) and stage 1
+  (slice 2a on included cells, no screening), the offset, `ThreeStage.prepare` and its outputs, the
+  distributed plan (aggregations by provider and by cell joined back), edge cases and validation;
+  X-028 (no dense provider × cluster table, class C).
+- Probes: pprof_py's preparation equals R's `glmm.data.prep` on its golden data (854 of 903 records kept,
+  `y_adj` within 3.3e-16, cells, `included` and the 23 × 8 table equal); stage 1's β within 3.9e-16 of
+  R's on the three-stage golden data; strict `cutoff`; `y_adj` = ±0.01/nⱼ.
+
 ## Round 42 (2026-10-08): the three-stage spike
 
 - `docs/spec/logistic/three-stage-spike.md` (D-38, awaiting approval), read from pprof_py v0.7.0: the
