@@ -104,4 +104,52 @@ class PythonApiSuite extends SparkSuite {
       PythonApi.coxProviderTests(tiny, fit, "stratum", "wald", 0.95)
     )
   }
+
+  test(
+    "a logistic fit through the facade equals the engine's; invalid roles are reported at once"
+  ) {
+    val f = Fixtures.csv("logistic/lfe-clustered/input.csv")
+    val rows = f.rows.map { r =>
+      Row.fromSeq(
+        f.columns.indices.map(i =>
+          if (Set("id", "provider", "patient", "y")(f.columns(i))) r(i).toLong else r(i)
+        )
+      )
+    }
+    val schema = StructType(f.columns.map { c =>
+      StructField(
+        c,
+        if (Set("id", "provider", "patient", "y")(c)) LongType else DoubleType,
+        nullable = false
+      )
+    })
+    val df = spark.createDataFrame(rows.asJava, schema)
+    val columns =
+      """{"outcome": "y", "features": ["x1", "x2", "x3"], "provider": "provider", "rowId": "id", "cluster": "patient"}"""
+    val viaFacade = PythonApi.logisticFit(df, columns, """{"tol": 1e-10}""")
+    val direct = pprof.spark.engine.logistic.LogisticFE.fit(
+      df,
+      pprof.spark.engine.logistic
+        .LogisticSpec("y", Seq("x1", "x2", "x3"), "provider", None, Some("id"), Some("patient")),
+      pprof.spark.engine.logistic.LogisticOptions(tol = 1e-10)
+    )
+    assertEquals(bits(viaFacade.estimates), bits(direct.estimates))
+    assertEquals(bits(viaFacade.robustCovariance.get), bits(direct.robustCovariance.get))
+    val summary = new ObjectMapper().readTree(PythonApi.logisticSummary(viaFacade))
+    assertEquals(java.lang.Double.parseDouble(summary.get("auc").asText()), direct.auc.get)
+    assertEquals(summary.get("columns").get("cluster").asText(), "patient")
+    val wald =
+      new ObjectMapper().readTree(PythonApi.logisticWald(viaFacade, 0.0, "two_sided", 0.95, true))
+    assertEquals(wald.get(0).get("method").asText(), "wald-robust")
+    val failure = intercept[IllegalArgumentException](
+      PythonApi.logisticModel(
+        """{"outcome": 1, "colour": "red"}""",
+        """{"tol": "small", "bound": -1}"""
+      )
+    )
+    Seq("columns.outcome", "columns.colour", "columns.features", "columns.provider", "fit.tol")
+      .foreach { key =>
+        assert(failure.getMessage.contains(key), failure.getMessage)
+      }
+  }
 }

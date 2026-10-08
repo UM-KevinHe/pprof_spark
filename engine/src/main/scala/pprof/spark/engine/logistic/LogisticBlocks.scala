@@ -15,7 +15,8 @@ final case class LogisticRow(
     rowId: Long,
     y: Double,
     n: Double,
-    x: Array[Double]
+    x: Array[Double],
+    cluster: String
 )
 
 /** Whole providers in canonical order (Phase 2a specification §11, DIST-6), covariates row-major.
@@ -31,9 +32,10 @@ final case class LogisticBlock(
     y: Array[Double],
     n: Array[Double],
     x: Array[Double],
+    cluster: Array[Int],
     gamma: Array[Double]
 ) {
-  def rows: Kernel.Rows = Kernel.Rows(groupStart, y, n, x, p)
+  def rows: Kernel.Rows = Kernel.Rows(groupStart, y, n, x, p, cluster)
 }
 
 /** Per block: counts, Σ n x, the fingerprint, and records, events and trials of each provider. */
@@ -48,7 +50,9 @@ final case class LogisticSummary(
     fingerprint: Long,
     records: Array[Long],
     providerEvents: Array[Double],
-    providerTrials: Array[Double]
+    providerTrials: Array[Double],
+    maxOutcome: Double,
+    zeroOutcomes: Long
 )
 
 final case class LogisticSchurPartial(
@@ -66,6 +70,24 @@ final case class LogisticTrialPartial(
 )
 
 final case class LogisticVariancePartial(blockId: Int, packed: Array[Double], loglik: Double)
+
+final case class LogisticMeatPartial(blockId: Int, packed: Array[Double], clusters: Long)
+
+final case class LogisticRobustPartial(
+    blockId: Int,
+    caseMix: Array[Double],
+    fixedBeta: Array[Double]
+)
+
+final case class LogisticScorePartial(blockId: Int, packed: Array[Double], score: Array[Double])
+
+final case class LogisticLoglikPartial(blockId: Int, loglik: Double)
+
+/** One row's fitted probability and outcome, for the AUC's sort. */
+final case class LogisticScore(pi: Double, positive: Boolean)
+
+/** One sorted partition's positives, negatives and twice its Mann–Whitney numerator. */
+final case class LogisticAucPartial(positives: Long, negatives: Long, twiceNumerator: Long)
 
 final case class LogisticProviderPartial(
     blockId: Int,
@@ -111,6 +133,13 @@ object LogisticBlockBuilder {
     val y = new Array[Double](count)
     val n = new Array[Double](count)
     val x = new Array[Double](count * p)
+    val keys = sorted.iterator.map(_.cluster).toArray.distinct.sorted
+    val clusters =
+      if (keys.forall(_.isEmpty)) Array.emptyIntArray
+      else {
+        val rank = keys.zipWithIndex.toMap
+        sorted.map(row => rank(row.cluster))
+      }
     val groups = Array.newBuilder[Int]
     val starts = Array.newBuilder[Int]
     var r = 0
@@ -136,6 +165,7 @@ object LogisticBlockBuilder {
       y,
       n,
       x,
+      clusters,
       Array.emptyDoubleArray
     )
   }
@@ -169,7 +199,8 @@ object LogisticWorkingSet {
         col(Validation.RowIdColumn).as("rowId"),
         col(LogisticValidation.OutcomeColumn).as("y"),
         col(LogisticValidation.TrialsColumn).as("n"),
-        col(Validation.FeaturesColumn).as("x")
+        col(Validation.FeaturesColumn).as("x"),
+        col(LogisticValidation.ClusterColumn).as("cluster")
       )
       .as[LogisticRow](Encoders.product[LogisticRow])
     val blocks = placed

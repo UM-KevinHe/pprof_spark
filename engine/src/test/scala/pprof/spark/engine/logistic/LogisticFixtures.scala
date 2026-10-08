@@ -28,16 +28,27 @@ object LogisticFixtures {
   }
 
   def spec(name: String): LogisticSpec =
-    LogisticSpec("y", Features, "provider", if (binomial(name)) Some("n") else None, Some("id"))
+    LogisticSpec(
+      "y",
+      Features,
+      "provider",
+      if (binomial(name)) Some("n") else None,
+      Some("id"),
+      if (clustered(name)) Some("patient") else None
+    )
+
+  def clustered(name: String): Boolean = table(name).columns.contains("patient")
 
   /** The input as a DataFrame: integral identifiers, outcome and trials, double features. */
   def frame(spark: SparkSession, name: String, reverse: Boolean = false): DataFrame = {
     val t = table(name)
     val trials = binomial(name)
+    val patients = clustered(name)
     val rows = t.rows.map { r =>
       def at(column: String) = r(t.columns.indexOf(column))
       Row.fromSeq(
         Seq[Any](at("id").toLong, at("provider").toLong, at("y").toInt) ++
+          (if (patients) Seq(at("patient").toLong) else Seq.empty) ++
           (if (trials) Seq(at("n").toInt) else Seq.empty) ++ Features.map(at)
       )
     }
@@ -46,7 +57,9 @@ object LogisticFixtures {
         StructField("id", LongType, nullable = false),
         StructField("provider", LongType, nullable = false),
         StructField("y", IntegerType, nullable = false)
-      ) ++ (if (trials) Seq(StructField("n", IntegerType, nullable = false)) else Seq.empty) ++
+      ) ++ (if (patients) Seq(StructField("patient", LongType, nullable = false))
+            else Seq.empty) ++ (if (trials) Seq(StructField("n", IntegerType, nullable = false))
+                                else Seq.empty) ++
         Features.map(StructField(_, DoubleType, nullable = false))
     )
     spark.createDataFrame((if (reverse) rows.reverse else rows).asJava, schema)

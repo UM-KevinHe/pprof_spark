@@ -29,10 +29,12 @@ import pprof.spark.numerics.SerbinStep
   */
 object LogisticFitIO {
 
-  val FormatVersion: Int = 2
+  val FormatVersion: Int = 3
 
-  /** Version 1 lacks `correlationThresholdBits`; its fits load with the default threshold. */
-  val ReadableVersions: Set[Int] = Set(1, 2)
+  /** Version 1 lacks `correlationThresholdBits` (its fits load with the default threshold); versions 1
+    * and 2 lack slice 2b's cluster column, robust variances and AUC.
+    */
+  val ReadableVersions: Set[Int] = Set(1, 2, 3)
   val Kind: String = "pprof.spark.engine.logistic.LogisticFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -62,6 +64,7 @@ object LogisticFitIO {
       field("providerCol", StringType),
       field("trialsCol", StringType, nullable = true),
       field("rowIdCol", StringType, nullable = true),
+      field("clusterCol", StringType, nullable = true),
       field("tolBits", LongType),
       field("maxIter", IntegerType),
       field("boundBits", LongType),
@@ -104,7 +107,10 @@ object LogisticFitIO {
       field("oversizedGroups", IntegerType),
       field("largestBlockRows", LongType),
       field("smallestBlockRows", LongType),
-      field("fingerprint", LongType)
+      field("fingerprint", LongType),
+      field("robustCovarianceBits", Longs, nullable = true),
+      field("clusters", LongType, nullable = true),
+      field("aucBits", LongType, nullable = true)
     )
   )
 
@@ -119,7 +125,9 @@ object LogisticFitIO {
       field("records", LongType),
       field("events", DoubleType),
       field("trials", DoubleType),
-      field("at_bound", BooleanType)
+      field("at_bound", BooleanType),
+      field("robust_var_case_mix", DoubleType, nullable = true),
+      field("robust_var_fixed_beta", DoubleType, nullable = true)
     )
   )
 
@@ -144,6 +152,7 @@ object LogisticFitIO {
       fit.spec.provider,
       fit.spec.trials.orNull,
       fit.spec.rowId.orNull,
+      fit.spec.cluster.orNull,
       bit(o.tol),
       o.maxIter,
       bit(o.bound),
@@ -188,7 +197,10 @@ object LogisticFitIO {
       fit.layout.oversizedGroups,
       fit.layout.largestBlockRows,
       fit.layout.smallestBlockRows,
-      fit.fingerprint
+      fit.fingerprint,
+      fit.robustCovariance.map(v => bits(v)).orNull,
+      fit.clusters,
+      fit.auc.map(v => java.lang.Long.valueOf(bit(v))).orNull
     )
     spark
       .createDataFrame(java.util.List.of(record), MetadataSchema)
@@ -206,7 +218,9 @@ object LogisticFitIO {
         p.records(k),
         p.events(k),
         p.trials(k),
-        p.atBound(k)
+        p.atBound(k),
+        if (p.robustVarCaseMix.isEmpty) null else p.robustVarCaseMix(k),
+        if (p.robustVarFixedBeta.isEmpty) null else p.robustVarFixedBeta(k)
       )
     }
     spark
@@ -286,7 +300,11 @@ object LogisticFitIO {
       rows.map(_.getLong(5)),
       rows.map(_.getDouble(6)),
       rows.map(_.getDouble(7)),
-      rows.map(_.getBoolean(8))
+      rows.map(_.getBoolean(8)),
+      if (rows.isEmpty || rows.head.isNullAt(9)) Array.emptyDoubleArray
+      else rows.map(_.getDouble(9)),
+      if (rows.isEmpty || rows.head.isNullAt(10)) Array.emptyDoubleArray
+      else rows.map(_.getDouble(10))
     )
     val names = seq[String]("featureCols")
     val estimate = doubles("estimateBits")
@@ -330,7 +348,8 @@ object LogisticFitIO {
         names,
         r.getAs[String]("providerCol"),
         Option(r.getAs[String]("trialsCol")),
-        Option(r.getAs[String]("rowIdCol"))
+        Option(r.getAs[String]("rowIdCol")),
+        Option(r.getAs[String]("clusterCol"))
       ),
       options,
       SoftwareInfo.fromFields(seq[String]("softwareKeys").zip(seq[String]("softwareValues"))),
@@ -342,7 +361,15 @@ object LogisticFitIO {
         r.getAs[Long]("smallestBlockRows")
       ),
       r.getAs[Long]("fingerprint"),
-      r.getAs[String]("featureStatus")
+      r.getAs[String]("featureStatus"),
+      robustCovariance = Option(r.get(r.fieldIndex("robustCovarianceBits")))
+        .map(_ =>
+          seq[Long]("robustCovarianceBits").iterator.map(java.lang.Double.longBitsToDouble).toVector
+        ),
+      clusters = Option(r.get(r.fieldIndex("clusters"))).map(_.asInstanceOf[Long]).getOrElse(0L),
+      auc = Option(r.get(r.fieldIndex("aucBits"))).map(v =>
+        java.lang.Double.longBitsToDouble(v.asInstanceOf[Long])
+      )
     )
   }
 }

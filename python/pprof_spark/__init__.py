@@ -4,5 +4,7 @@ Statistics run in the JVM, in the pprof_spark JARs; nothing here reimplements th
 """
 from ._jvm import __version__, api
 from .cox import Coefficient, CoxPH, CoxPHModel
+from .logistic import LogisticFixedEffect, LogisticFixedEffectModel, Test
 
-__all__ = ["__version__", "api", "Coefficient", "CoxPH", "CoxPHModel"]
+__all__ = ["__version__", "api", "Coefficient", "CoxPH", "CoxPHModel", "LogisticFixedEffect",
+           "LogisticFixedEffectModel", "Test"]

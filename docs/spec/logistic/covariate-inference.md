@@ -147,3 +147,16 @@ partitioning, the edge cases of §7, Classic Spark and Spark Connect.
 |---|---|---|---|
 | X-022 | pprof_py's prediction maps unknown providers to neighbours or raises `IndexError`, and its fit raises on two outcome values other than 0 and 1 | C | Fail with counts for unknown providers; report no AUC in the second case |
 | X-023 | Clusters are nested in providers: a patient seen by two providers counts as two clusters, and the sandwich ignores correlation across providers | — (reference convention) | Follow pprof_py and say so in the documentation; clustering across providers would need a shuffle by cluster and match neither reference |
+
+## 11. Implementation notes (round 33; no statistical change)
+
+1. Engine: `LogisticSpec.cluster`; `LogisticFE.fit` computes the robust variances and the AUC;
+   `LogisticFE.waldTests`, `covariateTests` and `predict`; kernels `robustMeat`, `robustProviders`,
+   `scoreTerms`, `fitted` and `sandwich` in `numerics.kernels.LogisticFE`.
+2. The χ²₁ p-value of the LR and score tests is computed as 2Φ̄(√statistic), which equals it; a
+   statistic at or below zero gives 1.
+3. The fingerprint does not include the cluster column, so a fit with and without one share it.
+4. `LogisticFitIO` format version 3 adds the cluster column, robust covariance, cluster count, AUC and
+   the providers' robust variances; versions 1 and 2 load without them.
+5. Python: `pprof_spark.LogisticFixedEffect` and `LogisticFixedEffectModel` (2a and 2b) through
+   `PythonApi.logistic*`.

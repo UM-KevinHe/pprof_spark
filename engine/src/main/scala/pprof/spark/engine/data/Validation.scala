@@ -48,6 +48,8 @@ object InputProblem {
       extends InputProblem(name, s"has $count negative values")
   final case class EntryNotBeforeExit(name: String, exit: String, count: Long)
       extends InputProblem(name, s"has $count values that are not below column $exit")
+  final case class UnknownProviders(name: String, count: Long)
+      extends InputProblem(name, s"has $count rows of providers that are not in the fit (X-022)")
   final case class UnknownStrata(name: String, count: Long)
       extends InputProblem(
         name,

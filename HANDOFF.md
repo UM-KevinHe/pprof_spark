@@ -101,6 +101,24 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 33 (2026-10-08): slice 2b code and the logistic Python wrappers
+
+- numerics: kernels for the cluster meat, the robust provider variances, the score test's terms,
+  fitted probabilities and the sandwich; `Rows.cluster`.
+- engine: `LogisticSpec.cluster` (validated; blocks carry cluster ranks; canonical order unchanged);
+  `fit` adds the robust covariance, the providers' robust variances (case mix, β known), the cluster
+  count and an exact AUC (one sort, integer counts); `waldTests`, `covariateTests` (refits on the
+  working set, fingerprint checked) and `predict` (unknown providers fail with counts, X-022);
+  the provider table gains the robust columns; `LogisticFitIO` format version 3.
+- Tests, sandbox (JDK 17): `LogisticInferenceSuite` 8 (every case against pprof_py's default fit
+  and R: Wald variants, LR, score, AUC, predictions, robust variances; bitwise fit with and without a
+  cluster column; failures) under Classic and Spark Connect; `LogisticFitIOSuite` 4 (both); the 2a
+  suites and numerics (71) rerun.
+- Python: `PythonApi.logistic*` (a JSON model parser reporting every problem); `pprof_spark`
+  `LogisticFixedEffect` and `LogisticFixedEffectModel`; `PythonApiSuite` 4 (both APIs); Python tests
+  10 (6 Cox, 4 logistic) in PySpark 4.1.0. OI-56: a Spark CSV pushdown error seen with a literal
+  provider column.
+
 ## Round 32 (2026-10-07): slice 2b fixtures and calibration
 
 The maintainer approved D-34 with X-022 and X-023 as recommended.

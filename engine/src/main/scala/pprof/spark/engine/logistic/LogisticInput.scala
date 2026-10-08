@@ -37,6 +37,7 @@ object LogisticValidation {
 
   val OutcomeColumn: String = "__pprof_y"
   val TrialsColumn: String = "__pprof_n"
+  val ClusterColumn: String = "__pprof_cluster"
 
   def validate(df: DataFrame, spec: LogisticSpec): LogisticInput = {
     val types = df.schema.fields.map(f => f.name -> f.dataType).toMap
@@ -89,6 +90,10 @@ object LogisticValidation {
       if (nulls > 0) problems += InputProblem.InvalidValues(name, nulls, 0L)
       if (duplicates > 0) problems += InputProblem.DuplicateRowIds(name, duplicates)
     }
+    spec.cluster.foreach { name =>
+      val nulls = next()
+      if (nulls > 0) problems += InputProblem.InvalidValues(name, nulls, 0L)
+    }
     if (rows == 0) problems += InputProblem.EmptyInput
     val found = problems.result()
     if (found.nonEmpty) throw new InvalidInputException(found)
@@ -105,7 +110,10 @@ object LogisticValidation {
         .as(Validation.FeaturesColumn),
       spec.rowId
         .fold(lit(0L))(name => Validation.column(name).cast(LongType))
-        .as(Validation.RowIdColumn)
+        .as(Validation.RowIdColumn),
+      spec.cluster
+        .fold(lit(""))(name => Validation.column(name).cast(StringType))
+        .as(ClusterColumn)
     )
     LogisticInput(frame, spec, rows, providerKeyIsText)
   }
@@ -137,7 +145,10 @@ object LogisticValidation {
       ).flatten ++
       spec.trials.toSeq.flatMap(name => check(name, Validation.isIntegral, "an integral type")) ++
       spec.features.flatMap(name => check(name, numeric, "a numeric type")) ++
-      spec.rowId.toSeq.flatMap(name => check(name, Validation.isIntegral, "an integral type"))
+      spec.rowId.toSeq.flatMap(name => check(name, Validation.isIntegral, "an integral type")) ++
+      spec.cluster.toSeq.flatMap(name =>
+        check(name, t => Validation.isIntegral(t) || t == StringType, "an integral or string type")
+      )
   }
 
   private def valueCounts(types: Map[String, DataType], spec: LogisticSpec): Seq[Column] = {
@@ -170,6 +181,7 @@ object LogisticValidation {
       Seq(countWhere(value.isNull), countDistinct(value))
     }
     Seq(count(lit(1)), countWhere(outcome.isNull)) ++ outcomeChecks ++ features ++
-      Seq(countWhere(Validation.column(spec.provider).isNull)) ++ rowId
+      Seq(countWhere(Validation.column(spec.provider).isNull)) ++ rowId ++
+      spec.cluster.toSeq.map(name => countWhere(Validation.column(name).isNull))
   }
 }

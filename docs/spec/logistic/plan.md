@@ -86,4 +86,4 @@ the Scala engine through PySpark's JVM gateway and never reimplements statistics
 | Databricks | The maintainer's test: py4j access to library classes is expected on dedicated (single-user) compute and blocked in standard access mode (to re-verify, OI-53) |
 | CI | A job with PySpark 4.1.0 and the built JARs running the Python tests in local Classic mode |
 | Distribution | A wheel with the JAR on GitHub Releases (D-08) |
-| Schedule | After slice 2a's estimator: ADR-0009, then wrappers for the Cox API, then each logistic slice as it lands |
+| Schedule | After slice 2a's estimator: ADR-0009, then wrappers for the Cox API (round 30), then each logistic slice as it lands (2a and 2b in round 33) |

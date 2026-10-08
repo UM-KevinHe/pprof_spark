@@ -49,4 +49,20 @@ again = CoxPHModel.load(spark, "/path/fit")
 `CoxPH`'s arguments are the `columns` and `fit` objects of the job runner's run specification, in
 Python spelling; options left as `None` take the engine's defaults. Invalid inputs raise
 `pyspark.errors.IllegalArgumentException` with the engine's message (counts, never values).
-Logistic models join as their slices land (plan §6).
+## Logistic fixed-effect models
+
+```python
+from pprof_spark import LogisticFixedEffect, LogisticFixedEffectModel
+
+fit = LogisticFixedEffect("readmitted", ["age", "comorbidity"], "facility", row_id="id",
+                          cluster="patient").fit(df)
+fit.coefficients, fit.covariance, fit.robust_covariance, fit.auc, fit.excluded
+fit.providers()                                    # effects, variances, flags per facility
+fit.wald_tests(null=0.0, alternative="two_sided", robust=True)
+fit.covariate_tests(df, "lr")                      # or "score": refits on the training data
+fit.predict(new_rows)                              # linear_predictor and probability
+fit.save("/path/fit"); LogisticFixedEffectModel.load(spark, "/path/fit")
+```
+
+Its arguments follow `LogisticSpec` and `LogisticOptions` (docs/spec/logistic/). Provider tests and
+standardized measures join as their slices land (plan §6).

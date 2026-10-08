@@ -92,7 +92,7 @@ class LogisticFitIOSuite extends SparkSuite {
     val failure = intercept[IllegalArgumentException](LogisticFitIO.load(spark, other))
     assert(
       failure.getMessage.contains("format version 99") && failure.getMessage.contains(
-        "versions 1 to 2"
+        "versions 1 to 3"
       )
     )
     val version1 = freshPath()
@@ -107,5 +107,25 @@ class LogisticFitIOSuite extends SparkSuite {
     spark.read.parquet(s"$path/providers").coalesce(1).write.parquet(s"$version1/providers")
     assertEquals(LogisticFitIO.load(spark, version1).options.correlationThreshold, 0.9)
     assertSameFit(LogisticFitIO.load(spark, path), fit)
+  }
+
+  test("clustered fits keep their robust variances, cluster column and AUC (format version 3)") {
+    val name = "lfe-clustered"
+    val fit = LogisticFE.fit(frame(spark, name), spec(name))
+    assert(fit.robustCovariance.isDefined && fit.auc.isDefined && fit.clusters > 0L)
+    val path = freshPath()
+    LogisticFitIO.save(spark, fit, path)
+    val loaded = LogisticFitIO.load(spark, path)
+    assertSameFit(loaded, fit)
+    assertEquals(bits(loaded.robustCovariance.get), bits(fit.robustCovariance.get))
+    assertEquals(
+      bits(loaded.providers.robustVarCaseMix.toSeq),
+      bits(fit.providers.robustVarCaseMix.toSeq)
+    )
+    assertEquals(
+      bits(loaded.providers.robustVarFixedBeta.toSeq),
+      bits(fit.providers.robustVarFixedBeta.toSeq)
+    )
+    assertEquals(bits(loaded.auc.toSeq), bits(fit.auc.toSeq))
   }
 }

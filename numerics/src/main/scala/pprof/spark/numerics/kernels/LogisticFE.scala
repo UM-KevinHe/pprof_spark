@@ -15,13 +15,16 @@ object LogisticFE {
   /** π is clipped to [1e-10, 1 − 1e-10] for the variances (pprof_py's `_estimate_variances`). */
   val VarianceClip: Double = 1e-10
 
-  /** One block's rows, grouped by provider. */
+  /** One block's rows, grouped by provider; `cluster(r)` ranks row r's cluster key in the block (empty
+    * without a cluster column; Phase 2b §5).
+    */
   final case class Rows(
       starts: Array[Int],
       y: Array[Double],
       n: Array[Double],
       x: Array[Double],
-      p: Int
+      p: Int,
+      cluster: Array[Int] = Array.emptyIntArray
   ) {
     def providers: Int = starts.length
     def rows: Int = y.length
@@ -244,6 +247,238 @@ object LogisticFE {
       k += 1
     }
     ProviderVariances(varGamma, varCaseMix)
+  }
+
+  /** Below this information a provider gets NaN robust variances and no share of the meat (pprof_py). */
+  val RobustFloor: Double = 1e-14
+
+  /** The block's share of the robust meat M_eff (packed) and its number of clusters (Phase 2b §2). */
+  final case class Meat(packed: Array[Double], clusters: Long)
+
+  /** Per provider of the block: Var_rob(γ̂ⱼ + x̄ᵀβ̂) and A0ⱼ/Iⱼ² (Phase 2b §2). */
+  final case class RobustVariances(caseMix: Array[Double], fixedBeta: Array[Double])
+
+  /** The score test's terms at clipped π: the centred S (packed) and the uncentred score Σ x e. */
+  final case class ScoreTerms(packed: Array[Double], score: Array[Double])
+
+  /** The fitted probability of every row, unclipped (AUC, prediction). */
+  def fitted(rows: Rows, gamma: Array[Double], beta: Array[Double]): Array[Double] = {
+    val out = new Array[Double](rows.rows)
+    var k = 0
+    while (k < rows.providers) {
+      var r = rows.starts(k)
+      while (r < rows.end(k)) {
+        out(r) = sigmoid(eta(rows, r, gamma(k), beta))
+        r += 1
+      }
+      k += 1
+    }
+    out
+  }
+
+  /** Pass R1 at the estimates, π clipped: Σ over clusters of ũₖũₖᵀ, ũₖ = Σᵢ∈ₖ (xᵢ − x̄ⱼ)eᵢ. */
+  def robustMeat(rows: Rows, gamma: Array[Double], beta: Array[Double]): Meat = {
+    val p = rows.p
+    val pi = new Array[Double](rows.rows)
+    val q = new Array[Double](rows.rows)
+    val unused = new NeumaierSum
+    val provider = new ProviderSums(p)
+    val meat = new Accumulator(Moments.packedLength(p))
+    val u = new Array[Double](p)
+    var clusters = 0L
+    var k = 0
+    while (k < rows.providers) {
+      provider.accumulate(rows, k, gamma(k), beta, pi, q, floored = false, unused)
+      if (provider.h >= RobustFloor) {
+        val order = byCluster(rows, k)
+        var i = 0
+        while (i < order.length) {
+          java.util.Arrays.fill(u, 0.0)
+          val cluster = rows.cluster(order(i))
+          while (i < order.length && rows.cluster(order(i)) == cluster) {
+            val r = order(i)
+            val e = rows.y(r) - rows.n(r) * pi(r)
+            var j = 0
+            while (j < p) {
+              u(j) += (rows.x(r * p + j) - provider.xbar(j)) * e
+              j += 1
+            }
+            i += 1
+          }
+          addOuter(meat, u, p)
+          clusters += 1L
+        }
+      }
+      k += 1
+    }
+    Meat(meat.values, clusters)
+  }
+
+  /** Pass R2: per provider Var_rob(γ̂ⱼ + x̄ᵀβ̂) and A0ⱼ/Iⱼ², given M_eff, S⁻¹ = Var(β̂) (both packed) and
+    * the average case mix x̄ (Phase 2b §2).
+    */
+  def robustProviders(
+      rows: Rows,
+      gamma: Array[Double],
+      beta: Array[Double],
+      meat: Array[Double],
+      covariance: Array[Double],
+      xbar: Array[Double]
+  ): RobustVariances = {
+    val p = rows.p
+    val pi = new Array[Double](rows.rows)
+    val q = new Array[Double](rows.rows)
+    val unused = new NeumaierSum
+    val provider = new ProviderSums(p)
+    val caseMix = new Array[Double](rows.providers)
+    val fixedBeta = new Array[Double](rows.providers)
+    val a1 = new Array[Double](p)
+    val clusterScore = new Array[Double](p)
+    var k = 0
+    while (k < rows.providers) {
+      provider.accumulate(rows, k, gamma(k), beta, pi, q, floored = false, unused)
+      val h = provider.h
+      if (h < RobustFloor) {
+        caseMix(k) = Double.NaN
+        fixedBeta(k) = Double.NaN
+      } else {
+        var a0 = 0.0
+        java.util.Arrays.fill(a1, 0.0)
+        val order = byCluster(rows, k)
+        var i = 0
+        while (i < order.length) {
+          var residual = 0.0
+          java.util.Arrays.fill(clusterScore, 0.0)
+          val cluster = rows.cluster(order(i))
+          while (i < order.length && rows.cluster(order(i)) == cluster) {
+            val r = order(i)
+            val e = rows.y(r) - rows.n(r) * pi(r)
+            residual += e
+            var j = 0
+            while (j < p) {
+              clusterScore(j) += rows.x(r * p + j) * e
+              j += 1
+            }
+            i += 1
+          }
+          a0 += residual * residual
+          var j = 0
+          while (j < p) {
+            a1(j) += residual * clusterScore(j)
+            j += 1
+          }
+        }
+        val d = Array.tabulate(p)(j => provider.xbar(j) - xbar(j))
+        val hv = packedTimes(covariance, d, p)
+        var xh = 0.0
+        var a1h = 0.0
+        var j = 0
+        while (j < p) {
+          xh += provider.xbar(j) * hv(j)
+          a1h += a1(j) * hv(j)
+          j += 1
+        }
+        caseMix(k) = a0 / (h * h) + 2.0 * (a0 / h) * xh + quadratic(meat, hv, p) - 2.0 * a1h / h
+        fixedBeta(k) = a0 / (h * h)
+      }
+      k += 1
+    }
+    RobustVariances(caseMix, fixedBeta)
+  }
+
+  /** At clipped π: the centred Schur complement over all p features and the uncentred score Σ xᵢeᵢ;
+    * the score test reads entry j of both at the fit without feature j (Phase 2b §2).
+    */
+  def scoreTerms(rows: Rows, gamma: Array[Double], beta: Array[Double]): ScoreTerms = {
+    val p = rows.p
+    val pi = new Array[Double](rows.rows)
+    val q = new Array[Double](rows.rows)
+    val s = new Accumulator(Moments.packedLength(p))
+    val r = new Accumulator(p)
+    val score = new Accumulator(p)
+    val unused = new NeumaierSum
+    val provider = new ProviderSums(p)
+    var k = 0
+    while (k < rows.providers) {
+      provider.accumulate(rows, k, gamma(k), beta, pi, q, floored = false, unused)
+      centeredInto(rows, k, provider.xbar, pi, q, s, r)
+      var row = rows.starts(k)
+      while (row < rows.end(k)) {
+        val e = rows.y(row) - rows.n(row) * pi(row)
+        var j = 0
+        while (j < p) {
+          score.add(j, rows.x(row * p + j) * e)
+          j += 1
+        }
+        row += 1
+      }
+      k += 1
+    }
+    ScoreTerms(s.values, score.values)
+  }
+
+  /** A M A for symmetric A and M packed row by row; the result packed (the robust Var(β̂)). */
+  def sandwich(bread: Array[Double], meat: Array[Double], p: Int): Array[Double] = {
+    val a = unpack(bread, p)
+    val m = unpack(meat, p)
+    val am =
+      Array.tabulate(p, p)((i, j) => (0 until p).foldLeft(0.0)((acc, l) => acc + a(i)(l) * m(l)(j)))
+    val out = new Array[Double](Moments.packedLength(p))
+    var index = 0
+    var i = 0
+    while (i < p) {
+      var j = i
+      while (j < p) {
+        out(index) = (0 until p).foldLeft(0.0)((acc, l) => acc + am(i)(l) * a(l)(j))
+        index += 1
+        j += 1
+      }
+      i += 1
+    }
+    out
+  }
+
+  /** Mv for M symmetric, packed row by row. */
+  def packedTimes(packed: Array[Double], v: Array[Double], p: Int): Array[Double] = {
+    val m = unpack(packed, p)
+    Array.tabulate(p)(i => (0 until p).foldLeft(0.0)((acc, j) => acc + m(i)(j) * v(j)))
+  }
+
+  private def unpack(packed: Array[Double], p: Int): Array[Array[Double]] = {
+    val m = Array.ofDim[Double](p, p)
+    var index = 0
+    var i = 0
+    while (i < p) {
+      var j = i
+      while (j < p) {
+        m(i)(j) = packed(index)
+        m(j)(i) = packed(index)
+        index += 1
+        j += 1
+      }
+      i += 1
+    }
+    m
+  }
+
+  private def addOuter(acc: Accumulator, u: Array[Double], p: Int): Unit = {
+    var i = 0
+    var index = 0
+    while (i < p) {
+      var j = i
+      while (j < p) {
+        acc.add(index, u(i) * u(j))
+        index += 1
+        j += 1
+      }
+      i += 1
+    }
+  }
+
+  /** Provider k's rows by cluster: clusters by rank, rows in canonical order within (a stable sort). */
+  private def byCluster(rows: Rows, k: Int): Array[Int] = {
+    require(rows.cluster.length == rows.rows, "robust variances need every row's cluster")
+    (rows.starts(k) until rows.end(k)).toArray.sortBy(r => rows.cluster(r))
   }
 
   /** vᵀMv for M symmetric, packed row by row. */

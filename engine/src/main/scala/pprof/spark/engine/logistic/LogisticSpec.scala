@@ -14,7 +14,8 @@ final case class LogisticSpec(
     features: Seq[String],
     provider: String,
     trials: Option[String] = None,
-    rowId: Option[String] = None
+    rowId: Option[String] = None,
+    cluster: Option[String] = None
 )
 
 /** Options of the fit (specification §5); the defaults are pprof_py v0.7.0's. */
@@ -53,6 +54,20 @@ object LogisticOptions {
   val DefaultMaxProvidersOnDriver: Int = 10000000
 }
 
+/** One covariate's test (Phase 2b §6): `method` is `wald`, `wald-robust`, `lr` or `score`; the interval is
+  * Wald-based, as pprof_py's.
+  */
+final case class LogisticTest(
+    feature: String,
+    estimate: Double,
+    standardError: Double,
+    statistic: Double,
+    pValue: Double,
+    lower: Double,
+    upper: Double,
+    method: String
+)
+
 /** One covariate's Wald summary. */
 final case class LogisticCoefficient(
     feature: String,
@@ -75,7 +90,9 @@ final class LogisticProviders(
     val records: Array[Long],
     val events: Array[Double],
     val trials: Array[Double],
-    val atBound: Array[Boolean]
+    val atBound: Array[Boolean],
+    val robustVarCaseMix: Array[Double] = Array.emptyDoubleArray,
+    val robustVarFixedBeta: Array[Double] = Array.emptyDoubleArray
 ) extends Serializable {
   def size: Int = keys.length
   def zeroEvents(k: Int): Boolean = events(k) <= 0.0
@@ -107,7 +124,10 @@ final case class LogisticFit(
     software: SoftwareInfo,
     layout: LayoutSummary,
     fingerprint: Long,
-    status: String = "experimental"
+    status: String = "experimental",
+    robustCovariance: Option[Vector[Double]] = None,
+    clusters: Long = 0L,
+    auc: Option[Double] = None
 ) {
   def estimates: Vector[Double] = coefficients.map(_.estimate)
   def standardErrors: Vector[Double] = coefficients.map(_.standardError)

@@ -1,0 +1,121 @@
+"""The logistic fixed-effect provider model through the JVM engine (docs/spec/logistic/)."""
+import json
+from dataclasses import dataclass
+from typing import List, Optional, Sequence
+
+from pyspark.sql import DataFrame
+
+from ._jvm import api
+from .cox import Coefficient, _float
+
+
+@dataclass(frozen=True)
+class Test:
+    """One covariate's test: `method` is `wald`, `wald-robust`, `lr` or `score`; intervals are Wald-based."""
+    feature: str
+    estimate: float
+    standard_error: float
+    statistic: float
+    p_value: float
+    lower: float
+    upper: float
+    method: str
+
+
+def _tests(text: str) -> List[Test]:
+    return [Test(t["feature"], _float(t["estimate"]), _float(t["standardError"]), _float(t["statistic"]),
+                 _float(t["pValue"]), _float(t["lower"]), _float(t["upper"]), t["method"]) for t in json.loads(text)]
+
+
+def _square(packed: List[float], p: int) -> List[List[float]]:
+    out = [[0.0] * p for _ in range(p)]
+    index = 0
+    for i in range(p):
+        for j in range(i, p):
+            out[i][j] = out[j][i] = packed[index]
+            index += 1
+    return out
+
+
+class LogisticFixedEffect:
+    """Column roles and options of the logistic fixed-effect model; options left as None take the engine's
+    defaults (pprof_py v0.7.0's)."""
+
+    def __init__(self, outcome: str, features: Sequence[str], provider: str, *, trials: Optional[str] = None,
+                 row_id: Optional[str] = None, cluster: Optional[str] = None, tol: Optional[float] = None,
+                 max_iter: Optional[int] = None, bound: Optional[float] = None, backtrack: Optional[bool] = None,
+                 screen: Optional[bool] = None, min_records: Optional[int] = None,
+                 confidence_level: Optional[float] = None, correlation_threshold: Optional[float] = None,
+                 max_providers_on_driver: Optional[int] = None):
+        columns = {"outcome": outcome, "features": list(features), "provider": provider, "trials": trials,
+                   "rowId": row_id, "cluster": cluster}
+        options = {"tol": tol, "maxIter": max_iter, "bound": bound, "backtrack": backtrack, "screen": screen,
+                   "minRecords": min_records, "confidenceLevel": confidence_level,
+                   "correlationThreshold": correlation_threshold, "maxProvidersOnDriver": max_providers_on_driver}
+        self.columns = {k: v for k, v in columns.items() if v is not None}
+        self.options = {k: v for k, v in options.items() if v is not None}
+
+    def fit(self, df: DataFrame) -> "LogisticFixedEffectModel":
+        facade = api(df.sparkSession)
+        handle = facade.logisticFit(df._jdf, json.dumps(self.columns), json.dumps(self.options))
+        return LogisticFixedEffectModel(df.sparkSession, handle)
+
+
+class LogisticFixedEffectModel:
+    """A fitted logistic fixed-effect model: a handle to the JVM's `LogisticFit` and its summary."""
+
+    def __init__(self, spark, handle):
+        self._spark = spark
+        self._handle = handle
+        s = json.loads(api(spark).logisticSummary(handle))
+        self.summary = s
+        self.coefficients: List[Coefficient] = [
+            Coefficient(c["feature"], _float(c["estimate"]), _float(c["standardError"]), _float(c["z"]),
+                        _float(c["pValue"]), _float(c["lower"]), _float(c["upper"]))
+            for c in s["coefficients"]
+        ]
+        self.coef_ = [c.estimate for c in self.coefficients]
+        p = len(self.coefficients)
+        self.covariance = _square([_float(v) for v in s["covariance"]], p)
+        self.robust_covariance = (_square([_float(v) for v in s["robustCovariance"]], p)
+                                  if "robustCovariance" in s else None)
+        self.log_likelihood = _float(s["logLikelihood"])
+        self.aic = _float(s["aic"])
+        self.bic = _float(s["bic"])
+        self.auc = _float(s["auc"]) if "auc" in s else None
+        self.trials = _float(s["trials"])
+        self.events = _float(s["events"])
+        self.excluded = [(e["provider"], e["records"]) for e in s["excluded"]]
+        for key, name in (("iterations", "iterations"), ("converged", "converged"), ("rows", "rows"),
+                          ("providers", "n_providers"), ("degenerateProviders", "degenerate_providers"),
+                          ("clusters", "clusters"), ("fingerprint", "fingerprint"), ("warnings", "warnings"),
+                          ("columns", "columns"), ("software", "software"), ("featureStatus", "feature_status")):
+            setattr(self, name, s[key])
+
+    def _frame(self, jdf) -> DataFrame:
+        return DataFrame(jdf, self._spark)
+
+    def providers(self) -> DataFrame:
+        """One row per fitted provider: effect, variances (robust ones with clusters), counts, flags."""
+        return self._frame(api(self._spark).logisticProviders(self._spark._jsparkSession, self._handle))
+
+    def wald_tests(self, null: float = 0.0, alternative: str = "two_sided", level: float = 0.95,
+                   robust: bool = False) -> List[Test]:
+        return _tests(api(self._spark).logisticWald(self._handle, float(null), alternative, float(level), robust))
+
+    def covariate_tests(self, df: DataFrame, method: str = "lr",
+                        covariates: Optional[Sequence[str]] = None) -> List[Test]:
+        """Likelihood-ratio (`lr`) or score (`score`) tests by refits on the training data `df`."""
+        names = json.dumps(list(covariates) if covariates else [])
+        return _tests(api(self._spark).logisticTests(df._jdf, self._handle, method, names))
+
+    def predict(self, df: DataFrame) -> DataFrame:
+        """`df` with `linear_predictor` and `probability`; rows of providers not in the fit raise."""
+        return self._frame(api(self._spark).logisticPredict(df._jdf, self._handle))
+
+    def save(self, path: str) -> None:
+        api(self._spark).logisticSave(self._spark._jsparkSession, self._handle, path)
+
+    @classmethod
+    def load(cls, spark, path: str) -> "LogisticFixedEffectModel":
+        return cls(spark, api(spark).logisticLoad(spark._jsparkSession, path))
