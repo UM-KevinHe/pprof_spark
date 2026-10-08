@@ -103,6 +103,16 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-38: Slice 2f direction after the three-stage spike (Proposed, 2026-10-08)
+
+`docs/spec/logistic/three-stage-spike.md` (OI-51): pprof_py's three-stage model is He et al. (2013)'s
+(providers crossed with clusters, random cluster effects), as R's `glmm.fac.hosp`. Proposed: compress
+the records once into per-cell offset-bin moments so that stages 2 and 3 iterate on cells, not
+records; sub-slices 2f-1 (preparation and stage 1), 2f-2 (stage 3, `marginal`, given β and σ), 2f-3
+(stage 2, the crossed random-intercept GLMM) and 2f-4 (pipeline, `sigma_sensitivity`, inference, job,
+Python); X-005 (the σ = 0 limit, class B); fixtures without nlopt and an optimizer-limited tolerance
+class for stage 2, to be calibrated. Awaiting the maintainer's approval.
+
 ### D-37: Slice 2e specification (Accepted: approved by the maintainer, 2026-10-08)
 
 `docs/spec/logistic/job-runner.md`: a logistic job runner. The run specification (version 1) gains a

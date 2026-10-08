@@ -101,6 +101,22 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 42 (2026-10-08): the three-stage spike
+
+- `docs/spec/logistic/three-stage-spike.md` (D-38, awaiting approval), read from pprof_py v0.7.0: the
+  three-stage model is He et al. (2013)'s, as R's `glmm.fac.hosp` (providers crossed with clusters,
+  random cluster effects): preparation, stage 1 on provider × cluster cells, stage 2 an lme4-style
+  crossed random-intercept GLMM (PIRLS, Laplace, Nelder–Mead), stage 3 fixed provider effects with
+  cluster effects integrated by adaptive Gauss–Hermite quadrature and a sparse Newton step,
+  `sigma_sensitivity` by σ's profile interval.
+- Probes on pprof_py's golden data (2,637 records, 40 providers, 12 clusters, 94 cells): fit 1.2 s;
+  stage 2's σ̂ 0.422943 against `glmer`'s 0.4229358 (default) and 0.4229352 (bobyqa to 1e-12); pprof_py
+  falls back from nlopt's bobyqa when nlopt is absent; stage 3's marginal log-likelihood from 950
+  per-cell offset-bin moment rows equals the record-level sum to 1.6e-16; `sigma_sensitivity` raises
+  `ZeroDivisionError` when σ's profile interval reaches 0 (X-005). lme4 1.1-35.1 available in the sandbox.
+- Proposed: compress records into per-cell offset-bin moments so stages 2 and 3 iterate on cells;
+  sub-slices 2f-1 to 2f-4.
+
 ## Round 41 (2026-10-08): slice 2e code
 
 The maintainer approved D-37.

@@ -51,7 +51,7 @@ Classes are proposals. Each row is re-verified against the pinned reference, ppr
 | X-002 | `CoxPH` does not warn when `max_iter` is reached | Resolved at v0.7.0: `CoxPH` warns; pprof_spark warns too | — |
 | X-003 | `FineGrayPH` with left truncation differs from R `finegray()` (about 3e-3 in coefficients) | Choose the parity target before the competing-risks phase | B |
 | X-004 | SerBIN can stop at a near-null fit when covariates are far from zero (upstream C27) | Resolved at v0.7.0: SerBIN uses the joint Newton direction as R does. Round 25 probe: shifting two features by +50 and −30 changes β̂ by 5.6e-15 and γ̂ + cᵀβ̂ by 4.7e-15, in the same five steps. The lfe-shifted fixture keeps it as a regression case (approved 2026-10-07, D-30) | — |
-| X-005 | `LogisticThreeStageModel.sigma_sensitivity()` fails when σ̂ = 0 | Define the boundary in the three-stage specification | B |
+| X-005 | `LogisticThreeStageModel.sigma_sensitivity()` fails when σ̂ = 0 | Verified at v0.7.0 (round 42): stage 3 divides by σ², so `sigma_sensitivity` raises `ZeroDivisionError` once σ's profile interval reaches 0 (golden data with hospital labels shuffled, σ̂ = 0.086). Proposed with D-38: use the σ = 0 limit, where stage 3 is the fixed-effect model with the stage 1 offset | B |
 | X-006 | Unresolved differences with internal R code (`IUR.fac`, `cal_SMR_pro_adj`) | Not parity-gated until resolved | B (provisional) |
 | X-007 | R-comparison suite: 26 documented failures | Resolved 2026-10-06: at v0.7.0 the survival suite passes with the committed R results (275 passed, 1 skipped for the optional lifelines package), and R 4.3.3 with survival 3.5-8 regenerates those results byte for byte; no Cox feature is excluded | — |
 
