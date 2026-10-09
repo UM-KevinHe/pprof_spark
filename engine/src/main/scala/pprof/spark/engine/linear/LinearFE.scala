@@ -1,14 +1,14 @@
 package pprof.spark.engine.linear
 
 import org.apache.spark.sql.{DataFrame, Encoders}
-import org.apache.spark.sql.functions.{col, lit, sqrt}
+import org.apache.spark.sql.functions.{array, col, lit, sqrt}
 import org.apache.spark.sql.types.{DoubleType, LongType, StringType}
 import pprof.spark.engine.backend.{DriverGuards, PlanFrames}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.layout.{GroupSizes, LayoutPlan}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
-import pprof.spark.numerics.{Cholesky, StudentT, Summation}
+import pprof.spark.numerics.{Cholesky, NeumaierSum, StudentT, Summation}
 import pprof.spark.numerics.kernels.{Fingerprint, Moments, LinearFE => Kernel}
 
 /** The linear fixed-effect model (docs/spec/linear/fixed-effect-estimation.md): the within estimator in two passes
@@ -159,17 +159,7 @@ object LinearFE {
   def predict(df: DataFrame, fit: LinearFit): DataFrame = {
     val spec = fit.spec
     val input = LinearValidation.validate(df, spec, outcomeRequired = false)
-    val text = fit.providers.schema(spec.provider).dataType == StringType
-    if (text != input.providerKeyIsText)
-      throw new InvalidInputException(
-        Seq(
-          InputProblem.UnsupportedType(
-            spec.provider,
-            df.schema(spec.provider).dataType.simpleString,
-            if (text) "a string type, as in the fit" else "an integral type, as in the fit"
-          )
-        )
-      )
+    val text = requireKeyType(df, fit, input)
     val key = "__pprof_key"
     val effect = "__pprof_gamma"
     val effects = fit.providers.select(col(spec.provider).as(key), col("gamma").as(effect))
@@ -186,6 +176,102 @@ object LinearFE {
       sum + Validation.column(spec.features(i)).cast(DoubleType) * lit(fit.coefficients(i).estimate)
     }
     joined.withColumn("prediction", prediction).drop(key, effect)
+  }
+
+  /** R² of the fit on `df`: 1 − Σ(y − ŷ)² / Σ(y − ȳ)², pprof_py's `score`, for any provider key type (X-034). Each
+    * row's residual is a column expression; the scored rows then pass through ProviderLocal blocks in canonical
+    * order and the sums are reduced in block order, so the result does not depend on the input's partitioning
+    * (NN-4). Rows of providers not in the fit fail with their count.
+    */
+  def score(df: DataFrame, fit: LinearFit): Double = {
+    val spec = fit.spec
+    val input = LinearValidation.validate(df, spec)
+    requireKeyType(df, fit, input)
+    val key = "__pprof_key"
+    val effect = "__pprof_gamma"
+    val effects = fit.providers.select(col(spec.provider).as(key), col("gamma").as(effect))
+    val joined = input.frame.join(effects, col(Validation.GroupColumn) === col(key), "left")
+    val unknown = joined.filter(col(effect).isNull).count()
+    if (unknown > 0)
+      throw new InvalidInputException(Seq(InputProblem.UnknownProviders(spec.provider, unknown)))
+    val features = col(Validation.FeaturesColumn)
+    val prediction = spec.features.indices.foldLeft(col(effect)) { (sum, i) =>
+      sum + features.getItem(i) * lit(fit.coefficients(i).estimate)
+    }
+    val outcome = col(LinearValidation.OutcomeColumn)
+    val residuals = joined.select(
+      col(Validation.GroupColumn),
+      outcome,
+      array(outcome - prediction).as(Validation.FeaturesColumn),
+      col(Validation.RowIdColumn)
+    )
+    val scored = LinearInput(
+      residuals,
+      spec.copy(features = Seq("residual")),
+      input.rowCount,
+      input.providerKeyIsText
+    )
+    val sizes = GroupSizes.collectGroupSizes(residuals, fit.options.blocks).sortBy(_._1)
+    val plan = LayoutPlan.create(sizes, fit.options.blocks.targetRowsPerBlock(2))
+    val workingSet = LinearWorkingSet.build(scored, plan, fit.options.blocks.resolvedStorageLevel)
+    try {
+      val first = workingSet.blocks
+        .map((block: LinearBlock) => scoreSums(block))(Encoders.product[LinearScorePartial])
+        .collect()
+        .sortBy(_.blockId)
+      val rows = first.iterator.map(_.rows).sum.toDouble
+      val mean = Summation.pairwise(first.map(_.ySum)) / rows
+      val totals = workingSet.blocks
+        .map((block: LinearBlock) => LinearTotalPartial(block.blockId, totalSquares(block, mean)))(
+          Encoders.product[LinearTotalPartial]
+        )
+        .collect()
+        .sortBy(_.blockId)
+      1.0 - Summation.pairwise(first.map(_.sse)) / Summation.pairwise(totals.map(_.tss))
+    } finally workingSet.release()
+  }
+
+  /** The provider key's type must match the fit's; returns whether it is text. */
+  private def requireKeyType(df: DataFrame, fit: LinearFit, input: LinearInput): Boolean = {
+    val spec = fit.spec
+    val text = fit.providers.schema(spec.provider).dataType == StringType
+    if (text != input.providerKeyIsText)
+      throw new InvalidInputException(
+        Seq(
+          InputProblem.UnsupportedType(
+            spec.provider,
+            df.schema(spec.provider).dataType.simpleString,
+            if (text) "a string type, as in the fit" else "an integral type, as in the fit"
+          )
+        )
+      )
+    text
+  }
+
+  /** Σ residual² and Σ y over a block of scored rows (values: residual, then y), in canonical order. */
+  private def scoreSums(block: LinearBlock): LinearScorePartial = {
+    val sse = new NeumaierSum
+    val ySum = new NeumaierSum
+    val rows = block.rowId.length
+    var r = 0
+    while (r < rows) {
+      val residual = block.values(2 * r)
+      sse.add(residual * residual)
+      ySum.add(block.values(2 * r + 1))
+      r += 1
+    }
+    LinearScorePartial(block.blockId, rows.toLong, sse.value, ySum.value)
+  }
+
+  private def totalSquares(block: LinearBlock, mean: Double): Double = {
+    val tss = new NeumaierSum
+    var r = 0
+    while (r < block.rowId.length) {
+      val d = block.values(2 * r + 1) - mean
+      tss.add(d * d)
+      r += 1
+    }
+    tss.value
   }
 
   private def moments(block: LinearBlock): LinearMomentPartial = {

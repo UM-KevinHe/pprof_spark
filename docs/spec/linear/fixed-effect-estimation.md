@@ -194,3 +194,18 @@ Fixtures in `fixtures/linear`, from pprof_py at the pin and R's `lm`:
    count (`UnknownProviders`); the prediction is γ̂ⱼ + Σₖ xₖβ̂ₖ in feature order.
 4. RSS = 0 gives σ̂ = 0 with a warning (NN-10). The fit carries R² on its training rows; `score` on other data
    comes with persistence in round 66.
+
+## 16. Implementation notes (round 66; no statistical change)
+
+1. `LinearFitIO`, format version 1: `metadata`, one JSON record of the column roles, options, β̂, standard errors,
+   σ̂²V, σ̂, RSS, the total sum of squares, ℓ, AIC, BIC, the condition estimate, counts, warnings, layout, software
+   and fingerprint, every double as its 64-bit pattern; `providers`, the provider table in Parquet (doubles exact).
+   Both written with mode `errorifexists`, so a save never overwrites; a load refuses other kinds and format
+   versions, naming both, and checks the provider count; the loaded provider table is ordered by key and persisted.
+2. `score(df, fit)`: each row's residual y − γ̂ⱼ − xᵀβ̂ as a column expression; the scored rows then pass through
+   ProviderLocal blocks in canonical order, and Σ(y − ŷ)², Σy and Σ(y − ȳ)² are reduced in block order, so the
+   result is invariant to the input's partitioning (NN-4). Any provider key type (X-034); rows of providers not in
+   the fit fail with their count.
+3. The metamorphic tests of §11: y + c moves every γ̂ⱼ by c (β̂ and σ̂ unchanged within T-part); a feature scaled by
+   s divides its coefficient by s; duplicated records leave β̂ and γ̂ unchanged, with σ̂² = 2·RSS/(2n − m − p); smaller
+   blocks change the layout and the results within T-part only (`LinearBehaviourSuite`).

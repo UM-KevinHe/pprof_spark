@@ -38,6 +38,12 @@ final case class LinearMomentPartial(
 /** Pass 2's partial of one block. */
 final case class LinearResidualPartial(blockId: Int, rss: Double, tss: Double)
 
+/** `score`'s first pass over one block of scored rows: rows, Σ residual² and Σ y. */
+final case class LinearScorePartial(blockId: Int, rows: Long, sse: Double, ySum: Double)
+
+/** `score`'s second pass over one block: Σ (y − ȳ)². */
+final case class LinearTotalPartial(blockId: Int, tss: Double)
+
 /** One provider's effect and variance factor qⱼ, from pass 2. */
 final case class LinearProviderRow(groupIndex: Int, records: Long, gamma: Double, q: Double)
 

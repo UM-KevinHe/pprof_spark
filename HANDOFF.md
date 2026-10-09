@@ -25,7 +25,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
 | 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
 | Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
-| 3, linear fixed effects | Plan and slice 3a specification approved (D-45); slice 3a fixtures and calibration (round 63) |
+| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66: fixtures, numerics, estimator, persistence and `score`); 3b and 3c next |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -40,7 +40,7 @@ since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not
 | `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile); `StudentT` and kernels `LinearFE` (Phase 3) |
 | `engine.cox` | `CoxPH` (fit, baseline, residuals, robust), `CoxFitIO` v3, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
 | `engine.logistic` | `LogisticSpec`, `LogisticFE`, `LogisticBlocks`, `LogisticFitIO` v3, `LogisticProviderTests`, `LogisticStandardization`; `ThreeStage` (prepare, compress, stage2, stage3, laplace, marginal, fitted), `ThreeStagePipeline` (fit, test, measures, intervals, profileInterval, sigmaSensitivity), `ThreeStageFitIO` v1 |
-| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`; the provider table distributed) |
+| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`, `score`; the provider table distributed), `LinearFitIO` v1 |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob` and their run specifications (version 1, `model`); `python.PythonApi` |
 | `python/` | The `pprof_spark` package (Cox, logistic and three-stage wrappers, ADR-0009) and its pytest suite |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (5), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
@@ -95,12 +95,24 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Round 66: `LinearFitIO` (format version 1: the summary as JSON with doubles as 64-bit patterns, the provider table
-in Parquet; never overwriting; a bit-for-bit round trip), `score` on new data, and spec 3a §11's metamorphic tests
-(y + c, scaling a feature, duplicated records, block sizes within T-part). Then slice 3b's specification: provider
-tests, intervals and standardized differences, with R pprof's functions (OI-60).
+Slice 3b's specification: provider tests (`test`: t statistics mapped to z by `t_to_z`, flags, limits γ̂ ± t·se,
+`critical`), intervals (`calculate_confidence_intervals`, `gamma` and `SM`) and the standardized differences; read
+R pprof 1.0.3's `test.linear_fe`, `confint.linear_fe` and `SM_output.linear_fe` (OI-60) and probe them against
+pprof_py; propose D-46. Slice 3c (job runner and Python) follows.
 
 ## Round log
+
+## Round 66 (2026-10-09): slice 3a complete, persistence, `score` and the metamorphic tests
+
+- engine `LinearFitIO` (format version 1: one JSON metadata record with doubles as 64-bit patterns, the provider
+  table in Parquet; never overwriting; other kinds and versions refused) and `LinearFE.score` (R² on any data:
+  residuals as column expressions, then ProviderLocal blocks and block-ordered sums, so partitioning does not
+  matter; any provider key type, X-034). Spec 3a §16.
+- `LinearFitIOSuite` (3: bit-for-bit round trips on lin-base and lin-text, with identical predictions and scores;
+  no overwriting; a logistic kind and format version 2 refused) and `LinearBehaviourSuite` (5: y + c, a feature
+  scaled by 4, duplicated records, smaller blocks within T-part, `score` against pprof_py's R² and invariant to
+  partitioning). With `LinearFESuite` (8, rerun after `predict` was refactored): Classic Spark 16/16, Spark Connect
+  16/16.
 
 ## Round 65 (2026-10-09): slice 3a engine, the linear fixed-effect estimator
 
