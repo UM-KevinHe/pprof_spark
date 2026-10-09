@@ -88,6 +88,12 @@ final class CholeskyFactor private[numerics] (
 
   def isFullRank: Boolean = aliased.isEmpty
 
+  /** The pivots, the factor's diagonal squared, in column order; 0 for an aliased column. Their range gives a
+    * condition estimate.
+    */
+  def pivots: Array[Double] =
+    Array.tabulate(dimension)(j => lower(j * dimension + j) * lower(j * dimension + j))
+
   /** Solves A·x = b. */
   def solve(b: Array[Double]): Array[Double] = {
     requireFullRank()

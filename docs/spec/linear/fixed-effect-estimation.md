@@ -147,7 +147,7 @@ Fixtures in `fixtures/linear`, from pprof_py at the pin and R's `lm`:
 | X-031 | B | pprof_py's `summary` loses every p-value below about 1e-16 | Approved (D-45) |
 | X-032 | C | Aliased features fail instead of returning an arbitrary coefficient | Approved (D-45) |
 | X-033 | C | n − m − p ≤ 0 fails instead of returning σ̂ = ∞ | Approved (D-45) |
-| X-034 | C | pprof_py's `score` rejects string provider keys; pprof_spark computes R² for any key type | Proposed (round 63) |
+| X-034 | C | pprof_py's `score` rejects string provider keys; pprof_spark computes R² for any key type | Approved |
 
 ## 13. Fixture findings (round 63)
 
@@ -161,3 +161,21 @@ Fixtures in `fixtures/linear`, from pprof_py at the pin and R's `lm`:
 3. X-034 (proposed): pprof_py's `score` takes arrays, and its array path converts provider keys to floats, so
    it fails on lin-text. The fixtures compute R² by `score`'s formula from `predict`'s DataFrame predictions;
    on the numeric-key cases the two agree to rounding.
+
+## 14. Implementation notes (round 64, numerics; no statistical change)
+
+1. `kernels.LinearFE`: each provider's centred co-moments by two passes over its rows with compensated sums
+   (`Moments.centred`). A ProviderLocal block holds all of a provider's rows, so the pairwise merges of Chan,
+   Golub and LeVeque (`Moments.merge`) that §7 names are not needed; the two-pass form is at least as accurate.
+   Block totals, γ̂ⱼ, qⱼ and the residual and total sums of squares use Neumaier sums in row and provider order.
+2. `StudentT` computes the t distribution exactly in every regime, as R's `pt` does through `pbeta`. The
+   two-sided tail is I_x(ν/2, 1/2), x = ν/(ν + t²): by Didonato and Morris's asymptotic expansion (TOMS 708's
+   BGRAT) when ν ≥ 30 and |log x| ≤ 1, and otherwise by Lentz's continued fraction, whose first coefficient
+   would cancel (relative error near ε·ν/(1 + t²)) in the region the expansion covers. log B(ν/2, 1/2) comes
+   from Stirling's series; quantiles by bisection. Measured against mpmath at 40 digits from 1 to 10⁹ degrees
+   of freedom: tails within 6.3e-14, quantiles within 1.7e-15 (`StudentTSuite`).
+3. R's `pt.c` keeps a normal approximation above 4·10⁵ degrees of freedom (Abramowitz and Stegun 26.7.8) only
+   under `#ifdef R_version_le_260`; R 4.3.3 does not use it, and its `pt` agrees with mpmath within 6.8e-15 at
+   10⁵, 10⁶ and 10⁹ degrees of freedom. A first version of `StudentT` adopted that approximation, and the strict
+   tests caught it (round 64); no cutoff remains.
+4. `CholeskyFactor.pivots` gives the condition estimate of §6.

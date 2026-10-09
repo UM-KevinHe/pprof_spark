@@ -79,6 +79,8 @@ suites, `API=connect`), `app41.sh` (app), `numtest48.sh`, `tk35b.sh`, `cipy.sh` 
 - Jackson 2.20 deprecates `JsonNode.fields()`; with `-Werror` that fails the build.
 - Spark resolves relative `spark.jars` entries against the JVM's working directory: rehearse CI steps
   verbatim (round 57.1).
+- R's `pt.c` still contains a normal approximation above 4·10⁵ degrees of freedom, compiled only under
+  `#ifdef R_version_le_260`: current R's `pt` is exact. Check R's source and output before following it (round 64).
 - Reference tails: pprof_py's upper and near-one tails lose accuracy (X-024); compare only where they are
   reliable. lme4 treats fractional binomial outcomes differently (informational only, spec 2f-3 §9).
 
@@ -92,11 +94,28 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Slice 3a's code: numerics (the within co-moments by Chan, Golub and LeVeque's updates), engine `LinearFE` (fit,
-summary, prediction, R², the provider table) and `LinearFitIO`, with parity tests against `fixtures/linear`
-under Classic Spark and Spark Connect (spec 3a §11). X-034 awaits the maintainer's approval.
+Round 65: the engine `LinearFE` (validation, ProviderLocal blocks, the two passes, the distributed provider table,
+`summary` with `StudentT`, prediction) with `LinearFESuite` against `fixtures/linear` under Classic Spark and Spark
+Connect. Round 66: `LinearFitIO`, `score` on new data and the metamorphic tests.
 
 ## Round log
+
+## Round 64 (2026-10-09): slice 3a numerics
+
+The maintainer approved X-034. Slice 3a's code is split: numerics here, the engine in round 65, persistence and
+`score` on new data in round 66.
+
+- numerics `kernels.LinearFE` (within co-moments, effects, variance factors, sums of squares), `StudentT` and
+  `CholeskyFactor.pivots`; spec 3a §14 records the methods.
+- `StudentT` is exact at every degree of freedom: the incomplete beta by BGRAT where ν ≥ 30 and |log x| ≤ 1, by
+  the continued fraction elsewhere. A first version followed a normal approximation above 4·10⁵ degrees of freedom,
+  believed to be R's; the strict tests showed it 3.3e-12 from R 4.3.3, and the maintainer asked for the source of
+  the difference before any cutoff. R's source keeps that approximation only under `#ifdef R_version_le_260`, and
+  R 4.3.3's `pt` matches mpmath within 6.8e-15; the continued fraction's error at large ν came from cancellation
+  in its first coefficient. The approximation was removed; the tests stayed strict.
+- `LinearKernelSuite` (4: against exact BigDecimal arithmetic; an exact within fit recovered) and `StudentTSuite`
+  (3: tails within 6.3e-14 and quantiles within 1.7e-15 of mpmath at 40 digits, 1 to 10⁹ degrees of freedom).
+  numerics 90 on JDK 17 and 21.
 
 ## Round 63 (2026-10-09): slice 3a fixtures and calibration
 
