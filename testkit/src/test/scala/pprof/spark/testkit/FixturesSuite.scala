@@ -423,4 +423,31 @@ class FixturesSuite extends munit.FunSuite {
       }
     }
   }
+
+  test(
+    "three-stage slice 2f-4a: profile intervals nest; sensitivity matches the profile; controls fall outside"
+  ) {
+    Seq("ts-golden", "ts-synthetic", "ts-shuffled").foreach { name =>
+      val inf = Fixtures.json(s"three-stage/$name/pprof_py.json").get("inference")
+      val p95 = Fixtures.doubles(inf.get("profile").get("0.95"))
+      val p90 = Fixtures.doubles(inf.get("profile").get("0.9"))
+      assert(p95(1) <= p90(1) && p90(1) <= p90(0) && p90(0) <= p90(2) && p90(2) <= p95(2), name)
+      if (inf.get("sensitivity").has("sigma"))
+        assertEquals(
+          Fixtures.doubles(inf.get("sensitivity").get("sigma")).toSeq,
+          Seq(p95(1), p95(0), p95(2))
+        )
+      else
+        assert(
+          p95(1) == 0.0,
+          s"$name: pprof_py's sensitivity failed although the interval stays above 0"
+        )
+      val exact = Fixtures.doubles(inf.get("tests").get("exact_two_sided").get("z"))
+      inf.get("negative_controls").properties().asScala.foreach { control =>
+        val miss =
+          Tolerances("T-test").worstRatio(Fixtures.doubles(control.getValue.get("z")), exact)
+        assert(miss >= Margin, s"$name ${control.getKey}")
+      }
+    }
+  }
 }

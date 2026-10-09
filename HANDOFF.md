@@ -101,6 +101,21 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 54 (2026-10-08): slice 2f-4a fixtures and calibration
+
+The maintainer approved D-43.
+
+- Generator (`three_stage_fixtures.py`, `inference` block): from pprof_py's pipeline on ts-golden,
+  ts-synthetic and ts-shuffled: stage 3's γ, posterior moments and fitted probabilities; `test` (`exact`
+  two-sided, `greater`, `less`; `poibin_exact`; `resampling`, seed 1); measures (indirect and direct;
+  median, mean, −1.0); intervals (`gamma`; `SM` for the four measures); σ_c's profile interval at 0.95 and
+  0.9; `sigma_sensitivity`, or, where it raises (X-005: ts-synthetic and ts-shuffled reach σ_c = 0), stage
+  3's refit and flags at the upper end; controls: the reference shifted by 0.01, the first event flipped.
+- Calibration passes: the 0.9 intervals nest in the 0.95 ones around the estimate; ts-golden's sensitivity
+  equals its profile interval; controls at least 5.5e5 times T-test. Regeneration byte-identical; the full
+  run with copied inputs (155 s) reproduces every file.
+- `FixturesSuite` checks slice 2f-4a; testkit 20 pass under Classic Spark and Spark Connect.
+
 ## Round 53 (2026-10-08): the slice 2f-4 specification
 
 - `docs/spec/logistic/three-stage-pipeline.md` (D-43, awaiting approval), read from pprof_py v0.7.0: the

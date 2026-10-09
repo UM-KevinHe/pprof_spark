@@ -268,6 +268,25 @@ def three_stage(tol, manifest, fixtures):
         for name, control in s2["negative_controls"].items():
             miss = ratio(tol, "T-opt", control["sigma"] + control["intercept"], tight["sigma"] + tight["intercept"])
             record(case, f"negative control {name}: stage 2 sigma and intercept", "T-opt", f"{miss:.3g}", miss >= MARGIN)
+    for case in manifest["cases"].get("three-stage", []):  # slice 2f-4a (D-43)
+        py = json.load(open(os.path.join(fixtures, "three-stage", case, "pprof_py.json"), encoding="utf-8"))
+        if "inference" not in py:
+            continue
+        inf = py["inference"]
+        hx = lambda v: [float.fromhex(x) for x in v]
+        (e95, lo95, hi95), (e90, lo90, hi90) = hx(inf["profile"]["0.95"]), hx(inf["profile"]["0.9"])
+        nested = lo95 <= lo90 <= e90 <= hi90 <= hi95 and e95 == e90
+        record(case, "profile interval of sigma_c: 0.9 inside 0.95, both around the estimate", "exact",
+               f"[{lo90:.4g}, {hi90:.4g}] in [{lo95:.4g}, {hi95:.4g}]", nested)
+        if "sigma" in inf["sensitivity"]:
+            same = hx(inf["sensitivity"]["sigma"]) == [lo95, e95, hi95]
+            record(case, "sigma_sensitivity's sigmas equal the 0.95 profile interval", "exact", "equal" if same else "differ", same)
+        else:
+            record(case, f"sigma_sensitivity raised {inf['sensitivity']['error']} (X-005); interval lower end {lo95:.3g}", "—",
+                   "informational", True)
+        for name, control in inf["negative_controls"].items():
+            miss = ratio(tol, "T-test", control["z"], inf["tests"]["exact_two_sided"]["z"])
+            record(case, f"negative control {name}: exact test z", "T-test", f"{miss:.3g}", miss >= MARGIN)
     rules = json.load(open(os.path.join(fixtures, "three-stage", "gauss-hermite.json"), encoding="utf-8"))
     for n, rule in sorted(rules.items(), key=lambda item: int(item[0])):
         for part in ("nodes", "weights"):

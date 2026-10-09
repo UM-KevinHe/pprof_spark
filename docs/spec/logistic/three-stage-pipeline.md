@@ -1,6 +1,6 @@
 # Specification: three-stage model — pipeline, σ sensitivity, stage 3 inference, job (Phase 2f-4)
 
-- Status: Draft, awaiting approval (D-43). No 2f-4 code is written before approval (NN-2).
+- Status: Approved by the maintainer, 2026-10-08 (D-43).
 - Builds on: 2f-1 to 2f-3 ([three-stage-spike.md](three-stage-spike.md), D-38 to D-42); slices 2c to 2e for
   the shared test, measure, job and Python machinery.
 - Decision references: D-43; X-005, X-024, X-025, X-026, X-030.
@@ -86,7 +86,8 @@ its limits are optimizer-limited: they are compared under T-opt (X-030).
 
 ## 8. Validation plan
 
-Fixtures (next round), on ts-golden, ts-synthetic and ts-shuffled, from pprof_py's pipeline: stage 3's
+Fixtures (round 54, calibrated in [three-stage-calibration.md](../../parity/three-stage-calibration.md)), on ts-golden,
+ts-synthetic and ts-shuffled, from pprof_py's pipeline: stage 3's
 `test` for `exact` (two-sided, `greater`, `less`), `poibin_exact` and `resampling` (seeded);
 `calculate_standardized_measures` (indirect and direct; median, mean, a number); `calculate_confidence_
 intervals` (`gamma`, and `SM` for both measures); `sigma_sensitivity` (the three σ values, flags, stability);
@@ -106,3 +107,10 @@ under 1.1 s; `sigma_sensitivity` 5.1 s, with σ_c's profile interval (0.2458, 0.
 
 2f-4a: the pipeline, stage 3's tests, measures and intervals, and `sigma_sensitivity` (fixtures, then code);
 2f-4b: persistence, the job runner and Python.
+
+## 10. Fixture findings (round 54)
+
+pprof_py's `sigma_sensitivity` runs on ts-golden (σ_c in (0.2458, 0.7280)) but raises `ZeroDivisionError` on
+ts-synthetic and ts-shuffled, whose profile intervals reach 0 ((0, 0.5253) and (0, 0.2414)): X-005 in the
+fixtures. For those two the fixtures hold the profile intervals at 0.95 and 0.9 and pprof_py's stage 3 refit
+and flags at the upper end, so pprof_spark's refits are checked there, and at σ = 0 against 2f-2's limit.

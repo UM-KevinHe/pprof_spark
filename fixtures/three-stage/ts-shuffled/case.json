@@ -9,6 +9,7 @@
   "female"
  ],
  "id": "ts-shuffled",
+ "inference": true,
  "rows": 2637,
  "shuffle_hosp_seed": 5,
  "source": "three_stage/raw.csv",

@@ -9,6 +9,7 @@
   "female"
  ],
  "id": "ts-golden",
+ "inference": true,
  "r_stage23": true,
  "rows": 2637,
  "source": "three_stage/raw.csv",

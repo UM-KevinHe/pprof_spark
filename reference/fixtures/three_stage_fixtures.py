@@ -28,10 +28,10 @@ CUTOFF = 10
 CASES = (
     {"id": "ts-golden-prep", "source": "glmm_prep/raw.csv", "features": ["age"], "r_prep": True},
     {"id": "ts-golden", "source": "three_stage/raw.csv", "features": ["age", "diabetes", "chf", "comorb", "female"],
-     "r_stage23": True, "stage3": True, "stage2": True},
-    {"id": "ts-synthetic", "seed": 31, "features": ["x1", "x2", "x3"], "stage3": True, "stage2": True},
+     "r_stage23": True, "stage3": True, "stage2": True, "inference": True},
+    {"id": "ts-synthetic", "seed": 31, "features": ["x1", "x2", "x3"], "stage3": True, "stage2": True, "inference": True},
     {"id": "ts-shuffled", "source": "three_stage/raw.csv", "shuffle_hosp_seed": 5,
-     "features": ["age", "diabetes", "chf", "comorb", "female"], "stage2": True},
+     "features": ["age", "diabetes", "chf", "comorb", "female"], "stage2": True, "inference": True},
 )
 OPTIONS = {
     "cutoff": CUTOFF, "tight": TIGHT,
@@ -50,6 +50,11 @@ OPTIONS = {
               "controls: offsets + 0.01 and the first five events flipped (tight); ts-shuffled permutes hosp (seed 5)",
     "r_stage2": "glmer(y_adj ~ 1 + (1 | fac) + (1 | hosp) + offset(stage1_offset), binomial, nAGQ = 1, bobyqa rhoend "
                 "1e-12): theta, intercept, ranef; its deviance function at the fixed points; the saturated constant",
+    "inference": "slice 2f-4a: LogisticThreeStageModel() (marginal): stage 3's gamma, posterior moments and fitted "
+                 "probabilities; test() exact (two_sided, greater, less), poibin_exact, resampling (seed 1); "
+                 "calculate_standardized_measures (indirect, direct; median, mean, -1.0); calculate_confidence_"
+                 "intervals (gamma; SM for both measures); sigma_sensitivity() (or its error) and profile_sigma at "
+                 "0.95 and 0.9; controls: reference median + 0.01, the first event flipped (refit)",
     "golden": "pprof_py tests/data/glmm_prep (R glmm.data.prep) and tests/data/three_stage (R stage 1 beta, "
               "glmer sigma, glmm.fac.hosp gamma and SRR), files checked against REFERENCE.lock",
 }
@@ -293,6 +298,66 @@ def stage2_outputs(df, features, case_dir):
                                    "five_events_flipped": summary(fit(flipped, tol_outer=1e-12, max_iter_outer=5000))}}, r)
 
 
+def stage3_inference(df, features):
+    """Slice 2f-4a (docs/spec/logistic/three-stage-pipeline.md): pprof_py's pipeline and stage 3's inference."""
+    from pprof_py import LogisticThreeStageModel
+
+    def pipeline(data):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return LogisticThreeStageModel().fit(data, "Y", list(features), "fac", "hosp")
+
+    def table(t):
+        return {"providers": [str(v) for v in t.index], "z": hexes(t["z_raw"]), "p": hexes(t["p_value"]),
+                "flag": [None if pd.isna(v) else int(v) for v in t["flag"]], "ci_lower": hexes(t["ci_lower"]),
+                "ci_upper": hexes(t["ci_upper"]), "null_value": hexes([t["null_value"].iloc[0]])}
+
+    m = pipeline(df)
+    s3 = m.stage3_
+    rows = m.data_.assign(fitted=s3.fitted_).sort_values("rid")
+    out = {"providers": [str(v) for v in s3.provider_ids_], "clusters": [str(v) for v in s3.cluster_ids_],
+           "gamma": hexes(s3.gamma_), "alpha_mean": hexes(s3.alpha_mean_cluster_), "alpha_var": hexes(s3.alpha_var_cluster_),
+           "fitted": hexes(rows["fitted"]), "tests": {}, "measures": {}, "intervals": {}}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for name, options in (("exact_two_sided", {}), ("exact_greater", {"alternative": "greater"}),
+                              ("exact_less", {"alternative": "less"}), ("poibin_exact", {"test_method": "poibin_exact"}),
+                              ("resampling", {"test_method": "resampling", "seed": 1})):
+            out["tests"][name] = table(m.test(**options))
+        for label, reference in (("median", "median"), ("mean", "mean"), ("value", -1.0)):
+            r = m.calculate_standardized_measures(stdz=["indirect", "direct"], reference=reference)
+            out["measures"][label] = {
+                kind: {c: hexes(r[kind][c]) for c in (f"{kind}_ratio", f"{kind}_rate", "observed", "expected")}
+                for kind in ("indirect", "direct")}
+        g = m.calculate_confidence_intervals(option="gamma")["gamma_ci"]
+        out["intervals"]["gamma"] = {c: hexes(g[c]) for c in ("gamma", "gamma_lower", "gamma_upper")}
+        for key, frame in m.calculate_confidence_intervals(option="SM", stdz=["indirect", "direct"]).items():
+            out["intervals"][key] = {c: hexes(frame[c]) for c in frame.columns if c.startswith("ci_") or c == key}
+        out["profile"] = {str(level): hexes(m.stage2_.profile_sigma("hosp", level=level).loc["hosp", ["sigma", "lower", "upper"]].to_numpy(float))
+                          for level in (0.95, 0.9)}
+        try:
+            sens = m.sigma_sensitivity()
+            out["sensitivity"] = {"sigma": hexes(sens["sigma"][["lower", "estimate", "upper"]].to_numpy(float)),
+                                  "flags": {c: [int(v) for v in sens["flags"][c]] for c in ("lower", "estimate", "upper")},
+                                  "stable": [bool(v) for v in sens["flags"]["stable"]]}
+        except ZeroDivisionError as error:  # X-005: the profile interval reaches sigma = 0
+            from pprof_py.models.logistic.fe_random_cluster import LogisticFERandomClusterModel
+            beta, _, start = s3._values_from_stages(m.stage1_, m.stage2_, list(features), "fac", "hosp")
+            upper = float.fromhex(out["profile"]["0.95"][2])
+            refit = LogisticFERandomClusterModel()
+            refit.fit(m.data_, "y_adj", list(features), "fac", "hosp", beta=beta, sigma=upper, gamma_init=start,
+                      obs_var="Y", verbose=False)
+            out["sensitivity"] = {"error": type(error).__name__, "upper_gamma": hexes(refit.gamma_),
+                                  "upper_flags": [int(v) for v in refit.test()["flag"]]}
+        gamma = np.asarray(s3.gamma_, dtype=float)
+        shifted = m.test(reference=float(np.median(gamma)) + 0.01)
+        flipped = df.copy()
+        first = int(np.flatnonzero(flipped["Y"].to_numpy() == 1)[0])
+        flipped.loc[flipped.index[first], "Y"] = 0
+        out["negative_controls"] = {"reference_shifted": table(shifted), "first_event_flipped": table(pipeline(flipped).test())}
+    return out
+
+
 def gauss_hermite():
     """Gauss-Hermite rules for weight e^(-t^2): mpmath at 50 digits, and numpy's hermgauss beside them."""
     import mpmath
@@ -355,6 +420,10 @@ def generate(out, inputs, lock, write_json):
         if case.get("stage2"):
             reference = json.load(open(os.path.join(case_dir, "pprof_py.json")))
             reference["stage2"], r_stage2 = stage2_outputs(df, features, case_dir)
+            write_json(os.path.join(case_dir, "pprof_py.json"), reference)
+        if case.get("inference"):
+            reference = json.load(open(os.path.join(case_dir, "pprof_py.json")))
+            reference["inference"] = stage3_inference(df, features)
             write_json(os.path.join(case_dir, "pprof_py.json"), reference)
         r = r_golden(lock, case, df)
         if r_stage2 is not None:

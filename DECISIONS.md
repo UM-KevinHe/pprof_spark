@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-43: Slice 2f-4 specification (Proposed, 2026-10-08)
+### D-43: Slice 2f-4 specification (Accepted: approved by the maintainer, 2026-10-08)
 
 `docs/spec/logistic/three-stage-pipeline.md`: the three-stage pipeline (`ThreeStage.fit`); stage 3's provider
 tests (`exact` by clustered Gauss–Hermite mixtures of Poisson-binomial counts, `poibin_exact`, `resampling`),
@@ -111,7 +111,7 @@ standardized measures (direct sums per cluster from offset-bin moments) and inte
 (σ_c's profile interval from the exact Laplace deviance, stage 3 refits at both ends with the σ = 0 limit);
 persistence, the job runner (`model` `three-stage`) and Python; the distributed plan and validation (T-opt
 for the profile limits). No new discrepancies: X-005, X-024, X-025, X-026 and X-030 apply as approved.
-Awaiting the maintainer's approval; no 2f-4 code before it (NN-2).
+Approved as written; 2f-4a fixtures in round 54.
 
 ### D-42: The T-opt tolerance class (Accepted: approved by the maintainer, 2026-10-08)
 
