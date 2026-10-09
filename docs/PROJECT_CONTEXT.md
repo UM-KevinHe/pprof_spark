@@ -1,10 +1,13 @@
 # pprof_spark — Project Context
 
-**Version** 2.4 · **Date** 2026-10-09 · **Supersedes** v2.3 (2026-10-07)
+**Version** 2.5 · **Date** 2026-10-09 · **Supersedes** v2.4 (2026-10-09)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
+> **v2.5 closes Phase 2** (D-44, after the gate review in `docs/gates/phase-2.md`) and describes the
+> three-stage model in §7.4 as specified (OI-48). v2.4 folded in Phase 2's slices.
+>
 > **v2.4 folds in Phase 2's slices 2a to 2f** (D-30 to D-43): logistic fixed effects with covariate
 > and provider inference, standardization, a job runner and Python access; the three-stage SRR model; the
 > T-opt tolerance class (D-42); and the Python CI fix (round 57.1). v2.3 folded in Phases 1a to 1d.
@@ -175,7 +178,7 @@ ROAD-1 (walking skeleton, as amended by D-11): Phase 0 ends with a statistics-fr
 
 ROAD-2: Each phase ends with a gate review recorded in `STATUS.md`. A phase cannot close with open class A or B discrepancies affecting its features.
 
-Status (2026-10-09): Phases 0 to 1d are closed at parity-verified. Phase 2's slices 2a to 2f are implemented with their parity tests (slice 2a closed, D-32); the three-stage Python wrapper and the Phase 2 gate review remain. Scale verification for every phase happens once, at package level (D-28).
+Status (2026-10-09): Phases 0 to 2 are closed at parity-verified (Phase 2 by D-44, after the gate review in `docs/gates/phase-2.md`); Phase 3, linear fixed effects, is next. Scale verification for every phase happens once, at package level (D-28).
 
 The mapping below covers `pprof_py`'s public model classes *(re-verify)*.
 
@@ -413,7 +416,7 @@ Spark ML on Spark Connect discovers estimators through Java's `ServiceLoader` an
 
 The `app` module provides plain Spark entry points for `spark-submit` or a Databricks JAR task: `pprof.spark.app.CoxJob`, `LogisticJob` and `ThreeStageJob`. Each reads a declarative, versioned run specification (version 1, with a `model` field; input path or table, column roles, fit options, outputs) and writes result tables, the fitted model and a run record (`docs/guide/cox-job.md`, `logistic-job.md`, `three-stage-job.md`); each job points another model's specification to its own job. Python and SQL users can work through tables and job parameters, and every run is auditable. Databricks deployment automation stays out of scope (D-14).
 
-Python access (D-31, D-33, ADR-0009): the `pprof_spark` package (`python/`) wraps the engine through py4j in PySpark Classic, delegating every computation to the JARs through `pprof.spark.app.python.PythonApi`. Cox and logistic wrappers exist; the three-stage wrapper is next. The `python` CI job tests them against the JARs each commit builds (green since round 57.1). Spark Connect ML registration (S-04) stays deferred. Python-facing code never reimplements statistics.
+Python access (D-31, D-33, ADR-0009): the `pprof_spark` package (`python/`) wraps the engine through py4j in PySpark Classic, delegating every computation to the JARs through `pprof.spark.app.python.PythonApi`. Wrappers exist for Cox, logistic fixed-effect and three-stage models. The `python` CI job tests them against the JARs each commit builds (green since round 57.1). Spark Connect ML registration (S-04) stays deferred. Python-facing code never reimplements statistics.
 
 ### 6.13 Observability
 
@@ -547,7 +550,9 @@ Provider tests follow the unified contract of §7.6: Wald, score, exact Poisson-
 
 Indirect standardization (observed over expected, with expected counts computed at the reference provider effect) is a single pass over the data. Direct standardization evaluates every provider's effect over the whole population, which is O(n·m) work. It runs as a kernel over the working set, with the provider-effect vector shipped as in §6.7, producing per-block m-length partial sums, and it is never a cross join. Its cost is documented, and approximations are used only if the reference uses them.
 
-The three-stage SRR pipeline (`LogisticThreeStageModel`) estimates β in stage 1 with fixed effects, the random-intercept variance σ² in stage 2 from a model with stage-1 offsets, and provider effects in stage 3 with β and σ held fixed. β is deliberately not updated in stage 3; this is a design choice of the pipeline, not a defect. Stage 2's per-provider marginal-likelihood contributions (Laplace or Gauss–Hermite, per the reference) are provider-local, and σ is optimized on the driver. The specification defines behavior at the σ̂ = 0 boundary (§3.4).
+The three-stage SRR pipeline (`LogisticThreeStageModel`) is He et al. (2013)'s model, as R's `glmm.fac.hosp`: providers are crossed with clusters (for example dialysis facilities with hospitals), and the clusters carry random effects (D-38; specifications in `docs/spec/logistic/three-stage-*.md`). Preparation keeps providers with more than `cutoff` records, forms the adjusted outcome ỹ (`y_adj`: y raised by 0.01/size for providers without events and lowered by it for providers with only events) and the provider × cluster cells, a cell being included when it has more than `cutoff` records. Stage 1 estimates β with slice 2a's fixed-effect fit, one effect per included cell, on the raw outcome; its offset oᵢ = xᵢᵀβ̂ enters stages 2 and 3. Stage 2 fits logit pᵢ = μ + oᵢ + σₚuⱼ + σ_c v_h to ỹ, with independent standard-normal provider and cluster intercepts (crossed random effects), by minimizing the Laplace deviance, and passes on σ_c, μ and the providers' BLUPs. Stage 3 estimates fixed provider effects γ with β̂ and σ_c held fixed, maximizing the marginal likelihood in which each cluster's effect a ~ N(0, σ_c²) is integrated out by adaptive Gauss–Hermite quadrature (pprof_py's default `marginal` estimator); providers interact through shared clusters, so its Newton system is sparse. β is deliberately not updated after stage 1; this is a design choice of the pipeline, not a defect.
+
+pprof_spark runs stages 2 and 3 on compressed cells (stage 3's per-cell offset-bin sums are X-029). It minimizes stage 2's deviance to convergence where pprof_py's Nelder–Mead stops early, so stage 2's optimum and anything computed through it are compared under T-opt (X-030, D-42), and it takes the σ_c = 0 limit where pprof_py fails (X-005). Stage 3's provider tests (`exact`, `poibin_exact`, `resampling`), standardized measures and intervals, and `sigma_sensitivity` (stage 3 refitted at both ends of σ_c's profile interval) follow `docs/spec/logistic/three-stage-pipeline.md` (D-43).
 
 ### 7.5 Linear fixed effects
 
@@ -910,7 +915,7 @@ Phase 0's decisions and spikes are resolved. The outcomes are recorded in `DECIS
 | D-10 | Root package and artifact names | `pprof.spark`; `pprof-spark-<module>_2.13` |
 | D-11 to D-19 | Raised during Phase 0 | Phase 0 exit and first Cox slice; tooling baseline; Spark Connect test topology; no assistant access to Databricks (D-14, clarified 2026-10-07); summation; platform skeleton; fixtures; deterministic mode; Codespaces |
 | D-20 to D-29 | Raised during Phases 1a to 1d | Cox specifications (D-20, D-21, D-23, D-25, D-27); phase gates closed at parity-verified (D-22, D-24, D-26, D-29); scale test on the maintainer's Databricks once the package is done (D-28) |
-| D-30 to D-43 | Raised during Phase 2 | Phase 2 plan and slice specifications (D-30, D-34 to D-41, D-43); Python access through py4j (D-31, D-33, ADR-0009); slice 2a closed (D-32); the T-opt tolerance class (D-42) |
+| D-30 to D-44 | Raised during Phase 2 | Phase 2 plan and slice specifications (D-30, D-34 to D-41, D-43); Python access through py4j (D-31, D-33, ADR-0009); slice 2a closed (D-32); the T-opt tolerance class (D-42); Phase 2 closed at parity-verified (D-44) |
 
 | ID | Question | Outcome |
 |---|---|---|
@@ -923,6 +928,14 @@ Phase 0's decisions and spikes are resolved. The outcomes are recorded in `DECIS
 | S-07 | Which block sizes work at envelope scale? | Deferred: needs a cluster (ADR-0008) |
 
 ## Appendix A. Changes and their rationale
+
+### v2.4 to v2.5 (Phase 2 closed)
+
+| Area | v2.4 | v2.5 | Why |
+|---|---|---|---|
+| Status (§4) | Phase 2's slices implemented; its gate review pending | Phases 0 to 2 closed at parity-verified | Gate review (round 60), D-44 |
+| Three-stage model (§7.4) | Stage 2 described as a provider-local random-intercept fit | He et al. (2013): providers crossed with clusters; stage 1 on cells, stage 2 a crossed random-intercept GLMM, stage 3 fixed provider effects with the cluster effects integrated out | OI-48; D-38 to D-43 |
+| Python access (§6.12) | Cox and logistic wrappers | Cox, logistic fixed-effect and three-stage wrappers | Round 59 |
 
 ### v2.3 to v2.4 (Phase 2)
 

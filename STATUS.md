@@ -1,11 +1,11 @@
 # Status
 
-Updated 2026-10-09, round 60.
+Updated 2026-10-09, round 61.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
-models: in progress**: plan and slice 2a specification approved (D-30); 2a fixtures and calibration in
-round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification in round 40 (D-37, approved); `LogisticJob` in round 41; the three-stage spike and 2f direction in round 42 (D-38, approved); the 2f-1 specification in round 43 (D-39, approved); its fixtures in round 44; `ThreeStage.prepare` in round 45; the 2f-2 specification in round 46 (D-40, approved); its fixtures in round 47; its driver path in round 48 and its executor path in round 49; the 2f-3 specification in round 50 (D-41, approved); its fixtures and T-opt in round 51 (D-42, approved); its code in round 52; the 2f-4 specification in round 53 (D-43, approved); 2f-4a's fixtures in round 54; the pipeline, stage 3's tests, measures and intervals in round 55; `sigma_sensitivity` in round 56; persistence and the job runner in round 57; the Python three-stage wrapper in round 59; the Phase 2 gate review in round 60 (D-44, proposed). Python access: py4j wrappers (D-31). The maintainer runs the
+models: closed** (D-44, 2026-10-09, after CI green as reported by the maintainer; docs/gates/phase-2.md): plan and slice 2a specification approved (D-30); 2a fixtures and calibration in
+round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification in round 40 (D-37, approved); `LogisticJob` in round 41; the three-stage spike and 2f direction in round 42 (D-38, approved); the 2f-1 specification in round 43 (D-39, approved); its fixtures in round 44; `ThreeStage.prepare` in round 45; the 2f-2 specification in round 46 (D-40, approved); its fixtures in round 47; its driver path in round 48 and its executor path in round 49; the 2f-3 specification in round 50 (D-41, approved); its fixtures and T-opt in round 51 (D-42, approved); its code in round 52; the 2f-4 specification in round 53 (D-43, approved); 2f-4a's fixtures in round 54; the pipeline, stage 3's tests, measures and intervals in round 55; `sigma_sensitivity` in round 56; persistence and the job runner in round 57; the Python three-stage wrapper in round 59; the Phase 2 gate review in round 60 (D-44, approved); PROJECT_CONTEXT v2.5 in round 61. Python access: py4j wrappers (D-31). The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -81,8 +81,9 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 57 | Slice 2f-4b: persistence (`ThreeStageFitIO`) and the job runner (`ThreeStageJob`) | Merged (e0a635c) |
 | 57.1 | Fix of the `python` CI job (absolute JAR paths; conftest resolves and checks them; pytest's report feeds the annotations) | Merged (7d5190a); CI green as reported by the maintainer |
 | 58 | PROJECT_CONTEXT v2.4 and the session handoff (documents) | Merged (2fa916b) |
-| 59 | Slice 2f-4b: the Python three-stage wrapper (`ThreeStage`, `ThreeStageModel`) | Merged (b876d51); CI not reported |
-| 60 | Phase 2 gate review (`docs/gates/phase-2.md`, D-44 proposed); worst ratios measured; the parity matrix's Phase 2 rows brought up to date | Delivered as a patch |
+| 59 | Slice 2f-4b: the Python three-stage wrapper (`ThreeStage`, `ThreeStageModel`) | Merged (b876d51); CI green as reported by the maintainer |
+| 60 | Phase 2 gate review (`docs/gates/phase-2.md`, D-44); worst ratios measured; the parity matrix's Phase 2 rows brought up to date | Merged (7f8b49f); D-44 approved 2026-10-09 |
+| 61 | D-44 approved: Phase 2 closed at parity-verified; PROJECT_CONTEXT v2.5 (§7.4's three-stage model, OI-48); README status | Delivered as a patch |
 | 60 | Phase 2 gate review | Planned |
 
 ## Decisions and spikes

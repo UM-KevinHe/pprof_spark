@@ -1,6 +1,6 @@
 # Handoff
 
-## Session handoff: Phase 2 slices done (2026-10-09)
+## Session handoff: Phase 2 closed (2026-10-09)
 
 This section stands on its own for a new session. The round log below it is the detailed history.
 
@@ -11,7 +11,7 @@ Kevin He) reimplements the validated statistical methods of pprof_py, pinned at 
 (D-05), as distributed Spark algorithms that keep their statistical definitions and validated behavior.
 Stack: Spark 4.1.0, Scala 2.13.16 (PLAT-3), Java 17 bytecode; CI on JDK 17 and 21, under Classic Spark and
 Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative context is
-`docs/PROJECT_CONTEXT.md` v2.4; recorded decisions in `DECISIONS.md` take precedence over it.
+`docs/PROJECT_CONTEXT.md` v2.5; recorded decisions in `DECISIONS.md` take precedence over it.
 
 ### 2. Where things stand
 
@@ -19,18 +19,18 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 |---|---|
 | 0 and 1a to 1d (Cox) | Closed at parity-verified (D-22, D-24, D-26, D-29) |
 | 2a, logistic fixed effects (SerBIN) | Closed at parity-verified (D-32) |
-| 2b, covariate inference, robust variance, prediction, AUC | Implemented (D-34) |
-| 2c, provider tests (exact Poisson-binomial, score, Wald, bootstrap) | Implemented (D-35) |
-| 2d, indirect and direct standardization | Implemented (D-36) |
-| 2e, `LogisticJob` | Implemented (D-37) |
-| 2f, the three-stage SRR model | Implemented through round 59 (D-38 to D-43): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
-| Remaining in Phase 2 | The maintainer's sign-off on D-44 (round 60's gate review), after CI for round 59 |
+| 2b, covariate inference, robust variance, prediction, AUC | Closed at parity-verified (D-34, D-44) |
+| 2c, provider tests (exact Poisson-binomial, score, Wald, bootstrap) | Closed at parity-verified (D-35, D-44) |
+| 2d, indirect and direct standardization | Closed at parity-verified (D-36, D-44) |
+| 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
+| 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
+| Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
 environment (D-14 as clarified). CI: round 56's run (37945209150) passed every Scala job (engine 295, numerics
 83, testkit 20, app 12 tests); the `python` job had failed since round 30 on relative JAR paths and has passed
-since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not reported individually.
+since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not reported individually. The maintainer reported CI green for round 59 (2026-10-09).
 
 ### 3. What exists
 
@@ -86,17 +86,29 @@ suites, `API=connect`), `app41.sh` (app), `numtest48.sh`, `tk35b.sh`, `cipy.sh` 
 OI-02 and OI-38 (large p), OI-03 (TimeRange), OI-29 (distributed result tables at large m), OI-40 (CI check
 of the parity matrix), OI-41 (per-release model fixtures), OI-43, OI-45, OI-46 and OI-59 (scale costs: the
 dense Schur complement of stage 2), OI-56 (PySpark CSV pushdown with a literal provider column), OI-57
-(exact tests with unbalanced blocks), OI-58 (external standard populations), OI-48 (PROJECT_CONTEXT §7.4's three-stage description), OI-33 and OI-42 (reports to
+(exact tests with unbalanced blocks), OI-58 (external standard populations), OI-33 and OI-42 (reports to
 pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-D-44 (round 60, `docs/gates/phase-2.md`) proposes closing Phase 2 at parity-verified once CI for round 59 is
-reported green. Then Phase 3, linear fixed effects (`LinearFixedEffectModel`): read pprof_py's implementation
-at the pin and propose a plan with the first slice's specification. OI-48 (PROJECT_CONTEXT §7.4) goes into the
-next PROJECT_CONTEXT revision.
+Phase 3, linear fixed effects (`LinearFixedEffectModel`): read pprof_py's implementation at the pin and propose
+a plan with the first slice's specification, as round 25 did for Phase 2.
 
 ## Round log
+
+## Round 61 (2026-10-09): Phase 2 closed; PROJECT_CONTEXT v2.5
+
+The maintainer reported CI green and approved D-44: Phase 2 is closed at parity-verified, every feature
+`Experimental` until the package-level scale test (D-28).
+
+- D-44 accepted; `docs/gates/phase-2.md` records the outcome; the parity matrix marks slices 2b to 2f and both
+  Python wrapper rows parity-verified (D-44); STATUS records round 59's CI and the merges of rounds 59 and 60.
+- `docs/PROJECT_CONTEXT.md` v2.5: §7.4 describes the three-stage model as specified (He et al. 2013:
+  providers crossed with clusters; stage 1 on cells, stage 2 a crossed random-intercept GLMM, stage 3 fixed
+  provider effects with the cluster effects integrated out), closing OI-48; §4's status, §6.12's Python
+  access, §16 (D-44) and an Appendix A entry. Replace the claude.ai project copies of PROJECT_CONTEXT.md and
+  HANDOFF.md with this round's files.
+- README: the status paragraph, last updated in round 23, now covers Phases 0 to 2.
 
 ## Round 60 (2026-10-09): the Phase 2 gate review
 

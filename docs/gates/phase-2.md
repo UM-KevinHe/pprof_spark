@@ -1,6 +1,6 @@
 # Phase 2 gate review: logistic provider models
 
-- Date: 2026-10-09 (round 60). Reviewer: the assistant; sign-off: the maintainer (D-44, proposed).
+- Date: 2026-10-09 (round 60). Reviewer: the assistant; sign-off: the maintainer (D-44, approved 2026-10-09).
 - Exit criterion (§4): the parity gate passed for large-m fixed effects (SerBIN-type blocked Newton),
   provider tests (Wald, score, exact Poisson-binomial, bootstrap), direct and indirect standardization, and
   the three-stage SRR pipeline with the stage 2 variance estimation it needs.
@@ -57,7 +57,7 @@ its class over the slice's suites. The repository's testkit is unchanged.
 | Persistence | Met | `LogisticFitIO` (format version 3): bitwise round trips, no overwriting, other kinds and versions refused. `ThreeStageFitIO` (version 1): never overwriting; the saved and re-attached fit gives the library's outputs bit for bit, and changed data are refused |
 | Job runners and Python access | Met | `LogisticJobSuite` and `ThreeStageJobSuite`: outputs equal to the library's bit for bit; `PythonApiSuite` and the Python tests: wrapper results equal to the engine's (ADR-0009) |
 | Platforms (§5) | Met | Every Phase 2 suite ran under Classic Spark and Spark Connect in its round; CI run 37945209150 (round 56) on JDK 17 and 21 and Spark Connect; in round 60's sandbox, numerics 83 on JDK 17 and 21 |
-| CI | Met through round 57.1; **pending** for round 59 | Run 37945209150 (round 56) passed every Scala job (engine 295, numerics 83, testkit 20, app 12 tests); the maintainer reported CI green after round 57.1, the `python` job included. Rounds 31 to 55 were not reported individually and are part of round 56's run. Round 59 (b876d51: the three-stage Python wrapper and a `PythonApiSuite` test) awaits its report |
+| CI | Met | Run 37945209150 (round 56) passed every Scala job (engine 295, numerics 83, testkit 20, app 12 tests); the maintainer reported CI green after round 57.1, the `python` job included. Rounds 31 to 55 were not reported individually and are part of round 56's run. Round 59 (b876d51: the three-stage Python wrapper and a `PythonApiSuite` test): green, as the maintainer reported on 2026-10-09 |
 | Documentation | Met, with one gap | Specifications; guides `logistic-job.md`, `three-stage-job.md` and `python.md`; the parity matrix, whose Phase 2 rows this round brings up to date. Gap: PROJECT_CONTEXT v2.4 §7.4 still describes stage 2 without the crossed GLMM (OI-48) |
 | Scale (§9.7) | **Deferred** | The maintainer's package-level test (D-28) |
 
@@ -79,4 +79,6 @@ next PROJECT_CONTEXT revision.
 
 ## Outcome
 
-Awaiting the maintainer's sign-off.
+**Closed on 2026-10-09** (D-44): the maintainer reported CI green and signed off. Every Phase 2 feature is
+parity-verified and stays `Experimental` until the package-level scale test (D-28). PROJECT_CONTEXT v2.5
+(round 61) folds in OI-48, the documentation gap above.
