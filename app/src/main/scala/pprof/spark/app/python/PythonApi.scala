@@ -5,7 +5,7 @@ import scala.jdk.CollectionConverters._
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import pprof.spark.app.RunSpec
+import pprof.spark.app.{RunSpec, ThreeStageJob, ThreeStageRunSpec}
 import pprof.spark.engine.BuildInfo
 import pprof.spark.engine.layout.GroupKey
 import pprof.spark.engine.logistic.{
@@ -17,7 +17,14 @@ import pprof.spark.engine.logistic.{
   LogisticProviderTests,
   LogisticSpec,
   LogisticStandardization,
-  LogisticTest
+  LogisticTest,
+  ThreeStage,
+  ThreeStageFit,
+  ThreeStageFitIO,
+  ThreeStageFitOptions,
+  ThreeStagePipeline,
+  ThreeStageSensitivity,
+  ThreeStageSpec
 }
 import pprof.spark.engine.cox.{
   CoxFit,
@@ -536,6 +543,232 @@ object PythonApi {
     LogisticFitIO.save(spark, fit, path)
 
   def logisticLoad(spark: SparkSession, path: String): LogisticFit = LogisticFitIO.load(spark, path)
+
+  /** Fits the three-stage model (docs/spec/logistic/three-stage-pipeline.md §1). Column roles and options use the
+    * job runner's format (docs/guide/three-stage-job.md): the `columns` and `fit` objects of a version-1 run
+    * specification with `model` `three-stage`; every problem is reported at once.
+    */
+  def threeStageFit(df: DataFrame, columnsJson: String, fitJson: String): ThreeStageFit = {
+    val (spec, options) = threeStageModel(columnsJson, fitJson)
+    ThreeStagePipeline.fit(df, spec, options)
+  }
+
+  /** The column roles and options of [[threeStageFit]], through the job runner's parser. */
+  def threeStageModel(
+      columnsJson: String,
+      fitJson: String
+  ): (ThreeStageSpec, ThreeStageFitOptions) = {
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    root.put("version", RunSpec.Version)
+    root.put("model", "three-stage")
+    root.putObject("input").put("path", "unused")
+    root.set[JsonNode]("columns", objectNode(mapper, columnsJson, "columns"))
+    root.set[JsonNode]("fit", objectNode(mapper, fitJson, "fit"))
+    root.putObject("outputs").put("path", "unused")
+    val run = ThreeStageRunSpec.parse(mapper.writeValueAsString(root))
+    (run.spec, run.options)
+  }
+
+  /** The three-stage fit as JSON: counts and excluded providers, stage 1's fit (as [[logisticSummary]]), stage 2's
+    * and stage 3's parameters and convergence, the column roles and the options in the job runner's format.
+    * Doubles are `Double.toHexString` strings.
+    */
+  def threeStageSummary(fit: ThreeStageFit): String = {
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    def hex(value: Double): String = java.lang.Double.toHexString(value)
+    val p = fit.preparation
+    root.put("kind", "ThreeStageFit")
+    root.put("providers", p.providers)
+    root.put("clusters", p.clusters)
+    root.put("cells", p.cells)
+    root.put("includedCells", p.includedCells)
+    val excluded = root.putArray("excluded")
+    p.excluded.foreach { case (key, records) =>
+      val node = excluded.addObject()
+      node.put("provider", GroupKey.value(key).toString)
+      node.put("records", records)
+    }
+    root.set[JsonNode]("stage1", mapper.readTree(logisticSummary(p.stage1)))
+    val s2 = fit.stage2
+    val stage2 = root.putObject("stage2")
+    stage2.put("sigmaProvider", hex(s2.sigmaProvider))
+    stage2.put("sigmaCluster", hex(s2.sigmaCluster))
+    stage2.put("intercept", hex(s2.intercept))
+    stage2.put("deviance", hex(s2.deviance))
+    stage2.put("converged", s2.converged)
+    stage2.put("iterations", s2.iterations)
+    stage2.put("evaluations", s2.evaluations)
+    stage2.put("projectedGradient", hex(s2.projectedGradient))
+    val s3 = fit.stage3
+    val stage3 = root.putObject("stage3")
+    stage3.put("sigma", hex(s3.sigma))
+    stage3.put("converged", s3.converged)
+    stage3.put("stalled", s3.stalled)
+    stage3.put("iterations", s3.iterations)
+    stage3.put("criterion", hex(s3.criterion))
+    stage3.put("logLikelihood", hex(s3.loglik))
+    stage3.put("heldAtBound", s3.held.count(identity))
+    stage3.put("cells", s3.cells)
+    stage3.put("bins", s3.bins)
+    val columns = root.putObject("columns")
+    columns.put("outcome", fit.spec.outcome)
+    val features = columns.putArray("features")
+    fit.spec.features.foreach(f => features.add(f))
+    columns.put("provider", fit.spec.provider)
+    columns.put("cluster", fit.spec.cluster)
+    fit.spec.rowId.foreach(r => columns.put("rowId", r))
+    val options = root.putObject("fit")
+    options.put("cutoff", fit.options.preparation.cutoff)
+    val o1 = fit.options.preparation.stage1
+    val stage1Options = options.putObject("stage1")
+    stage1Options.put("tol", hex(o1.tol))
+    stage1Options.put("maxIter", o1.maxIter)
+    stage1Options.put("bound", hex(o1.bound))
+    stage1Options.put("backtrack", o1.backtrack)
+    val o2 = fit.options.stage2
+    val stage2Options = options.putObject("stage2")
+    stage2Options.put("pirlsTolerance", hex(o2.pirlsTolerance))
+    stage2Options.put("pirlsMaxIterations", o2.pirlsMaxIterations)
+    stage2Options.put("gradientTolerance", hex(o2.gradientTolerance))
+    stage2Options.put("maxIterations", o2.maxIterations)
+    val o3 = fit.options.stage3
+    val stage3Options = options.putObject("stage3")
+    stage3Options.put("nNodes", o3.nNodes)
+    stage3Options.put("maxIter", o3.maxIter)
+    stage3Options.put("tol", hex(o3.tol))
+    stage3Options.put("bound", hex(o3.bound))
+    stage3Options.put("boundMode", o3.boundMode)
+    mapper.writeValueAsString(root)
+  }
+
+  /** Stage 3's effects with stage 2's BLUPs, as the job runner writes them (`providers`). */
+  def threeStageProviders(spark: SparkSession, fit: ThreeStageFit): DataFrame =
+    ThreeStageJob.providersTable(spark, fit)
+
+  /** The clusters' posterior moments with stage 2's BLUPs, as the job runner writes them (`clusters`). */
+  def threeStageClusters(spark: SparkSession, fit: ThreeStageFit): DataFrame =
+    ThreeStageJob.clustersTable(spark, fit)
+
+  /** Stage 3's provider tests (§2): `exact`, `poibin_exact` or `resampling`; `critical` is NaN for none. */
+  def threeStageTest(
+      fit: ThreeStageFit,
+      method: String,
+      reference: String,
+      alternative: String,
+      level: Double,
+      critical: Double,
+      providersJson: String,
+      nResample: Int,
+      seed: Long
+  ): DataFrame =
+    ThreeStagePipeline.test(
+      fit.preparation.data,
+      fit.spec,
+      fit.stage3,
+      method,
+      effectReference(reference),
+      alternative,
+      level,
+      if (critical.isNaN) None else Some(critical),
+      stringList(providersJson, "providers"),
+      nResample = nResample,
+      seed = seed
+    )
+
+  /** Indirect and direct standardized measures (§3), by kind. */
+  def threeStageMeasures(
+      fit: ThreeStageFit,
+      kindsJson: String,
+      reference: String
+  ): java.util.Map[String, DataFrame] =
+    ThreeStagePipeline
+      .measures(
+        fit.preparation.data,
+        fit.cells,
+        fit.spec,
+        fit.stage3,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect", "direct")),
+        effectReference(reference)
+      )
+      .asJava
+
+  /** Intervals by test inversion (§3): `gamma` for the effects, `SM` for the standardized measures. */
+  def threeStageIntervals(
+      fit: ThreeStageFit,
+      option: String,
+      kindsJson: String,
+      measureJson: String,
+      alternative: String,
+      level: Double,
+      method: String,
+      reference: String
+  ): java.util.Map[String, DataFrame] =
+    ThreeStagePipeline
+      .intervals(
+        fit.preparation.data,
+        fit.cells,
+        fit.spec,
+        fit.stage3,
+        option,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect")),
+        stringList(measureJson, "measure").getOrElse(Seq("rate", "ratio")),
+        alternative,
+        level,
+        method,
+        effectReference(reference)
+      )
+      .asJava
+
+  /** σ_c's sensitivity (§4) with the fit's stage 2 and stage 3 options. */
+  def threeStageSensitivity(
+      fit: ThreeStageFit,
+      level: Double,
+      method: String,
+      alternative: String,
+      testLevel: Double
+  ): ThreeStageSensitivity =
+    ThreeStagePipeline.sigmaSensitivity(
+      fit.preparation.data,
+      fit.cells,
+      fit.spec,
+      fit.stage2,
+      level,
+      method,
+      alternative,
+      testLevel,
+      fit.options.stage2,
+      fit.options.stage3
+    )
+
+  /** σ_c's profile interval and estimate as JSON, doubles as `Double.toHexString` strings. */
+  def threeStageSensitivitySummary(result: ThreeStageSensitivity): String = {
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    root.put("lower", java.lang.Double.toHexString(result.lower))
+    root.put("estimate", java.lang.Double.toHexString(result.estimate))
+    root.put("upper", java.lang.Double.toHexString(result.upper))
+    mapper.writeValueAsString(root)
+  }
+
+  def threeStageSensitivityFlags(result: ThreeStageSensitivity): DataFrame = result.flags
+
+  def threeStageSensitivityTests(result: ThreeStageSensitivity): java.util.Map[String, DataFrame] =
+    result.tests.asJava
+
+  /** The prepared training records with stage 3's fitted probability `fitted`. */
+  def threeStageFitted(fit: ThreeStageFit): DataFrame =
+    ThreeStage.fitted(fit.preparation.data, fit.spec, fit.stage3)
+
+  def threeStageSave(spark: SparkSession, fit: ThreeStageFit, path: String): Unit =
+    ThreeStageFitIO.save(spark, fit, path)
+
+  /** Loads a saved fit and re-attaches it to its training data `df` (the records are not saved, §12); data whose
+    * stage 1 fingerprint differs are refused.
+    */
+  def threeStageLoad(spark: SparkSession, path: String, df: DataFrame): ThreeStageFit =
+    ThreeStageFitIO.attach(df, ThreeStageFitIO.load(spark, path))
 
   private def testsJson(tests: Seq[LogisticTest]): String = {
     val mapper = new ObjectMapper()

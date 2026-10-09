@@ -67,5 +67,28 @@ fit.predict(new_rows)                              # linear_predictor and probab
 fit.save("/path/fit"); LogisticFixedEffectModel.load(spark, "/path/fit")
 ```
 
-Its arguments follow `LogisticSpec` and `LogisticOptions` (docs/spec/logistic/). The three-stage model
-joins with its slice (plan §6).
+Its arguments follow `LogisticSpec` and `LogisticOptions` (docs/spec/logistic/).
+
+## Three-stage SRR models
+
+```python
+from pprof_spark import ThreeStage, ThreeStageModel
+
+fit = ThreeStage("readmitted", ["age", "comorbidity"], "facility", "hospital", row_id="id",
+                 stage3={"nNodes": 20}).fit(df)
+fit.sigma, fit.intercept, fit.stage1_coefficients, fit.excluded, fit.summary
+fit.providers()                                    # gamma, stage 2's BLUP, stage 3's start, held_at_bound
+fit.clusters()                                     # posterior mean and variance per hospital
+fit.test(method="exact", reference="median")       # or poibin_exact, resampling (n_resample, seed)
+fit.standardized_measures()["indirect"]            # O/E ratios and rates; also "direct"
+fit.confidence_intervals()                         # SM: indirect_rate, indirect_ratio; option="gamma"
+s = fit.sigma_sensitivity(level=0.95)              # s.lower, s.estimate, s.upper, s.flags, s.tests
+fit.fitted()                                       # the prepared records with stage 3's probability
+fit.save("/path/fit"); ThreeStageModel.load(spark, "/path/fit", df)
+```
+
+`ThreeStage`'s arguments are the job runner's `columns` and `fit` objects
+([three-stage-job.md](three-stage-job.md)): `cutoff`, and `stage1`, `stage2` and `stage3` as dictionaries
+of their keys; options left out take the engine's defaults. The fit keeps the prepared training records,
+so its methods take no data. A saved fit does not hold them: `load` re-attaches it to the training data
+and refuses data whose stage 1 fingerprint differs (docs/spec/logistic/three-stage-pipeline.md §12).

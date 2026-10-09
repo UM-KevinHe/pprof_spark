@@ -150,4 +150,19 @@ and flags at the upper end, so pprof_spark's refits are checked there, and at σ
 3. `ThreeStageJobSuite` runs the whole pipeline as a job and again through the library in each test; its
    first test took 109 s under Spark Connect in the sandbox, so this suite allows four minutes per test
    instead of `SparkSuite`'s two (OI-44).
-4. The Python wrapper follows in round 58.
+4. The Python wrapper came in round 59 (§13).
+
+## 13. Implementation notes (round 59; no statistical change)
+
+1. The maintainer approved the wrapper's shape (round 59): `ThreeStage` holds the column roles and options
+   and its `fit(df)` returns `ThreeStageModel`, which carries §5's methods; `ThreeStageModel.load(spark,
+   path, df)` takes the training data, because a saved fit is re-attached to it (§12).
+2. `PythonApi.threeStage*` (ADR-0009): `threeStageModel` reads the `columns` and `fit` objects with the job
+   runner's parser; `threeStageSummary` is JSON with doubles in hexadecimal (counts, excluded providers,
+   stage 1's summary, stage 2's and stage 3's parameters and convergence, column roles, options);
+   `threeStageProviders` and `threeStageClusters` are the job's tables; `threeStageTest`, `Measures`,
+   `Intervals`, `Sensitivity` (with its summary, flags and tests), `Fitted`, `Save` and `Load`.
+3. Tests: `PythonApiSuite` (on ts-golden the facade's fit, summary, exact tests and measures equal the
+   engine's bit for bit; invalid roles are reported at once) and `python/tests/test_three_stage.py` (stage
+   3's effects, posterior means, σ̂_c, the exact z and σ sensitivity within T-opt of pprof_py's, with equal
+   flags and `stable`; equal observed counts; the save and load round trip; changed data refused).

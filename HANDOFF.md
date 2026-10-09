@@ -23,8 +23,8 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2c, provider tests (exact Poisson-binomial, score, Wald, bootstrap) | Implemented (D-35) |
 | 2d, indirect and direct standardization | Implemented (D-36) |
 | 2e, `LogisticJob` | Implemented (D-37) |
-| 2f, the three-stage SRR model | Implemented through round 57 (D-38 to D-43): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence and `ThreeStageJob` |
-| Remaining in Phase 2 | The Python `ThreeStageModel` wrapper (round 59), then the Phase 2 gate review (round 60) |
+| 2f, the three-stage SRR model | Implemented through round 59 (D-38 to D-43): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
+| Remaining in Phase 2 | The Phase 2 gate review (round 60); round 59 delivered the Python `ThreeStageModel` wrapper (CI to be reported) |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -40,7 +40,7 @@ since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not
 | `engine.cox` | `CoxPH` (fit, baseline, residuals, robust), `CoxFitIO` v3, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
 | `engine.logistic` | `LogisticSpec`, `LogisticFE`, `LogisticBlocks`, `LogisticFitIO` v3, `LogisticProviderTests`, `LogisticStandardization`; `ThreeStage` (prepare, compress, stage2, stage3, laplace, marginal, fitted), `ThreeStagePipeline` (fit, test, measures, intervals, profileInterval, sigmaSensitivity), `ThreeStageFitIO` v1 |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob` and their run specifications (version 1, `model`); `python.PythonApi` |
-| `python/` | The `pprof_spark` package (Cox and logistic wrappers, ADR-0009) and its pytest suite |
+| `python/` | The `pprof_spark` package (Cox, logistic and three-stage wrappers, ADR-0009) and its pytest suite |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
 | Documents | `docs/spec/cox/` (5), `docs/spec/logistic/` (2a to 2f), guides (`cox-job.md`, `logistic-job.md`, `three-stage-job.md`, Python), `docs/parity/` (matrix, calibrations), `DECISIONS.md` (to D-43), `DISCREPANCIES.md` (to X-030), `OPEN_ITEMS.md` (to OI-59) |
 
@@ -91,13 +91,31 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Round 59: the Python `ThreeStageModel` wrapper (`PythonApi.threeStage*`, `python/pprof_spark/three_stage.py`,
-tests against the library and the fixtures, run by the `python` CI job). Round 60: the Phase 2 gate review
-(`docs/gates/phase-2.md`: each slice's requirements and measured worst ratios, the CI evidence, and a
+Round 60: the Phase 2 gate review (`docs/gates/phase-2.md`: each slice's requirements and measured worst ratios, the CI evidence, and a
 proposal to close Phase 2 at parity-verified). Then Phase 3, linear fixed effects (`LinearFixedEffectModel`):
 read pprof_py's implementation at the pin and propose a plan with the first slice's specification.
 
 ## Round log
+
+## Round 59 (2026-10-09): the Python three-stage wrapper
+
+The maintainer approved the wrapper's shape: `ThreeStage(...)` holds the column roles and options, its
+`fit(df)` returns `ThreeStageModel`, and `ThreeStageModel.load(spark, path, df)` takes the training data,
+because a saved fit is re-attached to it (spec 2f-4 §13).
+
+- app `PythonApi.threeStage*`: fit and model (the job runner's parser for `columns` and `fit`), the summary
+  (JSON, doubles in hexadecimal), the job's providers and clusters tables, tests, measures, intervals, σ
+  sensitivity (summary, flags, tests), fitted probabilities, save, and load with attach.
+- Python `pprof_spark.ThreeStage`, `ThreeStageModel` and `SigmaSensitivity` (`three_stage.py`); guide
+  `docs/guide/python.md`; spec 2f-4 §13 (its §12 had said round 58); a parity-matrix row.
+- Evidence (sandbox, JDK 17): app main, its 2.13.16 linkage and tests compile; `PythonApiSuite` 5/5 under
+  Classic Spark (86 s) and Spark Connect (105 s), its new test showing the facade's fit, summary, exact
+  tests and measures equal to the engine's bit for bit on ts-golden; the `python` job's step: 17 passed
+  (12 before) in 145 s, where `test_three_stage.py` finds stage 3's effects, posterior means, σ̂_c, the exact
+  z and the σ sensitivity within T-opt of pprof_py's, flags and `stable` equal, observed counts equal, a
+  bit-for-bit save and load round trip, and changed data refused.
+- Sandbox rebuilt from `sandbox-tools.zip` (1 CPU): `build33.sh` needs one run of `compile-only.sh` first
+  (it generates `BuildInfo.scala`); the zip lacks `verify/probe/Probe.scala` (an informational step).
 
 ## Round 58 (2026-10-09): PROJECT_CONTEXT v2.4 and the session handoff
 

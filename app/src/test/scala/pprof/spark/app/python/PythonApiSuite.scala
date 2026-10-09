@@ -152,4 +152,83 @@ class PythonApiSuite extends SparkSuite {
         assert(failure.getMessage.contains(key), failure.getMessage)
       }
   }
+
+  test("a three-stage fit through the facade equals the engine's, as do its tests and measures") {
+    import pprof.spark.engine.logistic.{
+      EffectReference,
+      ThreeStageFitOptions,
+      ThreeStagePipeline,
+      ThreeStageSpec
+    }
+    def hex(values: Array[Double]): Seq[String] = values.toSeq.map(java.lang.Double.toHexString)
+    def exact(table: DataFrame): Seq[String] = table.collect().map(_.mkString("|")).toSeq.sorted
+    val df = spark.read
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .csv(Fixtures.root.resolve("three-stage/ts-golden/input.csv").toString)
+    val spec = ThreeStageSpec(
+      "Y",
+      Seq("age", "diabetes", "chf", "comorb", "female"),
+      "fac",
+      "hosp",
+      Some("rid")
+    )
+    val columns =
+      """{"outcome": "Y", "features": ["age", "diabetes", "chf", "comorb", "female"], "provider": "fac", "cluster": "hosp", "rowId": "rid"}"""
+    assertEquals(PythonApi.threeStageModel(columns, "{}"), (spec, ThreeStageFitOptions()))
+    val viaFacade = PythonApi.threeStageFit(df, columns, """{"stage3": {"nNodes": 20}}""")
+    val direct = ThreeStagePipeline.fit(df, spec)
+    assertEquals(hex(viaFacade.stage3.gamma), hex(direct.stage3.gamma))
+    assertEquals(hex(viaFacade.stage3.alphaMean), hex(direct.stage3.alphaMean))
+    val summary = new ObjectMapper().readTree(PythonApi.threeStageSummary(viaFacade))
+    assertEquals(
+      java.lang.Double.parseDouble(summary.get("stage2").get("sigmaCluster").asText()),
+      direct.stage2.sigmaCluster
+    )
+    assertEquals(summary.get("columns").get("cluster").asText(), "hosp")
+    assertEquals(summary.get("stage1").get("kind").asText(), "LogisticFit")
+    assertEquals(
+      exact(
+        PythonApi.threeStageTest(
+          viaFacade,
+          "exact",
+          "median",
+          "two_sided",
+          0.95,
+          Double.NaN,
+          "",
+          10000,
+          0L
+        )
+      ),
+      exact(ThreeStagePipeline.test(direct.preparation.data, spec, direct.stage3))
+    )
+    assertEquals(
+      exact(PythonApi.threeStageMeasures(viaFacade, """["indirect"]""", "mean").get("indirect")),
+      exact(
+        ThreeStagePipeline.measures(
+          direct.preparation.data,
+          direct.cells,
+          spec,
+          direct.stage3,
+          Seq("indirect"),
+          EffectReference.Mean
+        )("indirect")
+      )
+    )
+    val failure = intercept[IllegalArgumentException](
+      PythonApi.threeStageModel(
+        """{"outcome": "Y", "colour": "red"}""",
+        """{"stage2": {"speed": 1}}"""
+      )
+    )
+    Seq(
+      "columns.colour",
+      "columns.features",
+      "columns.provider",
+      "columns.cluster",
+      "fit.stage2.speed"
+    )
+      .foreach(key => assert(failure.getMessage.contains(key), failure.getMessage))
+  }
 }
