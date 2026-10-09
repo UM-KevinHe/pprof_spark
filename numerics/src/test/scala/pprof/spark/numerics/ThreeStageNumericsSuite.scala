@@ -105,4 +105,38 @@ class ThreeStageNumericsSuite extends munit.FunSuite {
       bounded.x.mkString(",")
     )
   }
+
+  test(
+    "clustered Poisson-binomial distributions: a distribution, the plain one without cluster variance, tails"
+  ) {
+    val eta = Array(-1.2, 0.3, -0.4, 0.9, -2.0, 0.1)
+    val cluster = Array(0, 0, 1, 1, 1, 2)
+    val mean = Array(0.2, -0.1, 0.4)
+    val variance = Array(0.3, 0.0, 0.5)
+    val pmf = ClusteredPoissonBinomial.clusteredPmf(eta, cluster, mean, variance)
+    near(pmf.sum, 1.0, 1e-14, "Σ pmf")
+    val plain = ClusteredPoissonBinomial.clusteredPmf(eta, cluster, mean, Array(0.0, 0.0, 0.0))
+    val direct = ClusteredPoissonBinomial.poibinPmf(
+      eta.indices.map(i => 1.0 / (1.0 + StrictMath.exp(-(eta(i) + mean(cluster(i)))))).toArray
+    )
+    plain.indices.foreach(k =>
+      near(plain(k), direct(k), 1e-15, s"pmf($k) without cluster variance")
+    )
+    val t = ClusteredPoissonBinomial.tails(pmf, 2)
+    near(t.above + t.below + (t.atLeast - t.above), 1.0, 1e-14, "tails")
+    val a = ClusteredPoissonBinomial.resampledTails(
+      2,
+      eta,
+      cluster.map(mean),
+      cluster.map(variance),
+      4000,
+      5L,
+      7L
+    )
+    assertEquals(
+      ClusteredPoissonBinomial
+        .resampledTails(2, eta, cluster.map(mean), cluster.map(variance), 4000, 5L, 7L),
+      a
+    )
+  }
 }

@@ -101,6 +101,22 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 55 (2026-10-09): slice 2f-4a code, the pipeline and stage 3's inference
+
+- numerics `ClusteredPoissonBinomial` (the `exact` null: 32-node posterior mixtures per cluster convolved
+  across clusters, tails summed from the entries; posterior-integrated probabilities; counter-based
+  resampling). `ThreeStageNumericsSuite` gains a test; numerics 83 on JDK 17 and 21.
+- engine `ThreeStagePipeline`: `fit`, `test` (`exact`, `poibin_exact`, `resampling`, inversion limits),
+  `measures` (indirect from compressed cells, direct from pooled cluster moments; the measures' `mean`
+  unweighted, the tests' size-weighted, as pprof_py) and `intervals` (`gamma`, `SM`).
+- `ThreeStagePipelineSuite` (2) and `ThreeStagePipelineMoreSuite` (2): on all three cases, with pprof_py's
+  stage outputs as input, every test (z under T-test where pprof_py's tails are reliable, p-values, flags,
+  limits under T-coef), resampling p within Monte Carlo error, measures (median, mean, −1.0; T-meas) and
+  intervals; end to end on ts-golden, stage 3 and its exact z within T-opt of pprof_py's. Classic Spark and
+  Spark Connect, 4/4 each.
+- Found: pprof_py's one-sided `exact` tail that is exactly 1 is a rounded sum (1 − 3e-16 on ts-synthetic's
+  provider with only events, z 8.08 instead of the cap); recorded under X-024.
+
 ## Round 54 (2026-10-08): slice 2f-4a fixtures and calibration
 
 The maintainer approved D-43.

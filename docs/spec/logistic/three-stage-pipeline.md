@@ -114,3 +114,19 @@ pprof_py's `sigma_sensitivity` runs on ts-golden (σ_c in (0.2458, 0.7280)) but 
 ts-synthetic and ts-shuffled, whose profile intervals reach 0 ((0, 0.5253) and (0, 0.2414)): X-005 in the
 fixtures. For those two the fixtures hold the profile intervals at 0.95 and 0.9 and pprof_py's stage 3 refit
 and flags at the upper end, so pprof_spark's refits are checked there, and at σ = 0 against 2f-2's limit.
+
+## 11. Implementation notes (round 55; no statistical change)
+
+1. numerics `ClusteredPoissonBinomial`: pprof_py's 32 posterior nodes (`_POSTERIOR_NODES`), the full
+   Poisson-binomial distribution by the exact recursion, per-cluster mixtures convolved in cluster order,
+   tails summed from the entries, posterior-integrated probabilities (`RowMixture`), and resampled tails from
+   counter-based uniforms (Box–Muller normals, keyed by seed, provider, replicate and record).
+2. engine `ThreeStagePipeline`: `fit` (2f-1 to 2f-3, then stage 3 from stage 2's start), `test` (records grouped
+   by provider; the clusters' posterior moments and γ̂ carried by closure), `measures` (indirect from the
+   compressed cells at γ₀ + E_post[aₕ]; direct from each cluster's pooled offset-bin moments) and `intervals`
+   (`gamma`; `SM` mapped through the measures). The inference functions take a `ThreeStageStage3`, so the tests
+   can feed them pprof_py's own stage outputs.
+3. X-024 again: a one-sided `exact` tail that is exactly 1 (for example P(X ≤ n) for a provider with only
+   events) is pprof_py's rounded sum of the distribution, 1 − 3e-16 on ts-synthetic, giving z = 8.08 where
+   pprof_spark reads the complement, 0, and caps z at 37.05; comparisons skip one-sided tails above 1 − 1e-7.
+4. `sigma_sensitivity` follows in round 56.
