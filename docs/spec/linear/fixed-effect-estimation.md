@@ -179,3 +179,18 @@ Fixtures in `fixtures/linear`, from pprof_py at the pin and R's `lm`:
    10⁵, 10⁶ and 10⁹ degrees of freedom. A first version of `StudentT` adopted that approximation, and the strict
    tests caught it (round 64); no cutoff remains.
 4. `CholeskyFactor.pivots` gives the condition estimate of §6.
+
+## 15. Implementation notes (round 65, engine; no statistical change)
+
+1. `engine.linear`: `LinearValidation` (one aggregate; every problem at once, with counts and never values),
+   ProviderLocal blocks in canonical order (provider, row identifier, values), pass 1 (`kernels.LinearFE.within`
+   per block; partials added in block order by pairwise summation), the Cholesky solve with R's aliasing rule
+   (X-032, the aliased features named), pass 2 (residual and total sums of squares per block), and the provider
+   table: a `flatMap` over the blocks, keyed through the plan's placements, ordered by key and persisted before
+   the blocks are released (columns: the provider key, `records`, `gamma`, `variance`, `se`).
+2. `summary`: t = (β̂ − null)/se with `StudentT`; limits from `upperQuantile((1 − level)/2)` (two-sided) or
+   `upperQuantile(1 − level)` (one-sided), as pprof_py's `t.ppf(1 − α/2)` and `t.ppf(level)`.
+3. `predict`: a left join of the rows with the provider table; rows of providers not in the fit fail with their
+   count (`UnknownProviders`); the prediction is γ̂ⱼ + Σₖ xₖβ̂ₖ in feature order.
+4. RSS = 0 gives σ̂ = 0 with a warning (NN-10). The fit carries R² on its training rows; `score` on other data
+   comes with persistence in round 66.

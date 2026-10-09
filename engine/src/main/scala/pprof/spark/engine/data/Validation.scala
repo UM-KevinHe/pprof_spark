@@ -68,6 +68,11 @@ object InputProblem {
       extends InputProblem(name, s"has $count values above column $trials")
   final case class ConstantFeature(name: String)
       extends InputProblem(name, "has the same value in every row (zero variance)")
+  final case class NoResidualDegreesOfFreedom(rows: Long, providers: Long, features: Int)
+      extends InputProblem(
+        "",
+        s"$rows rows leave no residual degrees of freedom for $providers providers and $features features (X-033)"
+      )
   case object NoFeatures extends InputProblem("", "the model needs at least one feature (X-019)")
   final case class NoOutcomeVariation(events: Long, trials: Long)
       extends InputProblem(

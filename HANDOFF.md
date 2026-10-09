@@ -37,9 +37,10 @@ since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not
 
 | Area | Content |
 |---|---|
-| `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile) |
+| `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile); `StudentT` and kernels `LinearFE` (Phase 3) |
 | `engine.cox` | `CoxPH` (fit, baseline, residuals, robust), `CoxFitIO` v3, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
 | `engine.logistic` | `LogisticSpec`, `LogisticFE`, `LogisticBlocks`, `LogisticFitIO` v3, `LogisticProviderTests`, `LogisticStandardization`; `ThreeStage` (prepare, compress, stage2, stage3, laplace, marginal, fitted), `ThreeStagePipeline` (fit, test, measures, intervals, profileInterval, sigmaSensitivity), `ThreeStageFitIO` v1 |
+| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`; the provider table distributed) |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob` and their run specifications (version 1, `model`); `python.PythonApi` |
 | `python/` | The `pprof_spark` package (Cox, logistic and three-stage wrappers, ADR-0009) and its pytest suite |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (5), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
@@ -94,11 +95,25 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Round 65: the engine `LinearFE` (validation, ProviderLocal blocks, the two passes, the distributed provider table,
-`summary` with `StudentT`, prediction) with `LinearFESuite` against `fixtures/linear` under Classic Spark and Spark
-Connect. Round 66: `LinearFitIO`, `score` on new data and the metamorphic tests.
+Round 66: `LinearFitIO` (format version 1: the summary as JSON with doubles as 64-bit patterns, the provider table
+in Parquet; never overwriting; a bit-for-bit round trip), `score` on new data, and spec 3a §11's metamorphic tests
+(y + c, scaling a feature, duplicated records, block sizes within T-part). Then slice 3b's specification: provider
+tests, intervals and standardized differences, with R pprof's functions (OI-60).
 
 ## Round log
+
+## Round 65 (2026-10-09): slice 3a engine, the linear fixed-effect estimator
+
+- engine `linear`: `LinearSpec` and `LinearOptions` (`complete` or `simplified` variances), `LinearValidation`,
+  `LinearBlocks`, and `LinearFE`: `fit` (two passes over ProviderLocal blocks reduced in block order; Cholesky with
+  the aliasing rule, X-032; the provider table distributed and persisted), `summary` (t tests and intervals with
+  `StudentT`) and `predict`. `InputProblem.NoResidualDegreesOfFreedom` (X-033). Spec 3a §15.
+- `LinearFESuite` (8): on all five `fixtures/linear` cases, against pprof_py and R's `lm`, β̂, γ̂, both variances,
+  σ̂, RSS, ℓ, AIC, BIC, R², degrees of freedom, provider order, `summary` for three alternatives (statistics,
+  limits, p-values against R everywhere and pprof_py above 1e-8) and predictions; the `simplified` option;
+  aliasing, n − m − p ≤ 0 and unknown providers; bitwise invariance to row order and partitioning. Classic Spark
+  8/8 (79 s), Spark Connect 8/8 (93 s); worst ratios (instrumented testkit, sandbox only): T-fn 0.0496
+  (lin-shifted), T-test 2.5e-4, T-meas 8.7e-5, T-coef 6.4e-5, T-var 5.2e-7.
 
 ## Round 64 (2026-10-09): slice 3a numerics
 
