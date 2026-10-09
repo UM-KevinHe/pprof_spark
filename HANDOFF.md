@@ -25,6 +25,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
 | 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
 | Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
+| 3, linear fixed effects | Plan and slice 3a specification proposed (D-45, round 62) |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -91,10 +92,26 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Phase 3, linear fixed effects (`LinearFixedEffectModel`): read pprof_py's implementation at the pin and propose
-a plan with the first slice's specification, as round 25 did for Phase 2.
+D-45 (round 62) proposes the Phase 3 plan and slice 3a's specification (`docs/spec/linear/`). Once approved:
+slice 3a's fixtures (`fixtures/linear`, from pprof_py and R's `lm`; OI-60) and calibration, then its code.
 
 ## Round log
+
+## Round 62 (2026-10-09): Phase 3 plan and the slice 3a specification
+
+- Read pprof_py v0.7.0's `LinearFixedEffectModel` (model, inference and measures mixins, and the shared
+  `effect_test`, `t_to_z` and reference helpers) and listed R pprof 1.0.3's `linear_fe` family.
+  `docs/spec/linear/plan.md` proposes slices 3a to 3c with references, fixtures, tolerance classes and the
+  distributed design; `docs/spec/linear/fixed-effect-estimation.md` specifies slice 3a (D-45, awaiting
+  approval).
+- Probes (sandbox, not fixtures; 2,592 rows, 40 providers, three features): pprof_py agrees with R's
+  `lm(y ~ 0 + factor(provider) + x)` within 5.4e-14 relative in β̂, γ̂, σ̂, both variances, AIC and BIC; its
+  provider test's limits are γ̂ ± t·se (4.4e-16) and its p-values the t test's (5.5e-15); the `mean`
+  reference is size-weighted; both standardized differences equal γ̂ − γ₀. Found: `summary` p-values of 0
+  where R gives 2.47e-284, 3.12e-33 and 4.55e-30 (X-031); a provider-level feature gets an arbitrary
+  coefficient without a warning (X-032); n − m − p = 0 gives σ̂ = ∞ (X-033); shuffled rows move β̂ by 7.8e-16.
+- New open items OI-60 (R pprof's linear functions as references) and OI-61 (§7.5's TSQR path deferred).
+  Documents only; no code changed.
 
 ## Round 61 (2026-10-09): Phase 2 closed; PROJECT_CONTEXT v2.5
 
