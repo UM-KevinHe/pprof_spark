@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-09, round 57.1.
+Updated 2026-10-09, round 58.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -78,10 +78,11 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 54 | Slice 2f-4a fixtures (stage 3 tests, measures, intervals, σ sensitivity) and calibration | Merged (0416194); CI not reported |
 | 55 | Slice 2f-4a code: the pipeline, stage 3's tests, measures and intervals | Merged (4015d6c); CI not reported |
 | 56 | Slice 2f-4a code: `sigma_sensitivity` | Merged (a215676); CI run 37945209150: checks, JDK 17 and 21 and Spark Connect passed (engine 295, numerics 83, testkit 20, app 12 tests); the `python` job failed |
-| 57 | Slice 2f-4b: persistence (`ThreeStageFitIO`) and the job runner (`ThreeStageJob`) | Delivered as a patch |
-| 57.1 | Fix of the `python` CI job (absolute JAR paths; conftest resolves and checks them; pytest's report feeds the annotations) | Delivered as a patch; apply after round 57 |
-| 58 | Slice 2f-4b: the Python `ThreeStageModel` wrapper | Planned |
-| 59 | Phase 2 gate review | Planned |
+| 57 | Slice 2f-4b: persistence (`ThreeStageFitIO`) and the job runner (`ThreeStageJob`) | Merged (e0a635c) |
+| 57.1 | Fix of the `python` CI job (absolute JAR paths; conftest resolves and checks them; pytest's report feeds the annotations) | Merged (7d5190a); CI green as reported by the maintainer |
+| 58 | PROJECT_CONTEXT v2.4 and the session handoff (documents) | Delivered as a patch |
+| 59 | Slice 2f-4b: the Python `ThreeStageModel` wrapper | Planned |
+| 60 | Phase 2 gate review | Planned |
 
 ## Decisions and spikes
 

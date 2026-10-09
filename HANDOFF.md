@@ -1,108 +1,112 @@
 # Handoff
 
-## Session handoff: start of Phase 2 (2026-10-07)
+## Session handoff: Phase 2 slices done (2026-10-09)
 
 This section stands on its own for a new session. The round log below it is the detailed history.
 
 ### 1. The project
 
-pprof_spark ([UM-KevinHe/pprof_spark](https://github.com/UM-KevinHe/pprof_spark), public, MIT,
-maintainer Kevin He) reimplements the validated statistical methods of pprof_py, pinned at v0.7.0,
-commit `9320766` (D-05), as distributed Spark algorithms that keep their statistical definitions
-and validated behavior. Stack: Spark 4.1.0, Scala 2.13.16 (PLAT-3), Java 17 bytecode; CI on JDK 17
-and 21, under Classic Spark and Spark Connect (T8). The authoritative context is
-`docs/PROJECT_CONTEXT.md` v2.3; recorded decisions in `DECISIONS.md` take precedence over it.
+pprof_spark ([UM-KevinHe/pprof_spark](https://github.com/UM-KevinHe/pprof_spark), public, MIT, maintainer
+Kevin He) reimplements the validated statistical methods of pprof_py, pinned at v0.7.0, commit `9320766`
+(D-05), as distributed Spark algorithms that keep their statistical definitions and validated behavior.
+Stack: Spark 4.1.0, Scala 2.13.16 (PLAT-3), Java 17 bytecode; CI on JDK 17 and 21, under Classic Spark and
+Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative context is
+`docs/PROJECT_CONTEXT.md` v2.4; recorded decisions in `DECISIONS.md` take precedence over it.
 
 ### 2. Where things stand
 
-| Phase | Status |
+| Phase or slice | Status |
 |---|---|
-| 0, foundations | Closed (`docs/gates/phase-0.md`) |
-| 1a, Cox estimation core | Closed (D-22) |
-| 1b, counting process and baseline | Closed (D-24) |
-| 1c, residuals and robust variance | Closed (D-26) |
-| 1d, provider workflows | Closed (D-29) |
-| 2, logistic provider models | In progress: plan and 2a specification approved (D-30); 2a fixtures (round 26) |
+| 0 and 1a to 1d (Cox) | Closed at parity-verified (D-22, D-24, D-26, D-29) |
+| 2a, logistic fixed effects (SerBIN) | Closed at parity-verified (D-32) |
+| 2b, covariate inference, robust variance, prediction, AUC | Implemented (D-34) |
+| 2c, provider tests (exact Poisson-binomial, score, Wald, bootstrap) | Implemented (D-35) |
+| 2d, indirect and direct standardization | Implemented (D-36) |
+| 2e, `LogisticJob` | Implemented (D-37) |
+| 2f, the three-stage SRR model | Implemented through round 57 (D-38 to D-43): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence and `ThreeStageJob` |
+| Remaining in Phase 2 | The Python `ThreeStageModel` wrapper (round 59), then the Phase 2 gate review (round 60) |
 
-Every closed phase passed its parity gate at parity-verified; its features stay `Experimental`
-until the package-level scale test, which the maintainer runs himself on his Databricks workspace
-once the whole package is done (D-28). AI assistants never access his Databricks environment (D-14
-as clarified). CI is green through round 22; rounds 23 and 24 changed documents only.
+Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
+Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
+environment (D-14 as clarified). CI: round 56's run (37945209150) passed every Scala job (engine 295, numerics
+83, testkit 20, app 12 tests); the `python` job had failed since round 30 on relative JAR paths and has passed
+since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not reported individually.
 
 ### 3. What exists
 
 | Area | Content |
 |---|---|
-| `numerics` | Pairwise and Neumaier summation; `Normal`, `Cholesky` (R's aliasing rule), `Newton` (convergence tested before halving, X-010); `Gamma`, `Poisson`, `Brent`, `PoissonTests`; kernels `Moments`, `CoxStratum` (likelihood with ties, weights, offsets, entry times), `CoxResiduals`, `CoxMeasures` |
-| `engine` | Validation with counts (`InputProblem`), layouts (`GroupSizes`, `LayoutPlan`), blocks and ordered reduction; `cox`: `CoxSpec`, `CoxOptions`, `CoxPH.fit`, `baseline`, `residuals`, `CoxFit`, `CoxFitIO` (format version 3), `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
-| `app` | `RunSpec` (JSON run specification, version 1) and `CoxJob` for `spark-submit` (`docs/guide/cox-job.md`) |
-| `testkit` | Classic and Connect sessions, `SparkSuite` (two-minute test timeout), `Tolerances` (`tolerances.conf`, D-09), `Fixtures` |
-| `bench` | `DeterminismCost` (ADR-0006) |
-| Fixtures | `fixtures/cox`: six cases with `pprof_py.json` and `r_survival.json`, made by `reference/fixtures/generate.py` and `cox_survival.R`; `calibrate.py`; regeneration is byte-identical |
-| Documents | `docs/spec/cox/` (five approved specifications), `docs/gates/`, `docs/parity/matrix.md`, `docs/adr/`, `STATUS.md`, `DECISIONS.md` (D-01 to D-29), `DISCREPANCIES.md` (X-001 to X-015), `OPEN_ITEMS.md` (to OI-47) |
+| `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile) |
+| `engine.cox` | `CoxPH` (fit, baseline, residuals, robust), `CoxFitIO` v3, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
+| `engine.logistic` | `LogisticSpec`, `LogisticFE`, `LogisticBlocks`, `LogisticFitIO` v3, `LogisticProviderTests`, `LogisticStandardization`; `ThreeStage` (prepare, compress, stage2, stage3, laplace, marginal, fitted), `ThreeStagePipeline` (fit, test, measures, intervals, profileInterval, sigmaSensitivity), `ThreeStageFitIO` v1 |
+| `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob` and their run specifications (version 1, `model`); `python.PythonApi` |
+| `python/` | The `pprof_spark` package (Cox and logistic wrappers, ADR-0009) and its pytest suite |
+| Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
+| Documents | `docs/spec/cox/` (5), `docs/spec/logistic/` (2a to 2f), guides (`cox-job.md`, `logistic-job.md`, `three-stage-job.md`, Python), `docs/parity/` (matrix, calibrations), `DECISIONS.md` (to D-43), `DISCREPANCIES.md` (to X-030), `OPEN_ITEMS.md` (to OI-59) |
 
 ### 4. How the work runs
 
-- Rounds. Each round is one commit delivered as a patch (`git format-patch -1`), rehearsed by
-  applying it to a fresh clone of `main` and checking that the tree matches, with an evidence log.
-  The maintainer applies and pushes it and reports CI. CI is never recorded as green without his
-  report (NN-8); the sandbox cannot read the GitHub API reliably (rate limits).
-- Specification first (NN-2). Each feature gets `docs/spec/<family>/<feature>.md`, approved before
-  code. Discrepancies with the reference (classes A to D, §3.4) are recommended, never assumed; the
-  maintainer decides. He often answers "continue"; a direct question gets a direct answer.
-- Records. Every round updates `STATUS.md`, this file's round log, the parity matrix and, as needed,
-  `DECISIONS.md`, `DISCREPANCIES.md`, `OPEN_ITEMS.md` and the specifications.
-- Parity. Function-level, lockstep and end-to-end tests against pprof_py and R fixtures, under the
-  tolerance classes. When implementations' estimates differ slightly (X-010), downstream
-  quantities are compared at each reference's own estimates.
-- Reproducibility. R0: bitwise per layout (canonical row order, compensated sums, block-ordered
-  reductions, StrictMath); R1: within T-part across layouts; R2: across JDKs and Classic and Connect.
+- Rounds. Each round is one commit delivered as a patch (`git format-patch -1`), rehearsed by applying it
+  to a fresh clone of `main` and checking the tree, with an evidence log and a one-line commit message. The
+  maintainer applies, pushes and reports CI; CI is never recorded as green without his report (NN-8).
+- Specification first (NN-2): spec, then fixtures and calibration, then code, each approved where a
+  decision is needed. Discrepancies (classes A to E) are proposed, never assumed. He often answers
+  "continue"; a direct question gets a direct answer; one question per reply.
+- Parity: function-level, lockstep and end-to-end, under the tolerance classes of §8.4 (T-opt, D-42, for
+  optimizer-limited estimates). Where implementations' estimates differ, downstream quantities are compared
+  at the reference's own stage outputs (its β, effects, posterior moments) fed into pprof_spark.
+- Reproducibility: R0 bitwise per layout, R1 within T-part across layouts, R2 across JDKs and APIs.
 
 ### 5. Verifying in the sandbox
 
-sbt cannot run in the sandbox (no Maven Central). The emulation compiles with the real Scala 2.13.16
-compiler and the build's exact scalacOptions, against Spark 4.1.0 jars from the PySpark 4.1.0
-distribution, and runs suites under a munit stand-in that enforces munit's timeouts. The scripts and
-stand-ins are in `sandbox-tools.zip` (outside the repository), whose `SETUP.md` rebuilds the
-environment. Typical use: `compile-only.sh` (about 2 minutes), then `run-suites.sh <jdk>
-<classic|connect> "<modules>" "<engine suites>"`, `quick.sh` for one module, `app.sh` for the app
-module; formatting with the scalafmt 3.11.5 native binary; `scripts/check-engine-api.sh`. A tool
-call ends after about five minutes and background processes do not survive it, so split long runs:
-CoxPHSuite and CoxBaselineSuite each take two to four minutes. Reference tools: Python 3.12.3 with
-numpy 2.5.3, scipy 1.18.1, pandas 3.0.6, numba 0.68.0, mpmath 1.4.1 and pprof_py installed from a
-clone at `9320766`; R 4.3.3 with survival 3.5-8.
+sbt cannot run in the sandbox (no Maven Central). `sandbox-tools.zip` (outside the repository; `SETUP.md`
+inside) rebuilds the emulation: the real Scala 2.13.16 compiler with the build's flags, Spark 4.1.0 jars from
+PySpark, a munit stand-in that enforces timeouts, the reference environment (Python 3.12 with pprof_py at
+`9320766`; R 4.3.3 with survival 3.5-8, sandwich 3.1-0, poibin 1.6, lme4 1.1-35.1) and a virtual environment
+that runs the Python tests as CI does. Scripts: `build33.sh` (numerics, engine, linkage), `test36.sh` (engine
+suites, `API=connect`), `app41.sh` (app), `numtest48.sh`, `tk35b.sh`, `cipy.sh` (Python as in CI),
+`mdcheck.py`. A tool call ends after about five minutes and a turn allows about twenty calls.
 
 ### 6. Lessons that cost a round
 
 - Spark Connect rejects an aggregate with two identically named columns; alias every column (OI-39).
-- munit fails any test over 30 seconds by default; register one test per fixture case (OI-44).
-- `/bin/sh` is dash: put bash syntax in script files. scalafmt reformats code, so scripted edits
-  must match formatted text.
+- munit fails a test over 30 seconds by default; `SparkSuite` allows two minutes, and suites that run a whole
+  pipeline twice (`ThreeStageJobSuite`) allow four (OI-44).
+- `/bin/sh` is dash: put bash syntax in script files. scalafmt reformats code, so scripted edits must
+  anchor on the formatted text (several rounds lost a call to this).
 - Editing a file Spark saved needs its Hadoop `.crc` file deleted too.
 - Jackson 2.20 deprecates `JsonNode.fields()`; with `-Werror` that fails the build.
-- Residuals, baselines and measures move with the estimates; compare them at the reference's own.
-- Spark resolves relative `spark.jars` entries against the JVM's working directory. The `python` CI job
-  listed the JARs relative to the repository root and ran pytest from `python/`, so it failed from round
-  30 to 56 while sandbox runs, which used absolute paths, passed. Rehearse CI steps verbatim (round 57.1).
+- Spark resolves relative `spark.jars` entries against the JVM's working directory: rehearse CI steps
+  verbatim (round 57.1).
+- Reference tails: pprof_py's upper and near-one tails lose accuracy (X-024); compare only where they are
+  reliable. lme4 treats fractional binomial outcomes differently (informational only, spec 2f-3 §9).
 
-### 7. Open questions to carry into Phase 2
+### 7. Open items to carry
 
-- Python access: py4j wrappers (D-31, superseding D-03); ADR-0009 after slice 2a (OI-53).
-- OI-02 and OI-38 (large p), OI-03 (TimeRange for very large strata), OI-29 (distributed result
-  tables at large m), OI-40 (CI check of the parity matrix), OI-41 (per-release model fixtures),
-  OI-43, OI-45 and OI-46 (scale costs), OI-33 and OI-42 (reports to pprof_py), OI-13 (lme4
-  comparison script not in pprof_py), which bears on Phase 2's random-intercept stage.
+OI-02 and OI-38 (large p), OI-03 (TimeRange), OI-29 (distributed result tables at large m), OI-40 (CI check
+of the parity matrix), OI-41 (per-release model fixtures), OI-43, OI-45, OI-46 and OI-59 (scale costs: the
+dense Schur complement of stage 2), OI-56 (PySpark CSV pushdown with a literal provider column), OI-57
+(exact tests with unbalanced blocks), OI-58 (external standard populations), OI-33 and OI-42 (reports to
+pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
-### 8. Phase 2 starting point
+### 8. Next
 
-Scope (§4): large-m logistic fixed effects (SerBIN-type blocked Newton); provider tests (Wald,
-score, exact Poisson-binomial, bootstrap); direct and indirect standardization; then the
-three-stage SRR pipeline, including its stage-2 random-intercept variance estimation. pprof_py
-classes: `LogisticFixedEffectModel` and `LogisticThreeStageModel`. First: read their
-implementations at the pin, then propose a Phase 2 plan in slices with the first slice's
-specification, fixtures and tolerance calibration, for approval before any code.
+Round 59: the Python `ThreeStageModel` wrapper (`PythonApi.threeStage*`, `python/pprof_spark/three_stage.py`,
+tests against the library and the fixtures, run by the `python` CI job). Round 60: the Phase 2 gate review
+(`docs/gates/phase-2.md`: each slice's requirements and measured worst ratios, the CI evidence, and a
+proposal to close Phase 2 at parity-verified). Then Phase 3, linear fixed effects (`LinearFixedEffectModel`):
+read pprof_py's implementation at the pin and propose a plan with the first slice's specification.
 
 ## Round log
+
+## Round 58 (2026-10-09): PROJECT_CONTEXT v2.4 and the session handoff
+
+The maintainer reported CI fixed after round 57.1 and asked for a handoff to a new session.
+- `docs/PROJECT_CONTEXT.md` v2.4: Phase 2 folded in (status in §4, the jobs and Python access in §6.12,
+  three-stage and tail limitations in §3.4, T-opt in §8.4, the fixture catalog in §9.3, the `python` CI job in
+  §11.4, D-30 to D-43 in §16, Appendix A). Replace the claude.ai project copy with this file.
+- This file's session handoff is rewritten for the end of Phase 2's slices; replace the project copy too.
+- `sandbox-tools.zip` (outside the repository) now carries the round 33+ scripts and the R and Python setup.
 
 ## Round 57.1 (2026-10-09): fix the Python CI job
 

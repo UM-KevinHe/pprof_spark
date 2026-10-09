@@ -1,10 +1,14 @@
 # pprof_spark — Project Context
 
-**Version** 2.3 · **Date** 2026-10-07 · **Supersedes** v2.2 (2026-10-06)
+**Version** 2.4 · **Date** 2026-10-09 · **Supersedes** v2.3 (2026-10-07)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
+> **v2.4 folds in Phase 2's slices 2a to 2f** (D-30 to D-43): logistic fixed effects with covariate
+> and provider inference, standardization, a job runner and Python access; the three-stage SRR model; the
+> T-opt tolerance class (D-42); and the Python CI fix (round 57.1). v2.3 folded in Phases 1a to 1d.
+>
 > **v2.3 folds in Phases 1a to 1d** (D-20 to D-29 in `DECISIONS.md`) and the maintainer's
 > clarification of D-14: AI assistants never access his Databricks environment, and he tests
 > pprof_spark on Databricks himself, once the whole package is done (D-28). v2.2 folded in the
@@ -108,8 +112,10 @@ Verified at the pin for survival (2026-10-06): pprof_py's survival suite passes 
 | `CoxPH(fit_intercept=True)` fits, but every `predict_*` method then raises. | `pprof_spark` rejects an intercept in Cox models at validation, because it is not identifiable (class C). |
 | `ties="exact"` is not implemented. | Out of scope. |
 | `FineGrayPH` on left-truncated data does not reproduce R's `finegray()` weights (about 3e-3 coefficient difference). | Choose the parity target before the competing-risks phase (class B). |
-| The SerBIN fixed-effect solver can stop at a near-null fit when covariates are far from zero (open item C27). | `pprof_spark` centers covariates internally, which leaves the MLE unchanged; a dedicated fixture confirms the behavior, and cases where the reference stops early are class B. |
-| `LogisticThreeStageModel.sigma_sensitivity()` fails when σ̂ = 0. | The three-stage specification defines behavior at the σ̂ = 0 boundary. |
+| The SerBIN fixed-effect solver can stop at a near-null fit when covariates are far from zero (open item C27). | `pprof_spark` centers covariates internally, which leaves the MLE unchanged; settled in slice 2a (`docs/spec/logistic/`, `DISCREPANCIES.md`). |
+| `LogisticThreeStageModel.sigma_sensitivity()` fails when σ̂ = 0, and whenever σ_c's profile interval reaches 0 (`ZeroDivisionError` in the stage 3 refit; ts-synthetic and ts-shuffled). | `pprof_spark` takes the σ = 0 limit (X-005, class B). |
+| pprof_py's exact Poisson-binomial upper tails are 1 − cdf from an FFT distribution, and a one-sided tail that is exactly 1 is a rounded sum. | `pprof_spark` computes the smaller tail directly; comparisons skip tails pprof_py cannot resolve (X-024, class B). |
+| The three-stage stage 2 optimum is optimizer-limited (Nelder–Mead stopping on changes of 1e-7); lme4's `glmer` treats non-integer outcomes differently from pprof_py's continuous `y_adj`. | `pprof_spark` minimizes the exactly converged Laplace deviance and compares the optimum under T-opt (X-030, D-42); `glmer` is informational where `y_adj` is fractional. |
 | Some reference measures have unresolved discrepancies with internal R code (for example `IUR.fac` and `cal_SMR_pro_adj`). | Dependent features are not parity-gated until resolved. |
 | pprof_py's README reports 26 failures in a fresh R-comparison run; at v0.7.0 none of the survival tests fail (X-007, X-008). | No Cox feature is excluded; other families are checked when their phase begins. |
 | `CoxPH` tests for a log-likelihood decrease, and halves the step, before testing convergence; R tests convergence first (X-010). | pprof_spark follows pprof_py (class B, bug-compatible, flagged): converged coefficients can differ from R by half a final step. |
@@ -168,6 +174,8 @@ When a problem's sufficient statistics are small — the covariate-free stage-2 
 ROAD-1 (walking skeleton, as amended by D-11): Phase 0 ends with a statistics-free platform skeleton (data contract, logical blocks, a toy kernel, block-ordered reduction, result tables and persistence) that is green in CI under Classic Spark and Spark Connect (ADR-0004). The first Cox slice opens Phase 1a: stratified (StratumLocal), right-censored, Breslow, with model-based variance, passing through every layer and all three parity levels. Statistical breadth is then added behind the same skeleton.
 
 ROAD-2: Each phase ends with a gate review recorded in `STATUS.md`. A phase cannot close with open class A or B discrepancies affecting its features.
+
+Status (2026-10-09): Phases 0 to 1d are closed at parity-verified. Phase 2's slices 2a to 2f are implemented with their parity tests (slice 2a closed, D-32); the three-stage Python wrapper and the Phase 2 gate review remain. Scale verification for every phase happens once, at package level (D-28).
 
 The mapping below covers `pprof_py`'s public model classes *(re-verify)*.
 
@@ -403,9 +411,9 @@ Spark ML on Spark Connect discovers estimators through Java's `ServiceLoader` an
 
 ### 6.12 Application layer and Python access
 
-The `app` module provides `pprof.spark.app.CoxJob`, a plain Spark entry point for `spark-submit` or a Databricks JAR task, which reads a declarative, versioned run specification (input path or table, column roles, fit options, outputs) and writes result tables, the fitted model and a run record (`docs/guide/cox-job.md`). Python and SQL users then work through tables and job parameters, and every run is auditable. Databricks deployment automation stays out of scope (D-14).
+The `app` module provides plain Spark entry points for `spark-submit` or a Databricks JAR task: `pprof.spark.app.CoxJob`, `LogisticJob` and `ThreeStageJob`. Each reads a declarative, versioned run specification (version 1, with a `model` field; input path or table, column roles, fit options, outputs) and writes result tables, the fitted model and a run record (`docs/guide/cox-job.md`, `logistic-job.md`, `three-stage-job.md`); each job points another model's specification to its own job. Python and SQL users can work through tables and job parameters, and every run is auditable. Databricks deployment automation stays out of scope (D-14).
 
-There is no Python access in v1 (D-03). py4j wrappers and Spark Connect ML registration (S-04, ADR-0008) are revisited after Phase 1d. Python-facing code never reimplements statistics.
+Python access (D-31, D-33, ADR-0009): the `pprof_spark` package (`python/`) wraps the engine through py4j in PySpark Classic, delegating every computation to the JARs through `pprof.spark.app.python.PythonApi`. Cox and logistic wrappers exist; the three-stage wrapper is next. The `python` CI job tests them against the JARs each commit builds (green since round 57.1). Spark Connect ML registration (S-04) stays deferred. Python-facing code never reimplements statistics.
 
 ### 6.13 Observability
 
@@ -602,6 +610,7 @@ Tolerances live in one versioned file (`testkit/src/main/resources/tolerances.co
 | T-res | Residuals (absolute, scaled) | 1e-9 |
 | T-meas | Expected counts, ratios, and rates (relative); observed counts exact | 1e-8 |
 | T-test | Test statistics (relative) | 1e-8 |
+| T-opt | Optimizer-limited estimates: the three-stage stage 2 SDs, intercept and BLUPs, σ's profile limits, and anything computed through them when both implementations run end to end (element-wise rule) | rtol 2e-4, atol 1e-6 (D-42) |
 | T-p | p-values: compare the statistics; when p < 1e-10, compare log₁₀ p (absolute 1e-6) or document the reference algorithm's accuracy limit | — |
 | T-flag | Flags match exactly, except cases within 1e-8 (relative) of a threshold, which are reported rather than failed | — |
 | T-part | Layout and platform invariance, R1 and R2 (relative) | 1e-12 objective; 1e-10 parameters |
@@ -639,7 +648,7 @@ Fixtures are generated once from synthetic inputs and shared by every implementa
 
 `reference/fixtures/generate.py` and `cox_survival.R` produce the fixtures, and `calibrate.py` checks the tolerances against them. `fixtures.yml`, run by hand on a re-pin (PAR-1), installs pprof_py at the pinned commit and R 4.3.3 with survival 3.5-8 from Ubuntu 24.04's archive, recomputes the outputs from the committed inputs, and compares them under T-part, because numpy's BLAS and numba compile for the host CPU. `FixturesSuite` checks the checksums, the pin, the exactness of the inputs and the calibration in every CI run.
 
-The catalog grows with each phase: Cox estimation now (four cases, Breslow and Efron), then left truncation and baseline hazards, residuals and robust variance, and provider measures (OI-32).
+The catalog (OI-32): Cox, six cases (estimation, left truncation and baselines, residuals and robust variance, provider measures and tests); logistic, six cases (fixed effects, covariate inference, provider tests, standardization) with Poisson-binomial tail references; three-stage, four cases (preparation and stages 1 to 3, inference and σ sensitivity) with Gauss–Hermite references. R tools: survival 3.5-8, sandwich 3.1-0, poibin 1.6 and lme4 1.1-35.1, pinned in `REFERENCE.lock`.
 
 ### 9.4 Metamorphic and property tests
 
@@ -783,6 +792,7 @@ Tests fork a JVM with the `--add-opens` flags of the pinned Spark's `JavaModuleO
 | Workflow | Trigger | Content | Gate |
 |---|---|---|---|
 | `ci.yml` | Pull requests; pushes to main | Engine API rules with a self-test; scalafmt; the linkage compile (PLAT-3, PLAT-4); compilation with `-Werror` and tests on JDK 17 and 21 (Temurin, `sbt/setup-sbt`); the engine suites under Spark Connect (T8); failure details and per-module test counts published as annotations | Required |
+| `ci.yml`, job `python` | Pull requests; pushes to main | The Python wrappers' tests in PySpark 4.1.0 (local Classic) against the JARs this commit builds, with absolute JAR paths; pytest's JUnit report feeds the counts and failure annotations | Required |
 | `fixtures.yml` | By hand, on a re-pin | Pinned pprof_py and R stack; outputs recomputed from the committed inputs and compared under T-part; calibration | Review |
 | `bench.yml` | By hand | Benchmark workloads on JDK 17 and 21; results on the run page | Informational |
 | Release | Version tag | Build; publish to GitHub Releases (D-08); attach the validation report and compatibility entry | Not written yet |
@@ -900,6 +910,7 @@ Phase 0's decisions and spikes are resolved. The outcomes are recorded in `DECIS
 | D-10 | Root package and artifact names | `pprof.spark`; `pprof-spark-<module>_2.13` |
 | D-11 to D-19 | Raised during Phase 0 | Phase 0 exit and first Cox slice; tooling baseline; Spark Connect test topology; no assistant access to Databricks (D-14, clarified 2026-10-07); summation; platform skeleton; fixtures; deterministic mode; Codespaces |
 | D-20 to D-29 | Raised during Phases 1a to 1d | Cox specifications (D-20, D-21, D-23, D-25, D-27); phase gates closed at parity-verified (D-22, D-24, D-26, D-29); scale test on the maintainer's Databricks once the package is done (D-28) |
+| D-30 to D-43 | Raised during Phase 2 | Phase 2 plan and slice specifications (D-30, D-34 to D-41, D-43); Python access through py4j (D-31, D-33, ADR-0009); slice 2a closed (D-32); the T-opt tolerance class (D-42) |
 
 | ID | Question | Outcome |
 |---|---|---|
@@ -912,6 +923,17 @@ Phase 0's decisions and spikes are resolved. The outcomes are recorded in `DECIS
 | S-07 | Which block sizes work at envelope scale? | Deferred: needs a cluster (ADR-0008) |
 
 ## Appendix A. Changes and their rationale
+
+### v2.3 to v2.4 (Phase 2)
+
+| Area | v2.3 | v2.4 | Why |
+|---|---|---|---|
+| Python access | None in v1; revisit after Phase 1d | py4j wrappers in PySpark Classic, tested in CI | D-31, D-33, ADR-0009 |
+| Application layer | `CoxJob` | `CoxJob`, `LogisticJob`, `ThreeStageJob`; run specifications carry `model` | Slices 2e and 2f-4 (D-37, D-43) |
+| Tolerances (§8.4) | Ten classes | T-opt added for optimizer-limited estimates | X-030, D-42 |
+| Reference limitations (§3.4) | Three-stage boundary to be specified | σ = 0 limit (X-005); exact-tail accuracy (X-024); optimizer-limited stage 2 (X-030) | Slices 2c and 2f |
+| Fixtures (§9.3) | Cox | Cox, logistic and three-stage families; sandwich, poibin and lme4 pinned | OI-32 |
+| CI (§11.4) | Scala jobs | The `python` job, with absolute JAR paths and pytest reports in the annotations | Round 57.1 |
 
 ### v2.2 to v2.3 (Phases 1a to 1d)
 
