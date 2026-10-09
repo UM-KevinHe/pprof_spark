@@ -25,7 +25,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
 | 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
 | Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
-| 3, linear fixed effects | Plan and slice 3a specification proposed (D-45, round 62) |
+| 3, linear fixed effects | Plan and slice 3a specification approved (D-45); slice 3a fixtures and calibration (round 63) |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -42,7 +42,7 @@ since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not
 | `engine.logistic` | `LogisticSpec`, `LogisticFE`, `LogisticBlocks`, `LogisticFitIO` v3, `LogisticProviderTests`, `LogisticStandardization`; `ThreeStage` (prepare, compress, stage2, stage3, laplace, marginal, fitted), `ThreeStagePipeline` (fit, test, measures, intervals, profileInterval, sigmaSensitivity), `ThreeStageFitIO` v1 |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob` and their run specifications (version 1, `model`); `python.PythonApi` |
 | `python/` | The `pprof_spark` package (Cox, logistic and three-stage wrappers, ADR-0009) and its pytest suite |
-| Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
+| Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (5), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
 | Documents | `docs/spec/cox/` (5), `docs/spec/logistic/` (2a to 2f), guides (`cox-job.md`, `logistic-job.md`, `three-stage-job.md`, Python), `docs/parity/` (matrix, calibrations), `DECISIONS.md` (to D-43), `DISCREPANCIES.md` (to X-030), `OPEN_ITEMS.md` (to OI-59) |
 
 ### 4. How the work runs
@@ -92,10 +92,30 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-D-45 (round 62) proposes the Phase 3 plan and slice 3a's specification (`docs/spec/linear/`). Once approved:
-slice 3a's fixtures (`fixtures/linear`, from pprof_py and R's `lm`; OI-60) and calibration, then its code.
+Slice 3a's code: numerics (the within co-moments by Chan, Golub and LeVeque's updates), engine `LinearFE` (fit,
+summary, prediction, R², the provider table) and `LinearFitIO`, with parity tests against `fixtures/linear`
+under Classic Spark and Spark Connect (spec 3a §11). X-034 awaits the maintainer's approval.
 
 ## Round log
+
+## Round 63 (2026-10-09): slice 3a fixtures and calibration
+
+The maintainer approved D-45 with X-031 to X-033.
+
+- `reference/fixtures/linear_fixtures.py` and `linear_r.R`: five cases (lin-base, lin-singletons, lin-shifted,
+  lin-text, lin-many; 20 files, 2.0 MB) from pprof_py's `LinearFixedEffectModel` (both variance options,
+  `summary` with three alternatives, the within cross-products, predictions, R², two negative controls) and
+  R's `lm`. `generate.py --family linear`; the family dispatch now regenerates only the family named.
+  Regeneration is byte-identical from scratch and from the committed inputs.
+- Calibration (`calibrate.py`, `docs/parity/linear-calibration.md`): every comparison passes, worst T-fn 0.11 (lin-shifted, rss), T-meas 0.003 (lin-shifted, predict), T-coef 8.9e-05 (lin-shifted, summary two_sided ci_lower), T-test 1.7e-05 (lin-shifted, summary greater stat), T-var 1.1e-06 (lin-shifted, var_gamma (simplified)), T-p 1.1e-06 (lin-text, summary two_sided p_value (1 of 3 above 1e-8 in pprof_py));
+  every negative control misses by at least 138; no new tolerance class. `FixturesSuite` mirrors it (two
+  tests); testkit 22 under Classic Spark and Spark Connect.
+- Found: X-034 (proposed, class C): pprof_py's `score` fails on string provider keys. X-031 shows in every case.
+- Sandbox: `generate.py` checks the Rcpp and RcppArmadillo versions at start even for one family, so both were
+  installed from Ubuntu's archive (1.0.12 and 0.12.8.1.0, as REFERENCE.lock pins).
+- A full regeneration from the committed inputs (CI's `fixtures` steps) reached every family before the call's 270 s
+  limit (19 of 20 linear files); only three-stage's R `glmer_stage2` blocks differ (up to 1.0e4 times T-part): OI-62. The
+  `fixtures` workflow is manual, so push CI checks the committed fixtures through `FixturesSuite` only.
 
 ## Round 62 (2026-10-09): Phase 3 plan and the slice 3a specification
 

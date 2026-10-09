@@ -1,6 +1,6 @@
 # Phase 3 plan: linear fixed effects
 
-- Status: proposed with D-45 (round 62), awaiting the maintainer's approval.
+- Status: approved with D-45 (2026-10-09).
 - Scope (PROJECT_CONTEXT §4): profile (within) estimation, standardization and inference for pprof_py's
   `LinearFixedEffectModel`, read at the pin (v0.7.0, `9320766`).
 

@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-45: Phase 3 plan and the slice 3a specification (Proposed: awaiting the maintainer)
+### D-45: Phase 3 plan and the slice 3a specification (Accepted: approved by the maintainer, 2026-10-09)
 
 `docs/spec/linear/plan.md` reads pprof_py v0.7.0's `LinearFixedEffectModel` and proposes slices 3a
 (estimation and covariate inference), 3b (provider tests, intervals, standardized differences) and 3c (job
@@ -111,7 +111,7 @@ runner and Python), the distributed design (PROJECT_CONTEXT §7.5's pass over th
 pass over the residuals; TSQR deferred, OI-61) and the tolerance classes.
 `docs/spec/linear/fixed-effect-estimation.md` specifies slice 3a. Proposed with them: X-031 (class B:
 covariate p-values from the upper tail), X-032 and X-033 (class C: aliased features and n − m − p ≤ 0 fail).
-Out of scope: funnel limits, plots and empirical nulls (§4 "Later").
+Out of scope: funnel limits, plots and empirical nulls (§4 "Later"). Approved on 2026-10-09 with X-031 to X-033.
 
 ### D-44: Close Phase 2 at parity-verified (Accepted: approved by the maintainer, 2026-10-09)
 

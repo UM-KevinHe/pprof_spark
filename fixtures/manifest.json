@@ -8,6 +8,13 @@
    "lt-stratified",
    "lt-weights-offset"
   ],
+  "linear": [
+   "lin-base",
+   "lin-singletons",
+   "lin-shifted",
+   "lin-text",
+   "lin-many"
+  ],
   "logistic": [
    "lfe-base",
    "lfe-degenerate",
@@ -48,6 +55,26 @@
   "cox/tiny-ties/input.csv": "013a5178b49cd73c21b9c312f48fa7309bdc7aeaffc62821151f0534f98fc88f",
   "cox/tiny-ties/pprof_py.json": "9be13a68c9ce7ebc70d8d98b361cc59e1fd14e66e646fd6c273fffadb47cc3fd",
   "cox/tiny-ties/r_survival.json": "58fa8d7331d8274e243cf5b0157b7834091cedf7db112ead8b3396a6291d6539",
+  "linear/lin-base/case.json": "1c57245e0cd368538b26f84d026f7bdbd3390465815a55948de5bff56610f3b5",
+  "linear/lin-base/input.csv": "26eb4d596d9a63c37b55ed42c9f88bda18116639eefb4933407f2969a7cff680",
+  "linear/lin-base/pprof_py.json": "5b24d1ae4e86d923656339727ec6053eaf48ab5b5e9dbca98e47c634bc6a1653",
+  "linear/lin-base/r_linear.json": "e441ab1e88fb9a140a87fe4a41f223def5ac82258c108b1d3579725865686235",
+  "linear/lin-many/case.json": "3e35d12ead98b712b85f556494acc0e9570796cd09ddfe06ba77ad4461f4036b",
+  "linear/lin-many/input.csv": "83b944a504fbdd401df97afe807a3db83c9cca41ef8219b477f7e8a8bc1b01cd",
+  "linear/lin-many/pprof_py.json": "cc943ec8aa213c792522a61cdc562efbf95a02e558434df7178c769ba902a0bb",
+  "linear/lin-many/r_linear.json": "3b97d6f5e0628e39eed94409860739fd2a19593c267d773cb412de982a729556",
+  "linear/lin-shifted/case.json": "d80fe5352e7c70d9aa951becdb057f1aaaa1d377b0d5b783db007859ae25d582",
+  "linear/lin-shifted/input.csv": "cc6be583f499bbac5c42e7fc7911c1d6a777f19e10e8824ab5e949270b2c4690",
+  "linear/lin-shifted/pprof_py.json": "d217ab0d92cf0c22848cdeb87055b80d99d04f4d865e607b9bbd1be5ba818a25",
+  "linear/lin-shifted/r_linear.json": "8f076fd0156ea908a78ed3916d58a34e65bd39c41a4260e4e2769cc076180617",
+  "linear/lin-singletons/case.json": "51621011b6760fbc831f87647091bac2b11ed076ace06bf4528ded986ec508bb",
+  "linear/lin-singletons/input.csv": "996e988565a7a70e380a1d266c1b97d190290412a85fb2e232e53ba3c84158be",
+  "linear/lin-singletons/pprof_py.json": "cf7df10c673e29bba6760985da1d1059abe6ea4086dcb1ec2044658045b79f2d",
+  "linear/lin-singletons/r_linear.json": "154a65a31d1698acfd5209ad840c513ccaccb69b3cfaf40a220a8045c70803e8",
+  "linear/lin-text/case.json": "f75da831421c3ef6897cec720f78d03167a526698dd376eb199462dd5b05a894",
+  "linear/lin-text/input.csv": "891d48d9195300d85c461950bb86ef825334d43841098b4dfe02ddad1b4ba1cf",
+  "linear/lin-text/pprof_py.json": "801a803d5e452b38d06442e24790e6d01dfacfac54a602f1e5c4f1c43e09a551",
+  "linear/lin-text/r_linear.json": "a837b7005ec913ab2220d30d71d338c1ec3c43aa34fccfc27ff57b80f058abc8",
   "logistic/lfe-base/case.json": "db19fc2f99280878594ef8c48c99d971f3543f2ab4dc1025303380e45a40c907",
   "logistic/lfe-base/input.csv": "af053d556d554b841b7392ace8c1133fc818157083d8a1bcbcee9c23c10fa34a",
   "logistic/lfe-base/pprof_py.json": "49f32941daeb88e8fa13afdc78e30cd37a8d99d995c97f607e652cd96529135f",
@@ -95,6 +122,14 @@
  "generator": "reference/fixtures/generate.py",
  "options": {
   "function_level": "R: coxph(init = beta, control = coxph.control(iter.max = 0))",
+  "linear": {
+   "function_level": "GroupDemeaner (within transformation): QX'QX (packed), QX'Qy; preprocess_groups' provider means",
+   "lm": "lm(y ~ 0 + factor(provider) + x1 + x2 + x3), provider levels sorted in the C locale; sigma, vcov, logLik, AIC, BIC, summary's t, p = 2 pt(|t|, df, lower.tail = FALSE), confint; one-sided tests at null 0.25 by pt and qt; fitted values of the first 100 rows; R^2 = 1 - RSS / sum((y - mean(y))^2); the within cross-products of the provider-demeaned features (ave) and outcome",
+   "negative_controls": "nudged_outcome: y + 1 in the first row of the largest provider; dropped_row: its last row removed",
+   "pprof_py": "LinearFixedEffectModel(gamma_var_option='complete') and ('simplified'): fit(x_vars, y_var, provider_var)",
+   "predict": "predict (DataFrame interface) for the first 100 rows; R^2 by score's formula from predict's training predictions (score's array path rejects text keys, X-034; equal to score on the numeric-key cases)",
+   "summary": "summary() (two_sided, level 0.95, null 0); summary(null=0.25, alternative='greater' and 'less')"
+  },
   "logistic": {
    "function_level": "SerbinAlgorithm._compute_scores_and_info and _loglikelihood at 'start' and 'fixed'",
    "glm": "glm(cbind(y, n - y) ~ 0 + factor(provider) + x1 + x2 + x3, binomial, control = glm.control(epsilon = 1e-15, maxit = 200)); loglik without sum(lchoose(n, y))",

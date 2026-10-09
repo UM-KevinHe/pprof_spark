@@ -32,6 +32,7 @@ ubuntu_packages = ["r-base-core=4.3.3-2build2", "r-cran-survival=3.5-8-1"]
 sandwich = "3.1-0"
 # The three-stage stage 2 fixtures (D-41) use lme4 1.1-35.1; glmnet 4.1-8 waits for penalized models.
 lme4 = "1.1-35.1"
+# The linear fixed-effect fixtures (D-45) use stats::lm from base R.
 
 [r_pprof]
 # R pprof (MIT), the R counterpart of pprof_py, from the CRAN mirror on GitHub (tag 1.0.3). Only

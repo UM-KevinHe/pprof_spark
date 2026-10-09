@@ -450,4 +450,115 @@ class FixturesSuite extends munit.FunSuite {
       }
     }
   }
+
+  test(
+    "linear inputs are exact: features on a 1/64 grid (x3 on 1/1024), outcomes on a 1/1024 grid"
+  ) {
+    Fixtures.cases("linear").foreach { name =>
+      // Read directly: lin-text's provider keys are strings, which Fixtures.csv does not parse.
+      val lines = Files
+        .readAllLines(Fixtures.root.resolve(s"linear/$name/input.csv"), StandardCharsets.UTF_8)
+        .asScala
+        .toVector
+        .filter(_.nonEmpty)
+      val header = lines.head.split(",").toVector
+      val rows = lines.tail.map(_.split(",", -1))
+      def column(c: String): Vector[Double] = rows.map(r => r(header.indexOf(c)).toDouble)
+      def onGrid(c: String, scale: Double): Boolean =
+        column(c).forall(v => v * scale == math.rint(v * scale))
+      assert(
+        onGrid("y", 1024.0) && onGrid("x1", 64.0) && onGrid("x2", 64.0) && onGrid("x3", 1024.0),
+        name
+      )
+      assert(rows.forall(r => r(header.indexOf("provider")).nonEmpty), name)
+    }
+  }
+
+  test(
+    "linear slice 3a: pprof_py and R's lm agree within the tolerance classes; controls fall far outside"
+  ) {
+    def ratio(cls: String, actual: JsonNode, expected: JsonNode): Double =
+      Tolerances(cls).worstRatio(Fixtures.doubles(actual), Fixtures.doubles(expected))
+    val threshold = Tolerances.number("T-p.log10.threshold")
+    val atol = Tolerances.number("T-p.log10.atol")
+    // T-p where pprof_py's p-value exceeds 1e-8 (X-031).
+    def pRatio(actual: Array[Double], expected: Array[Double]): Double =
+      actual
+        .zip(expected)
+        .filter(_._1 > 1e-8)
+        .map { case (a, e) =>
+          if (a < threshold && e < threshold) 0.0
+          else if (a < threshold || e < threshold) Double.PositiveInfinity
+          else math.abs(math.log10(a) - math.log10(e)) / atol
+        }
+        .foldLeft(0.0)((x, y) => math.max(x, y))
+    Fixtures.cases("linear").foreach { name =>
+      val py = Fixtures.json(s"linear/$name/pprof_py.json")
+      val r = Fixtures.json(s"linear/$name/r_linear.json")
+      val fit = py.get("complete")
+      val summary = py.get("summary")
+      def check(label: String, cls: String, a: JsonNode, e: JsonNode): Unit = {
+        val agreement = ratio(cls, a, e)
+        assert(agreement <= 1.0, s"$name $label: pprof_py vs R is $agreement of $cls")
+      }
+      Seq(
+        ("beta", "T-coef", "beta"),
+        ("gamma", "T-coef", "gamma"),
+        ("var_beta", "T-var", "var_beta"),
+        ("var_gamma", "T-var", "var_gamma"),
+        ("sigma", "T-fn", "sigma"),
+        ("rss", "T-fn", "rss"),
+        ("loglik", "T-fn", "loglik"),
+        ("aic", "T-fn", "aic"),
+        ("bic", "T-fn", "bic")
+      ).foreach { case (q, cls, rq) => check(q, cls, fit.get(q), r.get(rq)) }
+      check(
+        "simplified var_gamma",
+        "T-var",
+        py.get("simplified").get("var_gamma"),
+        r.get("var_gamma_simplified")
+      )
+      Seq(
+        ("two_sided", "stat", "T-test", "t"),
+        ("two_sided", "ci_lower", "T-coef", "ci_lower"),
+        ("two_sided", "ci_upper", "T-coef", "ci_upper"),
+        ("greater", "stat", "T-test", "greater_stat"),
+        ("greater", "ci_lower", "T-coef", "greater_lower"),
+        ("less", "stat", "T-test", "less_stat"),
+        ("less", "ci_upper", "T-coef", "less_upper")
+      ).foreach { case (alt, col, cls, rq) =>
+        check(s"$alt $col", cls, summary.get(alt).get(col), r.get(rq))
+      }
+      check("predict", "T-meas", py.get("predict"), r.get("predict"))
+      check("R^2", "T-fn", py.get("score"), r.get("r2"))
+      Seq("within_xx", "within_xy")
+        .foreach(q => check(q, "T-fn", py.get("function").get(q), r.get(q)))
+      assertEquals(fit.get("df").asInt, r.get("df").asInt, name)
+      Seq("two_sided" -> "p", "greater" -> "greater_p", "less" -> "less_p").foreach {
+        case (alt, rq) =>
+          val agreement =
+            pRatio(Fixtures.doubles(summary.get(alt).get("p_value")), Fixtures.doubles(r.get(rq)))
+          assert(agreement <= 1.0, s"$name $alt p-values: $agreement of T-p")
+      }
+      py.get("negative_controls").properties().asScala.foreach { control =>
+        Seq(
+          "beta" -> "T-coef",
+          "gamma" -> "T-coef",
+          "var_beta" -> "T-var",
+          "var_gamma" -> "T-var",
+          "sigma" -> "T-fn",
+          "aic" -> "T-fn",
+          "bic" -> "T-fn"
+        ).foreach { case (q, cls) =>
+          val miss = ratio(cls, control.getValue.get(q), fit.get(q))
+          assert(miss >= Margin, s"$name $q: ${control.getKey} is $miss of $cls")
+        }
+        if (control.getValue.has("function")) Seq("within_xx", "within_xy").foreach { q =>
+          val miss =
+            ratio("T-fn", control.getValue.get("function").get(q), py.get("function").get(q))
+          assert(miss >= Margin, s"$name $q: ${control.getKey} is $miss of T-fn")
+        }
+      }
+    }
+  }
 }

@@ -7,7 +7,7 @@ For each case and tie method it reports, under the comparison rule of testkit's 
 ratio of observed difference to allowed difference:
   - pprof_py against R survival::coxph (two validated implementations): must be at most 1;
   - each negative control against pprof_py: must be at least MARGIN, so a real defect fails.
-Writes docs/parity/cox-calibration.md, logistic-calibration.md and three-stage-calibration.md. Usage: python reference/fixtures/calibrate.py
+Writes docs/parity/cox-calibration.md, logistic-calibration.md, three-stage-calibration.md and linear-calibration.md. Usage: python reference/fixtures/calibrate.py
 """
 
 import json
@@ -308,6 +308,94 @@ def three_stage(tol, manifest, fixtures):
     return failures
 
 
+LINEAR_LM = (("beta", "T-coef", "beta"), ("gamma", "T-coef", "gamma"), ("var_beta", "T-var", "var_beta"),
+             ("var_gamma", "T-var", "var_gamma"), ("sigma", "T-fn", "sigma"), ("rss", "T-fn", "rss"),
+             ("loglik", "T-fn", "loglik"), ("aic", "T-fn", "aic"), ("bic", "T-fn", "bic"))
+LINEAR_SUMMARY = (("two_sided", "stat", "T-test", "t"), ("two_sided", "ci_lower", "T-coef", "ci_lower"),
+                  ("two_sided", "ci_upper", "T-coef", "ci_upper"), ("greater", "stat", "T-test", "greater_stat"),
+                  ("greater", "ci_lower", "T-coef", "greater_lower"), ("less", "stat", "T-test", "less_stat"),
+                  ("less", "ci_upper", "T-coef", "less_upper"))
+LINEAR_P = (("two_sided", "p"), ("greater", "greater_p"), ("less", "less_p"))
+LINEAR_CONTROLS = (("beta", "T-coef"), ("gamma", "T-coef"), ("var_beta", "T-var"), ("var_gamma", "T-var"),
+                   ("sigma", "T-fn"), ("aic", "T-fn"), ("bic", "T-fn"))
+
+
+def p_ratio(tol, actual, expected, floor=1e-8):
+    """T-p on the elements whose pprof_py p-value exceeds `floor` (X-031): log10 values within T-p.log10.atol
+    when both are at least T-p.log10.threshold, both below it otherwise. Returns (ratio, compared, lost)."""
+    threshold, atol = tol["T-p.log10.threshold"], tol["T-p.log10.atol"]
+    a = [float.fromhex(v) for v in actual]
+    e = [float.fromhex(v) for v in expected]
+    worst, compared = 0.0, 0
+    for x, y in zip(a, e):
+        if not x > floor:
+            continue
+        compared += 1
+        if x < threshold and y < threshold:
+            r = 0.0
+        elif x < threshold or y < threshold:
+            r = math.inf
+        else:
+            r = abs(math.log10(x) - math.log10(y)) / atol
+        worst = max(worst, r)
+    return worst, compared, sum(1 for x, y in zip(a, e) if x == 0.0 and y > 0.0)
+
+
+def linear(tol, manifest, fixtures):
+    """pprof_py against stats::lm and the negative controls against pprof_py (slice 3a, D-45); writes
+    docs/parity/linear-calibration.md."""
+    rows, failures, informational = [], [], []
+
+    def add(case, label, cls, value, ok):
+        rows.append((case, label, cls, value, "yes" if ok else "**no**"))
+        if not ok:
+            failures.append((case, label))
+
+    for case in manifest["cases"].get("linear", []):
+        py = json.load(open(os.path.join(fixtures, "linear", case, "pprof_py.json"), encoding="utf-8"))
+        r = json.load(open(os.path.join(fixtures, "linear", case, "r_linear.json"), encoding="utf-8"))
+        c = py["complete"]
+        checks = [(f"{q} vs lm", cls, c[q], r[rq]) for q, cls, rq in LINEAR_LM]
+        checks.append(("var_gamma (simplified) vs lm", "T-var", py["simplified"]["var_gamma"], r["var_gamma_simplified"]))
+        checks += [(f"summary {alt} {col} vs lm", cls, py["summary"][alt][col], r[rq]) for alt, col, cls, rq in LINEAR_SUMMARY]
+        checks += [("predict vs lm", "T-meas", py["predict"], r["predict"]), ("R^2 vs lm", "T-fn", py["score"], r["r2"]),
+                   ("within_xx vs R", "T-fn", py["function"]["within_xx"], r["within_xx"]),
+                   ("within_xy vs R", "T-fn", py["function"]["within_xy"], r["within_xy"])]
+        for label, cls, a, e in checks:
+            value = ratio(tol, cls, a, e)
+            add(case, label, cls, f"{value:.3g}", value <= 1.0)
+        add(case, "residual degrees of freedom", "exact", f"{c['df']} and {r['df']}", c["df"] == r["df"])
+        for alt, rq in LINEAR_P:
+            value, compared, lost = p_ratio(tol, py["summary"][alt]["p_value"], r[rq])
+            add(case, f"summary {alt} p_value vs lm ({compared} of 3 above 1e-8 in pprof_py)", "T-p", f"{value:.3g}", value <= 1.0)
+            if lost:
+                informational.append(f"{case}, {alt}: {lost} of 3 p-values are 0 in pprof_py and positive in R (X-031)")
+        for name, control in py["negative_controls"].items():
+            for q, cls in LINEAR_CONTROLS:
+                miss = ratio(tol, cls, control[q], c[q])
+                add(case, f"negative control {name}: {q}", cls, f"{miss:.3g}", miss >= MARGIN)
+            for q in ("within_xx", "within_xy") if "function" in control else ():
+                miss = ratio(tol, "T-fn", control["function"][q], py["function"][q])
+                add(case, f"negative control {name}: {q}", "T-fn", f"{miss:.3g}", miss >= MARGIN)
+    lines = ["# Linear tolerance calibration (D-09, D-45)", "",
+             "Generated by `reference/fixtures/calibrate.py` from the fixtures of pprof_py "
+             f"{manifest['reference']['pprof_py']['version']} and R {manifest['reference']['r']['version']} (stats::lm). "
+             "Ratios are observed difference over allowed difference under testkit's `Tolerance` rule; T-p compares "
+             "log10 p-values where pprof_py's exceed 1e-8 (X-031). Agreement between the two implementations must be "
+             f"at most 1; every negative control must be at least {MARGIN:g}.", "",
+             "| Case | Quantity | Class | Ratio | OK |", "|---|---|---|---|---|"]
+    lines += [f"| {case} | {label} | {cls} | {value} | {ok} |" for case, label, cls, value, ok in rows]
+    lines += ["", f"Result: {'all checks pass' if not failures else f'{len(failures)} checks fail'}."]
+    if informational:
+        lines += ["", "Informational:", ""] + [f"- {line}" for line in informational]
+    with open(os.path.join(ROOT, "docs", "parity", "linear-calibration.md"), "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+    print(f"linear: {lines[-1] if not informational else [l for l in lines if l.startswith('Result')][0]}")
+    for failure in failures:
+        print("FAIL linear", *failure)
+    return failures
+
+
 def main():
     tol = tolerances()
     fixtures = os.path.join(ROOT, "fixtures")
@@ -353,6 +441,7 @@ def main():
         print("FAIL", *failure)
     failures += logistic(tol, manifest, fixtures)
     failures += three_stage(tol, manifest, fixtures)
+    failures += linear(tol, manifest, fixtures)
     return 1 if failures else 0
 
 
