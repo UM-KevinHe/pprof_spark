@@ -22,7 +22,7 @@ import pprof.spark.numerics.{
   Serbin,
   TaylorBins
 }
-import pprof.spark.numerics.kernels.ThreeStageKernel
+import pprof.spark.numerics.kernels.{ThreeStageGlmm, ThreeStageKernel}
 
 /** The pipeline's options: preparation and stage 1, stage 2, stage 3. */
 final case class ThreeStageFitOptions(
@@ -39,6 +39,18 @@ final case class ThreeStageFit(
     stage3: ThreeStageStage3,
     spec: ThreeStageSpec,
     options: ThreeStageFitOptions
+)
+
+/** `sigma_sensitivity`'s result: σ_c's profile interval, stage 3 at its ends and estimate, their tests, and each
+  * provider's flags with `stable` (docs/spec/logistic/three-stage-pipeline.md §4).
+  */
+final case class ThreeStageSensitivity(
+    lower: Double,
+    estimate: Double,
+    upper: Double,
+    fits: Map[String, ThreeStageStage3],
+    tests: Map[String, DataFrame],
+    flags: DataFrame
 )
 
 /** One record for stage 3's tests: provider and cluster indices, raw outcome, offset. */
@@ -494,5 +506,73 @@ object ThreeStagePipeline {
         }
       }.toMap
     }
+  }
+
+  /** σ_c's profile interval at `level` from stage 2's exact Laplace deviance (spec §4). */
+  def profileInterval(
+      cells: ThreeStageCells,
+      stage2: ThreeStageStage2,
+      level: Double,
+      options: ThreeStageStage2Options
+  ): (Double, Double) = {
+    val m = cells.providers.size
+    val h = cells.clusters.size
+    val fit = ThreeStageGlmm.Fit(
+      stage2.sigmaProvider,
+      stage2.sigmaCluster,
+      stage2.intercept,
+      Array.empty,
+      stage2.deviance,
+      stage2.converged,
+      stage2.iterations,
+      stage2.evaluations,
+      stage2.projectedGradient
+    )
+    ThreeStageGlmm.profileInterval(cells.cells, m, h, fit, level, options.kernel)
+  }
+
+  /** pprof_py's `sigma_sensitivity` (spec §4): stage 3 refitted at σ_c's profile limits (the σ = 0 limit where the
+    * interval reaches 0, X-005) from stage 2's start, each fit tested, and each provider's flags with `stable`.
+    */
+  def sigmaSensitivity(
+      records: DataFrame,
+      cells: ThreeStageCells,
+      spec: ThreeStageSpec,
+      stage2: ThreeStageStage2,
+      level: Double = 0.95,
+      method: String = "exact",
+      alternative: String = "two_sided",
+      testLevel: Double = 0.95,
+      stage2Options: ThreeStageStage2Options = ThreeStageStage2Options(),
+      stage3Options: ThreeStageStage3Options = ThreeStageStage3Options()
+  ): ThreeStageSensitivity = {
+    val (lower, upper) = profileInterval(cells, stage2, level, stage2Options)
+    val sigmas = Seq("lower" -> lower, "estimate" -> stage2.sigmaCluster, "upper" -> upper)
+    val fits = sigmas.map { case (name, s) =>
+      name -> ThreeStage.stage3(cells, s, stage2.start, stage3Options)
+    }.toMap
+    val tests = fits.map { case (name, f) =>
+      name -> test(records, spec, f, method, alternative = alternative, level = testLevel).orderBy(
+        spec.provider
+      )
+    }
+    val flagsOf = tests.map { case (name, t) =>
+      name -> t.select("flag").collect().map(_.getInt(0))
+    }
+    val spark = records.sparkSession
+    val text = stage2.providers.headOption.exists(_.isInstanceOf[GroupKey.Text])
+    val rows = stage2.providers.indices.map { j =>
+      val f = Seq("lower", "estimate", "upper").map(n => flagsOf(n)(j))
+      Row(GroupKey.value(stage2.providers(j)), f(0), f(1), f(2), f.distinct.size == 1)
+    }
+    val flags = spark.createDataFrame(
+      rows.asJava,
+      StructType(
+        StructField(spec.provider, if (text) StringType else LongType, nullable = false) +:
+          (Seq("lower", "estimate", "upper").map(StructField(_, IntegerType, nullable = false)) :+
+            StructField("stable", org.apache.spark.sql.types.BooleanType, nullable = false))
+      )
+    )
+    ThreeStageSensitivity(lower, stage2.sigmaCluster, upper, fits, tests, flags)
   }
 }

@@ -1,11 +1,11 @@
 # Status
 
-Updated 2026-10-09, round 55.
+Updated 2026-10-09, round 56.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
 models: in progress**: plan and slice 2a specification approved (D-30); 2a fixtures and calibration in
-round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification in round 40 (D-37, approved); `LogisticJob` in round 41; the three-stage spike and 2f direction in round 42 (D-38, approved); the 2f-1 specification in round 43 (D-39, approved); its fixtures in round 44; `ThreeStage.prepare` in round 45; the 2f-2 specification in round 46 (D-40, approved); its fixtures in round 47; its driver path in round 48 and its executor path in round 49; the 2f-3 specification in round 50 (D-41, approved); its fixtures and T-opt in round 51 (D-42, approved); its code in round 52; the 2f-4 specification in round 53 (D-43, approved); 2f-4a's fixtures in round 54; the pipeline, stage 3's tests, measures and intervals in round 55. Python access: py4j wrappers (D-31). The maintainer runs the
+round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification in round 40 (D-37, approved); `LogisticJob` in round 41; the three-stage spike and 2f direction in round 42 (D-38, approved); the 2f-1 specification in round 43 (D-39, approved); its fixtures in round 44; `ThreeStage.prepare` in round 45; the 2f-2 specification in round 46 (D-40, approved); its fixtures in round 47; its driver path in round 48 and its executor path in round 49; the 2f-3 specification in round 50 (D-41, approved); its fixtures and T-opt in round 51 (D-42, approved); its code in round 52; the 2f-4 specification in round 53 (D-43, approved); 2f-4a's fixtures in round 54; the pipeline, stage 3's tests, measures and intervals in round 55; `sigma_sensitivity` in round 56. Python access: py4j wrappers (D-31). The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -76,8 +76,9 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 52 | Slice 2f-3 code: PIRLS on compressed cells, the Schur-complement Cholesky, the bounded quasi-Newton | Merged (47c4048); CI not reported |
 | 53 | Slice 2f-4 specification: the pipeline, `sigma_sensitivity`, stage 3's tests, measures and intervals, persistence, job and Python (D-43) | Merged (d6f2527); D-43 approved |
 | 54 | Slice 2f-4a fixtures (stage 3 tests, measures, intervals, σ sensitivity) and calibration | Merged (0416194); CI not reported |
-| 55 | Slice 2f-4a code: the pipeline, stage 3's tests, measures and intervals | Delivered as a patch |
-| 56 | Slice 2f-4a code: `sigma_sensitivity` | Planned |
+| 55 | Slice 2f-4a code: the pipeline, stage 3's tests, measures and intervals | Merged (4015d6c); CI not reported |
+| 56 | Slice 2f-4a code: `sigma_sensitivity` | Delivered as a patch |
+| 57 | Slice 2f-4b: persistence (`ThreeStageFitIO`), the job runner (`ThreeStageJob`) and Python | Planned |
 
 ## Decisions and spikes
 

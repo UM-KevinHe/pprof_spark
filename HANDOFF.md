@@ -101,6 +101,18 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 56 (2026-10-09): slice 2f-4a code, σ sensitivity
+
+- numerics `ThreeStageGlmm.profile` and `profileInterval` (pprof_py's `profile_sigma` with the exact Laplace
+  deviance: warm-started profile minimizations, doubling bracket, Brent's method); engine
+  `ThreeStagePipeline.profileInterval` and `sigmaSensitivity` (`ThreeStageSensitivity`: the interval, stage 3 at
+  the lower limit, estimate and upper limit, their tests, flags and `stable`).
+- `ThreeStageSensitivitySuite` (ts-golden) and `ThreeStageSensitivityMoreSuite` (ts-synthetic, ts-shuffled):
+  the 0.9 and 0.95 intervals within T-opt of pprof_py's; on ts-golden the three σ values, flags and `stable`
+  equal to `sigma_sensitivity`'s; where pprof_py raises (X-005) the lower limit is 0 with stage 3 at the σ = 0
+  limit, and the upper refit's effects (T-opt) and flags match pprof_py's. Classic Spark and Spark Connect,
+  1/1 and 2/2; numerics 83 on JDK 17 and 21.
+
 ## Round 55 (2026-10-09): slice 2f-4a code, the pipeline and stage 3's inference
 
 - numerics `ClusteredPoissonBinomial` (the `exact` null: 32-node posterior mixtures per cluster convolved

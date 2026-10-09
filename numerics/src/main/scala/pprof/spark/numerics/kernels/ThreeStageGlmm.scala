@@ -1,6 +1,6 @@
 package pprof.spark.numerics.kernels
 
-import pprof.spark.numerics.{BoundedQuasiNewton, NeumaierSum, TaylorBins}
+import pprof.spark.numerics.{BoundedQuasiNewton, Brent, NeumaierSum, Normal, TaylorBins}
 import pprof.spark.numerics.kernels.ThreeStageKernel.Cell
 
 /** Stage 2 of the three-stage model on compressed cells (Phase 2f-3 specification): the crossed
@@ -245,5 +245,59 @@ object ThreeStageGlmm {
       r.evaluations,
       r.projectedGradient
     )
+  }
+
+  /** The profiled deviance P(s): D minimized over (σₚ, μ) with σ_c = s, from `start`; with the minimizer. */
+  def profile(
+      cells: Array[Cell],
+      m: Int,
+      h: Int,
+      sigmaCluster: Double,
+      start: (Double, Double),
+      options: Options = Options()
+  ): (Double, Double, Double) = {
+    val r = BoundedQuasiNewton.minimize(
+      x => evaluate(cells, m, h, x(0), sigmaCluster, x(1), options).deviance,
+      Array(start._1, start._2),
+      Array(0.0, Double.NegativeInfinity),
+      options.optimizer
+    )
+    (r.value, r.x(0), r.x(1))
+  }
+
+  /** σ_c's profile interval at `level` (pprof_py's `profile_sigma`): the s with P(s) − D_min ≤ χ²₁(level), the
+    * upper limit bracketed by doubling from σ̂_c + max(0.1, σ̂_c), both limits by Brent's method; the lower limit
+    * is 0 when P(0) is within the cut-off. The profile is warm-started from the previous point's minimizer.
+    */
+  def profileInterval(
+      cells: Array[Cell],
+      m: Int,
+      h: Int,
+      fit: Fit,
+      level: Double,
+      options: Options = Options()
+  ): (Double, Double) = {
+    require(level > 0.0 && level < 1.0, s"level must lie strictly between 0 and 1, got $level")
+    val q = Normal.upperQuantile((1.0 - level) / 2.0)
+    val critical = q * q
+    var warm = (fit.sigmaProvider, fit.mu)
+    def profiled(s: Double): Double = {
+      val (d, sp, mu) = profile(cells, m, h, s, warm, options)
+      warm = (sp, mu)
+      d
+    }
+    val estimate = fit.sigmaCluster
+    val minimum = math.min(fit.deviance, profiled(estimate))
+    def excess(s: Double): Double = profiled(s) - minimum - critical
+    var hi = estimate + math.max(0.1, estimate)
+    while (excess(hi) < 0.0) {
+      if (hi > 1e3)
+        throw new ArithmeticException("no upper profile limit for the cluster SD below 1000")
+      hi *= 2.0
+    }
+    val upper = Brent.root(excess, estimate, hi, 1e-10)
+    val lower =
+      if (estimate <= 0.0 || excess(0.0) <= 0.0) 0.0 else Brent.root(excess, 0.0, estimate, 1e-10)
+    (lower, upper)
   }
 }

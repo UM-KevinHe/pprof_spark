@@ -129,4 +129,12 @@ and flags at the upper end, so pprof_spark's refits are checked there, and at σ
 3. X-024 again: a one-sided `exact` tail that is exactly 1 (for example P(X ≤ n) for a provider with only
    events) is pprof_py's rounded sum of the distribution, 1 − 3e-16 on ts-synthetic, giving z = 8.08 where
    pprof_spark reads the complement, 0, and caps z at 37.05; comparisons skip one-sided tails above 1 − 1e-7.
-4. `sigma_sensitivity` follows in round 56.
+4. Round 56: `ThreeStageGlmm.profile` (P(s): the bounded quasi-Newton over (σₚ, μ) at σ_c = s, warm-started
+   from the previous point) and `profileInterval` (pprof_py's doubling bracket from σ̂_c + max(0.1, σ̂_c), limit
+   1000, Brent's method to 1e-10 where pprof_py uses `brentq` with `xtol` 1e-7; χ²₁(level) as the square of the
+   normal quantile); `ThreeStagePipeline.profileInterval` and `sigmaSensitivity` (stage 3 refitted at the
+   lower limit, the estimate and the upper limit from stage 2's start, tested, flags with `stable`).
+5. Tests feed pprof_py's offsets and compare with the round 54 fixtures: the 0.9 and 0.95 intervals under
+   T-opt on all three cases; on ts-golden the three σ values, the flags at each and `stable`; on ts-synthetic and
+   ts-shuffled, where pprof_py raises (X-005), the lower limit 0 with stage 3 at the σ = 0 limit, and the upper
+   refit's effects (T-opt) and flags.
