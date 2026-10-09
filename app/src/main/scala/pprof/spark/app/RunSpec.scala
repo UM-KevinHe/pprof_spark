@@ -105,7 +105,9 @@ object RunSpec {
           case "cox"      => ()
           case "logistic" =>
             problems += "model logistic: run this specification with pprof.spark.app.LogisticJob"
-          case other => problems += s"model must be cox or logistic, got $other"
+          case "three-stage" =>
+            problems += "model three-stage: run this specification with pprof.spark.app.ThreeStageJob"
+          case other => problems += s"model must be cox, logistic or three-stage, got $other"
         }
     }
 

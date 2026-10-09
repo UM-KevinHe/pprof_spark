@@ -138,3 +138,16 @@ and flags at the upper end, so pprof_spark's refits are checked there, and at σ
    T-opt on all three cases; on ts-golden the three σ values, the flags at each and `stable`; on ts-synthetic and
    ts-shuffled, where pprof_py raises (X-005), the lower limit 0 with stage 3 at the σ = 0 limit, and the upper
    refit's effects (T-opt) and flags.
+
+## 12. Implementation notes (round 57; no statistical change)
+
+1. `ThreeStageFitIO` (format version 1): `metadata` (JSON with every double as its 64-bit pattern),
+   `stage1` (`LogisticFitIO`), and `providers` and `clusters` as Parquet; the records are not saved, and
+   `attach` re-prepares the training data and checks stage 1's fingerprint (API-3). Block options are not
+   saved; a loaded fit uses the defaults.
+2. `ThreeStageRunSpec` and `ThreeStageJob` (`docs/guide/three-stage-job.md`): the outputs of §5; the Cox
+   and logistic parsers point `three-stage` specifications to this job.
+3. `ThreeStageJobSuite` runs the whole pipeline as a job and again through the library in each test; its
+   first test took 109 s under Spark Connect in the sandbox, so this suite allows four minutes per test
+   instead of `SparkSuite`'s two (OI-44).
+4. The Python wrapper follows in round 58.

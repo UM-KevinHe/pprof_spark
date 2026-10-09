@@ -101,6 +101,19 @@ specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
 
+## Round 57 (2026-10-09): slice 2f-4b, persistence and the job runner
+
+- engine `ThreeStageFitIO` (`save`, `load` to `ThreeStageSaved`, `attach` with stage 1's fingerprint check).
+- app `ThreeStageRunSpec` and `ThreeStageJob` (`model` `three-stage`: fit, providers, clusters, tests, measures,
+  intervals, sensitivity, fitted probabilities, run record); `RunSpec` and `LogisticRunSpec` point three-stage
+  specifications here. Guide: `docs/guide/three-stage-job.md`.
+- `ThreeStageJobSuite` (3, four minutes per test): outputs bit-for-bit equal to the library's on the saved and
+  re-attached fit, changed data refused; resampling, measure intervals and sensitivity (lower limit 0 on
+  ts-synthetic) consistent with the library; invalid specifications, cross-job pointers, no overwriting.
+  Classic Spark 3/3 (144 s), Spark Connect 3/3 (192 s). `LogisticJobSuite` 5/5 and `CoxJobSuite` 3/3 after the
+  parser changes (Classic).
+- The round was assembled across two turns: the first ran out of tool calls after the tests passed.
+
 ## Round 56 (2026-10-09): slice 2f-4a code, σ sensitivity
 
 - numerics `ThreeStageGlmm.profile` and `profileInterval` (pprof_py's `profile_sigma` with the exact Laplace
