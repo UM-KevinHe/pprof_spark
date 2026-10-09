@@ -2,7 +2,7 @@
 """Publish CI failure details where readers who are not signed in to GitHub can see them.
 
 GitHub shows workflow logs only to signed-in users, but annotations and job summaries appear on
-the public run page. This script reads sbt's JUnit reports (target/test-reports/*.xml) and the
+the public run page. This script reads JUnit reports (target/test-reports/*.xml, from sbt and pytest) and the
 `[error]` lines of sbt logs, emits error annotations, and appends a job summary. It never fails
 the job itself: the step that failed already did.
 
@@ -73,8 +73,11 @@ def report_counts():
         except ET.ParseError:
             continue
         totals = modules.setdefault(module, [0, 0, 0, 0])
-        for index, key in enumerate(("tests", "failures", "errors", "skipped")):
-            totals[index] += int(root.get(key) or 0)
+        # sbt writes one <testsuite> per file; pytest wraps its <testsuite> in <testsuites>
+        suites = [root] if root.tag == "testsuite" else list(root.iter("testsuite"))
+        for suite in suites:
+            for index, key in enumerate(("tests", "failures", "errors", "skipped")):
+                totals[index] += int(suite.get(key) or 0)
     if not modules:
         print("::warning title=Test counts::No JUnit test reports were found")
         return 0

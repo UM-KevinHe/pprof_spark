@@ -131,10 +131,16 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install pyspark==4.1.0 pytest==8.4.2
           .venv/bin/pip install -e python
-          export PPROF_SPARK_JARS=$(ls numerics/target/scala-2.13/pprof-spark-numerics_2.13-*.jar \
-            engine/target/scala-2.13/pprof-spark-engine_2.13-*.jar app/target/scala-2.13/pprof-spark-app_2.13-*.jar | paste -sd, -)
+          # Absolute paths: the tests run from python/, and Spark resolves relative spark.jars entries
+          # against the JVM's working directory (rounds 30 to 56 failed this way).
+          export PPROF_SPARK_JARS=$(ls "$PWD"/numerics/target/scala-2.13/pprof-spark-numerics_2.13-*.jar \
+            "$PWD"/engine/target/scala-2.13/pprof-spark-engine_2.13-*.jar \
+            "$PWD"/app/target/scala-2.13/pprof-spark-app_2.13-*.jar | paste -sd, -)
           echo "JARs: $PPROF_SPARK_JARS"
-          cd python && ../.venv/bin/python -m pytest tests -q
+          cd python && ../.venv/bin/python -m pytest tests -q --junitxml=target/test-reports/pytest.xml
+      - name: Publish test counts
+        if: always()
+        run: python3 scripts/ci_failure_report.py --counts
       - name: Publish failure details (readable without signing in)
         if: failure()
         run: python3 scripts/ci_failure_report.py sbt.log

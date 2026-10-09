@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-09, round 57.
+Updated 2026-10-09, round 57.1.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -51,7 +51,7 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 27 | Slice 2a: SerBIN kernels and iteration (numerics), the distributed estimator (engine), parity tests | Merged (c9640f3); CI not reported |
 | 28 | Slice 2a: persistence (`LogisticFitIO`), slice review (D-32), X-021 | Merged (1022efc); CI not reported |
 | 29 | The correlation warning (X-021, a); `LogisticFitIO` format version 2; ADR-0009 (D-33) with a py4j spike | Merged (7391a78); CI not reported |
-| 30 | Python access: the `PythonApi` facade, the `pprof_spark` package with the Cox wrappers, the `python` CI job, a user guide | Merged (c277147); CI not reported |
+| 30 | Python access: the `PythonApi` facade, the `pprof_spark` package with the Cox wrappers, the `python` CI job, a user guide | Merged (c277147); CI not reported; the `python` job failed in every run from here to round 56 (relative JAR paths; fixed in round 57.1) |
 | 31 | Slice 2b specification (D-34, X-022, X-023) | Merged (45e38b1); D-34 approved |
 | 32 | Slice 2b fixtures (`lfe-clustered`; tests, AUC, predictions, robust variances) and calibration | Merged (a956da7); CI not reported |
 | 33 | Slice 2b code (robust variances, Wald variants, LR and score tests, prediction, AUC, `LogisticFitIO` v3); logistic Python wrappers | Merged (e917a68); CI not reported |
@@ -77,8 +77,9 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 53 | Slice 2f-4 specification: the pipeline, `sigma_sensitivity`, stage 3's tests, measures and intervals, persistence, job and Python (D-43) | Merged (d6f2527); D-43 approved |
 | 54 | Slice 2f-4a fixtures (stage 3 tests, measures, intervals, σ sensitivity) and calibration | Merged (0416194); CI not reported |
 | 55 | Slice 2f-4a code: the pipeline, stage 3's tests, measures and intervals | Merged (4015d6c); CI not reported |
-| 56 | Slice 2f-4a code: `sigma_sensitivity` | Merged (a215676); CI not reported |
+| 56 | Slice 2f-4a code: `sigma_sensitivity` | Merged (a215676); CI run 37945209150: checks, JDK 17 and 21 and Spark Connect passed (engine 295, numerics 83, testkit 20, app 12 tests); the `python` job failed |
 | 57 | Slice 2f-4b: persistence (`ThreeStageFitIO`) and the job runner (`ThreeStageJob`) | Delivered as a patch |
+| 57.1 | Fix of the `python` CI job (absolute JAR paths; conftest resolves and checks them; pytest's report feeds the annotations) | Delivered as a patch; apply after round 57 |
 | 58 | Slice 2f-4b: the Python `ThreeStageModel` wrapper | Planned |
 | 59 | Phase 2 gate review | Planned |
 

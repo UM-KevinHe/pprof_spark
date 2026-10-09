@@ -81,6 +81,9 @@ clone at `9320766`; R 4.3.3 with survival 3.5-8.
 - Editing a file Spark saved needs its Hadoop `.crc` file deleted too.
 - Jackson 2.20 deprecates `JsonNode.fields()`; with `-Werror` that fails the build.
 - Residuals, baselines and measures move with the estimates; compare them at the reference's own.
+- Spark resolves relative `spark.jars` entries against the JVM's working directory. The `python` CI job
+  listed the JARs relative to the repository root and ran pytest from `python/`, so it failed from round
+  30 to 56 while sandbox runs, which used absolute paths, passed. Rehearse CI steps verbatim (round 57.1).
 
 ### 7. Open questions to carry into Phase 2
 
@@ -100,6 +103,24 @@ implementations at the pin, then propose a Phase 2 plan in slices with the first
 specification, fixtures and tolerance calibration, for approval before any code.
 
 ## Round log
+
+## Round 57.1 (2026-10-09): fix the Python CI job
+
+The maintainer reported that the `python` job had failed since round 30 (run 37945209150 for round 56; the
+other jobs passed: engine 295, numerics 83, testkit 20, app 12 tests). Its annotation said only "exit code 1",
+because the failure reporter read sbt's reports, not pytest's.
+
+- Cause, reproduced in the sandbox with a fresh virtual environment (pyspark 4.1.0, pytest 8.4.2) and the CI
+  step verbatim: `PPROF_SPARK_JARS` held paths relative to the repository root, the tests ran from `python/`,
+  and Spark looked for `python/numerics/target/...` (`FileNotFoundException`), so every wrapper raised "the
+  pprof_spark JARs are not on the Spark classpath". Sandbox runs had used absolute paths.
+- Fix: the job lists the JARs with absolute paths; `conftest.py` resolves relative entries against the
+  repository root and fails early, naming any missing file; pytest writes a JUnit report under
+  `python/target/test-reports`, which `ci_failure_report.py` now counts (pytest's `<testsuites>` root) and
+  turns into annotations; the job publishes test counts.
+- Evidence: the new step verbatim, 12 passed and the count annotation "python: 12 tests"; the old relative
+  paths now also pass through conftest; a missing JAR fails every test at setup with the file named, and the
+  reporter shows each failure as an annotation.
 
 ## Round 57 (2026-10-09): slice 2f-4b, persistence and the job runner
 
