@@ -103,6 +103,16 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-44: Close Phase 2 at parity-verified (Proposed: awaiting the maintainer)
+
+`docs/gates/phase-2.md`: slices 2a to 2f meet the parity gate. In round 60's sandbox every Phase 2 engine
+suite passed (15 suites, 76 tests, Classic Spark, JDK 17) and none of the 10,042 tolerance ratios they
+compute exceeds 1 (worst: T-coef 0.683, T-opt 0.331, T-meas 0.169, T-fn 0.142); every discrepancy affecting
+Phase 2 has an approved decision; CI was green through round 57.1. Proposed: close Phase 2 at
+parity-verified once the maintainer reports CI green for round 59, on the terms of D-32; every Phase 2
+feature stays `Experimental` until the package-level scale test (D-28). PROJECT_CONTEXT §7.4's three-stage
+description (OI-48) goes into the next revision.
+
 ### D-43: Slice 2f-4 specification (Accepted: approved by the maintainer, 2026-10-08)
 
 `docs/spec/logistic/three-stage-pipeline.md`: the three-stage pipeline (`ThreeStage.fit`); stage 3's provider

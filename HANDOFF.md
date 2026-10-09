@@ -24,7 +24,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2d, indirect and direct standardization | Implemented (D-36) |
 | 2e, `LogisticJob` | Implemented (D-37) |
 | 2f, the three-stage SRR model | Implemented through round 59 (D-38 to D-43): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
-| Remaining in Phase 2 | The Phase 2 gate review (round 60); round 59 delivered the Python `ThreeStageModel` wrapper (CI to be reported) |
+| Remaining in Phase 2 | The maintainer's sign-off on D-44 (round 60's gate review), after CI for round 59 |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -86,16 +86,33 @@ suites, `API=connect`), `app41.sh` (app), `numtest48.sh`, `tk35b.sh`, `cipy.sh` 
 OI-02 and OI-38 (large p), OI-03 (TimeRange), OI-29 (distributed result tables at large m), OI-40 (CI check
 of the parity matrix), OI-41 (per-release model fixtures), OI-43, OI-45, OI-46 and OI-59 (scale costs: the
 dense Schur complement of stage 2), OI-56 (PySpark CSV pushdown with a literal provider column), OI-57
-(exact tests with unbalanced blocks), OI-58 (external standard populations), OI-33 and OI-42 (reports to
+(exact tests with unbalanced blocks), OI-58 (external standard populations), OI-48 (PROJECT_CONTEXT §7.4's three-stage description), OI-33 and OI-42 (reports to
 pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Round 60: the Phase 2 gate review (`docs/gates/phase-2.md`: each slice's requirements and measured worst ratios, the CI evidence, and a
-proposal to close Phase 2 at parity-verified). Then Phase 3, linear fixed effects (`LinearFixedEffectModel`):
-read pprof_py's implementation at the pin and propose a plan with the first slice's specification.
+D-44 (round 60, `docs/gates/phase-2.md`) proposes closing Phase 2 at parity-verified once CI for round 59 is
+reported green. Then Phase 3, linear fixed effects (`LinearFixedEffectModel`): read pprof_py's implementation
+at the pin and propose a plan with the first slice's specification. OI-48 (PROJECT_CONTEXT §7.4) goes into the
+next PROJECT_CONTEXT revision.
 
 ## Round log
+
+## Round 60 (2026-10-09): the Phase 2 gate review
+
+- `docs/gates/phase-2.md`: slices 2a to 2f against the parity gate. Every Phase 2 engine suite passed in the
+  sandbox (Classic Spark, JDK 17: 15 suites, 76 tests) and none of the 10,042 tolerance ratios they compute
+  exceeds 1. Worst: T-coef 0.683 (ts-golden-prep, stage 1) and 0.431 (lfe-clustered), T-opt 0.331
+  (ts-shuffled, stage 2), T-meas 0.169, T-fn 0.142, T-test 0.0528, T-var 0.0253, T-iter 0.0176. Numerics 83 on
+  JDK 17 and 21, and testkit 20 under Classic Spark and Spark Connect, passed again. The ratios came from a
+  sandbox-only copy of the testkit that prints each one; the repository's testkit is unchanged.
+- D-44 proposes closing Phase 2 at parity-verified once CI for round 59 (b876d51) is reported green; every
+  discrepancy affecting Phase 2 has an approved decision.
+- Bookkeeping: the parity matrix's 2b, 2c, 2d and 2f rows still said "planned", their progress written into
+  the specification cell; they now carry fixtures, tests, status and worst ratios, as does 2a's row. OI-49,
+  OI-51 and OI-52 closed (settled by D-36, D-38 and D-35); OI-53 updated; OI-48 stays open, because
+  PROJECT_CONTEXT v2.4 §7.4 still describes stage 2 without the crossed GLMM. X-027 was never assigned: no entry or reference in the repository or its history. STATUS records round 59 as
+  merged.
 
 ## Round 59 (2026-10-09): the Python three-stage wrapper
 
