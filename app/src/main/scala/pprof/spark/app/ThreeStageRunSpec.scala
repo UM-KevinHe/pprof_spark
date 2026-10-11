@@ -173,6 +173,8 @@ object ThreeStageRunSpec {
         problems += "model logistic: run this specification with pprof.spark.app.LogisticJob"
       case Some(v) if v.isTextual && v.asText() == "cox" =>
         problems += "model cox: run this specification with pprof.spark.app.CoxJob"
+      case Some(v) if v.isTextual && v.asText() == "linear" =>
+        problems += "model linear: run this specification with pprof.spark.app.LinearJob"
       case Some(v) => problems += s"model must be three-stage for this job, got ${v.toString}"
       case None    =>
         problems += "model is required; a specification without one is a Cox specification, for pprof.spark.app.CoxJob"

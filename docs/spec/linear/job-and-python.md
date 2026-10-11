@@ -1,6 +1,6 @@
 # Specification: linear fixed effects — job runner and Python access (Phase 3c)
 
-- Status: proposed with D-47 (round 71), awaiting the maintainer's approval.
+- Status: approved with D-47 (2026-10-09).
 - References: the logistic job runner ([job-runner.md](../logistic/job-runner.md), D-37) and the py4j wrappers
   (ADR-0009, D-31, D-33), applied to slices 3a and 3b ([fixed-effect-estimation.md](fixed-effect-estimation.md),
   [provider-inference.md](provider-inference.md)). Plan: [plan.md](plan.md). No new statistics.
@@ -117,3 +117,19 @@ parser, every problem at once), `linearSummary` (JSON, doubles as `Double.toHexS
 ## 7. Known discrepancies
 
 None new: the job and the wrappers add no statistics.
+
+## 8. Implementation notes (round 72; no statistical change)
+
+1. `LinearRunSpec` parses as `ThreeStageRunSpec` does (every problem at once; a field of another model "does not
+   belong to a linear specification"), with `fit.blocks` as `LogisticRunSpec`. `RunSpec`, `LogisticRunSpec` and
+   `ThreeStageRunSpec` refuse `model` `linear`, naming `LinearJob`; `LinearRunSpec` refuses the other three models,
+   naming their jobs.
+2. `LinearJob.run` reads the input once and calls the library for each requested output: `LinearFE.fit`,
+   `LinearFitIO.save`, the provider table, `LinearFE.summary` (as a table, `LinearJob.summaryTable`),
+   `LinearProviderTests.test` and `gammaIntervals`, `LinearStandardization.measures` and `intervals` on the job's own
+   input (the training data), and `LinearFE.predict`. The run record holds the specification as given and, under
+   `fitOptions`, the options used with their defaults filled in.
+3. An existing `outputs.path` is detected, as by the other three jobs, at the first write (mode `errorifexists`),
+   after the fit, not before reading the data as §4 and D-37 say: nothing is overwritten and no run record is
+   written, but the fit is computed in vain (OI-63).
+4. The Python facade and wrapper (§5) follow in round 73.

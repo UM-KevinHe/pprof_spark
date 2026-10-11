@@ -25,7 +25,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
 | 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
 | Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
-| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b implemented (rounds 67 to 70); slice 3c specification proposed (D-47, round 71) |
+| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b implemented (rounds 67 to 70); slice 3c specification approved (D-47); its job runner in round 72 |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -80,6 +80,8 @@ suites, `API=connect`), `app41.sh` (app), `numtest48.sh`, `tk35b.sh`, `cipy.sh` 
 - Jackson 2.20 deprecates `JsonNode.fields()`; with `-Werror` that fails the build.
 - Spark resolves relative `spark.jars` entries against the JVM's working directory: rehearse CI steps
   verbatim (round 57.1).
+- `app41.sh` does not run scalafmt, unlike the engine and testkit scripts: run `scalafmt --non-interactive app` before
+  committing app sources, and check every module with `scalafmt --test` in the rehearsal (round 72).
 - A suite of many small Spark jobs can run past a call's time under Spark Connect (round 70: 286 s); split it by
   case into a `MoreSuite` with a shared base class.
 - R's `pt.c` still contains a normal approximation above 4·10⁵ degrees of freedom, compiled only under
@@ -97,12 +99,29 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-D-47 (round 71) proposes slice 3c's specification (`docs/spec/linear/job-and-python.md`). Once approved: its code,
-in two rounds as for slice 2e and round 59 (`LinearRunSpec` and `LinearJob` with `LinearJobSuite`; then the
-`PythonApi.linear*` facade, `python/pprof_spark/linear.py` and their tests), the guides, and then the Phase 3
-gate review.
+Round 73: the `PythonApi.linear*` facade, `python/pprof_spark/linear.py` (`LinearFixedEffect`, `LinearFixedEffectModel`),
+a `PythonApiSuite` test, `python/tests/test_linear.py` and a section of `docs/guide/python.md` (spec 3c §5 and §6).
+Then the Phase 3 gate review. OI-63 (job output paths) awaits a decision.
 
 ## Round log
+
+## Round 72 (2026-10-09): slice 3c job runner
+
+The maintainer approved D-47.
+
+- app `LinearRunSpec` (version 1, `model` `linear`: `columns`, `fit` with `varianceOption` and `blocks`, eight output
+  sections) and `LinearJob` (`--spec`, `--spec-json`; one Parquet directory per output, the run record last with the
+  options used); `RunSpec`, `LogisticRunSpec` and `ThreeStageRunSpec` refuse `model` `linear`, naming `LinearJob`.
+  Guide `docs/guide/linear-job.md`; spec 3c §8.
+- `LinearJobSuite` (2): every output on lin-base equals the library's result bit for bit, the fit loads back, the run
+  record holds the counts, options and outputs; invalid specifications list every problem; the four jobs refuse each
+  other's specifications; a second run to the same path fails; argument handling. Classic Spark 2/2 (103 s), Spark
+  Connect 2/2 (129 s). Regression after the parser changes, Classic Spark: `CoxJobSuite` 3/3, `LogisticJobSuite` 5/5,
+  `ThreeStageJobSuite` 3/3.
+- OI-63: D-37's "fails before reading any data" for an existing output path is not what any job does; they fail at
+  the first write, after the fit.
+- The rehearsal's `scalafmt --test` caught four unformatted app files (`app41.sh` does not format); formatted, and
+  `LinearJobSuite` rerun (2/2, Classic Spark).
 
 ## Round 71 (2026-10-09): the slice 3c specification
 
