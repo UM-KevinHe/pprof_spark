@@ -103,6 +103,14 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-47: Slice 3c specification (Proposed: awaiting the maintainer)
+
+`docs/spec/linear/job-and-python.md` specifies the linear job runner and the Python access, following the logistic
+job runner (D-37) and the py4j wrappers (ADR-0009): a run specification with `model` `linear` (new `LinearRunSpec`,
+entry point `LinearJob`; the four jobs refuse each other's specifications), one output directory per section with the
+run record written last, and `pprof_spark.LinearFixedEffect` and `LinearFixedEffectModel` mapping pprof_py's methods,
+with the data argument required exactly where the library needs the training data (API-3). No new statistics.
+
 ### D-46: Slice 3b specification (Accepted: approved by the maintainer, 2026-10-09)
 
 `docs/spec/linear/provider-inference.md` specifies pprof_py's linear provider tests (t statistics mapped to z by

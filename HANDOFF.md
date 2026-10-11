@@ -25,7 +25,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
 | 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
 | Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
-| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b implemented (rounds 67 to 70: specification, fixtures, provider tests, standardization); 3c next |
+| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b implemented (rounds 67 to 70); slice 3c specification proposed (D-47, round 71) |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -97,11 +97,21 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Slice 3c's specification (D-47): the run specification for `model` `linear` (as `LogisticJob`'s, D-37) and the
-Python wrapper's API (`LinearFixedEffect`, `LinearFixedEffectModel`, ADR-0009); then its code. After slice 3c,
-the Phase 3 gate review.
+D-47 (round 71) proposes slice 3c's specification (`docs/spec/linear/job-and-python.md`). Once approved: its code,
+in two rounds as for slice 2e and round 59 (`LinearRunSpec` and `LinearJob` with `LinearJobSuite`; then the
+`PythonApi.linear*` facade, `python/pprof_spark/linear.py` and their tests), the guides, and then the Phase 3
+gate review.
 
 ## Round log
+
+## Round 71 (2026-10-09): the slice 3c specification
+
+- `docs/spec/linear/job-and-python.md` (D-47, awaiting approval): the run specification for `model` `linear`
+  (`columns` as `LinearSpec`, `fit` as `LinearOptions`, outputs `fit`, `providers`, `summary`, `providerTests`,
+  `effectIntervals`, `measures`, `measureIntervals`, `predictions`), the entry point `LinearJob`, the output
+  directories and run record, the behaviour (as D-37), the Python classes `LinearFixedEffect` and
+  `LinearFixedEffectModel` with pprof_py's method names, the `PythonApi.linear*` facade, and the validation plan.
+- Documents only; no code changed.
 
 ## Round 70 (2026-10-09): slice 3b standardized differences
 
