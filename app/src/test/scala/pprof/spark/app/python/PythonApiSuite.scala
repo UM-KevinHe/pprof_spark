@@ -231,4 +231,49 @@ class PythonApiSuite extends SparkSuite {
     )
       .foreach(key => assert(failure.getMessage.contains(key), failure.getMessage))
   }
+
+  test("a linear fit through the facade equals the engine's, as do its tests and measures") {
+    import pprof.spark.engine.linear.{
+      LinearFE,
+      LinearOptions,
+      LinearProviderTests,
+      LinearSpec,
+      LinearStandardization
+    }
+    import pprof.spark.engine.logistic.EffectReference
+    def exact(table: DataFrame): Seq[String] = table.collect().map(_.mkString("|")).toSeq.sorted
+    val df = spark.read
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .csv(Fixtures.root.resolve("linear/lin-base/input.csv").toString)
+    val spec = LinearSpec("y", Seq("x1", "x2", "x3"), "provider", Some("id"))
+    val columns =
+      """{"outcome": "y", "features": ["x1", "x2", "x3"], "provider": "provider", "rowId": "id"}"""
+    assertEquals(PythonApi.linearModel(columns, "{}"), (spec, LinearOptions()))
+    val viaFacade = PythonApi.linearFit(df, columns, """{"varianceOption": "complete"}""")
+    val direct = LinearFE.fit(df, spec)
+    assertEquals(
+      viaFacade.estimates.map(java.lang.Double.doubleToRawLongBits),
+      direct.estimates.map(java.lang.Double.doubleToRawLongBits)
+    )
+    assertEquals(exact(PythonApi.linearProviders(viaFacade)), exact(direct.providers))
+    val summary = new ObjectMapper().readTree(PythonApi.linearSummary(viaFacade))
+    assertEquals(java.lang.Double.parseDouble(summary.get("sigma").asText()), direct.sigma)
+    assertEquals(summary.get("columns").get("provider").asText(), "provider")
+    assertEquals(
+      exact(PythonApi.linearTest(viaFacade, "mean", "two_sided", 0.95, Double.NaN, "")),
+      exact(LinearProviderTests.test(direct, EffectReference.Mean))
+    )
+    assertEquals(
+      exact(
+        PythonApi.linearMeasures(df, viaFacade, """["indirect"]""", "median", "").get("indirect")
+      ),
+      exact(LinearStandardization.measures(df, direct, Seq("indirect"))("indirect"))
+    )
+    val failure = intercept[IllegalArgumentException](
+      PythonApi.linearModel("""{"outcome": "y", "trials": "n"}""", """{"varianceOption": "full"}""")
+    )
+    Seq("columns.trials", "columns.features", "columns.provider", "fit.varianceOption")
+      .foreach(key => assert(failure.getMessage.contains(key), failure.getMessage))
+  }
 }

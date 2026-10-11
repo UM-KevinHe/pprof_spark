@@ -25,7 +25,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
 | 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
 | Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
-| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b implemented (rounds 67 to 70); slice 3c specification approved (D-47); its job runner in round 72 |
+| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b implemented (rounds 67 to 70); slice 3c implemented (rounds 71 to 73: specification, job runner, Python access); the gate review next |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -42,7 +42,7 @@ since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not
 | `engine.logistic` | `LogisticSpec`, `LogisticFE`, `LogisticBlocks`, `LogisticFitIO` v3, `LogisticProviderTests`, `LogisticStandardization`; `ThreeStage` (prepare, compress, stage2, stage3, laplace, marginal, fitted), `ThreeStagePipeline` (fit, test, measures, intervals, profileInterval, sigmaSensitivity), `ThreeStageFitIO` v1 |
 | `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`, `score`; the provider table distributed), `LinearFitIO` v1; `LinearProviderTests`; `LinearStandardization` |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob` and their run specifications (version 1, `model`); `python.PythonApi` |
-| `python/` | The `pprof_spark` package (Cox, logistic and three-stage wrappers, ADR-0009) and its pytest suite |
+| `python/` | The `pprof_spark` package (Cox, logistic, three-stage and linear wrappers, ADR-0009) and its pytest suite |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
 | Documents | `docs/spec/cox/` (5), `docs/spec/logistic/` (2a to 2f), guides (`cox-job.md`, `logistic-job.md`, `three-stage-job.md`, Python), `docs/parity/` (matrix, calibrations), `DECISIONS.md` (to D-43), `DISCREPANCIES.md` (to X-030), `OPEN_ITEMS.md` (to OI-59) |
 
@@ -99,11 +99,26 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Round 73: the `PythonApi.linear*` facade, `python/pprof_spark/linear.py` (`LinearFixedEffect`, `LinearFixedEffectModel`),
-a `PythonApiSuite` test, `python/tests/test_linear.py` and a section of `docs/guide/python.md` (spec 3c §5 and §6).
-Then the Phase 3 gate review. OI-63 (job output paths) awaits a decision.
+The Phase 3 gate review (`docs/gates/phase-3.md`), as round 60 did for Phase 2: each slice's requirements and
+measured worst ratios (the testkit copy that prints ratios, sandbox only), the CI evidence, and a proposal to close
+Phase 3 at parity-verified. The Python job's tests now take about 250 s in the sandbox (`cipy.sh` allows 280 s).
 
 ## Round log
+
+## Round 73 (2026-10-09): slice 3c Python access
+
+The maintainer chose to amend the wording for OI-63.
+
+- app `PythonApi.linear*` (fit and model through `LinearRunSpec`'s parser, summary, provider table, covariate tests,
+  provider tests, effect intervals, measures, measure intervals, prediction, R², save, load) and a `PythonApiSuite`
+  test (the facade's fit, provider table, summary, tests and measures equal the engine's bit for bit; invalid roles
+  reported at once). Python `pprof_spark.LinearFixedEffect`, `LinearFixedEffectModel`, `LinearCoefficient` and
+  `LinearTest` (`linear.py`), `python/tests/test_linear.py` (4), and a section of `docs/guide/python.md`. Spec 3c §9.
+- OI-63 closed: the logistic and linear job-runner specifications now say an existing output path is detected at the
+  first write, after the fit.
+- Evidence (sandbox): app main, linkage and tests compile; `PythonApiSuite` 6/6 under Classic Spark (151 s) and Spark
+  Connect (184 s); the `python` job's step: 21 passed (17 before) in 254 s, against pprof_py's fixtures within T-coef,
+  T-var, T-fn, T-test and T-meas, and base R's for the provider tests.
 
 ## Round 72 (2026-10-09): slice 3c job runner
 

@@ -77,7 +77,7 @@ other entry point. `LogisticJob.run(spark, spec)` is the library form used by te
 
 | Case | Behaviour |
 |---|---|
-| `outputs.path` exists | Fails before reading any data; nothing is written |
+| `outputs.path` exists | Fails at the first write, after the fit (the Spark API that works under Spark Connect has no existence check); nothing is overwritten and the run record is not written (OI-63, round 73) |
 | A stage fails after others wrote | The job fails; directories already written stay, and the run record is not written, so an incomplete run is recognizable |
 | Robust Wald tests or robust measure variances without `columns.cluster` | A specification problem, reported with the others |
 | Spark Connect | The job uses the engine's Connect-compatible API; tests run under Classic Spark and Spark Connect |

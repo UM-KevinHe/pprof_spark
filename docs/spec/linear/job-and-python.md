@@ -75,7 +75,7 @@ theirs, naming the right entry point. `LinearJob.run(spark, spec)` is the librar
 
 | Case | Behaviour |
 |---|---|
-| `outputs.path` exists | Fails before reading any data; nothing is written |
+| `outputs.path` exists | Fails at the first write, after the fit (the Spark API that works under Spark Connect has no existence check); nothing is overwritten and the run record is not written (OI-63, round 73) |
 | A stage fails after others wrote | The job fails; directories already written stay, and the run record is not written, so an incomplete run is recognizable |
 | Measures and their intervals | Use the job's own input, which is the fit's training data; the fingerprint check passes by construction |
 | Spark Connect | The job uses the engine's Connect-compatible API; tests run under Classic Spark and Spark Connect |
@@ -133,3 +133,16 @@ None new: the job and the wrappers add no statistics.
    after the fit, not before reading the data as §4 and D-37 say: nothing is overwritten and no run record is
    written, but the fit is computed in vain (OI-63).
 4. The Python facade and wrapper (§5) follow in round 73.
+
+## 9. Implementation notes (round 73; no statistical change)
+
+1. `PythonApi.linear*`: `linearModel` and `linearFit` (through `LinearRunSpec`'s parser), `linearSummary` (JSON,
+   doubles in hexadecimal), `linearProviders`, `linearCovariateTests`, `linearTest`, `linearGammaIntervals`,
+   `linearMeasures`, `linearIntervals`, `linearPredict`, `linearScore` (hexadecimal), `linearSave`, `linearLoad`.
+2. `python/pprof_spark/linear.py`: `LinearFixedEffect`, `LinearFixedEffectModel`, `LinearCoefficient`, `LinearTest`;
+   `confidence_intervals` returns pprof_py's keys (`gamma_ci`, `indirect_ci`, `direct_ci`), refuses one-sided `gamma`
+   intervals as pprof_py does, and asks for the training data for `SM`; `standardized_measures` returns `indirect` and
+   `direct`.
+3. OI-63 (closed in round 73): §4's row and the logistic job runner's now say what all four jobs do; an existing
+   `outputs.path` is detected at the first write, after the fit, because the Spark API that works under Spark
+   Connect has no existence check.

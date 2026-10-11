@@ -92,3 +92,24 @@ fit.save("/path/fit"); ThreeStageModel.load(spark, "/path/fit", df)
 of their keys; options left out take the engine's defaults. The fit keeps the prepared training records,
 so its methods take no data. A saved fit does not hold them: `load` re-attaches it to the training data
 and refuses data whose stage 1 fingerprint differs (docs/spec/logistic/three-stage-pipeline.md §12).
+
+## Linear fixed-effect models
+
+```python
+from pprof_spark import LinearFixedEffect, LinearFixedEffectModel
+
+fit = LinearFixedEffect("length_of_stay", ["age", "comorbidity"], "facility", row_id="id").fit(df)
+fit.coefficients, fit.sigma, fit.r2, fit.aic, fit.bic, fit.degrees_of_freedom
+fit.providers()                                      # records, gamma, variance, se
+fit.summary(level=0.95, null=0.0)                    # t tests and intervals for the covariates
+fit.test(reference="median")                         # provider tests: z_raw, p_value, flag, ci_lower, ci_upper
+fit.confidence_intervals(option="gamma")["gamma_ci"] # effect intervals, from the fit alone
+fit.standardized_measures(df)["indirect"]            # differences, with the training data (API-3)
+fit.confidence_intervals(df, kinds=("indirect", "direct"))  # their intervals: indirect_ci, direct_ci
+fit.predict(df), fit.score(df)
+fit.save("/path/fit"); LinearFixedEffectModel.load(spark, "/path/fit")
+```
+
+`LinearFixedEffect`'s options are the job runner's `fit` object ([linear-job.md](linear-job.md)): `variance_option`
+(`complete` or `simplified`) and `blocks`. The method names follow pprof_py's `LinearFixedEffectModel`
+(docs/spec/linear/job-and-python.md §5).

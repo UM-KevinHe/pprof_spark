@@ -5,7 +5,17 @@ import scala.jdk.CollectionConverters._
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import pprof.spark.app.{RunSpec, ThreeStageJob, ThreeStageRunSpec}
+import pprof.spark.app.{LinearRunSpec, RunSpec, ThreeStageJob, ThreeStageRunSpec}
+import pprof.spark.engine.linear.{
+  LinearFE,
+  LinearFit,
+  LinearFitIO,
+  LinearOptions,
+  LinearProviderTests,
+  LinearSpec,
+  LinearStandardization,
+  LinearTest
+}
 import pprof.spark.engine.BuildInfo
 import pprof.spark.engine.layout.GroupKey
 import pprof.spark.engine.logistic.{
@@ -769,6 +779,173 @@ object PythonApi {
     */
   def threeStageLoad(spark: SparkSession, path: String, df: DataFrame): ThreeStageFit =
     ThreeStageFitIO.attach(df, ThreeStageFitIO.load(spark, path))
+
+  /** Fits the linear fixed-effect model (docs/spec/linear/fixed-effect-estimation.md). Column roles and options use
+    * the job runner's format (docs/guide/linear-job.md): the `columns` and `fit` objects of a version-1 run
+    * specification with `model` `linear`; every problem is reported at once.
+    */
+  def linearFit(df: DataFrame, columnsJson: String, fitJson: String): LinearFit = {
+    val (spec, options) = linearModel(columnsJson, fitJson)
+    LinearFE.fit(df, spec, options)
+  }
+
+  /** The column roles and options of [[linearFit]], through the job runner's parser. */
+  def linearModel(columnsJson: String, fitJson: String): (LinearSpec, LinearOptions) = {
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    root.put("version", RunSpec.Version)
+    root.put("model", "linear")
+    root.putObject("input").put("path", "unused")
+    root.set[JsonNode]("columns", objectNode(mapper, columnsJson, "columns"))
+    root.set[JsonNode]("fit", objectNode(mapper, fitJson, "fit"))
+    root.putObject("outputs").put("path", "unused")
+    val run = LinearRunSpec.parse(mapper.writeValueAsString(root))
+    (run.spec, run.options)
+  }
+
+  /** The linear fit as JSON: coefficients with standard errors, σ̂²V (packed), σ̂, RSS, the total sum of squares,
+    * R², ℓ, AIC, BIC, the condition estimate, counts, warnings, column roles, options, software and fingerprint;
+    * doubles as `Double.toHexString` strings.
+    */
+  def linearSummary(fit: LinearFit): String = {
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    def hex(value: Double): String = java.lang.Double.toHexString(value)
+    root.put("kind", "LinearFit")
+    root.put("status", fit.status)
+    val coefficients = root.putArray("coefficients")
+    fit.coefficients.foreach { c =>
+      val node = coefficients.addObject()
+      node.put("feature", c.feature)
+      node.put("estimate", hex(c.estimate))
+      node.put("standardError", hex(c.standardError))
+    }
+    val covariance = root.putArray("covariance")
+    fit.covariance.foreach(v => covariance.add(hex(v)))
+    Seq(
+      "sigma" -> fit.sigma,
+      "rss" -> fit.rss,
+      "tss" -> fit.tss,
+      "r2" -> fit.r2,
+      "loglik" -> fit.loglik,
+      "aic" -> fit.aic,
+      "bic" -> fit.bic,
+      "condition" -> fit.condition
+    ).foreach { case (key, value) => root.put(key, hex(value)) }
+    root.put("rows", fit.rows)
+    root.put("providers", fit.providerCount)
+    root.put("degreesOfFreedom", fit.degreesOfFreedom)
+    val warnings = root.putArray("warnings")
+    fit.warnings.foreach(w => warnings.add(w))
+    val columns = root.putObject("columns")
+    columns.put("outcome", fit.spec.outcome)
+    val features = columns.putArray("features")
+    fit.spec.features.foreach(f => features.add(f))
+    columns.put("provider", fit.spec.provider)
+    fit.spec.rowId.foreach(r => columns.put("rowId", r))
+    root.putObject("fit").put("varianceOption", fit.options.varianceOption)
+    val software = root.putObject("software")
+    fit.software.toFields.foreach { case (key, value) => software.put(key, value) }
+    root.put("fingerprint", fit.fingerprint)
+    mapper.writeValueAsString(root)
+  }
+
+  def linearProviders(fit: LinearFit): DataFrame = fit.providers
+
+  /** `LinearFE.summary` as JSON, doubles as `Double.toHexString` strings. */
+  def linearCovariateTests(
+      fit: LinearFit,
+      level: Double,
+      nullValue: Double,
+      alternative: String
+  ): String = {
+    val mapper = new ObjectMapper()
+    val array = mapper.createArrayNode()
+    LinearFE.summary(fit, level, nullValue, alternative).foreach { (t: LinearTest) =>
+      val node = array.addObject()
+      node.put("feature", t.feature)
+      node.put("estimate", java.lang.Double.toHexString(t.estimate))
+      node.put("standardError", java.lang.Double.toHexString(t.standardError))
+      node.put("statistic", java.lang.Double.toHexString(t.statistic))
+      node.put("pValue", java.lang.Double.toHexString(t.pValue))
+      node.put("lower", java.lang.Double.toHexString(t.lower))
+      node.put("upper", java.lang.Double.toHexString(t.upper))
+    }
+    mapper.writeValueAsString(array)
+  }
+
+  /** Provider tests (spec 3b §2); `critical` NaN for none. */
+  def linearTest(
+      fit: LinearFit,
+      reference: String,
+      alternative: String,
+      level: Double,
+      critical: Double,
+      providersJson: String
+  ): DataFrame =
+    LinearProviderTests.test(
+      fit,
+      effectReference(reference),
+      alternative,
+      level,
+      if (critical.isNaN) None else Some(critical),
+      stringList(providersJson, "providers")
+    )
+
+  /** Effect intervals (spec 3b §3, option `gamma`). */
+  def linearGammaIntervals(fit: LinearFit, level: Double, providersJson: String): DataFrame =
+    LinearProviderTests.gammaIntervals(fit, level, stringList(providersJson, "providers"))
+
+  /** Standardized differences (spec 3b §4); `df` must be the fit's training data (API-3). */
+  def linearMeasures(
+      df: DataFrame,
+      fit: LinearFit,
+      kindsJson: String,
+      reference: String,
+      providersJson: String
+  ): java.util.Map[String, DataFrame] =
+    LinearStandardization
+      .measures(
+        df,
+        fit,
+        stringList(kindsJson, "kinds").getOrElse(LinearStandardization.Kinds),
+        effectReference(reference),
+        stringList(providersJson, "providers")
+      )
+      .asJava
+
+  /** Intervals for the standardized differences (spec 3b §3, option `SM`); `df` must be the training data (API-3). */
+  def linearIntervals(
+      df: DataFrame,
+      fit: LinearFit,
+      kindsJson: String,
+      reference: String,
+      alternative: String,
+      level: Double,
+      providersJson: String
+  ): java.util.Map[String, DataFrame] =
+    LinearStandardization
+      .intervals(
+        df,
+        fit,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect")),
+        effectReference(reference),
+        alternative,
+        level,
+        stringList(providersJson, "providers")
+      )
+      .asJava
+
+  def linearPredict(df: DataFrame, fit: LinearFit): DataFrame = LinearFE.predict(df, fit)
+
+  /** R² of the fit on `df` (any provider key type, X-034), as `Double.toHexString`. */
+  def linearScore(df: DataFrame, fit: LinearFit): String =
+    java.lang.Double.toHexString(LinearFE.score(df, fit))
+
+  def linearSave(spark: SparkSession, fit: LinearFit, path: String): Unit =
+    LinearFitIO.save(spark, fit, path)
+
+  def linearLoad(spark: SparkSession, path: String): LinearFit = LinearFitIO.load(spark, path)
 
   private def testsJson(tests: Seq[LogisticTest]): String = {
     val mapper = new ObjectMapper()
