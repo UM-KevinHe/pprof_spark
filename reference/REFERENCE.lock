@@ -35,7 +35,9 @@ lme4 = "1.1-35.1"
 # The linear fixed-effect fixtures (D-45) use stats::lm from base R.
 
 [r_pprof]
-# R pprof (MIT), the R counterpart of pprof_py, from the CRAN mirror on GitHub (tag 1.0.3). Only
+# R pprof (MIT), the R counterpart of pprof_py, from the CRAN mirror on GitHub (tag 1.0.3). The linear
+# inference fixtures (D-46) source R/linear_fe.R, R/test.linear_fe.R and R/SM_output.linear_fe.R (pure R, with
+# Matrix). Otherwise only
 # src/Fixed_effect.cpp's SerBIN (logis_BIN_fe_prov) is used: compiled with Rcpp::sourceCpp for the
 # logistic fixed-effect fixtures (D-30), with Ubuntu 24.04's r-cran-rcpp 1.0.12,
 # r-cran-rcpparmadillo 0.12.8.1.0 and r-cran-rcppparallel 5.1.7.
@@ -50,6 +52,9 @@ license = "MIT"
 "myomp.h" = "cdfcae72160d813e281f1df98ad3dc72e83fcf80bc0ca1d8f115c66b45888673"
 "test.logis_fe.R" = "01c04a465b9660bd3205dea07dd3000c860ec2d4566ceabe5b9a53be3729db75"
 "SM_output.logis_fe.R" = "bdbd4f360c0fbe4f8e810ed39f88ae1e7e0e859276a5d36b0ea754163965459d"
+"linear_fe.R" = "285b035b4469ad074ce14d233cb16ceba464886d29b93500d4c8f850434643ad"
+"test.linear_fe.R" = "9d5f16a2b625d7e7238ba21542f9b28dca33d059e7c06b3f4c5511eed7f9cbdb"
+"SM_output.linear_fe.R" = "c049ce547a824d222b13d72dfdde1cbf609bc4c66646bc82c84a6c991f7ecda4"
 
 [r_poibin]
 # poibin (GPL-2; run only, never ported), needed by R pprof's exact test for the slice 2c fixtures (D-35).

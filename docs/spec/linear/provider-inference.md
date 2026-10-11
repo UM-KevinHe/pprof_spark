@@ -1,6 +1,6 @@
 # Specification: linear fixed effects — provider tests, intervals and standardized differences (Phase 3b)
 
-- Status: proposed with D-46 (round 67), awaiting the maintainer's approval.
+- Status: approved with D-46 (2026-10-09).
 - Reference: pprof_py v0.7.0's `LinearFixedEffectModel.test`, `calculate_confidence_intervals` and
   `calculate_standardized_measures`, with the shared `reference_effect`, `t_to_z`, `effect_test` and
   `provider_test`; R pprof 1.0.3's `test.linear_fe`, `confint.linear_fe` and `SM_output.linear_fe` (pure R, OI-60)
@@ -103,5 +103,21 @@ controls as D-09 requires.
 
 | ID | Class | Summary | Status |
 |---|---|---|---|
-| X-035 | B | pprof_py leaves a provider untested when its t tail underflows | Proposed with D-46 |
-| X-036 | — | R pprof 1.0.3's linear inference departs from pprof_py's definitions in places (normal quantiles in `confint` with the `full` variance, normal tails with the `simplified` one, lower-tail p-values by subtraction) | Proposed with D-46 |
+| X-035 | B | pprof_py leaves a provider untested when its t tail underflows | Approved (D-46) |
+| X-036 | — | R pprof 1.0.3's linear inference departs from pprof_py's definitions in places (normal quantiles in `confint` with the `full` variance, normal tails with the `simplified` one, lower-tail p-values by subtraction) | Approved (D-46) |
+
+## 11. Fixture findings (round 68)
+
+1. `fixtures/linear` gains `inference_pprof_py.json` and `inference_r.json` for every case, and a sixth case,
+   lin-extreme (lin-base with provider 10's outcomes + 60), which also enters slice 3a's calibration. lin-many keeps
+   the two-sided test, the `gamma` and two-sided `SM` intervals and the median measures; the other five cases carry
+   all of §9. R pprof's three linear files are pinned in REFERENCE.lock by SHA-256. Regeneration is byte-identical
+   from scratch and from the committed inputs.
+2. Calibration (`docs/parity/linear-inference-calibration.md`, 386 checks) passes: pprof_py agrees with base
+   R within the classes, worst T-meas 0.5 (lin-shifted: R pprof SM_output indirect expected vs pprof_py), T-test 0.31 (lin-shifted: R pprof test.linear_fe statistic vs pprof_py's t), T-p 3.1e-05 (lin-shifted: test number p_value vs base R), T-coef 6e-06 (lin-shifted: test critical ci_upper vs base R); R pprof's statistics, flags and standardized differences agree where X-036 allows;
+   every negative control misses by at least 2.63e+03. No new tolerance class is needed.
+3. X-035 on lin-extreme: pprof_py leaves one provider untested (z, p-value, flag and limits NaN) where base R's
+   log-scale tail gives z, the p-value 0, the flag and the limits; the calibration counts such positions instead of
+   comparing them.
+4. X-036: R pprof's two-sided p-values differ from pprof_py's by up to 1e-4 relative on lin-base and 2.6e-3 on
+   lin-extreme (its lower tails by subtraction); its flags agree everywhere.

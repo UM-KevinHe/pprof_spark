@@ -25,7 +25,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
 | 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
 | Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
-| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b specification proposed (D-46, round 67); 3c next |
+| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b specification approved (D-46), fixtures and calibration (round 68); 3c next |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -43,7 +43,7 @@ since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not
 | `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`, `score`; the provider table distributed), `LinearFitIO` v1 |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob` and their run specifications (version 1, `model`); `python.PythonApi` |
 | `python/` | The `pprof_spark` package (Cox, logistic and three-stage wrappers, ADR-0009) and its pytest suite |
-| Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (5), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
+| Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
 | Documents | `docs/spec/cox/` (5), `docs/spec/logistic/` (2a to 2f), guides (`cox-job.md`, `logistic-job.md`, `three-stage-job.md`, Python), `docs/parity/` (matrix, calibrations), `DECISIONS.md` (to D-43), `DISCREPANCIES.md` (to X-030), `OPEN_ITEMS.md` (to OI-59) |
 
 ### 4. How the work runs
@@ -95,12 +95,25 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-D-46 (round 67) proposes slice 3b's specification (`docs/spec/linear/provider-inference.md`). Once approved: its
-fixtures (the five cases extended, and lin-extreme for X-035; R pprof's `test.linear_fe` and `SM_output.linear_fe`
-with the `full` variance; base R's tails and limits) and calibration; then the code (numerics: z from a log-scale t
-tail; engine `LinearProviderTests` and `LinearStandardization`). Slice 3c (job runner and Python) follows.
+Slice 3b's code: numerics (z from a log-scale t tail, so an underflowing tail keeps its z, X-035), engine
+`LinearProviderTests` (tests and `gamma` intervals from the fit, the reference effect on the driver under
+`DriverGuards`) and `LinearStandardization` (measures and `SM` intervals from a pass over the training data,
+API-3), with parity suites against the slice 3b fixtures under Classic Spark and Spark Connect. Then slice 3c.
 
 ## Round log
+
+## Round 68 (2026-10-09): slice 3b fixtures and calibration
+
+The maintainer approved D-46 with X-035 and X-036.
+
+- `linear_fixtures.py` writes `inference_pprof_py.json` (tests in six variants, a subset, `gamma` and `SM` intervals,
+  measures at the median and the mean, two negative controls; lin-many reduced) and `inference_r.json` (base R from
+  `lm` as pprof_py defines each quantity, z from log-scale tails; R pprof's `test.linear_fe` and `SM_output.linear_fe`
+  with the `full` variance, its three files pinned by SHA-256) for six cases, lin-extreme new (X-035).
+  Regeneration byte-identical from scratch and from the committed inputs.
+- `calibrate.py` gains `linear_inference` (386 checks, all pass; worst T-meas 0.5 (lin-shifted: R pprof SM_output indirect expected vs pprof_py), T-test 0.31 (lin-shifted: R pprof test.linear_fe statistic vs pprof_py's t), T-p 3.1e-05 (lin-shifted: test number p_value vs base R), T-coef 6e-06 (lin-shifted: test critical ci_upper vs base R); weakest negative control
+  2.63e+03); `FixturesSuite` mirrors it; testkit 23 under Classic Spark and Spark Connect. Every other family's
+  calibration still passes; slice 3a's now covers lin-extreme as well.
 
 ## Round 67 (2026-10-09): the slice 3b specification
 

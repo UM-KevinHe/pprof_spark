@@ -7,9 +7,12 @@ stats::lm(y ~ 0 + factor(provider) + x1 + x2 + x3) (linear_r.R). generate.py cal
 `generate(out, inputs, lock, write_json)`; the output is deterministic.
 """
 
+import hashlib
 import os
 import shutil
 import subprocess
+import tempfile
+import urllib.request
 import warnings
 
 import numpy as np
@@ -28,6 +31,7 @@ CASES = (
     {"id": "lin-shifted", "seed": 31, "sizes": BASE_SIZES, "shift": [10000.0, -10000.0, 0.0], "scale_x3": 1.0 / 1024},
     {"id": "lin-text", "seed": 34, "sizes": [5 + (7 * j) % 40 for j in range(30)], "text": True},
     {"id": "lin-many", "seed": 35, "sizes": [3 + j % 6 for j in range(2000)]},
+    {"id": "lin-extreme", "seed": 31, "sizes": BASE_SIZES, "extreme": 10},
 )
 
 OPTIONS = {
@@ -41,6 +45,15 @@ OPTIONS = {
           "summary's t, p = 2 pt(|t|, df, lower.tail = FALSE), confint; one-sided tests at null 0.25 by pt and qt; "
           "fitted values of the first 100 rows; R^2 = 1 - RSS / sum((y - mean(y))^2); the within cross-products of the "
           "provider-demeaned features (ave) and outcome",
+    "inference": "slice 3b (D-46), inference_pprof_py.json: test() two-sided at the median, greater, less, the size-weighted "
+                 "mean, 0.25 and critical 2.5 (z_raw, p_value, flag, ci_lower, ci_upper); a five-provider subset; "
+                 "calculate_confidence_intervals gamma and SM (indirect, direct; two-sided, greater, less); "
+                 "calculate_standardized_measures at the median and the mean; negative controls (reference + 0.01; "
+                 "level 0.94). lin-many keeps the two-sided test, gamma and two-sided SM intervals and the median measures",
+    "inference_r": "inference_r.json: base R from lm, as pprof_py defines each quantity: z = sign(t) qnorm of the log tail "
+                   "pt(|t|, df, lower.tail = FALSE, log.p = TRUE), p-values, flags against qnorm(0.975), qnorm(0.95) or 2.5, "
+                   "limits with qt(pnorm(c), df), SM intervals and measures by provider sums; R pprof 1.0.3's "
+                   "test.linear_fe and SM_output.linear_fe with option.gamma.var = 'full' (X-036)",
 }
 
 
@@ -70,6 +83,8 @@ def make_data(case):
         parts.append(pd.DataFrame({"provider": f"prov-{j}" if case.get("text") else j,
                                    "y": np.rint(y * 1024) / 1024, "x1": x1, "x2": x2, "x3": x3}))
     df = pd.concat(parts, ignore_index=True)
+    if "extreme" in case:  # one provider far out, so its t tail underflows (X-035)
+        df.loc[df["provider"] == case["extreme"], "y"] += 60.0
     for name, shift in zip(FEATURES, case.get("shift", (0.0, 0.0, 0.0))):
         df[name] = df[name] + shift
     if "scale_x3" in case:
@@ -151,10 +166,101 @@ def r_outputs(case_dir):
     return result
 
 
+R_PPROF_FILES = ("linear_fe.R", "test.linear_fe.R", "SM_output.linear_fe.R")
+INFERENCE_TESTS = (("two_sided", {}), ("greater", {"alternative": "greater"}), ("less", {"alternative": "less"}),
+                   ("mean", {"reference": "mean"}), ("number", {"reference": 0.25}), ("critical", {"critical": 2.5}))
+TEST_COLUMNS = ("z_raw", "p_value", "flag", "ci_lower", "ci_upper")
+REDUCED = {"lin-many"}  # the blocked case keeps the two-sided test, gamma and two-sided SM intervals, median measures
+
+
+def r_pprof_sources(lock, directory):
+    """R pprof's linear functions at the pinned commit, checked against REFERENCE.lock."""
+    pin = lock["r_pprof"]
+    os.makedirs(directory, exist_ok=True)
+    for name in R_PPROF_FILES:
+        path = os.path.join(directory, name)
+        if not os.path.exists(path):
+            url = f"https://raw.githubusercontent.com/cran/pprof/{pin['commit']}/R/{name}"
+            with urllib.request.urlopen(url, timeout=60) as response, open(path, "wb") as handle:
+                handle.write(response.read())
+        with open(path, "rb") as handle:
+            digest = hashlib.sha256(handle.read()).hexdigest()
+        if digest != pin["sha256"][name]:
+            raise SystemExit(f"{name}: sha256 {digest} differs from REFERENCE.lock")
+    return directory
+
+
+def values(series):
+    return hexes(series.to_numpy(dtype=float, na_value=np.nan))
+
+
+def tests_table(t):
+    return {"providers": [label(v) for v in t.index], "null_value": values(t["null_value"])[:1],
+            **{c: values(t[c]) for c in TEST_COLUMNS}}
+
+
+def inference_pprof_py(model, case):
+    """Slice 3b's pprof_py outputs (spec 3b §9)."""
+    reduced = case["id"] in REDUCED
+    gamma = model.coefficients_["gamma"].ravel()
+    median = float(np.median(gamma))
+    two = model.test()
+    providers = [label(v) for v in two.index]
+    out = {"providers": providers, "estimate": values(two["estimate"]), "se": values(two["se"]),
+           "references": {"median": hexes([median]),
+                          "mean": hexes([np.average(gamma, weights=model.provider_sizes_)])},
+           "tests": {}, "intervals": {}, "measures": {}}
+    for name, kwargs in INFERENCE_TESTS[:1] if reduced else INFERENCE_TESTS:
+        out["tests"][name] = tests_table(two if not kwargs else model.test(**kwargs))
+    if not reduced:
+        out["subset"] = tests_table(model.test(providers=providers[:5]))
+    g = model.calculate_confidence_intervals(option="gamma")["gamma_ci"]
+    assert [label(v) for v in g["provider_id"]] == providers
+    out["intervals"]["gamma"] = {"lower": values(g["lower"]), "upper": values(g["upper"])}
+    for alt in ("two_sided",) if reduced else ("two_sided", "greater", "less"):
+        ci = model.calculate_confidence_intervals(option="SM", stdz=["indirect", "direct"], alternative=alt)
+        out["intervals"][f"sm_{alt}"] = {
+            kind: {"lower": values(ci[f"{kind}_ci"]["lower"]), "upper": values(ci[f"{kind}_ci"]["upper"])}
+            for kind in ("indirect", "direct")}
+    for ref in ("median",) if reduced else ("median", "mean"):
+        sm = model.calculate_standardized_measures(stdz=["indirect", "direct"], reference=ref)
+        assert [label(v) for v in sm["indirect"]["provider_id"]] == providers
+        out["measures"][ref] = {
+            "indirect": {c: values(sm["indirect"][c]) for c in ("indirect_difference", "observed", "expected")},
+            "direct": {"direct_difference": values(sm["direct"]["direct_difference"]),
+                       "observed": values(sm["direct"]["observed"])[:1], "expected": values(sm["direct"]["expected"])}}
+    shifted = model.test(reference=median + 0.01)
+    out["negative_controls"] = {
+        "reference_shifted": {
+            "z_raw": values(shifted["z_raw"]), "p_value": values(shifted["p_value"]),
+            "indirect_difference": values(model.calculate_standardized_measures(
+                stdz=["indirect"], reference=median + 0.01)["indirect"]["indirect_difference"])},
+        "level_094": {
+            "ci_lower": values(model.test(level=0.94)["ci_lower"]),
+            "gamma_upper": values(model.calculate_confidence_intervals(option="gamma", level=0.94)["gamma_ci"]["upper"])}}
+    return out
+
+
+def inference_r(case_dir, sources, case):
+    reduced = "1" if case["id"] in REDUCED else "0"
+    subprocess.run(["Rscript", os.path.join(HERE, "linear_inference_r.R"), case_dir, sources, reduced], check=True)
+    path = os.path.join(case_dir, "r_inference.txt")
+    result = {}
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            key, text = line.rstrip("\n").split("\t")
+            parsed = [float.fromhex(v) for v in text.split(",")]
+            result[key] = int(parsed[0]) if key == "df" else hexes(parsed)
+    os.remove(path)
+    return result
+
+
 def generate(out, inputs, lock, write_json):
-    """Writes out/linear/<case>/{case.json, input.csv, pprof_py.json, r_linear.json}."""
+    """Writes out/linear/<case>/{case.json, input.csv, pprof_py.json, r_linear.json, inference_pprof_py.json,
+    inference_r.json}."""
     root = os.path.join(out, "linear")
     shutil.rmtree(root, ignore_errors=True)
+    sources = r_pprof_sources(lock, tempfile.mkdtemp(prefix="r_pprof_linear_"))
     names = []
     for case in CASES:
         case_dir = os.path.join(root, case["id"])
@@ -177,5 +283,7 @@ def generate(out, inputs, lock, write_json):
             "score": hexes([r_squared(model, df, case)]),
             "negative_controls": negative_controls(df)})
         write_json(os.path.join(case_dir, "r_linear.json"), r_outputs(case_dir))
+        write_json(os.path.join(case_dir, "inference_pprof_py.json"), inference_pprof_py(model, case))
+        write_json(os.path.join(case_dir, "inference_r.json"), inference_r(case_dir, sources, case))
         names.append(case["id"])
     return names

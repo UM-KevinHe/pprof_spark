@@ -561,4 +561,181 @@ class FixturesSuite extends munit.FunSuite {
       }
     }
   }
+
+  test(
+    "linear slice 3b: pprof_py agrees with base R and R pprof where X-036 allows; controls fall far outside"
+  ) {
+    val critical = Map(
+      "two_sided" -> 1.959963984540054,
+      "mean" -> 1.959963984540054,
+      "number" -> 1.959963984540054,
+      "greater" -> 1.6448536269514722,
+      "less" -> 1.6448536269514722,
+      "critical" -> 2.5
+    )
+    val threshold = Tolerances.number("T-p.log10.threshold")
+    val atol = Tolerances.number("T-p.log10.atol")
+    val testRtol = Tolerances.number("T-test.rtol")
+    val band = Tolerances.number("T-flag.boundary.rtol")
+    def d(node: JsonNode): Array[Double] = Fixtures.doubles(node)
+    // Elements finite in both; other positions must match, except pprof_py's NaN (X-035), which is counted.
+    def masked(cls: String, a: Array[Double], e: Array[Double]): (Double, Int) = {
+      assertEquals(a.length, e.length)
+      val keep =
+        a.indices.filter(i => java.lang.Double.isFinite(a(i)) && java.lang.Double.isFinite(e(i)))
+      val untested = a.indices.count(i => a(i).isNaN && !e(i).isNaN)
+      val mismatched = a.indices.exists { i =>
+        val finite = java.lang.Double.isFinite(a(i)) && java.lang.Double.isFinite(e(i))
+        !finite && !(a(i).isNaN && !e(i).isNaN) && !(a(i) == e(i) || (a(i).isNaN && e(i).isNaN))
+      }
+      val ratio =
+        if (keep.isEmpty) 0.0
+        else Tolerances(cls).worstRatio(keep.map(a).toArray, keep.map(e).toArray)
+      (if (mismatched) Double.PositiveInfinity else ratio, untested)
+    }
+    // §8.4's T-p, skipping pprof_py's NaN (X-035).
+    def pRatio(a: Array[Double], e: Array[Double]): Double =
+      a.zip(e)
+        .filterNot(_._1.isNaN)
+        .map { case (x, y) =>
+          if (y >= threshold) math.abs(x - y) / (testRtol * math.abs(y))
+          else if (y == 0.0) { if (x < 1e-300) 0.0 else Double.PositiveInfinity }
+          else if (x > 0) math.abs(math.log10(x) - math.log10(y)) / atol
+          else Double.PositiveInfinity
+        }
+        .foldLeft(0.0)((u, v) => math.max(u, v))
+    def flagsOutside(f: Array[Double], r: Array[Double], z: Array[Double], c: Double): Int =
+      f.indices.count(i => !f(i).isNaN && f(i) != r(i) && math.abs(math.abs(z(i)) - c) > band * c)
+    Fixtures.cases("linear").foreach { name =>
+      val py = Fixtures.json(s"linear/$name/inference_pprof_py.json")
+      val r = Fixtures.json(s"linear/$name/inference_r.json")
+      def agree(label: String, cls: String, a: Array[Double], e: Array[Double]): Int = {
+        val (ratio, untested) = masked(cls, a, e)
+        assert(ratio <= 1.0, s"$name $label: $ratio of $cls")
+        untested
+      }
+      Seq("median", "mean").foreach(ref =>
+        agree(s"reference $ref", "T-coef", d(py.get("references").get(ref)), d(r.get(s"ref_$ref")))
+      )
+      val two = py.get("tests").get("two_sided")
+      var untested = 0
+      py.get("tests").properties().asScala.foreach { entry =>
+        val v = entry.getKey
+        val t = entry.getValue
+        Seq(
+          ("z_raw", "z", "T-test"),
+          ("ci_lower", "lower", "T-coef"),
+          ("ci_upper", "upper", "T-coef")
+        ).foreach { case (col, rq, cls) =>
+          untested = math.max(
+            untested,
+            agree(s"test $v $col", cls, d(t.get(col)), d(r.get(s"test_${v}_$rq")))
+          )
+        }
+        val p = pRatio(d(t.get("p_value")), d(r.get(s"test_${v}_p")))
+        assert(p <= 1.0, s"$name test $v p-values: $p of T-p")
+        val outside = flagsOutside(
+          d(t.get("flag")),
+          d(r.get(s"test_${v}_flag")),
+          d(r.get(s"test_${v}_z")),
+          critical(v)
+        )
+        assertEquals(outside, 0, s"$name test $v flags")
+      }
+      assertEquals(
+        untested,
+        if (name == "lin-extreme") 1 else 0,
+        s"$name: providers untested by pprof_py (X-035)"
+      )
+      if (py.has("subset")) {
+        val subset = py.get("subset")
+        def first(node: JsonNode): Seq[String] = (0 until 5).map(i => node.get(i).asText())
+        assertEquals(first(subset.get("providers")), first(py.get("providers")))
+        Seq("z_raw", "p_value", "flag", "ci_lower", "ci_upper").foreach(col =>
+          assertEquals(first(subset.get(col)), first(two.get(col)), s"$name subset $col")
+        )
+      }
+      Seq("lower", "upper").foreach(side =>
+        agree(
+          s"gamma interval $side",
+          "T-coef",
+          d(py.get("intervals").get("gamma").get(side)),
+          d(r.get(s"gamma_$side"))
+        )
+      )
+      py.get("intervals").properties().asScala.filter(_.getKey.startsWith("sm_")).foreach { sm =>
+        for (kind <- Seq("indirect", "direct"); side <- Seq("lower", "upper"))
+          agree(
+            s"${sm.getKey} $kind $side",
+            "T-meas",
+            d(sm.getValue.get(kind).get(side)),
+            d(r.get(s"${sm.getKey}_${kind}_$side"))
+          )
+      }
+      py.get("measures").properties().asScala.foreach { ref =>
+        ref.getValue.properties().asScala.foreach { kind =>
+          kind.getValue.properties().asScala.foreach { col =>
+            val key =
+              s"measures_${ref.getKey}_${kind.getKey}_${col.getKey.replace(kind.getKey + "_", "")}"
+            val expected = d(r.get(key))
+            val direct = kind.getKey == "direct" && col.getKey == "observed"
+            agree(
+              s"measures ${ref.getKey} ${kind.getKey} ${col.getKey}",
+              "T-meas",
+              d(col.getValue),
+              if (direct) expected.take(1) else expected
+            )
+          }
+        }
+      }
+      val nullValue = d(two.get("null_value"))(0)
+      val statistic =
+        d(py.get("estimate")).zip(d(py.get("se"))).map { case (e, s) => (e - nullValue) / s }
+      agree("R pprof statistic", "T-test", statistic, d(r.get("rpprof_stat")))
+      assertEquals(
+        flagsOutside(
+          d(two.get("flag")),
+          d(r.get("rpprof_flag")),
+          d(r.get("test_two_sided_z")),
+          critical("two_sided")
+        ),
+        0,
+        s"$name R pprof flags"
+      )
+      val median = py.get("measures").get("median")
+      Seq(
+        ("indirect", "indirect_difference", "rpprof_indirect_difference"),
+        ("indirect", "observed", "rpprof_indirect_observed"),
+        ("indirect", "expected", "rpprof_indirect_expected"),
+        ("direct", "direct_difference", "rpprof_direct_difference"),
+        ("direct", "expected", "rpprof_direct_expected")
+      ).foreach { case (kind, col, key) =>
+        agree(s"R pprof $kind $col", "T-meas", d(median.get(kind).get(col)), d(r.get(key)))
+      }
+      val c = py.get("negative_controls")
+      Seq(
+        ("z_raw", "T-test", d(c.get("reference_shifted").get("z_raw")), d(two.get("z_raw"))),
+        (
+          "indirect_difference",
+          "T-meas",
+          d(c.get("reference_shifted").get("indirect_difference")),
+          d(median.get("indirect").get("indirect_difference"))
+        ),
+        ("ci_lower", "T-coef", d(c.get("level_094").get("ci_lower")), d(two.get("ci_lower"))),
+        (
+          "gamma upper",
+          "T-coef",
+          d(c.get("level_094").get("gamma_upper")),
+          d(py.get("intervals").get("gamma").get("upper"))
+        )
+      ).foreach { case (label, cls, a, e) =>
+        val miss = masked(cls, a, e)._1
+        assert(miss >= Margin, s"$name control $label: $miss of $cls")
+      }
+      assert(
+        pRatio(d(c.get("reference_shifted").get("p_value")), d(two.get("p_value"))) >= Margin,
+        s"$name control p"
+      )
+    }
+  }
 }

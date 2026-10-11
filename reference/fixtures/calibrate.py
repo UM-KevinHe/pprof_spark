@@ -7,7 +7,8 @@ For each case and tie method it reports, under the comparison rule of testkit's 
 ratio of observed difference to allowed difference:
   - pprof_py against R survival::coxph (two validated implementations): must be at most 1;
   - each negative control against pprof_py: must be at least MARGIN, so a real defect fails.
-Writes docs/parity/cox-calibration.md, logistic-calibration.md, three-stage-calibration.md and linear-calibration.md. Usage: python reference/fixtures/calibrate.py
+Writes docs/parity/cox-calibration.md, logistic-calibration.md, three-stage-calibration.md, linear-calibration.md and
+linear-inference-calibration.md. Usage: python reference/fixtures/calibrate.py
 """
 
 import json
@@ -396,6 +397,162 @@ def linear(tol, manifest, fixtures):
     return failures
 
 
+def masked(tol, cls, actual, expected):
+    """The ratio over elements finite in both; other positions must match, except pprof_py's NaN where the
+    reference is not NaN (X-035: the provider untested), which is counted. Returns (ratio, X-035 count)."""
+    a = np.array([float.fromhex(v) for v in actual])
+    e = np.array([float.fromhex(v) for v in expected])
+    if a.shape != e.shape:
+        return math.inf, 0
+    both = np.isfinite(a) & np.isfinite(e)
+    x035 = np.isnan(a) & ~np.isnan(e)
+    same = (a == e) | (np.isnan(a) & np.isnan(e))
+    if np.any(~both & ~x035 & ~same):
+        return math.inf, int(x035.sum())
+    keep = [i for i in range(len(a)) if both[i]]
+    value = ratio(tol, cls, [actual[i] for i in keep], [expected[i] for i in keep]) if keep else 0.0
+    return value, int(x035.sum())
+
+
+def p_check(tol, actual, expected):
+    """§8.4's T-p: T-test relative at or above T-p.log10.threshold, log10 within T-p.log10.atol below it, 0 against 0;
+    pprof_py's NaN (X-035) skipped."""
+    threshold, atol = tol["T-p.log10.threshold"], tol["T-p.log10.atol"]
+    rtol = tol["T-test.rtol"]
+    worst = 0.0
+    for x, y in zip((float.fromhex(v) for v in actual), (float.fromhex(v) for v in expected)):
+        if math.isnan(x):
+            continue
+        if y >= threshold:
+            r = abs(x - y) / (rtol * abs(y))
+        elif y == 0.0:
+            r = 0.0 if x < 1e-300 else math.inf
+        else:
+            r = abs(math.log10(x) - math.log10(y)) / atol if x > 0 else math.inf
+        worst = max(worst, r)
+    return worst
+
+
+def flag_check(tol, flags, reference, z, critical):
+    """Flags equal, except within T-flag.boundary.rtol of the critical value; pprof_py's NaN (X-035) skipped.
+    Returns (mismatches outside the band, near-boundary mismatches)."""
+    band = tol["T-flag.boundary.rtol"] * critical
+    outside = near = 0
+    for f, r, zz in zip((float.fromhex(v) for v in flags), (float.fromhex(v) for v in reference), (float.fromhex(v) for v in z)):
+        if math.isnan(f) or f == r:
+            continue
+        if abs(abs(zz) - critical) <= band:
+            near += 1
+        else:
+            outside += 1
+    return outside, near
+
+
+CRITICAL = {"two_sided": 1.959963984540054, "mean": 1.959963984540054, "number": 1.959963984540054,
+            "greater": 1.6448536269514722, "less": 1.6448536269514722, "critical": 2.5}
+
+
+def linear_inference(tol, manifest, fixtures):
+    """Slice 3b (D-46): pprof_py against base R and R pprof (X-036); negative controls against pprof_py; writes
+    docs/parity/linear-inference-calibration.md."""
+    rows, failures, informational = [], [], []
+
+    def add(case, label, cls, value, ok):
+        rows.append((case, label, cls, value, "yes" if ok else "**no**"))
+        if not ok:
+            failures.append((case, label))
+
+    for case in manifest["cases"].get("linear", []):
+        py = json.load(open(os.path.join(fixtures, "linear", case, "inference_pprof_py.json"), encoding="utf-8"))
+        r = json.load(open(os.path.join(fixtures, "linear", case, "inference_r.json"), encoding="utf-8"))
+        x035 = 0
+        for ref in ("median", "mean"):
+            value = ratio(tol, "T-coef", py["references"][ref], r[f"ref_{ref}"])
+            add(case, f"reference {ref} vs R", "T-coef", f"{value:.3g}", value <= 1.0)
+        for name, t in py["tests"].items():
+            for col, rq, cls in (("z_raw", "z", "T-test"), ("ci_lower", "lower", "T-coef"), ("ci_upper", "upper", "T-coef")):
+                value, missing = masked(tol, cls, t[col], r[f"test_{name}_{rq}"])
+                x035 = max(x035, missing)
+                add(case, f"test {name} {col} vs base R", cls, f"{value:.3g}", value <= 1.0)
+            value = p_check(tol, t["p_value"], r[f"test_{name}_p"])
+            add(case, f"test {name} p_value vs base R", "T-p", f"{value:.3g}", value <= 1.0)
+            outside, near = flag_check(tol, t["flag"], r[f"test_{name}_flag"], r[f"test_{name}_z"], CRITICAL[name])
+            add(case, f"test {name} flags vs base R ({near} near the boundary)", "T-flag", str(outside), outside == 0)
+        if "subset" in py:
+            two = py["tests"]["two_sided"]
+            same = py["subset"]["providers"] == py["providers"][:5] and all(
+                py["subset"][c] == two[c][:5] for c in ("z_raw", "p_value", "flag", "ci_lower", "ci_upper"))
+            add(case, "test subset equals the first five rows", "exact", "equal" if same else "differs", same)
+        for side in ("lower", "upper"):
+            value = ratio(tol, "T-coef", py["intervals"]["gamma"][side], r[f"gamma_{side}"])
+            add(case, f"gamma interval {side} vs base R", "T-coef", f"{value:.3g}", value <= 1.0)
+        for key, kinds in py["intervals"].items():
+            if not key.startswith("sm_"):
+                continue
+            for kind, sides in kinds.items():
+                for side in ("lower", "upper"):
+                    value, _ = masked(tol, "T-meas", sides[side], r[f"{key}_{kind}_{side}"])
+                    add(case, f"{key} {kind} {side} vs base R", "T-meas", f"{value:.3g}", value <= 1.0)
+        for ref, kinds in py["measures"].items():
+            for kind, cols in kinds.items():
+                for col, values in cols.items():
+                    key = f"measures_{ref}_{kind}_{col.replace(kind + '_', '')}"
+                    expected = r[key][:1] if (kind, col) == ("direct", "observed") else r[key]
+                    value = ratio(tol, "T-meas", values, expected)
+                    add(case, f"measures {ref} {kind} {col} vs base R", "T-meas", f"{value:.3g}", value <= 1.0)
+        two = py["tests"]["two_sided"]
+        null = float.fromhex(two["null_value"][0])
+        t = [(float.fromhex(e) - null) / float.fromhex(s) for e, s in zip(py["estimate"], py["se"])]
+        value = ratio(tol, "T-test", [v.hex() for v in t], r["rpprof_stat"])
+        add(case, "R pprof test.linear_fe statistic vs pprof_py's t", "T-test", f"{value:.3g}", value <= 1.0)
+        outside, near = flag_check(tol, two["flag"], r["rpprof_flag"], r["test_two_sided_z"], CRITICAL["two_sided"])
+        add(case, f"R pprof flags vs pprof_py ({near} near the boundary)", "T-flag", str(outside), outside == 0)
+        med = py["measures"]["median"]
+        for col, key in (("indirect_difference", "rpprof_indirect_difference"), ("observed", "rpprof_indirect_observed"),
+                         ("expected", "rpprof_indirect_expected")):
+            value = ratio(tol, "T-meas", med["indirect"][col], r[key])
+            add(case, f"R pprof SM_output indirect {col} vs pprof_py", "T-meas", f"{value:.3g}", value <= 1.0)
+        for col, key in (("direct_difference", "rpprof_direct_difference"), ("expected", "rpprof_direct_expected")):
+            value = ratio(tol, "T-meas", med["direct"][col], r[key])
+            add(case, f"R pprof SM_output direct {col} vs pprof_py", "T-meas", f"{value:.3g}", value <= 1.0)
+        c = py["negative_controls"]
+        for label, cls, actual, expected in (
+                ("reference + 0.01: z_raw", "T-test", c["reference_shifted"]["z_raw"], two["z_raw"]),
+                ("reference + 0.01: indirect_difference", "T-meas", c["reference_shifted"]["indirect_difference"],
+                 med["indirect"]["indirect_difference"]),
+                ("level 0.94: ci_lower", "T-coef", c["level_094"]["ci_lower"], two["ci_lower"]),
+                ("level 0.94: gamma upper", "T-coef", c["level_094"]["gamma_upper"], py["intervals"]["gamma"]["upper"])):
+            miss, _ = masked(tol, cls, actual, expected)
+            add(case, f"negative control {label}", cls, f"{miss:.3g}", miss >= MARGIN)
+        miss = p_check(tol, c["reference_shifted"]["p_value"], two["p_value"])
+        add(case, "negative control reference + 0.01: p_value", "T-p", f"{miss:.3g}", miss >= MARGIN)
+        if x035:
+            informational.append(f"{case}: {x035} provider(s) untested by pprof_py (z, p-value, flag and limits NaN) "
+                                 "where base R's log-scale tail gives finite values (X-035)")
+        rp = [float.fromhex(v) for v in r["rpprof_p"]]
+        pp = [float.fromhex(v) for v in two["p_value"]]
+        worst = max((abs(a - b) / b for a, b in zip(rp, pp) if b > 0 and not math.isnan(b)), default=0.0)
+        informational.append(f"{case}: R pprof's two-sided p-values differ from pprof_py's by up to {worst:.2g} relative (X-036)")
+    lines = ["# Linear provider inference calibration (D-09, D-46)", "",
+             "Generated by `reference/fixtures/calibrate.py` from the slice 3b fixtures (`inference_pprof_py.json`, "
+             "`inference_r.json`) of pprof_py "
+             f"{manifest['reference']['pprof_py']['version']} and R {manifest['reference']['r']['version']} (base R from "
+             "`lm`; R pprof 1.0.3 where X-036 allows). Ratios are observed difference over allowed difference under "
+             "testkit's `Tolerance` rule on the elements finite in both; T-p follows §8.4; flags must agree except "
+             "within T-flag's boundary band. pprof_py's NaN where base R is finite is X-035 and is counted, not "
+             f"compared. Agreement must be at most 1; every negative control at least {MARGIN:g}.", "",
+             "| Case | Quantity | Class | Ratio | OK |", "|---|---|---|---|---|"]
+    lines += [f"| {case} | {label} | {cls} | {value} | {ok} |" for case, label, cls, value, ok in rows]
+    lines += ["", f"Result: {'all checks pass' if not failures else f'{len(failures)} checks fail'}."]
+    lines += ["", "Informational:", ""] + [f"- {line}" for line in informational]
+    with open(os.path.join(ROOT, "docs", "parity", "linear-inference-calibration.md"), "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+    print(f"linear inference: Result: {'all checks pass' if not failures else f'{len(failures)} checks fail'}.")
+    for failure in failures:
+        print("FAIL linear inference", *failure)
+    return failures
+
+
 def main():
     tol = tolerances()
     fixtures = os.path.join(ROOT, "fixtures")
@@ -442,6 +599,7 @@ def main():
     failures += logistic(tol, manifest, fixtures)
     failures += three_stage(tol, manifest, fixtures)
     failures += linear(tol, manifest, fixtures)
+    failures += linear_inference(tol, manifest, fixtures)
     return 1 if failures else 0
 
 
