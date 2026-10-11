@@ -165,4 +165,97 @@ class StudentTSuite extends munit.FunSuite {
     intercept[IllegalArgumentException](StudentT.twoSided(1.0, 0.0))
     intercept[IllegalArgumentException](StudentT.upperQuantile(0.0, 3.0))
   }
+
+  private val toZCases = Seq(
+    (
+      h("0x1.f5c28f5c28f5cp+0"),
+      h("0x1.e000000000000p+4"),
+      h("0x1.e2b9df3250cdbp+0"),
+      h("-0x1.698702a410c06p+1")
+    ),
+    (
+      h("-0x1.8000000000000p+1"),
+      h("0x1.1e40000000000p+11"),
+      h("-0x1.7f94e6a1f998bp+1"),
+      h("-0x1.79d8bc63e58dbp+2")
+    ),
+    (
+      h("0x1.714af4f0d844dp+3"),
+      h("0x1.57c0000000000p+13"),
+      h("0x1.702c863778d0cp+3"),
+      h("-0x1.137445610458ep+6")
+    ),
+    (
+      h("0x1.2c00000000000p+5"),
+      h("0x1.1e40000000000p+11"),
+      h("0x1.08dd659a2d485p+5"),
+      h("-0x1.13e65e4f98b97p+9")
+    ),
+    (
+      h("0x1.12a6666666666p+9"),
+      h("0x1.1e40000000000p+11"),
+      h("0x1.a730ecbe23bcbp+6"),
+      h("-0x1.5e178eb0057e9p+12")
+    ),
+    (
+      h("0x1.f400000000000p+9"),
+      h("0x1.e000000000000p+4"),
+      h("0x1.19c1b69a3c369p+4"),
+      h("-0x1.3c4cb9d93413dp+7")
+    ),
+    (
+      h("-0x1.5e00000000000p+9"),
+      h("0x1.86a0000000000p+16"),
+      h("-0x1.a54d09e71bb07p+8"),
+      h("-0x1.5ab181c730727p+16")
+    ),
+    (
+      h("0x1.4000000000000p+5"),
+      h("0x1.dcd6500000000p+29"),
+      h("0x1.3ffff79b2d10cp+5"),
+      h("-0x1.91f5136225dcdp+9")
+    ),
+    (
+      h("-0x1.3000000000000p+5"),
+      h("0x1.e848000000000p+19"),
+      h("-0x1.2fe3e8757a778p+5"),
+      h("-0x1.6aabd92a8e641p+9")
+    )
+  )
+
+  private val logQuantiles = Seq(
+    (h("-0x1.5e00000000000p+9"), h("0x1.2a5c52b5df7dap+5")),
+    (h("-0x1.f400000000000p+9"), h("0x1.64ed0d259b287p+5")),
+    (h("-0x1.81ccccccccccdp+13"), h("0x1.3a314e9699321p+7")),
+    (h("-0x1.e848000000000p+19"), h("0x1.618d4c5107c57p+10"))
+  )
+
+  test(
+    "t to z by equal tail probability stays finite and accurate when the tail underflows (X-035)"
+  ) {
+    val worst = toZCases.map { case (t, df, expected, logTail) =>
+      val z = StudentT.toZ(t, df)
+      assert(relative(z, expected) <= 1e-12, s"t = $t, df = $df: z = $z against $expected")
+      val l = StudentT.logTwoSided(t, df)
+      assert(
+        math.abs(l - logTail) <= 1e-12 * math.abs(logTail),
+        s"t = $t, df = $df: log tail $l against $logTail"
+      )
+      relative(z, expected)
+    }.max
+    println(
+      s"StudentT.toZ: worst relative error $worst over ${toZCases.size} cases, down to log tails of ${toZCases.map(_._4).min}"
+    )
+    logQuantiles.foreach { case (logA, expected) =>
+      val z = Normal.upperQuantileOfLog(logA)
+      assert(relative(z, expected) <= 1e-13, s"log a = $logA: $z against $expected")
+      assert(
+        math.abs(Normal.logUpperTail(z) - logA) <= 1e-12 * math.abs(logA),
+        s"log a = $logA: round trip"
+      )
+    }
+    assertEquals(StudentT.toZ(0.0, 5.0), 0.0)
+    assertEquals(StudentT.toZ(Double.PositiveInfinity, 5.0), Double.PositiveInfinity)
+    assert(StudentT.toZ(Double.NaN, 5.0).isNaN)
+  }
 }

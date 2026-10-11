@@ -51,6 +51,33 @@ object Normal {
     }
   }
 
+  /** log P(Z > z) without underflow: for z ≥ 1.5 the log of the Mills ratio plus log φ(z). */
+  def logUpperTail(z: Double): Double =
+    if (z < 1.5) StrictMath.log(upperTail(z))
+    else StrictMath.log(millsRatio(z)) - 0.5 * z * z - LogSqrtTwoPi
+
+  /** The z with log P(Z > z) = `logA`, for `logA` below log ½: [[upperQuantile]] while e^logA is a normal double,
+    * otherwise Newton on the log scale, so tails below the smallest double keep their quantile (X-035).
+    */
+  def upperQuantileOfLog(logA: Double): Double = {
+    require(logA < 0.0, s"a log tail probability must be negative; got $logA")
+    if (logA > -690.0) upperQuantile(StrictMath.exp(logA))
+    else {
+      var z = math.sqrt(-2.0 * logA)
+      var k = 0
+      var done = false
+      while (!done && k < 100) {
+        val step = (logUpperTail(z) - logA) * millsRatio(z)
+        z += step
+        k += 1
+        done = math.abs(step) <= 1e-15 * z
+      }
+      z
+    }
+  }
+
+  private val LogSqrtTwoPi = 0.9189385332046728
+
   /** Σ z^(2n+1) / (1·3·5···(2n+1)), so that Φ(z) − ½ = φ(z) times this sum. */
   private def series(z: Double): Double = {
     var term = z

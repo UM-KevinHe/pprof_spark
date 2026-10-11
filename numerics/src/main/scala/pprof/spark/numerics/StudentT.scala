@@ -41,6 +41,41 @@ object StudentT {
     else 1.0 - StrictMath.exp(logFront) * continuedFraction(b, a, y) / b
   }
 
+  /** log P(|T| > |t|) without underflow: the log of [[twoSided]] while that is a normal double, otherwise the
+    * continued fraction with its prefactor kept as a logarithm (an underflowing tail lies in its convergent region).
+    */
+  def logTwoSided(t: Double, df: Double): Double = {
+    val p = twoSided(t, df)
+    if (p > 1e-300 || p.isNaN) StrictMath.log(p)
+    else {
+      val t2 = t * t
+      if (t2.isInfinite) Double.NegativeInfinity
+      else {
+        val a = df / 2.0
+        val b = 0.5
+        val x = 1.0 / (1.0 + t2 / df)
+        val y = 1.0 / (1.0 + df / t2)
+        val logFront = -a * StrictMath.log1p(t2 / df) + b * StrictMath.log(y) - logBeta(a)
+        logFront + StrictMath.log(continuedFraction(a, b, x) / a)
+      }
+    }
+  }
+
+  /** t mapped to the normal scale by equal tail probability, sign(t)·Φ̄⁻¹(P(T > |t|)) (pprof_py's `t_to_z`); finite
+    * for every finite t, through the log tail when the tail underflows (X-035).
+    */
+  def toZ(t: Double, df: Double): Double =
+    if (t.isNaN) Double.NaN
+    else if (t == 0.0) 0.0
+    else if (t.isInfinite) t
+    else {
+      val p = twoSided(t, df)
+      val z =
+        if (p > 1e-300) Normal.upperQuantile(0.5 * p)
+        else Normal.upperQuantileOfLog(logTwoSided(t, df) - StrictMath.log(2.0))
+      math.signum(t) * z
+    }
+
   /** P(T > t). */
   def upperTail(t: Double, df: Double): Double = {
     val p = twoSided(t, df)

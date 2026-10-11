@@ -121,3 +121,15 @@ controls as D-09 requires.
    comparing them.
 4. X-036: R pprof's two-sided p-values differ from pprof_py's by up to 1e-4 relative on lin-base and 2.6e-3 on
    lin-extreme (its lower tails by subtraction); its flags agree everywhere.
+
+## 12. Implementation notes (round 69; no statistical change)
+
+1. numerics: `Normal.logUpperTail` (log of the Mills ratio plus log φ for z ≥ 1.5, so it never underflows),
+   `Normal.upperQuantileOfLog` (Newton on the log scale below e⁻⁶⁹⁰), `StudentT.logTwoSided` (the continued fraction
+   with its prefactor kept as a logarithm when the tail underflows) and `StudentT.toZ` (pprof_py's `t_to_z`, finite
+   for every finite t: X-035). A log tail accurate to ε·ν/(1 + t²) gives z to about that over z², since
+   dz = −d(log p)/z. Measured against mpmath at 50 digits: z within 1.6e-15 relative down to log tails of −88,754.
+2. engine `LinearProviderTests`: `reference` (γ₀ on the driver from the provider table in key order under
+   `DriverGuards`: NumPy's median, or the size-weighted mean by a compensated sum), `test` (a typed map over the
+   distributed provider table, keys carried as text and cast back; slice 2c's columns, `records` added) and
+   `gammaIntervals` (column expressions). Measures and `SM` intervals follow in round 70.

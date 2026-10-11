@@ -40,7 +40,7 @@ since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not
 | `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile); `StudentT` and kernels `LinearFE` (Phase 3) |
 | `engine.cox` | `CoxPH` (fit, baseline, residuals, robust), `CoxFitIO` v3, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
 | `engine.logistic` | `LogisticSpec`, `LogisticFE`, `LogisticBlocks`, `LogisticFitIO` v3, `LogisticProviderTests`, `LogisticStandardization`; `ThreeStage` (prepare, compress, stage2, stage3, laplace, marginal, fitted), `ThreeStagePipeline` (fit, test, measures, intervals, profileInterval, sigmaSensitivity), `ThreeStageFitIO` v1 |
-| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`, `score`; the provider table distributed), `LinearFitIO` v1 |
+| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`, `score`; the provider table distributed), `LinearFitIO` v1; `LinearProviderTests` |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob` and their run specifications (version 1, `model`); `python.PythonApi` |
 | `python/` | The `pprof_spark` package (Cox, logistic and three-stage wrappers, ADR-0009) and its pytest suite |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
@@ -95,12 +95,24 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Slice 3b's code: numerics (z from a log-scale t tail, so an underflowing tail keeps its z, X-035), engine
-`LinearProviderTests` (tests and `gamma` intervals from the fit, the reference effect on the driver under
-`DriverGuards`) and `LinearStandardization` (measures and `SM` intervals from a pass over the training data,
-API-3), with parity suites against the slice 3b fixtures under Classic Spark and Spark Connect. Then slice 3c.
+Round 70: engine `LinearStandardization` (indirect and direct differences and `SM` intervals from one pass over
+ProviderLocal blocks of the training data, fingerprint checked, API-3), with its parity suite against the slice 3b
+fixtures under Classic Spark and Spark Connect. Then slice 3c (job runner and Python).
 
 ## Round log
+
+## Round 69 (2026-10-09): slice 3b provider tests
+
+- numerics: `Normal.logUpperTail`, `Normal.upperQuantileOfLog`, `StudentT.logTwoSided` and `StudentT.toZ`, so a t
+  whose tail underflows keeps a finite z (X-035); `StudentTSuite` gains a test against mpmath at 50 digits (z within
+  1.6e-15 down to log tails of −88,754). numerics 91 on JDK 17 and 21.
+- engine `LinearProviderTests`: `reference` (median or size-weighted mean on the driver, guarded), `test` (slice 2c's
+  columns from the distributed provider table) and `gammaIntervals`. Spec 3b §12.
+- `LinearProviderTestsSuite` (6, one per case): z, p-values, flags and limits for every variant against base R, z
+  against pprof_py where pprof_py tests the provider, the subset, the effect intervals; on lin-extreme every provider
+  tested. Classic Spark 6/6 (115 s), Spark Connect 6/6 (139 s); worst ratios (instrumented testkit): T-test 7.3e-4,
+  T-coef 6e-6 over 3,175 ratios.
+- Found while testing: `val Seq(…) = …` destructuring fails `-Werror` ("match may not be exhaustive"); index instead.
 
 ## Round 68 (2026-10-09): slice 3b fixtures and calibration
 
