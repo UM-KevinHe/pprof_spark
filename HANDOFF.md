@@ -25,7 +25,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
 | 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
 | Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
-| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b implemented (rounds 67 to 70); slice 3c implemented (rounds 71 to 73: specification, job runner, Python access); the gate review next |
+| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b implemented (rounds 67 to 70); slices 3a to 3c implemented (rounds 62 to 73); gate review round 74 (D-48, proposed) |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -99,11 +99,23 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-The Phase 3 gate review (`docs/gates/phase-3.md`), as round 60 did for Phase 2: each slice's requirements and
-measured worst ratios (the testkit copy that prints ratios, sandbox only), the CI evidence, and a proposal to close
-Phase 3 at parity-verified. The Python job's tests now take about 250 s in the sandbox (`cipy.sh` allows 280 s).
+D-48 (round 74, `docs/gates/phase-3.md`) proposes closing Phase 3 at parity-verified once CI is reported green for
+`main` at that round (rounds 61 to 73 have no CI report). Then PROJECT_CONTEXT v2.6 (Phase 3 closed; §7.5's two passes,
+deferred TSQR and exact `StudentT`), and the next phase of PROJECT_CONTEXT §4's roadmap.
 
 ## Round log
+
+## Round 74 (2026-10-11): the Phase 3 gate review
+
+- `docs/gates/phase-3.md`: slices 3a to 3c against the parity gate. Every linear engine suite passed again in the
+  sandbox (Classic Spark, JDK 17: `LinearFESuite` 8, `LinearBehaviourSuite` 5, `LinearProviderTestsSuite` 6,
+  `LinearStandardizationSuite` 3, `LinearStandardizationMoreSuite` 4, `LinearFitIOSuite` 3), and none of the 3,544
+  tolerance ratios they compute exceeds 1 (the ratio-printing testkit copy, sandbox only). Worst: T-meas 0.887 on
+  lin-shifted, inside the references' own spread there (R pprof against pprof_py, 0.504 of T-meas); T-fn 0.0496;
+  T-test 7.3e-4; T-coef 6.4e-5.
+- D-48 proposes closing Phase 3 at parity-verified once CI is reported green for `main` at this round; rounds 61 to 73
+  have no CI report. It also proposes accepting that the within cross-products are verified against exact arithmetic
+  and end to end, not against the fixtures' NumPy values as spec 3a §11 planned.
 
 ## Round 73 (2026-10-09): slice 3c Python access
 
