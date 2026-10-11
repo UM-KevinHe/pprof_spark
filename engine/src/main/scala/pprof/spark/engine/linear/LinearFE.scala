@@ -276,6 +276,18 @@ object LinearFE {
 
   private def moments(block: LinearBlock): LinearMomentPartial = {
     val within = Kernel.within(block.rows)
+    LinearMomentPartial(
+      block.blockId,
+      within.rows,
+      within.xx,
+      within.xy,
+      within.ySum,
+      fingerprintOf(block)
+    )
+  }
+
+  /** The block's share of the data fingerprint: each row's provider, identifier and values (NN-11, API-3). */
+  private[linear] def fingerprintOf(block: LinearBlock): Long = {
     val q = block.p + 1
     val values = new Array[Double](q)
     var fingerprint = 0L
@@ -290,7 +302,21 @@ object LinearFE {
       }
       g += 1
     }
-    LinearMomentPartial(block.blockId, within.rows, within.xx, within.xy, within.ySum, fingerprint)
+    fingerprint
+  }
+
+  /** The training data's working set, laid out as the fit's: same validation, group sizes and block target, so the
+    * fingerprint can be compared with the fit's (API-3). The caller releases it.
+    */
+  private[linear] def trainingWorkingSet(
+      df: DataFrame,
+      fit: LinearFit
+  ): (LinearWorkingSet, LayoutPlan, LinearInput) = {
+    val input = LinearValidation.validate(df, fit.spec)
+    val sizes = GroupSizes.collectGroupSizes(input.frame, fit.options.blocks).sortBy(_._1)
+    val plan =
+      LayoutPlan.create(sizes, fit.options.blocks.targetRowsPerBlock(fit.spec.features.size + 1))
+    (LinearWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel), plan, input)
   }
 
   private def residuals(block: LinearBlock, beta: Array[Double], v: Array[Double], mean: Double) = {

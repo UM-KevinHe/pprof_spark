@@ -133,3 +133,18 @@ controls as D-09 requires.
    `DriverGuards`: NumPy's median, or the size-weighted mean by a compensated sum), `test` (a typed map over the
    distributed provider table, keys carried as text and cast back; slice 2c's columns, `records` added) and
    `gammaIntervals` (column expressions). Measures and `SM` intervals follow in round 70.
+
+## 13. Implementation notes (round 70; no statistical change)
+
+1. engine `LinearStandardization` (`measures`, `intervals` for option `SM`): one pass over ProviderLocal blocks of the
+   training data, laid out as the fit's (`LinearFE.trainingWorkingSet`: the same validation, group sizes and block
+   target). Each block reports its rows, Σ xᵢᵀβ̂, Σ (γ₀ + xᵢᵀβ̂) and its share of the fingerprint; these are reduced in
+   block order, and a fingerprint or row count different from the fit's is refused (API-3). Each provider's Oⱼ, Eⱼ and
+   Sⱼ = Σ xᵢᵀβ̂ come from Neumaier sums in canonical order, joined to the keys through the plan's placements and to
+   the provider table's γ̂ⱼ and seⱼ.
+2. The indirect limits are (nⱼLⱼ + Sⱼ − Eⱼ)/nⱼ, pprof_py's (Σᵢ(Lⱼ + xᵢᵀβ̂) − Eⱼ)/nⱼ rearranged; the direct expected
+   value is nγ̂ⱼ + Σ xᵢᵀβ̂. Lⱼ and Uⱼ come from the provider table, so they agree with `LinearProviderTests` bit for bit:
+   the fit keeps σ̂²V but not V, and recomputing seⱼ per block would differ in the last bits.
+3. The tables are persisted before the blocks are released. The parity tests are split into
+   `LinearStandardizationSuite` and `LinearStandardizationMoreSuite`, three cases each, because one suite of many
+   small Spark jobs ran past 285 s under Spark Connect.

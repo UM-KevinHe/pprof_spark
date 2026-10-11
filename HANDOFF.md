@@ -25,7 +25,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
 | 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
 | Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
-| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b specification approved (D-46), fixtures and calibration (round 68); 3c next |
+| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b implemented (rounds 67 to 70: specification, fixtures, provider tests, standardization); 3c next |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
@@ -40,7 +40,7 @@ since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not
 | `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile); `StudentT` and kernels `LinearFE` (Phase 3) |
 | `engine.cox` | `CoxPH` (fit, baseline, residuals, robust), `CoxFitIO` v3, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
 | `engine.logistic` | `LogisticSpec`, `LogisticFE`, `LogisticBlocks`, `LogisticFitIO` v3, `LogisticProviderTests`, `LogisticStandardization`; `ThreeStage` (prepare, compress, stage2, stage3, laplace, marginal, fitted), `ThreeStagePipeline` (fit, test, measures, intervals, profileInterval, sigmaSensitivity), `ThreeStageFitIO` v1 |
-| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`, `score`; the provider table distributed), `LinearFitIO` v1; `LinearProviderTests` |
+| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`, `score`; the provider table distributed), `LinearFitIO` v1; `LinearProviderTests`; `LinearStandardization` |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob` and their run specifications (version 1, `model`); `python.PythonApi` |
 | `python/` | The `pprof_spark` package (Cox, logistic and three-stage wrappers, ADR-0009) and its pytest suite |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
@@ -80,6 +80,8 @@ suites, `API=connect`), `app41.sh` (app), `numtest48.sh`, `tk35b.sh`, `cipy.sh` 
 - Jackson 2.20 deprecates `JsonNode.fields()`; with `-Werror` that fails the build.
 - Spark resolves relative `spark.jars` entries against the JVM's working directory: rehearse CI steps
   verbatim (round 57.1).
+- A suite of many small Spark jobs can run past a call's time under Spark Connect (round 70: 286 s); split it by
+  case into a `MoreSuite` with a shared base class.
 - R's `pt.c` still contains a normal approximation above 4·10⁵ degrees of freedom, compiled only under
   `#ifdef R_version_le_260`: current R's `pt` is exact. Check R's source and output before following it (round 64).
 - Reference tails: pprof_py's upper and near-one tails lose accuracy (X-024); compare only where they are
@@ -95,11 +97,25 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Round 70: engine `LinearStandardization` (indirect and direct differences and `SM` intervals from one pass over
-ProviderLocal blocks of the training data, fingerprint checked, API-3), with its parity suite against the slice 3b
-fixtures under Classic Spark and Spark Connect. Then slice 3c (job runner and Python).
+Slice 3c's specification (D-47): the run specification for `model` `linear` (as `LogisticJob`'s, D-37) and the
+Python wrapper's API (`LinearFixedEffect`, `LinearFixedEffectModel`, ADR-0009); then its code. After slice 3c,
+the Phase 3 gate review.
 
 ## Round log
+
+## Round 70 (2026-10-09): slice 3b standardized differences
+
+- engine `LinearStandardization`: `measures` (indirect and direct differences with observed and expected values) and
+  `intervals` (option `SM`), from one pass over the training data's ProviderLocal blocks with a fingerprint check
+  (API-3); the limits come from the provider table, so they agree with `LinearProviderTests`. `LinearFE` shares its
+  fingerprint and training working set (`fingerprintOf`, `trainingWorkingSet`). Spec 3b §13.
+- `LinearStandardizationSuite` (3) and `LinearStandardizationMoreSuite` (4): on all six cases, the measures at the
+  median and the mean and the `SM` intervals for every alternative against base R, pprof_py and R pprof (X-036);
+  refusal of other data (API-3); a provider subset. Classic Spark 3/3 (123 s) and 4/4 (125 s), Spark Connect 3/3
+  (213 s) and 4/4 (216 s). After the refactor, `LinearFESuite` 8/8, `LinearFitIOSuite` 3/3 and
+  `LinearProviderTestsSuite` 6/6 under Classic Spark.
+- Found while testing: one suite ran past 285 s under Spark Connect, hence the split; a scripted edit anchored on text
+  scalafmt had reformatted (the file was rewritten instead).
 
 ## Round 69 (2026-10-09): slice 3b provider tests
 
