@@ -27,7 +27,7 @@ same model (`linear_fe`, `summary.linear_fe`, `test.linear_fe`, `confint.linear_
 | Slice | Content | pprof_py | R references | Fixtures | Tolerance classes |
 |---|---|---|---|---|---|
 | 3a | Estimation and covariate inference: β̂, γ̂, σ̂, both variance options, t tests and intervals for β, ℓ, AIC and BIC, prediction and R², persistence. Specification: [fixed-effect-estimation.md](fixed-effect-estimation.md) (D-45) | `fit`, `summary`, `predict`, `score`, `get_fitted_params` | `lm` with a provider factor | lin-base, lin-singletons, lin-shifted, lin-text, lin-many | T-fn, T-coef, T-var, T-test, T-p, T-part |
-| 3b | Provider tests, limits and intervals (`gamma` and `SM`), standardized differences | `test`, `calculate_confidence_intervals`, `calculate_standardized_measures` | R pprof `test.linear_fe`, `confint.linear_fe`, `SM_output.linear_fe` | 3a cases | T-test, T-p, T-coef, T-meas |
+| 3b | Provider tests, limits and intervals (`gamma` and `SM`), standardized differences. Specification: [provider-inference.md](provider-inference.md) (D-46) | `test`, `calculate_confidence_intervals`, `calculate_standardized_measures` | R pprof `test.linear_fe`, `confint.linear_fe`, `SM_output.linear_fe` | 3a cases | T-test, T-p, T-coef, T-meas |
 | 3c | The job runner (`model` `linear`, as `LogisticJob`) and the Python wrapper (`LinearFixedEffect`, ADR-0009) | — | — | lin-base | Bitwise against the library |
 
 Each slice follows the pattern of Phases 1 and 2: specification approved first, then fixtures and

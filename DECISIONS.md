@@ -103,6 +103,16 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-46: Slice 3b specification (Proposed: awaiting the maintainer)
+
+`docs/spec/linear/provider-inference.md` specifies pprof_py's linear provider tests (t statistics mapped to z by
+equal tail probability; slice 2c's flags, `critical` and columns; limits γ̂ ∓ q·se), intervals (`gamma`, and `SM` for
+the indirect and direct differences) and standardized differences. The reference effect is computed on the driver
+from the provider table (median, size-weighted mean or a number), and the measures from a pass over the training data
+(API-3). Proposed with it: X-035 (class B: a provider whose t tail underflows keeps its test, through a log-scale z)
+and X-036 (R pprof 1.0.3's linear inference serves as a reference only where it follows pprof_py's definitions).
+R pprof's linear functions are pure R (OI-60 closed).
+
 ### D-45: Phase 3 plan and the slice 3a specification (Accepted: approved by the maintainer, 2026-10-09)
 
 `docs/spec/linear/plan.md` reads pprof_py v0.7.0's `LinearFixedEffectModel` and proposes slices 3a
