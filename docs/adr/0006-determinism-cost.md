@@ -44,3 +44,13 @@ row data are read once. A reusable form belongs in `numerics` with the first Cox
 - The platform skeleton's toy `Moments` kernel keeps its scratch columns; production kernels use
   the fused pattern.
 - Re-measure with the Phase 1a Cox kernel and on a GitHub runner (`bench.yml`).
+
+## Amendment (2026-10-12, round 80; L-01, OI-69)
+
+The decision above chose a fused pairwise cascade for kernels with several sums per row. It was not
+implemented. The Cox kernel keeps Neumaier running sums, as its specification requires because rows
+are added and later removed, and the logistic kernels keep a Neumaier sum per statistic. Both are
+deterministic and at least as accurate as the references, which use plain sums (pprof_py's
+`np.bincount` and BLAS products; R pprof's Armadillo sums and BLAS). OI-34 is closed. Whether the
+cascade's lower cost matters is measured by the scale-test kit's kernel benchmarks
+([docs/spec/scale/plan.md](../spec/scale/plan.md) §7, OI-38).

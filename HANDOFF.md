@@ -100,17 +100,40 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Planned, as recommended to the maintainer (2026-10-11): round 80, a plan for the package-level scale test (D-28) with
-synthetic generators, a measuring runner and a runbook, which would also measure OI-68, OI-70 and OI-38 and so settle
-OI-69; then rounds 81 to 83 build it. Specification addenda for OI-65 and OI-66 can run alongside.
+Round 80 proposed the scale-test plan (`docs/spec/scale/plan.md`, Draft). Next: the maintainer's decisions in its §12
+(approval as D-49, the cluster budget, the tiers, the three-stage wave); then rounds 81 to 83 build the kit
+(generators; `ScaleJob`; kernel benchmarks, the runbook and a local dry run). Specification addenda for OI-65 and
+OI-66 can run alongside.
 
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
 effects, frailty and time-varying Cox, discrete-time survival, competing risks), which starts, as Phases 2 and 3 did,
 with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 a wheel, OI-53 Databricks access modes,
-OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-69, OI-70).
+OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-70).
 
 ## Round log
+
+## Round 80 (2026-10-12): scale-test plan (draft for approval); L-01 recorded
+
+Round 79's CI went green after the maintainer re-ran the JDK 17 job. Its one failure, a 2-minute timeout in
+`LinearBehaviourSuite`, did not reproduce: on JDK 17 with CI's 2 GB heap the test took 8 s after either new
+suite, so it is treated as a runner stall. If it recurs, the test-reports artifact or the job log is needed;
+the assistant cannot read Actions logs.
+
+- `docs/spec/scale/plan.md` (Draft; to become D-49): the package-level scale test (D-28). What it decides:
+  §9.8's scale-verified status, the targets D-04 left open, the measure-first items, PERF-1. Five
+  correctness checks that need no reference at scale: R0 on the cluster, R1, recovery of the generating
+  parameters, sample parity with pprof_py on the driver, and the guards. Deterministic synthetic generators
+  in `bench`; a grid in tiers P1 to P3; `ScaleJob` with a listener; kernel benchmarks for OI-38; proposed
+  decision rules for OI-02, OI-03, OI-30, OI-43, OI-45, OI-50, OI-57, OI-68, OI-70 and PERF-1; two stages,
+  calibration then verification; rounds 81 to 83.
+- L-01 recorded: the 2a specification's §11 and an amendment to ADR-0006 say the kernels use Neumaier sums;
+  OI-34 and OI-69 closed; OI-38 points to the plan's kernel benchmarks; the logistic tutorial's L-01 resolved.
+
+Evidence (assistant sandbox): documentation only; links checked; the patch applies to a fresh clone of
+`20e1e5b`.
+
+What to send back: the decisions of the plan's §12.
 
 ## Round 79 (2026-10-11): distributed-correctness tests (OI-67, OI-71)
 

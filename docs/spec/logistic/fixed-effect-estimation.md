@@ -194,7 +194,8 @@ driver budget (§6.8). Compute per step: O(n·p²) in pass A and O(n·p) in pass
 preparation. A final pass at the estimates gives the provider table, distributed, with S⁻¹ captured
 by closure (p² doubles).
 
-**Determinism.** Provider sums in canonical row order with the fused pairwise cascade (OI-34);
+**Determinism.** Provider sums in canonical row order with Neumaier-compensated sums (the fused pairwise
+cascade that ADR-0006 and OI-34 planned was not adopted; round 80);
 partials in block order with compensated summation; the median is exact (a sort of m values on the
 driver); every step length's ℓ is computed with the arithmetic of the sequential search. Hence R0
 across partitionings and R1 across block sizes (T-part). Engine code uses Dataset APIs only and runs

@@ -9,7 +9,7 @@ OI-69 to OI-71 in [OPEN_ITEMS.md](../../../OPEN_ITEMS.md).
 
 | ID | Finding | Kind | Severity | Open item |
 |---|---|---|---|---|
-| L-01 | The specification, ADR-0006 and OI-34 call for a fused pairwise cascade in the kernels; the logistic kernels use Neumaier sums | Documentation; possible cost | Low | OI-69 |
+| L-01 | The specification, ADR-0006 and OI-34 call for a fused pairwise cascade in the kernels; the logistic kernels use Neumaier sums | Documentation; possible cost | Low | Resolved in round 80 (OI-69) |
 | L-02 | Provider-test results pass through the driver as m rows before becoming a table again | Performance at large m | Low to medium | OI-70 |
 | L-03 | Every pass costs two Spark jobs, one of them to broadcast the γ table | Performance | Unknown until measured | OI-70 |
 | L-04 | Covariate tests, provider tests and measures each rebuild the working set | Performance | Unknown until measured | OI-70 |
@@ -44,6 +44,8 @@ either, and every difference is class D: on `lfe-base` the function-level values
 **Recommendation.** Record the choice: amend the specification's §11 and ADR-0006's consequences to say
 the Cox and logistic kernels use Neumaier sums, and close or re-scope OI-34. Implementing the cascade
 would change bits (NUM-2) and should wait for a measurement showing the kernels are compute-bound.
+
+**Status.** Round 80 recorded the choice: the 2a specification's §11 and an amendment to ADR-0006 now say Neumaier, and OI-34 is closed. The cost question is measured by the scale-test kit's kernel benchmarks ([docs/spec/scale/plan.md](../../spec/scale/plan.md) §7, OI-38).
 
 ## L-02. Provider-test results through the driver
 
