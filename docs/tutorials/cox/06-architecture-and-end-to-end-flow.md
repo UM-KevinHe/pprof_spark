@@ -16,7 +16,7 @@ look when something goes wrong.
 | `app` | `engine` | `CoxJob` and its run specification; `python.PythonApi` |
 | `python/` | The JARs, through py4j | `pprof_spark.CoxPH` |
 | `testkit` | Spark (test scope) | Local session, fixture reader, tolerance classes |
-| `ml` | `engine`, Spark ML | No Cox adapter (PROJECT_CONTEXT §3.6 shows a `CoxPHEstimator` only as an illustration) |
+| `ml` | `engine`, Spark ML | No code yet; PROJECT_CONTEXT §3.6 and §6.11 describe the adapters as planned |
 | `bench` | `engine`, `testkit` | No Cox benchmark; `DeterminismCost` measures `StrictMath` in a Cox-shaped kernel (ADR-0006) |
 
 `scripts/check-engine-api.sh` enforces on every push that `engine` uses no Classic-only Spark API and
@@ -84,8 +84,8 @@ for robust fits, the model-based covariance and the cluster count.
 | Corrections of pprof_py behavior (X-010, X-013, X-015) | Reproducibility and agreement with R and with the reference's own documentation | Parity with pprof_py is within tolerance or explicitly divergent |
 
 PROJECT_CONTEXT §6.9 describes capability traits (`HasCoefficients`, `SupportsResiduals` and so on)
-through which inference and measures would be written generically; no such traits exist in `engine`
-at this commit, and the Cox code uses its concrete types.
+through which inference and measures would be written generically; they are planned, not built
+(v2.7 says so), and the Cox code uses its concrete types.
 
 ## 6.5 Where statistics and Spark are separated, and where they touch
 

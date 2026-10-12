@@ -155,8 +155,9 @@ assumptions and failure modes, validation.
   [CoxPH.scala lines 322–337](../../../engine/src/main/scala/pprof/spark/engine/cox/CoxPH.scala#L322-L337),
   [`BlockOptions.targetRowsPerBlock`](../../../engine/src/main/scala/pprof/spark/engine/backend/BlockOptions.scala#L29-L30).
 - **Assumptions and failure modes.** A stratum is never split: TimeRange, which would split one,
-  does not exist (OI-03, OI-30), so an unstratified fit is a single block. The `maxStratumRows`
-  message says TimeRange arrives "in Phase 1b", which has closed without it (review finding F-04).
+  does not exist (OI-03, OI-30), so an unstratified fit is a single block. Until round 77 the `maxStratumRows`
+  message said TimeRange would arrive "in Phase 1b"; it now says TimeRange is not implemented
+  (review finding F-04).
   The guards fail with messages naming the option to change.
 - **Validation.** `LayoutPlanSuite`; `CoxPHSuite`: "a stratum larger than maxStratumRows fails and
   points to TimeRange" and "R1: another block layout stays within T-part".
@@ -340,8 +341,8 @@ assumptions and failure modes, validation.
   [`bucketOuter`](../../../engine/src/main/scala/pprof/spark/engine/cox/CoxKernel.scala#L331-L348),
   [`sandwich`](../../../engine/src/main/scala/pprof/spark/engine/cox/CoxPH.scala#L415-L442).
 - **Assumptions and failure modes.** Cluster keys are compared as strings. A cluster's rows meet in
-  one task, so a very large cluster is a hot spot (OI-45). The specification describes one shuffle;
-  the code has a second, small one (review finding F-09).
+  one task, so a very large cluster is a hot spot (OI-45). The specification described one shuffle
+  until round 77 corrected it (review finding F-09).
 - **Validation.** `CoxRobustSuite`: against R everywhere and pprof_py except where X-015 applies;
   clusters of one row equal per-row variance; renaming clusters changes nothing; R0 across row
   orders and partitions; the warning; null cluster keys; persistence (format version 3).

@@ -100,13 +100,38 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
+Requested by the maintainer (2026-10-11): a tutorial on the logistic fixed-effect model, in the style of the Cox
+tutorial (`docs/tutorials/logistic/`), from round 78.
+
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
 effects, frailty and time-varying Cox, discrete-time survival, competing risks), which starts, as Phases 2 and 3 did,
 with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 a wheel, OI-53 Databricks access modes,
-OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-64 to OI-68).
+OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65 to OI-68).
 
 ## Round log
+
+## Round 77 (2026-10-11): OI-64 documentation corrections; PROJECT_CONTEXT v2.7
+
+The maintainer asked for OI-64's corrections (2026-10-11). No result changes.
+
+- `docs/PROJECT_CONTEXT.md` v2.7: §3.4 and §7.3.2 describe X-010's step control as corrected by D-20
+  (convergence tested on the full step first, as R does); §3.6 shows the engine API and marks the Spark ML
+  adapter as planned; §6.9's capability traits and §6.11's adapters are marked planned; an Appendix A
+  entry. Replace the claude.ai project copies of PROJECT_CONTEXT.md and HANDOFF.md with this round's files.
+- ADR-0003: a dated amendment for the Cox kernel's per-row Neumaier sums (OI-38).
+- Phase 1c specification §4: clustered robust variance has two shuffles, not one.
+- Parity matrix: the counting-process specification is approved (D-23), not a draft.
+- `CoxPH`: the `maxStratumRows` message says TimeRange is not implemented (OI-03) instead of naming
+  Phase 1b; `CoxPHSuite` only requires it to mention TimeRange. No line moves.
+- The Cox tutorial records F-01, F-04's message, F-08, F-09 and F-10 as resolved. OI-64 closed.
+
+Evidence (assistant sandbox; not CI): scalafmt 3.11.5 (native) reports `CoxPH.scala` formatted; `engine`
+compiles with scalac 2.13.17; a local fit with `maxStratumRows = 100` raises the new message, which
+mentions TimeRange; every relative link in the changed documents resolves; the patch applies to a fresh
+clone of `582c3c8` and reproduces the committed tree. Not verified: sbt, CI.
+
+What to send back: the CI run.
 
 ## Round 76 (2026-10-11): Cox tutorial
 

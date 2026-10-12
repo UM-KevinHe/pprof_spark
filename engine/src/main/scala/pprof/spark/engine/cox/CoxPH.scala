@@ -326,8 +326,8 @@ object CoxPH {
     plan.placements.find(_.rows > options.maxStratumRows).foreach { g =>
       throw new IllegalArgumentException(
         s"stratum ${g.groupIndex} has ${g.rows} rows, more than maxStratumRows = " +
-          s"${options.maxStratumRows}; a stratum must fit in one block until TimeRange layouts " +
-          "arrive in Phase 1b"
+          s"${options.maxStratumRows}; a stratum must fit in one block: TimeRange layouts, " +
+          "which would split it, are not implemented (OI-03)"
       )
     }
     DriverGuards.requireWithinBudget(

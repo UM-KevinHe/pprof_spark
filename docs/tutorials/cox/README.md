@@ -11,7 +11,8 @@ The tutorial describes the code at commit `efb6329` (round 75). Every implementa
 cites a file and a line range at that commit. The review and the probe runs were done at `9385836`
 (round 69). Nothing the tutorial cites changed between the two: rounds 70 to 75 were Phase 3 work, no
 Cox kernel, engine code, job runner, specification, fixture or test changed, and the shared
-run-specification and Python entry points only gained the linear model. Where the code and the project's own documents
+run-specification and Python entry points only gained the linear model. Round 77 then corrected the
+text of one error message (`maxStratumRows`) without moving any line. Where the code and the project's own documents
 disagree, the tutorial says so and follows the code; the disagreements are collected in
 [review-findings.md](review-findings.md).
 
@@ -99,7 +100,7 @@ maintainer runs on his Databricks workspace once the whole package is done (D-28
 | Likelihood-ratio and score tests | Not reported; derivable from the reported log-likelihoods (chapter 3) | — |
 | Proportional-hazards diagnostics (Schoenfeld residuals, `cox.zph`) | Not implemented | — |
 | Penalized Cox, frailty, time-varying coefficients, competing risks | Not implemented; "Later" in §4 | — |
-| Spark ML estimator (`CoxPHEstimator`) | Not implemented: the `ml` module has no Cox code, although PROJECT_CONTEXT §3.6 shows one as an example | — |
+| Spark ML estimator (`CoxPHEstimator`) | Planned, not implemented: the `ml` module has no code (PROJECT_CONTEXT §3.6, §6.11) | — |
 | An intercept | Rejected by design: not identifiable (X-001) | — |
 
 ## Notation

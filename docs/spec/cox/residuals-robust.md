@@ -1,7 +1,8 @@
 # Specification: residuals and robust variance (Phase 1c)
 
 - Status: **Approved on 2026-10-06 (D-25), including X-015.** Round 17 implements the residuals (§1, §3)
-  and the fixtures (§5); round 18 implements robust variance (§2, §4) and format version 3.
+  and the fixtures (§5); round 18 implements robust variance (§2, §4) and format version 3. Round 77 corrected §4's
+  clustered row, which described one shuffle where there are two (OI-64).
 - Extends the Phase 1a and 1b specifications; everything not stated here is unchanged.
 - Reference: pprof_py v0.7.0 (`inference/survival/residuals.py`: `martingale_residuals`,
   `score_residuals`, `dfbeta_residuals`; `inference/survival/robust.py`: `cluster_score_residuals`,
@@ -49,7 +50,7 @@ also keeps V as `naiveCovariance`, as pprof_py keeps `naive_covariance_`.
 |---|---|
 | Residuals | One pass at β̂ over the StratumLocal blocks: a descending sweep forms the risk-set sums and per-time increments, and running totals over ascending event times give each row its sums over (aᵢ, bᵢ] as differences, as agmart3 and agscore3 do; O(n·p) per pass, no shuffle |
 | Per-row robust B | Each block adds wᵢ² UᵢUᵢᵀ for its rows; partials combine in block order (ADR-0003) |
-| Clustered robust B | One shuffle by cluster of (wᵢUᵢ, block, row position); each cluster sums its rows in that order with Neumaier sums; clusters fall into 256 buckets by a fixed hash of the key, each bucket adds its clusters' s_c s_cᵀ in key order, and the 256 partials combine in bucket order. The result does not depend on Spark's partitioning (R0) |
+| Clustered robust B | One shuffle by cluster of (wᵢUᵢ, block, row position); each cluster sums its rows in that order with Neumaier sums; a second, smaller shuffle sends each cluster's sum to one of 256 buckets chosen by a fixed hash of its key; each bucket adds its clusters' s_c s_cᵀ in key order, and the 256 partials combine in bucket order. The result does not depend on Spark's partitioning (R0) |
 | Driver | B and V_rob, p×p |
 | Output | The residual table stays distributed (DIST-1) |
 

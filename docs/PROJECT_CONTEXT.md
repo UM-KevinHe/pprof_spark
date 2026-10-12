@@ -1,10 +1,14 @@
 # pprof_spark — Project Context
 
-**Version** 2.6 · **Date** 2026-10-11 · **Supersedes** v2.5 (2026-10-09)
+**Version** 2.7 · **Date** 2026-10-11 · **Supersedes** v2.6 (2026-10-11)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
+> **v2.7 corrects passages found stale by the Cox tutorial's review** (OI-64, round 77): the step
+> control of X-010 (§3.4, §7.3.2), and the Spark ML adapters and capability traits, which are planned
+> rather than built (§3.6, §6.9, §6.11). v2.6 closed Phase 3.
+>
 > **v2.6 closes Phase 3** (D-48, after the gate review in `docs/gates/phase-3.md`), completing the roadmap's
 > numbered phases, and describes §7.5's linear design as built. v2.5 closed Phase 2.
 >
@@ -124,7 +128,7 @@ Verified at the pin for survival (2026-10-06): pprof_py's survival suite passes 
 | The three-stage stage 2 optimum is optimizer-limited (Nelder–Mead stopping on changes of 1e-7); lme4's `glmer` treats non-integer outcomes differently from pprof_py's continuous `y_adj`. | `pprof_spark` minimizes the exactly converged Laplace deviance and compares the optimum under T-opt (X-030, D-42); `glmer` is informational where `y_adj` is fractional. |
 | Some reference measures have unresolved discrepancies with internal R code (for example `IUR.fac` and `cal_SMR_pro_adj`). | Dependent features are not parity-gated until resolved. |
 | pprof_py's README reports 26 failures in a fresh R-comparison run; at v0.7.0 none of the survival tests fail (X-007, X-008). | No Cox feature is excluded; other families are checked when their phase begins. |
-| `CoxPH` tests for a log-likelihood decrease, and halves the step, before testing convergence; R tests convergence first (X-010). | pprof_spark follows pprof_py (class B, bug-compatible, flagged): converged coefficients can differ from R by half a final step. |
+| `CoxPH` tests for a log-likelihood decrease, and halves the step, before testing convergence; R tests convergence first (X-010). | pprof_spark tests convergence on the full step before halving, as R does (class B, corrected by D-20), because pprof_py's order makes its own results depend on row order. Where pprof_py halves a converged step, pprof_spark's coefficients differ from pprof_py's by half that step and agree with R's. |
 | With non-integer case weights R's `coxph` reports a robust variance by default; pprof_py's default is model-based (X-009). | Fixtures and comparisons with R use `robust = FALSE`. |
 
 ### 3.5 Discrepancy protocol
@@ -141,10 +145,20 @@ PAR-3: Every observed difference between `pprof_spark` and the reference is clas
 
 ### 3.6 API freedom
 
-The Scala API follows Spark and Scala conventions rather than Python's. Where Python writes `model.fit(X, duration=time, event=event)`, the Spark ML adapter is configured through typed parameters:
+The Scala API follows Spark and Scala conventions rather than Python's. Where Python writes `model.fit(X, duration=time, event=event)`, the engine takes a specification of column roles:
 
 ```scala
-val model = new CoxPHEstimator()
+val fit = CoxPH.fit(df,
+  CoxSpec(time = "stop", event = "event", features = Seq("age", "diabetes", "bmi"),
+    strata = Some("provider_id"), entry = Some("start"), offset = Some("offset"),
+    weight = Some("weight")),
+  CoxOptions(ties = Ties.Breslow))
+```
+
+A Spark ML adapter would configure the same fit through typed parameters. It is planned, not built: the `ml` module has no code yet (§6.11).
+
+```scala
+val model = new CoxPHEstimator()   // planned
   .setEntryCol("start").setDurationCol("stop").setEventCol("event")
   .setFeatureCols(Array("age", "diabetes", "bmi"))
   .setStrataCol("provider_id").setOffsetCol("offset").setWeightCol("weight")
@@ -377,7 +391,7 @@ At large p the partials themselves become large: a packed p×p partial is about 
 
 ### 6.9 Model contract, results, and schemas
 
-Models declare capabilities as traits — `HasCoefficients`, `HasCovariance`, `HasProviderEffects`, `HasBaselineHazard`, `SupportsResiduals`, `SupportsRobustVariance`, `SupportsStandardization`, `SupportsProviderTests`, `SupportsPrediction` — and the inference and measures layers are written against capabilities rather than concrete classes. This mirrors `pprof_py`'s unified provider-model interface and lets a new family, such as Group Lasso, join testing and standardization without restructuring the core.
+Models are to declare capabilities as traits — `HasCoefficients`, `HasCovariance`, `HasProviderEffects`, `HasBaselineHazard`, `SupportsResiduals`, `SupportsRobustVariance`, `SupportsStandardization`, `SupportsProviderTests`, `SupportsPrediction` — so that the inference and measures layers can be written against capabilities rather than concrete classes. This mirrors `pprof_py`'s unified provider-model interface and would let a new family, such as Group Lasso, join testing and standardization without restructuring the core. The traits are planned, not built: each family's fitted model is a concrete case class, such as `CoxFit`, and its inference and measures are written against it.
 
 API-1: A support matrix is generated from the declared capabilities and enforced by tests.
 
@@ -405,7 +419,7 @@ PERS-3: Persistence uses only public Spark APIs; the Spark ML adapters implement
 
 ### 6.11 Spark ML adapter layer (`ml`)
 
-Each estimator (for example `CoxPHEstimator extends Estimator[CoxPHModel]`) validates parameters, converts inputs, calls the engine, and wraps the engine's fitted model; each model implements `transform`, `copy`, and persistence. Parameters are project-owned traits (`entryCol`, `durationCol`, `eventCol`, `strataCol`, `offsetCol`, `weightCol`, `clusterCol`, `providerCol`, `featureCols`, `ties`, `maxIter`, `tol`) with defaults and validators. The event column uses 1 for an event. Spark's AFT estimator calls its equivalent column `censorCol` even though 1 means the event occurred; this package does not copy that naming.
+The adapters described here are planned; the `ml` module has no code yet, and Spark users call the engine API (§3.6). Each estimator (for example `CoxPHEstimator extends Estimator[CoxPHModel]`) validates parameters, converts inputs, calls the engine, and wraps the engine's fitted model; each model implements `transform`, `copy`, and persistence. Parameters are project-owned traits (`entryCol`, `durationCol`, `eventCol`, `strataCol`, `offsetCol`, `weightCol`, `clusterCol`, `providerCol`, `featureCols`, `ties`, `maxIter`, `tol`) with defaults and validators. The event column uses 1 for an event. Spark's AFT estimator calls its equivalent column `censorCol` even though 1 means the event occurred; this package does not copy that naming.
 
 Features arrive as a list of numeric columns (preferred, because the names carry into coefficient tables) or as a vector column, which is converted with `vector_to_array` and named from its ML attribute metadata when present. `transformSchema` validates types eagerly. `transform` appends explicitly named outputs (linear predictor, relative hazard, expected count) instead of overloading `predictionCol`. Provider-level results are DataFrames returned by model methods, not rows forced through `transform`.
 
@@ -497,7 +511,7 @@ so the tied events share their mean weight, which is the `survival` package's co
 | Strata | Separate baseline hazards with shared coefficients; strata without events contribute nothing to ℓ but are represented in baseline tables. |
 | Offsets | Added to η; baseline-hazard centering with offsets follows the reference (the `basehaz` offset-mean subtlety that `pprof_py` documents). |
 | Centering | Internal centering, and per-stratum shifts of η for overflow safety, are free because ℓ is exactly invariant to them; reported baselines and linear predictors follow the reference's centering convention. |
-| Convergence | Mirror the reference's rule. For orientation, `survival::coxph.control` stops when the relative change in log partial likelihood falls below `eps` = 1e-9, caps iterations at `iter.max` = 20, and halves steps that decrease ℓ. pprof_py tests for a decrease (and halves the step) before testing convergence, whereas R tests convergence first; pprof_spark follows pprof_py (X-010, class B, bug-compatible). |
+| Convergence | Mirror the reference's rule. For orientation, `survival::coxph.control` stops when the relative change in log partial likelihood falls below `eps` = 1e-9, caps iterations at `iter.max` = 20, and halves steps that decrease ℓ. pprof_py tests for a decrease (and halves the step) before testing convergence, whereas R tests convergence first; pprof_spark tests convergence on the full step first, as R does, and otherwise keeps pprof_py's formula and halving schedule (X-010, class B, corrected by D-20). |
 | Singularity | Cholesky with a singularity tolerance (`toler.chol` = ε^0.75 in `survival`); aliased covariates reported as null coefficients with a flag, per reference. |
 | Infinite coefficients | Detection rule per reference (`toler.inf` in `survival`); always reported. |
 | Weights in variance | Model-based variance treats case weights as frequency weights; robust and clustered variance follow the reference's dfbeta-based construction. |
@@ -932,6 +946,14 @@ Phase 0's decisions and spikes are resolved. The outcomes are recorded in `DECIS
 | S-07 | Which block sizes work at envelope scale? | Deferred: needs a cluster (ADR-0008) |
 
 ## Appendix A. Changes and their rationale
+
+### v2.6 to v2.7 (corrections from the Cox tutorial's review)
+
+| Area | v2.6 | v2.7 | Why |
+|---|---|---|---|
+| Step control (§3.4, §7.3.2) | pprof_spark follows pprof_py's order (bug-compatible) | Convergence tested on the full step first, as R does; pprof_py's formula and halving schedule otherwise kept | D-20 had corrected X-010; the context still had the round-6 choice (F-01, OI-64) |
+| Spark ML adapters (§3.6, §6.11) | Shown as the API | Planned; §3.6 shows the engine API | The `ml` module has no code (F-10, OI-64) |
+| Capability traits (§6.9) | Described as the model contract | Planned; fitted models are concrete case classes | Not built (F-10, OI-64) |
 
 ### v2.5 to v2.6 (Phase 3 closed)
 

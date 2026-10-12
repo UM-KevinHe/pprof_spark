@@ -5,20 +5,21 @@
 Writing the tutorial meant checking each claim against the code at `efb6329`. These are the
 discrepancies, weaknesses and gaps that check found. None of them changes the implementation; the
 tutorial documents behavior as it is. Each finding is a proposal for the maintainer, who decides
-(§15). The actionable ones are registered as OI-64 to OI-68 in [OPEN_ITEMS.md](../../../OPEN_ITEMS.md).
+(§15). The actionable ones are registered as OI-64 to OI-68 in [OPEN_ITEMS.md](../../../OPEN_ITEMS.md). Round 77 resolved OI-64's documentation
+items: F-01, F-08, F-09, F-10 and the message of F-04.
 
 | ID | Finding | Kind | Severity | Open item |
 |---|---|---|---|---|
-| F-01 | PROJECT_CONTEXT still calls the step control bug-compatible with pprof_py | Documentation | Medium: misleads readers about a parity-relevant behavior | OI-64 |
+| F-01 | PROJECT_CONTEXT still calls the step control bug-compatible with pprof_py | Documentation | Medium: misleads readers about a parity-relevant behavior | Resolved in round 77 (OI-64) |
 | F-02 | Monotone likelihood (infinite coefficients) is not detected | Robustness gap (NN-10) | Medium | OI-65 |
 | F-03 | No η shift or covariate scaling; extreme offsets or scales fail or mislead; the context overstates the protection | Robustness gap and documentation | Low to medium | OI-66 |
-| F-04 | One stratum is one task; unstratified fits are capped at 1,000,000 rows by default; the error message names a closed phase | Scalability limit and documentation | High for unstratified uses | OI-64 (message); OI-03, OI-30 |
+| F-04 | One stratum is one task; unstratified fits are capped at 1,000,000 rows by default; the error message names a closed phase | Scalability limit and documentation | High for unstratified uses | Message corrected in round 77; OI-03, OI-30 |
 | F-05 | Every call rebuilds the working set; a full `CoxJob` prepares the data 5 to 7 times | Performance | Unknown until measured | OI-68 |
 | F-06 | Tasks per pass follow `spark.sql.shuffle.partitions`, not the blocks | Performance | Unknown until measured | OI-68 |
 | F-07 | Tests do not exercise multi-block parity, shuffle-partition changes, skew, larger p or degenerate numerics | Test coverage | Medium | OI-67 |
-| F-08 | ADR-0003 says compensated sums stay out of per-row loops; the Cox kernel uses them there | Documentation | Low | OI-64 |
-| F-09 | The Phase 1c specification describes one shuffle for clustered robust variance; the code uses two | Documentation | Low | OI-64 |
-| F-10 | Stale labels: a "draft" specification that is approved; a `CoxPHEstimator` and capability traits that do not exist | Documentation | Low | OI-64 |
+| F-08 | ADR-0003 says compensated sums stay out of per-row loops; the Cox kernel uses them there | Documentation | Low | Resolved in round 77 (OI-64) |
+| F-09 | The Phase 1c specification describes one shuffle for clustered robust variance; the code uses two | Documentation | Low | Resolved in round 77 (OI-64) |
+| F-10 | Stale labels: a "draft" specification that is approved; a `CoxPHEstimator` and capability traits that do not exist | Documentation | Low | Resolved in round 77 (OI-64) |
 | F-11 | One parity comparison passes with 0.5% of its tolerance to spare | Awareness | Low | — |
 | F-12 | Minor efficiency and accounting items | Performance | Low | — |
 
@@ -39,6 +40,8 @@ by exactly half the final step (chapter 3, section 3.4).
 
 **Recommendation.** Correct both rows in the next revision of PROJECT_CONTEXT. §0 gives the
 specification and decisions precedence and asks for the context to be corrected when they conflict.
+
+**Status.** PROJECT_CONTEXT v2.7 (round 77) corrects §3.4 and §7.3.2.
 
 ## F-02. Monotone likelihood is not detected
 
@@ -97,6 +100,8 @@ Phase 1b closed without TimeRange.
 mentions TimeRange). Document the limit in the user guide. Schedule TimeRange, or an event-grid
 aggregation for small p·K, before unstratified fits at national scale are needed.
 
+**Status.** Round 77 corrected the message; the limit itself remains (OI-03, OI-30).
+
 ## F-05. Repeated preparation of the working set
 
 **What.** `fit`, `baseline`, `residuals`, `evaluateAt`, `requireFittedData`, `CoxMeasures.standardized`
@@ -140,6 +145,8 @@ in per-row inner loops". The Cox specification later required compensated runnin
 
 **Recommendation.** Amend the ADR's consequences with a pointer to the Cox specification and OI-38.
 
+**Status.** Round 77 added a dated amendment to ADR-0003.
+
 ## F-09. Clustered robust variance: one shuffle in the specification, two in the code
 
 **What.** [residuals-robust.md](../../spec/cox/residuals-robust.md) §4 describes "one shuffle by
@@ -150,6 +157,8 @@ The result is unaffected.
 
 **Recommendation.** Amend the specification's distributed plan.
 
+**Status.** Round 77 corrected the specification's clustered row.
+
 ## F-10. Stale labels
 
 **What.** `docs/parity/matrix.md` lists the counting-process specification as "(draft, D-23)", but
@@ -157,6 +166,8 @@ it is approved (D-23). PROJECT_CONTEXT §3.6 shows a `CoxPHEstimator` and §6.9 
 neither exists at `efb6329` (the `ml` module has no Cox code).
 
 **Recommendation.** Mark the matrix entry approved and the two context examples as planned.
+
+**Status.** Round 77 marked the matrix entry approved; PROJECT_CONTEXT v2.7 marks the adapters and capability traits as planned.
 
 ## F-11. A comparison that passes with little to spare
 

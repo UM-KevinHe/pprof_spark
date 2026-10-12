@@ -134,9 +134,9 @@ is the second iterate plus *half* of the final step:
 relative, uses 0.995 of the T-coef tolerance, so the parity test that compares default fits with
 pprof_py passes narrowly (review finding F-11).
 
-**Review note.** PROJECT_CONTEXT v2.6 §3.4 and §7.3.2 still describe this behavior as
-bug-compatible with pprof_py. The approved specification, D-20, X-010 in DISCREPANCIES.md and the
-code all test convergence first (review finding F-01).
+**Review note.** Until v2.7 (round 77), PROJECT_CONTEXT §3.4 and §7.3.2 described this behavior as
+bug-compatible with pprof_py, contradicting the approved specification, D-20, X-010 and the code
+(review finding F-01, now resolved).
 
 ## 3.5 Step halving
 

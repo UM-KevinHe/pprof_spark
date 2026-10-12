@@ -35,3 +35,9 @@ level R0). The exact algorithms become part of every result's bits, so they are 
   constants in SummationSuite fail until they are regenerated with the reference script.
 - Neumaier costs about four extra floating-point operations per addend, so it is used where
   partials are combined across blocks, not in per-row inner loops.
+
+## Amendment (2026-10-11, round 77; OI-64)
+The second consequence no longer holds for Cox. The Cox specification
+([first-slice.md](../spec/cox/first-slice.md) §6) made the running risk-set sums of `CoxStratum.add`
+(S₀, S₁ and S₂) Neumaier sums inside the per-row loop, because rows are added and, under left
+truncation, removed again, which can cancel. OI-38 tracks the cost at larger p.

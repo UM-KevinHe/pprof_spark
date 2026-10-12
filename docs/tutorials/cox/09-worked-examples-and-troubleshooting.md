@@ -128,7 +128,7 @@ non-behavioral change must leave every printed number unchanged in every digit.
 | `InvalidInputException` listing problems (`NonPositiveValues`, `NonBinaryValues`, `InvalidValues`, `NegativeValues`, `EntryNotBeforeExit`, `DuplicateRowIds`, `MissingColumn`, `UnsupportedType`, `EmptyInput`) | The listed column and count | Fix the data; counts, never values, are reported (NN-7) |
 | `NoEvents` | No event with positive weight | Check the event coding (1 or true) and the weights |
 | "the input has more than … groups, the limit set by BlockOptions.maxGroupsOnDriver" | More than 2,000,000 strata | Raise the limit if the driver has the memory |
-| "stratum … has … rows, more than maxStratumRows …" | A stratum larger than 1,000,000 rows, often an unstratified fit | Raise `maxStratumRows` and accept one task for that stratum, or stratify; TimeRange does not exist yet (the message's "Phase 1b" is out of date, F-04) |
+| "stratum … has … rows, more than maxStratumRows …" | A stratum larger than 1,000,000 rows, often an unstratified fit | Raise `maxStratumRows` and accept one task for that stratum, or stratify; TimeRange, which would split it, is not implemented (OI-03) |
 | "… block partials take about … bytes on the driver, more than BlockOptions.driverBudgetBytes" | Large p or very many blocks | Raise `targetBlockBytes` or `driverBudgetBytes` (chapter 8, section 8.4) |
 | "covariates … are aliased" | A constant or collinear covariate, or one on a very different scale | Remove or combine; rescale covariates to comparable units |
 | "the objective is not finite at the starting values" | Linear predictors or offsets beyond about ±709 | Center or rescale offsets; chapter 3, section 3.6 |
