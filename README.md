@@ -30,6 +30,7 @@ every feature stays `Experimental` until the package-level scale test (D-28).
 | [HANDOFF.md](HANDOFF.md) | Continuity between working sessions |
 | [docs/compatibility.md](docs/compatibility.md) | Spark, Databricks Runtime, Scala and JDK pins |
 | [docs/tutorials/cox/](docs/tutorials/cox/README.md) | Tutorial: the Cox model from statistics to source code and Spark execution |
+| [docs/tutorials/logistic/](docs/tutorials/logistic/README.md) | Tutorial: the logistic fixed-effect provider model, from statistics to Spark |
 
 ## Modules
 

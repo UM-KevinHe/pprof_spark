@@ -100,8 +100,8 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Requested by the maintainer (2026-10-11): a tutorial on the logistic fixed-effect model, in the style of the Cox
-tutorial (`docs/tutorials/logistic/`), from round 78.
+Round 78 delivered the logistic fixed-effect tutorial (`docs/tutorials/logistic/`); its findings are OI-69 to OI-71.
+A tutorial on the three-stage model would continue the series.
 
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
@@ -110,6 +110,35 @@ with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 
 OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65 to OI-68).
 
 ## Round log
+
+## Round 78 (2026-10-11): logistic fixed-effect tutorial
+
+Documentation only: no source, test or build file changes.
+
+- `docs/tutorials/logistic/`: a tutorial on slices 2a to 2e in nine chapters: the model and its arrowhead
+  information; SerBIN derived (block elimination, the centred Schur complement, the eight-step ladder, the
+  bound, stopping, variances from the block inverse); covariate inference; provider tests (exact tails,
+  limits by inversion); standardized measures (binned Taylor sums); distributed execution with a traced
+  fit; validation; performance; and `lfe-base` worked against the stored pprof_py and R results, with
+  troubleshooting.
+- `docs/tutorials/logistic/review-findings.md`: L-01 to L-06, registered as OI-69 to OI-71. L-01 answers
+  the maintainer's question: pprof_py sums provider statistics with `np.bincount`, sparse and BLAS
+  products and numpy's pairwise `np.sum`, R pprof with Armadillo's two-accumulator `sum` and BLAS; neither
+  compensates or cascades; the specification, ADR-0006 and OI-34 describe a fused pairwise cascade, while
+  the kernels use Neumaier sums.
+- `docs/tutorials/logistic/probe/`: the program and script that produced the numbers; not compiled by sbt
+  and not run by CI. README links the tutorial.
+
+Evidence (assistant sandbox; not CI): at `3e70739`, the probe (scalac 2.13.17 from PySpark 4.1.0, no
+`-release 17`, a stand-in `BuildInfo`, OpenJDK 21.0.10, `local[4]`) reproduces on lfe-base pprof_py's
+log-likelihood bitwise and its scores and information to 8.3e-16, the five iterates to 1.4e-15, β̂
+bitwise equal to R pprof's SerBIN and within 6.4e-16 of `glm`, the variances, the AUC and the exact
+provider tests (flags equal to both references); the Spark fit equals the in-memory kernels bitwise in
+40 jobs; four blocks, and shuffle partitions 1, 4 and 7 on reversed, repartitioned input, leave β̂
+bitwise unchanged. pprof_py at `9320766` and R pprof 1.0.3 (GitHub's CRAN mirror) read at their sources.
+Not verified: sbt, CI.
+
+What to send back: the CI run as usual; no compiled file changes.
 
 ## Round 77 (2026-10-11): OI-64 documentation corrections; PROJECT_CONTEXT v2.7
 
