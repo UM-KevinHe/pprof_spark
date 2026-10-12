@@ -264,8 +264,9 @@ or partitioning (R0), because:
 
 Evidence: `CoxPHSuite` "R0: row order and partitioning leave every bit unchanged" (reversed rows,
 `repartition(5)`), the R0 tests of the baseline and of clustered robust variance (`repartition(7)`),
-and "R1: another block layout stays within T-part". The test suites never change
-`spark.sql.shuffle.partitions`; the probe did, refitting the two-block toy with the setting at 1 and
+and "R1: another block layout stays within T-part". Round 79's `CoxLayoutSuite` changes
+`spark.sql.shuffle.partitions` too (1, 4 and 7, on reversed, repartitioned input, for fits with robust
+variance and for baselines); before it only the probe did, refitting the two-block toy with the setting at 1 and
 at 7 with reversed, repartitioned input, and found β̂, the covariance and ℓ bitwise identical to the
 run at 4. Bitwise equality across platforms (JDK 17 and 21, Classic and Connect) is R2, checked by CI's
 JDK matrix and its Spark Connect job.

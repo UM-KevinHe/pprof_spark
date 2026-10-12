@@ -123,9 +123,7 @@ change within T-part; agreement across JDK 17 and 21 and between Classic Spark a
 |---|---|
 | Scale, performance and the crossover with pprof_py (PERF-1) | No Cox benchmark exists; the scale test waits for the package-level run (D-28) |
 | Multi-node clusters (T9) | Local mode shares one JVM between driver and executors, hiding serialization paths and driver-only state (§9.6) |
-| Multi-block reduction in the parity tests | At the default 4 MiB target a block holds 74,898 rows when p = 3, so every fixture is one block; only the R1 test splits a fixture into several, and checks β̂ and ℓ within T-part |
-| `spark.sql.shuffle.partitions` | No test varies it; the probe did (bitwise equal at 1, 4 and 7) |
-| Skewed stratum sizes, oversized strata, realistic `maxStratumRows` sizes | §9.6 asks every engine test for a skewed distribution; the Cox suites have none |
+| Sizes near the limits | Round 79's `CoxLayoutSuite` covers many-block parity on every stratified fixture, R0 across shuffle partitions and a skewed layout with an oversized stratum (OI-67); realistic `maxStratumRows` sizes and skew at scale remain for the scale test |
 | Larger p, badly scaled covariates, extreme offsets, monotone likelihood | p ≤ 3 in every fixture; chapter 3 shows these fail or mislead |
 | Near-tied times | Behavior differs from R's default by design; untested |
 | Heavy truncation | The compensated removals are tested on 600-row fixtures only |
@@ -181,7 +179,8 @@ In practice:
 
 ## 7.10 Recommended additional tests
 
-These are proposals; review finding F-07 collects them.
+These were proposals; review finding F-07 collects them, and round 79 implemented the first three in
+`CoxLayoutSuite` (OI-67).
 
 | Test | Layer | What it would show |
 |---|---|---|

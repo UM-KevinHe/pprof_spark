@@ -43,6 +43,7 @@ times.
 | Provider tests | Exact, score, Wald and bootstrap against pprof_py and R; tails against mpmath | `LogisticProviderTestsSuite` |
 | Measures | Indirect and direct measures, standard errors and tests against pprof_py and R; binned against exact sums | `LogisticStandardizationSuite` |
 | Behaviour | Binomial rows against expanded Bernoulli rows; invalid inputs; aliasing; degenerate and screened providers; `maxIter = 0`; the provider table; the correlation warning; R0 and R1 | `LogisticBehaviourSuite` |
+| Layout | Many-block parity on every fixture; R0 across shuffle partitions with exact tests; skewed provider sizes; the ladder against a sequential search; twenty features; twenty thousand providers | `LogisticLayoutSuite` (round 79) |
 | Kernels | Derivatives of ℓ; the centred identity; shift invariance; numpy's median and bound; convergence; a provider at the bound; aliasing; blocks in order | numerics `LogisticFESuite` |
 
 On `lfe-shifted`, pprof_py forms S by subtracting C − Σbbᵀ/h and loses about three digits (1.38 of T-fn
@@ -101,11 +102,10 @@ The Cox procedure applies (Cox tutorial, section 7.9), with logistic specifics:
 ## 7.6 Where the evidence stops
 
 - No measurement of performance or scale, and no multi-node run (T9, T10, D-28).
-- No test varies `spark.sql.shuffle.partitions` (the probe did) or uses skewed provider sizes, which
-  §9.6 asks of every engine test; `lfe-many` has 500 providers, far from the 10⁶ of the envelope.
-- Every fixture has p = 3.
-- On `lfe-base` every full Newton step is accepted; whether a fixture exercises a rejected ladder of
-  step lengths was not checked here.
+- Since round 79, `LogisticLayoutSuite` covers what this list used to name: shuffle partitions 1, 4 and
+  7, a skewed provider-size distribution with an oversized provider, many-block parity on every fixture,
+  a rejected line-search ladder (from a distant start), twenty features and twenty thousand providers.
+  Sizes near the envelope (10⁶ providers, 10⁹ records) remain for the scale test.
 - Exact provider tests on large providers (cost) and the 20,000-trial limit are covered by rules, not
   by data of that size.
 

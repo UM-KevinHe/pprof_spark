@@ -16,7 +16,7 @@ items: F-01, F-08, F-09, F-10 and the message of F-04.
 | F-04 | One stratum is one task; unstratified fits are capped at 1,000,000 rows by default; the error message names a closed phase | Scalability limit and documentation | High for unstratified uses | Message corrected in round 77; OI-03, OI-30 |
 | F-05 | Every call rebuilds the working set; a full `CoxJob` prepares the data 5 to 7 times | Performance | Unknown until measured | OI-68 |
 | F-06 | Tasks per pass follow `spark.sql.shuffle.partitions`, not the blocks | Performance | Unknown until measured | OI-68 |
-| F-07 | Tests do not exercise multi-block parity, shuffle-partition changes, skew, larger p or degenerate numerics | Test coverage | Medium | OI-67 |
+| F-07 | Tests do not exercise multi-block parity, shuffle-partition changes, skew, larger p or degenerate numerics | Test coverage | Medium | Resolved in round 79 (OI-67) |
 | F-08 | ADR-0003 says compensated sums stay out of per-row loops; the Cox kernel uses them there | Documentation | Low | Resolved in round 77 (OI-64) |
 | F-09 | The Phase 1c specification describes one shuffle for clustered robust variance; the code uses two | Documentation | Low | Resolved in round 77 (OI-64) |
 | F-10 | Stale labels: a "draft" specification that is approved; a `CoxPHEstimator` and capability traits that do not exist | Documentation | Low | Resolved in round 77 (OI-64) |
@@ -136,6 +136,8 @@ engine test. Every multi-covariate fixture has p = 3. Monotone likelihood, extre
 scaled covariates, near-tied times and heavy truncation are untested.
 
 **Recommendation.** The tests listed in chapter 7, section 7.10.
+
+**Status.** Round 79 added `CoxLayoutSuite`: function-level and tight-fit parity against pprof_py and R with about twenty blocks on every stratified fixture, both tie methods; bitwise R0 at `spark.sql.shuffle.partitions` 1, 4 and 7 on reversed, repartitioned input, for fits with robust variance and for baselines; and a skewed layout with an oversized stratum. Larger p, extreme values and sizes near the limits remain for later (OI-65, OI-66, the scale test).
 
 ## F-08. ADR-0003's stated consequence no longer holds for Cox
 

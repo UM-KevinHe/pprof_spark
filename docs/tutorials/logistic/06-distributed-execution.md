@@ -108,8 +108,9 @@ reduced in block order; Δγ is placed by provider index; the median is exact; a
 log-likelihoods use the same arithmetic as a sequential search. The probe confirmed bitwise
 reproducibility (R0) at `spark.sql.shuffle.partitions` 1, 4 and 7 with reversed, repartitioned input,
 and found that four blocks gave β̂ and ℓ bitwise equal to one block and γ̂ within 1.4e-16 (R1 requires
-only T-part). `LogisticBehaviourSuite` tests R0 (reversed rows, `repartition(7)`) and R1
-(`targetBlockBytes` = 4,096).
+only T-part). `LogisticBehaviourSuite` tests R0 (reversed rows, `repartition(7)`) and R1 (`targetBlockBytes` = 4,096),
+and since round 79 `LogisticLayoutSuite` adds R0 across shuffle partitions and many-block parity with
+pprof_py on every fixture.
 
 ## 6.7 After the fit
 

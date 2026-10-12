@@ -111,7 +111,8 @@ exactly the step length the sequential search would; if none of the eight passes
 evaluates 0.6⁸ to 0.6¹⁵
 ([Serbin.scala lines 126–156](../../../numerics/src/main/scala/pprof/spark/numerics/Serbin.scala#L126-L156)).
 Each trial log-likelihood is computed by the same arithmetic as in a sequential search, so the
-accepted value is the same to the bit. The trade-off is seven log-likelihood sums that are often
+accepted value is the same to the bit; since round 79 `LogisticLayoutSuite` checks it against a
+sequential search, from a start that needs a second ladder pass. The trade-off is seven log-likelihood sums that are often
 unused (the full step is usually accepted) against a job per rejected step length; the specification
 chose the ladder for that reason (§11), without a measurement yet.
 

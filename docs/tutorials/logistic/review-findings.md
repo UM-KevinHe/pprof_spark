@@ -13,7 +13,7 @@ OI-69 to OI-71 in [OPEN_ITEMS.md](../../../OPEN_ITEMS.md).
 | L-02 | Provider-test results pass through the driver as m rows before becoming a table again | Performance at large m | Low to medium | OI-70 |
 | L-03 | Every pass costs two Spark jobs, one of them to broadcast the γ table | Performance | Unknown until measured | OI-70 |
 | L-04 | Covariate tests, provider tests and measures each rebuild the working set | Performance | Unknown until measured | OI-70 |
-| L-05 | No test varies shuffle partitions, skews provider sizes, or uses p above 3 or m above 500 | Test coverage | Medium | OI-71 |
+| L-05 | No test varies shuffle partitions, skews provider sizes, or uses p above 3 or m above 500 | Test coverage | Medium | Resolved in round 79 (OI-71) |
 | L-06 | A single provider's block has no size cap | Robustness at scale | Low | OI-70 |
 
 ## L-01. Summation in the kernels
@@ -85,6 +85,8 @@ fixture exercises a rejected line-search ladder was not checked.
 **Recommendation.** Add R0 at shuffle partitions 1, 4 and 7 (the probe's check); a synthetic case with a
 heavy-tailed provider-size distribution and one oversized provider; a case with p around 20; a case that
 forces backtracking; and a large-m smoke test of the driver-side γ.
+
+**Status.** Round 79 added `LogisticLayoutSuite`: many-block parity with pprof_py on every fixture; bitwise R0 at `spark.sql.shuffle.partitions` 1, 4 and 7 on reversed, repartitioned input, with exact tests, robust variances and the AUC; a skewed provider-size distribution with an oversized provider; the eight-step ladder against a sequential search from a start that needs a second ladder pass; twenty features against the in-memory SerBIN; and twenty thousand providers with the `maxProvidersOnDriver` guard.
 
 ## L-06. No cap on a provider's block
 
