@@ -31,6 +31,7 @@ every feature stays `Experimental` until the package-level scale test (D-28).
 | [docs/compatibility.md](docs/compatibility.md) | Spark, Databricks Runtime, Scala and JDK pins |
 | [docs/tutorials/cox/](docs/tutorials/cox/README.md) | Tutorial: the Cox model from statistics to source code and Spark execution |
 | [docs/tutorials/logistic/](docs/tutorials/logistic/README.md) | Tutorial: the logistic fixed-effect provider model, from statistics to Spark |
+| [docs/guide/databricks.md](docs/guide/databricks.md) | Running pprof_spark on Databricks: build, install and check it from notebooks |
 
 ## Modules
 

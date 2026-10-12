@@ -100,10 +100,10 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Round 80 proposed the scale-test plan (`docs/spec/scale/plan.md`, Draft). Next: the maintainer's decisions in its §12
-(approval as D-49, the cluster budget, the tiers, the three-stage wave); then rounds 81 to 83 build the kit
-(generators; `ScaleJob`; kernel benchmarks, the runbook and a local dry run). Specification addenda for OI-65 and
-OI-66 can run alongside.
+Round 81 delivered the Databricks workflow (`databricks/` notebooks, `docs/guide/databricks.md`). Next: the
+maintainer's first run on his cluster (`00_build`, installation, `01_parity`, `02_scale`) and what it sends back
+(OI-72), with a follow-up round for whatever Databricks reveals; his decisions on the scale-test plan's §12 (D-49);
+then rounds 82 to 84 build the kit. Specification addenda for OI-65 and OI-66 can run alongside.
 
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
@@ -112,6 +112,33 @@ with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 
 OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-70).
 
 ## Round log
+
+## Round 81 (2026-10-12): Databricks build, parity and scale notebooks
+
+The maintainer has no local Scala or sbt and no Unity Catalog volumes, and wants no GitHub Actions costs; his personal
+Databricks cluster installs libraries from workspace files or S3. He chose this round over a CI packaging step.
+
+- `databricks/00_build.py`: checks outbound access to github.com and Maven Central, clones a commit on the driver,
+  builds `numerics/package engine/package app/package` with an sbt launcher from GitHub, builds the wheel, and writes
+  `pprof_spark_builds/<commit>/` in workspace files: the JARs, the wheel, the Python package, the Cox, logistic and
+  linear fixtures, `tolerances.conf` and a manifest. Optional copy to S3; optional installation through the SDK.
+- `databricks/01_parity.py`: refuses JARs from another commit (`BuildInfo.gitSha` against the manifest), then 155
+  comparisons through the PySpark wrappers: Cox tight fits with 2 KiB blocks against pprof_py and R, and default
+  iteration counts; logistic default fits and exact provider tests against pprof_py; linear fits against pprof_py;
+  R0 for each model under other shuffle partitions and input order. Saves a CSV and an environment record.
+- `databricks/02_scale.py`: deterministic synthetic data from Spark SQL hashes with known β, one model per run,
+  timings per phase, max |z| of the coefficients against the truth, a row appended to a CSV per run.
+- `docs/guide/databricks.md`; a README link; the scale-test plan's §2, §6, §10 and §11 follow the notebook workflow,
+  with the kit's rounds renumbered 82 to 84. OI-72 opened.
+
+Evidence (assistant sandbox; not Databricks): PySpark 4.1.0 in local mode with this commit's JARs and a harness that
+runs Databricks source notebooks cell by cell with stand-ins for `dbutils` and `display`. `01_parity` passed 155 of
+155 comparisons in 178 s. `02_scale` ran Cox, linear and logistic (the last through the Parquet branch) at 200,000
+rows, each recovering its coefficients (max |z| 1.0 to 1.9). `00_build`'s outbound check stops with the guide's
+pointer when Maven Central is unreachable; the sbt launcher's archive has `sbt/bin/sbt`; the wheel builds. Not run
+here: sbt on a Databricks driver, library installation, Databricks itself.
+
+What to send back: the outputs listed in step 6 of the guide.
 
 ## Round 80 (2026-10-12): scale-test plan (draft for approval); L-01 recorded
 

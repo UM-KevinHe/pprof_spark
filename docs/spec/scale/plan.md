@@ -36,7 +36,7 @@ It does not replace simulation studies of bias and coverage for features without
 | Synthetic data only | No protected data anywhere in the test; generators run on the cluster; results leave the workspace as aggregate tables |
 | Deterministic generation | Every generated value is a function of (seed, row identifier, stream) through the counter-based SplitMix64 generator the bootstrap tests already use (STAT-2), so any point is identical on any cluster and partitioning and can be regenerated exactly |
 | Measurement only | The kit calls the public API and the existing job runners; it adds no hooks to the engine and changes no statistical code; it observes through Spark listener events and the job runners' run records |
-| Self-contained (D-14) | The kit's JAR, a plan file and the runbook are all the maintainer needs; assistants never touch the workspace |
+| Self-contained (D-14) | The notebooks in `databricks/` and [docs/guide/databricks.md](../../guide/databricks.md) (round 81) are all the maintainer needs: they build pprof_spark on his cluster, install it from workspace files and run the checks; assistants never touch the workspace, and nothing needs paid GitHub resources |
 | Recorded context | Every result carries the software versions (`SoftwareInfo`), the Databricks Runtime build identifier (OI-06), the cluster shape and the Spark configuration |
 | Two stages | A calibration run sets the targets (D-04); a verification run checks them (§9.8) |
 
@@ -109,7 +109,8 @@ S1 for Cox and logistic. R1 reruns: C2 with 2 MiB and 8 MiB blocks. Each timed c
 
 ## 6. The runner
 
-`ScaleJob` in the `bench` module, run as a Databricks JAR task on dedicated (single-user) compute, takes a
+`ScaleJob` in the `bench` module, run on dedicated (single-user) compute from the scale notebook through the
+Python package (or as a Databricks JAR task), takes a
 plan file (the runs: data path, model, specification, options, Spark configuration, operations, repeats)
 and a results path. For every run and operation it records:
 
@@ -165,21 +166,24 @@ when the remaining conditions of §9.8 also hold.
 
 ## 10. The runbook
 
-`docs/guide/scale-test.md`, delivered with the kit, takes the maintainer through: creating dedicated
-compute on Databricks Runtime 18 LTS and recording its build identifier; uploading the `bench` JAR and
-the plan file; running the generator job, then `ScaleJob`, point by point; watching for failures;
-exporting the results table and, for failures, the driver log; and deleting the generated data. Results
-come back to the repository as aggregate tables under `docs/parity/scale/`.
+Round 81 delivered the workflow the runbook builds on: [docs/guide/databricks.md](../../guide/databricks.md)
+and the notebooks `00_build` (builds a commit on the cluster's driver into a folder of workspace files),
+`01_parity` (fixture parity and R0 on the cluster) and `02_scale` (a first look at scale: deterministic
+synthetic data, timings, recovery of the true coefficients). The kit extends `02_scale` to the grid of
+section 5 and the measurements of section 6, and the guide gains the steps for generating the grid's data
+on S3, running the points, exporting the results table and, for failures, the driver log, and deleting the
+generated data. Results come back to the repository as aggregate tables under `docs/parity/scale/`.
 
 ## 11. Deliverables and rounds
 
 | Round | Content | Verified by |
 |---|---|---|
-| 81 | Generators for the Cox, logistic and linear fixed-effect models, with manifests; tests for determinism across partitionings, the distributions' moments against their true values, and parameter recovery at small n | Sandbox; CI |
-| 82 | `ScaleJob`: the plan file, the listener, phase attribution, output hashes, recovery checks, the results table; a tiny local plan as a test | Sandbox; CI (Classic) |
-| 83 | The kernel benchmarks of section 7 in `bench.yml`; the runbook; a dry run of the whole P1 plan at n ≈ 10⁵ in local mode | Sandbox; `bench.yml` |
+| 81 (done) | The Databricks workflow: `databricks/00_build`, `01_parity` and `02_scale`, and docs/guide/databricks.md | Sandbox (local Spark); the maintainer's first run |
+| 82 | Generators for the Cox, logistic and linear fixed-effect models, with manifests and a Python entry point; tests for determinism across partitionings, the distributions' moments against their true values, and parameter recovery at small n | Sandbox; CI |
+| 83 | `ScaleJob` with Python access: the plan file, the listener, phase attribution, output hashes, recovery checks, the results table; a tiny local plan as a test | Sandbox; CI (Classic) |
+| 84 | The kernel benchmarks of section 7; `02_scale` extended to the grid; a dry run of the whole P1 plan at n ≈ 10⁵ in local mode | Sandbox |
 | — | Stage A on the maintainer's workspace | The maintainer |
-| 84 and on | The report, `docs/parity/scale/`; proposed targets; the decisions of section 8; then Stage B | — |
+| 85 and on | The report, `docs/parity/scale/`; proposed targets; the decisions of section 8; then Stage B | — |
 
 ## 12. Decisions requested
 
