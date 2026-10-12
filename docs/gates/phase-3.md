@@ -1,6 +1,6 @@
 # Phase 3 gate review: linear fixed effects
 
-- Date: 2026-10-11 (round 74). Reviewer: the assistant; sign-off: the maintainer (D-48, proposed).
+- Date: 2026-10-11 (round 74). Reviewer: the assistant; sign-off: the maintainer (D-48, approved 2026-10-11).
 - Exit criterion (PROJECT_CONTEXT §4): the parity gate passed for the profile (within) estimation, standardization
   and inference of pprof_py's `LinearFixedEffectModel`.
 - Plan: [plan.md](../spec/linear/plan.md) (D-45), slices 3a to 3c. Scale verification is the maintainer's, once the
@@ -56,7 +56,7 @@ facade compare bit for bit and compute no ratios.
 | Persistence | Met | `LinearFitIO` (format version 1): bitwise round trips on integral and string keys, never overwriting, other kinds and versions refused |
 | Job runner and Python access | Met | `LinearJobSuite` and the `PythonApiSuite` test: equal to the library bit for bit; `test_linear.py` against the fixtures |
 | Platforms (§5) | Met in the sandbox | Every linear suite under Classic Spark and Spark Connect in its round; numerics on JDK 17 and 21 (round 69) |
-| CI | **Pending** | The maintainer reported CI green after round 60; rounds 61 to 73 have no CI report. CI runs JDK 17 and 21 and Spark Connect |
+| CI | Met | The maintainer reported CI green for every run since round 57.1 (2026-10-11); CI runs JDK 17 and 21 and Spark Connect |
 | Documentation | Met | Specifications 3a to 3c; guides `linear-job.md` and `python.md`; the parity matrix's 3a to 3c rows; two calibration documents. PROJECT_CONTEXT §4 and §7.5 to be updated when Phase 3 closes |
 | Scale (§9.7) | **Deferred** | The maintainer's package-level test (D-28) |
 
@@ -76,4 +76,6 @@ Phase 3.
 
 ## Outcome
 
-Awaiting the maintainer's sign-off.
+**Closed on 2026-10-11** (D-48): the maintainer reported CI green for every run since round 57.1 and signed off,
+accepting 3a's function-level substitute. Every Phase 3 feature is parity-verified and stays `Experimental` until
+the package-level scale test (D-28). PROJECT_CONTEXT v2.6 (round 75) records Phase 3.

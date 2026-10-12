@@ -1,11 +1,11 @@
 # Status
 
-Updated 2026-10-11, round 74.
+Updated 2026-10-11, round 75.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
 models: closed** (D-44, 2026-10-09, after CI green as reported by the maintainer; docs/gates/phase-2.md): plan and slice 2a specification approved (D-30); 2a fixtures and calibration in
-round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification in round 40 (D-37, approved); `LogisticJob` in round 41; the three-stage spike and 2f direction in round 42 (D-38, approved); the 2f-1 specification in round 43 (D-39, approved); its fixtures in round 44; `ThreeStage.prepare` in round 45; the 2f-2 specification in round 46 (D-40, approved); its fixtures in round 47; its driver path in round 48 and its executor path in round 49; the 2f-3 specification in round 50 (D-41, approved); its fixtures and T-opt in round 51 (D-42, approved); its code in round 52; the 2f-4 specification in round 53 (D-43, approved); 2f-4a's fixtures in round 54; the pipeline, stage 3's tests, measures and intervals in round 55; `sigma_sensitivity` in round 56; persistence and the job runner in round 57; the Python three-stage wrapper in round 59; the Phase 2 gate review in round 60 (D-44, approved); PROJECT_CONTEXT v2.5 in round 61. **Phase 3, linear fixed effects: in progress**: the plan and slice 3a's specification approved (D-45, round 62); slice 3a's fixtures and calibration in round 63; its numerics in round 64; its engine (`LinearFE`) in round 65; persistence, `score` and the metamorphic tests in round 66, completing slice 3a; the slice 3b specification in round 67 (D-46, approved); its fixtures and calibration in round 68; provider tests in round 69; standardized differences in round 70, completing slice 3b; the slice 3c specification in round 71 (D-47, approved); the linear job runner in round 72; Python access in round 73, completing slice 3c; the Phase 3 gate review in round 74 (D-48, proposed). Python access: py4j wrappers (D-31). The maintainer runs the
+round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification in round 40 (D-37, approved); `LogisticJob` in round 41; the three-stage spike and 2f direction in round 42 (D-38, approved); the 2f-1 specification in round 43 (D-39, approved); its fixtures in round 44; `ThreeStage.prepare` in round 45; the 2f-2 specification in round 46 (D-40, approved); its fixtures in round 47; its driver path in round 48 and its executor path in round 49; the 2f-3 specification in round 50 (D-41, approved); its fixtures and T-opt in round 51 (D-42, approved); its code in round 52; the 2f-4 specification in round 53 (D-43, approved); 2f-4a's fixtures in round 54; the pipeline, stage 3's tests, measures and intervals in round 55; `sigma_sensitivity` in round 56; persistence and the job runner in round 57; the Python three-stage wrapper in round 59; the Phase 2 gate review in round 60 (D-44, approved); PROJECT_CONTEXT v2.5 in round 61. **Phase 3, linear fixed effects: closed** (D-48, 2026-10-11, after CI green as reported by the maintainer; docs/gates/phase-3.md): the plan and slice 3a's specification approved (D-45, round 62); slice 3a's fixtures and calibration in round 63; its numerics in round 64; its engine (`LinearFE`) in round 65; persistence, `score` and the metamorphic tests in round 66, completing slice 3a; the slice 3b specification in round 67 (D-46, approved); its fixtures and calibration in round 68; provider tests in round 69; standardized differences in round 70, completing slice 3b; the slice 3c specification in round 71 (D-47, approved); the linear job runner in round 72; Python access in round 73, completing slice 3c; the Phase 3 gate review in round 74 (D-48, approved); PROJECT_CONTEXT v2.6 in round 75. Python access: py4j wrappers (D-31). The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -80,24 +80,24 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 56 | Slice 2f-4a code: `sigma_sensitivity` | Merged (a215676); CI run 37945209150: checks, JDK 17 and 21 and Spark Connect passed (engine 295, numerics 83, testkit 20, app 12 tests); the `python` job failed |
 | 57 | Slice 2f-4b: persistence (`ThreeStageFitIO`) and the job runner (`ThreeStageJob`) | Merged (e0a635c) |
 | 57.1 | Fix of the `python` CI job (absolute JAR paths; conftest resolves and checks them; pytest's report feeds the annotations) | Merged (7d5190a); CI green as reported by the maintainer |
-| 58 | PROJECT_CONTEXT v2.4 and the session handoff (documents) | Merged (2fa916b) |
+| 58 | PROJECT_CONTEXT v2.4 and the session handoff (documents) | Merged (2fa916b); CI green as reported by the maintainer |
 | 59 | Slice 2f-4b: the Python three-stage wrapper (`ThreeStage`, `ThreeStageModel`) | Merged (b876d51); CI green as reported by the maintainer |
-| 60 | Phase 2 gate review (`docs/gates/phase-2.md`, D-44); worst ratios measured; the parity matrix's Phase 2 rows brought up to date | Merged (7f8b49f); D-44 approved 2026-10-09 |
-| 61 | D-44 approved: Phase 2 closed at parity-verified; PROJECT_CONTEXT v2.5 (§7.4's three-stage model, OI-48); README status | Merged (da6aa4e) |
-| 62 | Phase 3 plan and the slice 3a specification (D-45, X-031 to X-033, OI-60, OI-61) | Merged (fb9cecf); D-45 approved |
-| 63 | Slice 3a fixtures (`fixtures/linear`) and calibration; X-034 proposed | Merged (9513936); X-034 approved |
-| 64 | Slice 3a numerics: `kernels.LinearFE`, `StudentT` (exact at every degree of freedom), Cholesky pivots | Merged (6ea993e) |
-| 65 | Slice 3a engine: `LinearFE` (fit, `summary`, `predict`, the distributed provider table), `LinearFESuite` | Merged (793be3e) |
-| 66 | Slice 3a: `LinearFitIO`, `score` on new data, the metamorphic tests | Merged (87ebb96) |
-| 67 | Slice 3b specification: provider tests, intervals, standardized differences (D-46, X-035, X-036; OI-60 closed) | Merged (8f8d285); D-46 approved |
-| 68 | Slice 3b fixtures (`inference_*.json` for six cases, lin-extreme new) and calibration | Merged (f478360) |
-| 69 | Slice 3b: log-scale tails (X-035), `LinearProviderTests` (`test`, `gammaIntervals`) | Merged (9385836) |
-| 70 | Slice 3b: `LinearStandardization` (standardized differences, `SM` intervals) | Merged (3133a2f) |
-| 71 | Slice 3c specification: the linear job runner and Python access (D-47) | Merged (ad55dab); D-47 approved |
-| 72 | Slice 3c: `LinearRunSpec`, `LinearJob`, `LinearJobSuite`, the job guide; OI-63 | Merged (eba212c) |
-| 73 | Slice 3c: `PythonApi.linear*`, `pprof_spark.LinearFixedEffect` and `LinearFixedEffectModel`, their tests, the guide section; OI-63 closed | Merged (6722631) |
-| 74 | Phase 3 gate review (`docs/gates/phase-3.md`, D-48 proposed); worst ratios measured | Delivered as a patch |
-| 60 | Phase 2 gate review | Planned |
+| 60 | Phase 2 gate review (`docs/gates/phase-2.md`, D-44); worst ratios measured; the parity matrix's Phase 2 rows brought up to date | Merged (7f8b49f); D-44 approved 2026-10-09; CI green as reported by the maintainer |
+| 61 | D-44 approved: Phase 2 closed at parity-verified; PROJECT_CONTEXT v2.5 (§7.4's three-stage model, OI-48); README status | Merged (da6aa4e); CI green as reported by the maintainer |
+| 62 | Phase 3 plan and the slice 3a specification (D-45, X-031 to X-033, OI-60, OI-61) | Merged (fb9cecf); D-45 approved; CI green as reported by the maintainer |
+| 63 | Slice 3a fixtures (`fixtures/linear`) and calibration; X-034 proposed | Merged (9513936); X-034 approved; CI green as reported by the maintainer |
+| 64 | Slice 3a numerics: `kernels.LinearFE`, `StudentT` (exact at every degree of freedom), Cholesky pivots | Merged (6ea993e); CI green as reported by the maintainer |
+| 65 | Slice 3a engine: `LinearFE` (fit, `summary`, `predict`, the distributed provider table), `LinearFESuite` | Merged (793be3e); CI green as reported by the maintainer |
+| 66 | Slice 3a: `LinearFitIO`, `score` on new data, the metamorphic tests | Merged (87ebb96); CI green as reported by the maintainer |
+| 67 | Slice 3b specification: provider tests, intervals, standardized differences (D-46, X-035, X-036; OI-60 closed) | Merged (8f8d285); D-46 approved; CI green as reported by the maintainer |
+| 68 | Slice 3b fixtures (`inference_*.json` for six cases, lin-extreme new) and calibration | Merged (f478360); CI green as reported by the maintainer |
+| 69 | Slice 3b: log-scale tails (X-035), `LinearProviderTests` (`test`, `gammaIntervals`) | Merged (9385836); CI green as reported by the maintainer |
+| 70 | Slice 3b: `LinearStandardization` (standardized differences, `SM` intervals) | Merged (3133a2f); CI green as reported by the maintainer |
+| 71 | Slice 3c specification: the linear job runner and Python access (D-47) | Merged (ad55dab); D-47 approved; CI green as reported by the maintainer |
+| 72 | Slice 3c: `LinearRunSpec`, `LinearJob`, `LinearJobSuite`, the job guide; OI-63 | Merged (eba212c); CI green as reported by the maintainer |
+| 73 | Slice 3c: `PythonApi.linear*`, `pprof_spark.LinearFixedEffect` and `LinearFixedEffectModel`, their tests, the guide section; OI-63 closed | Merged (6722631); CI green as reported by the maintainer |
+| 74 | Phase 3 gate review (`docs/gates/phase-3.md`, D-48); worst ratios measured | Merged (9e33d27); D-48 approved; CI green as reported by the maintainer |
+| 75 | D-48 approved: Phase 3 closed at parity-verified; PROJECT_CONTEXT v2.6; README status | Delivered as a patch |
 
 ## Decisions and spikes
 

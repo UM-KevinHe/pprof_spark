@@ -5,7 +5,7 @@ reimplements the validated statistical methods of [pprof_py](https://github.com/
 as distributed algorithms for Apache Spark, preserving their statistical definitions. pprof_py is
 used only to produce reference results for the test suite.
 
-**Status: Phases 0 to 2 closed at parity-verified; Phase 3 (linear fixed effects) is next.** Stratified
+**Status: Phases 0 to 3 closed at parity-verified, completing the roadmap's numbered phases.** Stratified
 Cox regression (`pprof.spark.engine.cox.CoxPH`): Breslow or Efron ties, case weights, offsets, entry times,
 model-based and robust variance, baselines, prediction and residuals; two-stage SMR and SHR
 (`CoxMeasures`) and exact and mid-p provider tests (`CoxProviderTests`). Logistic fixed-effect provider
@@ -13,8 +13,11 @@ models (`pprof.spark.engine.logistic.LogisticFE`, SerBIN): covariate tests, clus
 prediction and AUC; exact Poisson-binomial, score, Wald and bootstrap provider tests
 (`LogisticProviderTests`); indirect and direct standardization (`LogisticStandardization`). The
 three-stage SRR model with providers crossed with clusters (`ThreeStagePipeline`): stage 3's tests,
-measures and intervals, and σ sensitivity. Job runners for `spark-submit` (`pprof.spark.app.CoxJob`,
-`LogisticJob`, `ThreeStageJob`; guides in `docs/guide/`) and Python wrappers through py4j (`python/`,
+measures and intervals, and σ sensitivity. Linear fixed-effect provider models
+(`pprof.spark.engine.linear.LinearFE`, the within estimator): covariate t tests with exact tails, prediction
+and R², provider tests and effect intervals (`LinearProviderTests`), and standardized differences
+(`LinearStandardization`). Job runners for `spark-submit` (`pprof.spark.app.CoxJob`, `LogisticJob`,
+`ThreeStageJob`, `LinearJob`; guides in `docs/guide/`) and Python wrappers through py4j (`python/`,
 `docs/guide/python.md`). Everything is at parity with pprof_py v0.7.0, and with R where R is a reference;
 every feature stays `Experimental` until the package-level scale test (D-28).
 

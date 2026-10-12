@@ -1,6 +1,6 @@
 # Handoff
 
-## Session handoff: Phase 2 closed (2026-10-09)
+## Session handoff: Phase 3 closed (2026-10-11)
 
 This section stands on its own for a new session. The round log below it is the detailed history.
 
@@ -11,7 +11,7 @@ Kevin He) reimplements the validated statistical methods of pprof_py, pinned at 
 (D-05), as distributed Spark algorithms that keep their statistical definitions and validated behavior.
 Stack: Spark 4.1.0, Scala 2.13.16 (PLAT-3), Java 17 bytecode; CI on JDK 17 and 21, under Classic Spark and
 Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative context is
-`docs/PROJECT_CONTEXT.md` v2.5; recorded decisions in `DECISIONS.md` take precedence over it.
+`docs/PROJECT_CONTEXT.md` v2.6; recorded decisions in `DECISIONS.md` take precedence over it.
 
 ### 2. Where things stand
 
@@ -25,13 +25,14 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
 | 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
 | Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
-| 3, linear fixed effects | Plan approved (D-45); slice 3a implemented (rounds 63 to 66); slice 3b implemented (rounds 67 to 70); slices 3a to 3c implemented (rounds 62 to 73); gate review round 74 (D-48, proposed) |
+| 3, linear fixed effects (3a to 3c) | Closed at parity-verified (D-45 to D-48): estimation and covariate inference, provider tests, intervals and standardized differences, persistence, `LinearJob` and the Python wrapper |
+| Phase 3 | Closed at parity-verified on 2026-10-11 (D-48; gate review `docs/gates/phase-3.md`) |
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
 Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
 environment (D-14 as clarified). CI: round 56's run (37945209150) passed every Scala job (engine 295, numerics
 83, testkit 20, app 12 tests); the `python` job had failed since round 30 on relative JAR paths and has passed
-since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not reported individually. The maintainer reported CI green for round 59 (2026-10-09).
+since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not reported individually. The maintainer reported CI green for every run since round 57.1 (2026-10-11).
 
 ### 3. What exists
 
@@ -41,10 +42,10 @@ since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not
 | `engine.cox` | `CoxPH` (fit, baseline, residuals, robust), `CoxFitIO` v3, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
 | `engine.logistic` | `LogisticSpec`, `LogisticFE`, `LogisticBlocks`, `LogisticFitIO` v3, `LogisticProviderTests`, `LogisticStandardization`; `ThreeStage` (prepare, compress, stage2, stage3, laplace, marginal, fitted), `ThreeStagePipeline` (fit, test, measures, intervals, profileInterval, sigmaSensitivity), `ThreeStageFitIO` v1 |
 | `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`, `score`; the provider table distributed), `LinearFitIO` v1; `LinearProviderTests`; `LinearStandardization` |
-| `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob` and their run specifications (version 1, `model`); `python.PythonApi` |
+| `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob`, `LinearJob` and their run specifications (version 1, `model`); `python.PythonApi` |
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage and linear wrappers, ADR-0009) and its pytest suite |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
-| Documents | `docs/spec/cox/` (5), `docs/spec/logistic/` (2a to 2f), guides (`cox-job.md`, `logistic-job.md`, `three-stage-job.md`, Python), `docs/parity/` (matrix, calibrations), `DECISIONS.md` (to D-43), `DISCREPANCIES.md` (to X-030), `OPEN_ITEMS.md` (to OI-59) |
+| Documents | `docs/spec/cox/` (5), `docs/spec/logistic/` (2a to 2f), `docs/spec/linear/` (3a to 3c), guides (`cox-job.md`, `logistic-job.md`, `three-stage-job.md`, `linear-job.md`, Python), `docs/parity/` (matrix, calibrations), `DECISIONS.md` (to D-48), `DISCREPANCIES.md` (to X-036), `OPEN_ITEMS.md` (to OI-63) |
 
 ### 4. How the work runs
 
@@ -99,11 +100,27 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-D-48 (round 74, `docs/gates/phase-3.md`) proposes closing Phase 3 at parity-verified once CI is reported green for
-`main` at that round (rounds 61 to 73 have no CI report). Then PROJECT_CONTEXT v2.6 (Phase 3 closed; §7.5's two passes,
-deferred TSQR and exact `StudentT`), and the next phase of PROJECT_CONTEXT §4's roadmap.
+Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
+scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
+effects, frailty and time-varying Cox, discrete-time survival, competing risks), which starts, as Phases 2 and 3 did,
+with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 a wheel, OI-53 Databricks access modes,
+OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix).
 
 ## Round log
+
+## Round 75 (2026-10-11): Phase 3 closed; PROJECT_CONTEXT v2.6
+
+The maintainer approved D-48, with the substitute for 3a's function-level check, and reported CI green for every run
+since round 57.1.
+
+- D-48 accepted; `docs/gates/phase-3.md` records the outcome; the parity matrix marks slices 3a to 3c parity-verified,
+  every feature `Experimental` until the scale test (D-28); STATUS records CI green for rounds 58 to 74 (and drops a
+  stale planned row).
+- `docs/PROJECT_CONTEXT.md` v2.6: §4 records Phases 0 to 3 closed, completing the numbered roadmap; §7.5 describes the
+  linear design as built (two passes, two-pass centring per provider, TSQR deferred under OI-61, exact t tails and a
+  finite z, X-031 to X-035); §6.12 lists the linear wrapper; §16 adds D-45 to D-48; Appendix A has the v2.5-to-v2.6
+  entry. Replace the claude.ai project copies of PROJECT_CONTEXT.md and HANDOFF.md with this round's files.
+- README: the status paragraph covers Phases 0 to 3, with the linear models and `LinearJob`.
 
 ## Round 74 (2026-10-11): the Phase 3 gate review
 

@@ -1,10 +1,13 @@
 # pprof_spark — Project Context
 
-**Version** 2.5 · **Date** 2026-10-09 · **Supersedes** v2.4 (2026-10-09)
+**Version** 2.6 · **Date** 2026-10-11 · **Supersedes** v2.5 (2026-10-09)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
+> **v2.6 closes Phase 3** (D-48, after the gate review in `docs/gates/phase-3.md`), completing the roadmap's
+> numbered phases, and describes §7.5's linear design as built. v2.5 closed Phase 2.
+>
 > **v2.5 closes Phase 2** (D-44, after the gate review in `docs/gates/phase-2.md`) and describes the
 > three-stage model in §7.4 as specified (OI-48). v2.4 folded in Phase 2's slices.
 >
@@ -178,7 +181,7 @@ ROAD-1 (walking skeleton, as amended by D-11): Phase 0 ends with a statistics-fr
 
 ROAD-2: Each phase ends with a gate review recorded in `STATUS.md`. A phase cannot close with open class A or B discrepancies affecting its features.
 
-Status (2026-10-09): Phases 0 to 2 are closed at parity-verified (Phase 2 by D-44, after the gate review in `docs/gates/phase-2.md`); Phase 3, linear fixed effects, is next. Scale verification for every phase happens once, at package level (D-28).
+Status (2026-10-11): Phases 0 to 3 are closed at parity-verified (Phase 3 by D-48, after the gate review in `docs/gates/phase-3.md`), completing the numbered roadmap; what follows is the maintainer's choice among the package-level scale test (D-28), the features listed under Later, and the open items. Scale verification for every phase happens once, at package level (D-28).
 
 The mapping below covers `pprof_py`'s public model classes *(re-verify)*.
 
@@ -416,7 +419,7 @@ Spark ML on Spark Connect discovers estimators through Java's `ServiceLoader` an
 
 The `app` module provides plain Spark entry points for `spark-submit` or a Databricks JAR task: `pprof.spark.app.CoxJob`, `LogisticJob` and `ThreeStageJob`. Each reads a declarative, versioned run specification (version 1, with a `model` field; input path or table, column roles, fit options, outputs) and writes result tables, the fitted model and a run record (`docs/guide/cox-job.md`, `logistic-job.md`, `three-stage-job.md`); each job points another model's specification to its own job. Python and SQL users can work through tables and job parameters, and every run is auditable. Databricks deployment automation stays out of scope (D-14).
 
-Python access (D-31, D-33, ADR-0009): the `pprof_spark` package (`python/`) wraps the engine through py4j in PySpark Classic, delegating every computation to the JARs through `pprof.spark.app.python.PythonApi`. Wrappers exist for Cox, logistic fixed-effect and three-stage models. The `python` CI job tests them against the JARs each commit builds (green since round 57.1). Spark Connect ML registration (S-04) stays deferred. Python-facing code never reimplements statistics.
+Python access (D-31, D-33, ADR-0009): the `pprof_spark` package (`python/`) wraps the engine through py4j in PySpark Classic, delegating every computation to the JARs through `pprof.spark.app.python.PythonApi`. Wrappers exist for Cox, logistic fixed-effect, three-stage and linear fixed-effect models. The `python` CI job tests them against the JARs each commit builds (green since round 57.1). Spark Connect ML registration (S-04) stays deferred. Python-facing code never reimplements statistics.
 
 ### 6.13 Observability
 
@@ -556,7 +559,7 @@ pprof_spark runs stages 2 and 3 on compressed cells (stage 3's per-cell offset-b
 
 ### 7.5 Linear fixed effects
 
-The profile (within) estimator obtains β from within-provider co-moments and sets γ_j = ȳ_j − x̄_jᵀβ. One pass suffices: within each ProviderLocal block, per-provider means and co-moments are merged with the numerically stable pairwise updates of Chan, Golub, and LeVeque, and each block emits its within-provider cross-product totals. The "sum of squares minus correction" formula, which cancels catastrophically, is never used. When conditioning diagnostics indicate trouble, a TSQR (communication-avoiding QR) path solves the least-squares problem without forming cross-products. Degrees-of-freedom and variance conventions follow the reference.
+The profile (within) estimator obtains β from within-provider co-moments and sets γ_j = ȳ_j − x̄_jᵀβ (docs/spec/linear/, D-45 to D-47). It runs in two passes over ProviderLocal blocks, partials reduced in block order. The first computes each provider's centred co-moments, by two passes over the provider's rows with compensated sums, since all of a provider's rows lie in one block (Chan, Golub and LeVeque's pairwise merges are not needed), and each block emits its totals of the within cross-products. The second computes the residual and total sums of squares from the residuals themselves, because the co-moment identity for the residual sum of squares cancels when the within fit is close; the "sum of squares minus correction" formula is never used. Aliased features fail by R's pivot rule (X-032) and n − m − p ≤ 0 fails at validation (X-033). The provider effects and their variances stay in a distributed provider table. A TSQR path for ill-conditioned cross-products is deferred (OI-61); the fit records a condition estimate. Degrees-of-freedom and variance conventions follow the reference: σ̂² = RSS/(n − m − p) and t inference on n − m − p degrees of freedom, with tails evaluated directly (X-031; `StudentT` is exact at every degree of freedom, as R's `pt` is), and the provider tests map t to z by equal tail probability, finite for every finite t (X-035).
 
 ### 7.6 Provider-level measures and inference
 
@@ -916,6 +919,7 @@ Phase 0's decisions and spikes are resolved. The outcomes are recorded in `DECIS
 | D-11 to D-19 | Raised during Phase 0 | Phase 0 exit and first Cox slice; tooling baseline; Spark Connect test topology; no assistant access to Databricks (D-14, clarified 2026-10-07); summation; platform skeleton; fixtures; deterministic mode; Codespaces |
 | D-20 to D-29 | Raised during Phases 1a to 1d | Cox specifications (D-20, D-21, D-23, D-25, D-27); phase gates closed at parity-verified (D-22, D-24, D-26, D-29); scale test on the maintainer's Databricks once the package is done (D-28) |
 | D-30 to D-44 | Raised during Phase 2 | Phase 2 plan and slice specifications (D-30, D-34 to D-41, D-43); Python access through py4j (D-31, D-33, ADR-0009); slice 2a closed (D-32); the T-opt tolerance class (D-42); Phase 2 closed at parity-verified (D-44) |
+| D-45 to D-48 | Raised during Phase 3 | The Phase 3 plan and slice specifications (D-45 to D-47); Phase 3 closed at parity-verified (D-48) |
 
 | ID | Question | Outcome |
 |---|---|---|
@@ -928,6 +932,14 @@ Phase 0's decisions and spikes are resolved. The outcomes are recorded in `DECIS
 | S-07 | Which block sizes work at envelope scale? | Deferred: needs a cluster (ADR-0008) |
 
 ## Appendix A. Changes and their rationale
+
+### v2.5 to v2.6 (Phase 3 closed)
+
+| Area | v2.5 | v2.6 | Why |
+|---|---|---|---|
+| Status (§4) | Phases 0 to 2 closed; Phase 3 next | Phases 0 to 3 closed at parity-verified; the numbered roadmap complete | Gate review (round 74), D-48 |
+| Linear fixed effects (§7.5) | One pass with pairwise co-moment merges; TSQR when conditioning is poor | Two passes (co-moments, then residuals), two-pass centring within each provider's block; TSQR deferred (OI-61); exact t tails and a finite z for every t | D-45 to D-47; rounds 64 to 70 |
+| Python access (§6.12) | Cox, logistic fixed-effect and three-stage wrappers | Also the linear fixed-effect wrapper | Round 73 |
 
 ### v2.4 to v2.5 (Phase 2 closed)
 

@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-48: Close Phase 3 at parity-verified (Proposed: awaiting the maintainer)
+### D-48: Close Phase 3 at parity-verified (Accepted: approved by the maintainer, 2026-10-11)
 
 `docs/gates/phase-3.md`: slices 3a to 3c meet the parity gate in the sandbox (round 74: every linear engine suite
 passes under Classic Spark on JDK 17, and none of the 3,544 tolerance ratios they compute exceeds 1; worst T-meas 0.887
@@ -112,7 +112,8 @@ affecting Phase 3 has an approved decision. Proposed: close Phase 3 at parity-ve
 green for `main` at this round (rounds 61 to 73 have no CI report), on the terms of D-32 and D-44, accepting that the
 within cross-products are verified against exact arithmetic (`LinearKernelSuite`) and end to end rather than against
 the fixtures' NumPy values (spec 3a §11); every Phase 3 feature stays `Experimental` until the package-level scale
-test (D-28). PROJECT_CONTEXT v2.6 then records Phase 3.
+test (D-28). PROJECT_CONTEXT v2.6 then records Phase 3. Approved on 2026-10-11, with the substitute for 3a's
+function-level check, the maintainer reporting CI green for every run since round 57.1.
 
 ### D-47: Slice 3c specification (Accepted: approved by the maintainer, 2026-10-09)
 
