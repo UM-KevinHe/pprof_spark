@@ -45,7 +45,7 @@ since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob`, `LinearJob` and their run specifications (version 1, `model`); `python.PythonApi` |
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage and linear wrappers, ADR-0009) and its pytest suite |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
-| Documents | `docs/spec/cox/` (5), `docs/spec/logistic/` (2a to 2f), `docs/spec/linear/` (3a to 3c), guides (`cox-job.md`, `logistic-job.md`, `three-stage-job.md`, `linear-job.md`, Python), `docs/parity/` (matrix, calibrations), `DECISIONS.md` (to D-48), `DISCREPANCIES.md` (to X-036), `OPEN_ITEMS.md` (to OI-63) |
+| Documents | `docs/spec/cox/` (5), `docs/spec/logistic/` (2a to 2f), `docs/spec/linear/` (3a to 3c), guides (`cox-job.md`, `logistic-job.md`, `three-stage-job.md`, `linear-job.md`, Python), the Cox tutorial (`docs/tutorials/cox/`), `docs/parity/` (matrix, calibrations), `DECISIONS.md` (to D-48), `DISCREPANCIES.md` (to X-036), `OPEN_ITEMS.md` (to OI-63) |
 
 ### 4. How the work runs
 
@@ -104,9 +104,37 @@ Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
 effects, frailty and time-varying Cox, discrete-time survival, competing risks), which starts, as Phases 2 and 3 did,
 with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 a wheel, OI-53 Databricks access modes,
-OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix).
+OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-64 to OI-68).
 
 ## Round log
+
+## Round 76 (2026-10-11): Cox tutorial
+
+Documentation only: no source, test or build file changes.
+
+- `docs/tutorials/cox/`: a tutorial on the Cox implementation, from survival analysis and the partial
+  likelihood through Breslow and Efron ties, Newton–Raphson with X-010's step control, inference,
+  robust variance, baselines and residuals, to the mapping from formulas to source (line references at
+  `efb6329`), the distributed execution (blocks, the one shuffle, the Spark jobs of a fit, driver and
+  executors, determinism), architecture, validation, performance and worked examples on `tiny-ties`.
+- `docs/tutorials/cox/review-findings.md`: twelve findings, F-01 to F-12, registered as OI-64 to OI-68.
+  Among them: PROJECT_CONTEXT v2.6 §3.4 and §7.3.2 still call X-010 bug-compatible (F-01); monotone
+  likelihood is not detected (F-02); extreme offsets and covariate scales fail or mislead (F-03); an
+  unstratified fit is one task and capped at 1,000,000 rows, with a message naming Phase 1b (F-04).
+- `docs/tutorials/cox/probe/`: the two Scala programs and the script that produced the tutorial's
+  numbers; not compiled by sbt and not run by CI. README links the tutorial.
+
+Evidence (assistant sandbox; not CI): the review and the probes ran at `9385836` (round 69); between the two,
+no Cox kernel, engine code, job runner, specification, fixture or test changed (the shared run
+specification and Python entry point only gained the linear model). `numerics` and `engine` compiled
+with scalac 2.13.17 from the PySpark 4.1.0 source distribution (no `-release 17`; a stand-in
+`BuildInfo`) on OpenJDK 21.0.10. On tiny-ties the kernel reproduces R's stored log-likelihood, score,
+information, estimates, standard errors, baseline, residuals and robust variance to 7e-15 or better;
+`CoxPH.fit` in local Spark returns β̂ and ℓ bitwise equal to the kernel; a two-block fit is bitwise
+identical at `spark.sql.shuffle.partitions` 1, 4 and 7 with reversed, repartitioned input; a listener
+recorded 15 Spark jobs for a three-iteration fit. Not verified: sbt, the pinned compiler, CI.
+
+What to send back: the CI run as usual; no compiled file changes.
 
 ## Round 75 (2026-10-11): Phase 3 closed; PROJECT_CONTEXT v2.6
 

@@ -29,6 +29,7 @@ every feature stays `Experimental` until the package-level scale test (D-28).
 | [OPEN_ITEMS.md](OPEN_ITEMS.md), [DISCREPANCIES.md](DISCREPANCIES.md) | Open work; differences from the reference |
 | [HANDOFF.md](HANDOFF.md) | Continuity between working sessions |
 | [docs/compatibility.md](docs/compatibility.md) | Spark, Databricks Runtime, Scala and JDK pins |
+| [docs/tutorials/cox/](docs/tutorials/cox/README.md) | Tutorial: the Cox model from statistics to source code and Spark execution |
 
 ## Modules
 
