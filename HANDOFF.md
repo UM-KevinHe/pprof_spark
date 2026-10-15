@@ -100,10 +100,10 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Round 81 delivered the Databricks workflow (`databricks/` notebooks, `docs/guide/databricks.md`). Next: the
-maintainer's first run on his cluster (`00_build`, installation, `01_parity`, `02_scale`) and what it sends back
-(OI-72), with a follow-up round for whatever Databricks reveals; his decisions on the scale-test plan's §12 (D-49);
-then rounds 82 to 84 build the kit. Specification addenda for OI-65 and OI-66 can run alongside.
+Round 82 diagnosed the production-validation findings (`docs/reviews/production-validation-2026-10.md`, OI-73 to OI-81). Next: the maintainer's
+decisions in its section 3 (the addenda; the order), then the fixes, in the proposed order L5 and C3, C1, L2 to L4
+and L6, L1, then C2's composite keys. The scale-test kit (plan §11) follows them; addenda for OI-65 and OI-66
+can run alongside.
 
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
@@ -112,6 +112,27 @@ with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 
 OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-70).
 
 ## Round log
+
+## Round 82 (2026-10-12): diagnosis of the production-validation findings
+
+The maintainer's team validated `b670dbb` (round 81) against R and pprof_py on production data in five
+pipelines (about 5 M rows, 60 to 142 features) and reported ten issues, C1 to C4 for `CoxPH` and L1 to L6 for
+`LogisticFixedEffect`. `docs/reviews/production-validation-2026-10.md` gives each a diagnosis, the code involved, a proposed
+fix and its risks; no code changed. Highlights:
+
+- C1 (reported High) is a reference-point convention, not an estimator error: on counting-process data with
+  2,505 rows starting at event times, daily ties and an offset, the fit's score under R's risk set was 1e-13,
+  the baseline increments matched R's definitions to 5e-16 and the martingale residuals (Efron with R's tied-death
+  rule) to 2e-15; pprof_spark's baseline is at offset 0 (X-014), R's and pprof_py's at the weighted mean offset.
+- L4 is pprof_py's `null_value="reference"` versus `"mean"`; pprof_spark lacks the latter.
+- L5's arithmetic: at p = 142, 4 MiB blocks give about 1,400 partials of 82 KB against a 64 MiB driver budget.
+- OI-72 partly answered; OI-73 to OI-81 opened.
+
+Evidence (assistant sandbox): the C1 probe ran pprof_spark (round 81 code, local Spark) against an independent
+NumPy implementation of R's definitions; the other diagnoses come from the source and pprof_py v0.7.0's
+(`add_providers`, `test_standardized`, its null models). Not run here: production data, R.
+
+What to send back: decisions on the document's section 3.
 
 ## Round 81 (2026-10-12): Databricks build, parity and scale notebooks
 
