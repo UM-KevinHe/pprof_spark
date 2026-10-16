@@ -112,6 +112,26 @@ OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the 
 
 ## Round log
 
+## Round 83.1 (2026-10-16): CI fixes after round 83
+
+Round 83's CI failed two suites:
+
+- `CoxFitIOSuite` asserted the literal "format versions 1 to 3" in the message for an unreadable version; round 83
+  moved `CoxFitIO` to format version 4. The assertion now follows `CoxFitIO.FormatVersion`, as the same test's
+  other checks already did.
+- `ThreeStageStage3Suite` failed with `OutOfMemoryError: Java heap space` while Spark serialized a task. Measured in
+  the sandbox on JDK 17 with CI's 2 GB cap: the heap after a full collection grows with every Spark test even when
+  nothing stays persisted (the three-stage code releases all four datasets it persists; Spark's own bookkeeping,
+  such as broadcast task binaries awaiting cleanup, accounts for the growth; lowering Spark's job, stage and
+  execution history changed it by under 10 MB). From about 100 MB at the start, 33 layout and stage-3 tests
+  reach 480 MB, the stage-3 tests adding most; in CI about 350 tests share the JVM. The test JVM's heap is
+  now 3 GB (`build.sbt`); GitHub's standard runners for public repositories have 16 GB.
+
+Evidence (assistant sandbox): `CoxFitIOSuite` passes against round 83's engine; the heap measurements above. Not
+run here: sbt, the full suites.
+
+What to send back: the CI run.
+
 ## Round 83 (2026-10-12): block options and growth (L5); stratum byte budget (C3)
 
 The maintainer approved the round 82 recommendations (D-49). This round delivers the first item of their order.

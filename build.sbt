@@ -103,7 +103,9 @@ lazy val sparkModuleSettings = Seq(
   Test / javaOptions ++=
     sys.props.get("pprof.test.sparkApi").map(mode => s"-Dpprof.test.sparkApi=$mode").toSeq,
   Test / javaOptions ++= sparkJavaModuleOptions ++ Seq(
-    "-Xmx2g",
+    // About 350 Spark suites share one forked JVM, whose retained heap grows with Spark's own bookkeeping;
+    // round 83's CI ran out of heap at 2 GB in ThreeStageStage3Suite (round 83.1). Runners have 16 GB.
+    "-Xmx3g",
     "-Duser.timezone=UTC",
     "-Dpprof.fixtures=" + ((LocalRootProject / baseDirectory).value / "fixtures"),
     "-Dlog4j2.configurationFile=" +
