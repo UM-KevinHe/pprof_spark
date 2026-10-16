@@ -129,10 +129,6 @@ class CoxBaselineReferenceSuite extends SparkSuite {
   for (name <- withOffsets; ties <- Methods)
     test(s"means is R's basehaz(centered = TRUE), with R's fit$$means: $name, ${ties.name}") {
       val r = reference(name, "r_survival", ties).get("tight")
-      assume(
-        r.has("basehaz_centered_hazard"),
-        "the fixtures predate round 84: regenerate them with the fixtures workflow"
-      )
       val fit = CoxPH.fit(frame(spark, name), spec(name), tight(ties))
       val point = CoxPH.referencePoint(frame(spark, name), fit)
       check("T-coef", s"$name ${ties.name} means vs R", point.means, doubles(r, "means"))

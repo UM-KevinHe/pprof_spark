@@ -71,7 +71,7 @@ sums. Fixtures gain R's `basehaz` both ways and `survfit`.
 **Risks.** None by default. R computes `fit$means` over rows weighted by case weights; this is to be
 confirmed in the fixtures, including for counting-process rows and strata (R uses overall means).
 
-**Status.** Resolved in round 84: `baseline(reference = "raw" | "mean_offset" | "means")` and `reference_point()`, which gives R's means for centring the linear predictor (in place of a `centered` flag on `linear_predictor`). R's `nocenter` rule and its weighted and unweighted means are followed; the R references for `means` arrive with the next fixture regeneration (OI-82).
+**Status.** Resolved in round 84: `baseline(reference = "raw" | "mean_offset" | "means")` and `reference_point()`, which gives R's means for centring the linear predictor (in place of a `centered` flag on `linear_predictor`). R's `nocenter` rule and its weighted and unweighted means are followed; the R references for `means` are in the fixtures since round 88 (OI-82, closed).
 
 ### C2. `row_id` for counting-process data
 
@@ -146,7 +146,7 @@ standardized measures, tests and null values. Python: `add_providers(...)`, retu
 the provider's rows (exact, score) have none for added providers and return missing values, as is to be
 confirmed against pprof_py.
 
-**Status.** Resolved in round 86: `LogisticFit.withProviders` and Python `add_providers`, with every output that lists providers following pprof_py v0.7.0 (logistic specification §8a); checked against pprof_py itself on 70 comparisons in the sandbox.
+**Status.** Resolved in round 86: `LogisticFit.withProviders` and Python `add_providers`, with every output that lists providers following pprof_py v0.7.0 (logistic specification §8a); checked against pprof_py itself on 70 comparisons in the sandbox. Fixture-backed parity since round 88 (OI-85).
 
 ### L2. Null model for `test_standardized()`
 
@@ -163,7 +163,7 @@ under its own specification.
 **Risks.** None by default. The team's R `FixedNull(sd = 1.81)` should be checked against pprof_py's
 definition (location, scale, and how intervals use them) before fixtures are made.
 
-**Status.** Round 85: the theoretical and fixed nulls, in the engine and Python (`FixedNull`; pprof_py's `FixedNull` objects are accepted). The empirical null remains (OI-78).
+**Status.** Round 85: the theoretical and fixed nulls, in the engine and Python (`FixedNull`; pprof_py's `FixedNull` objects are accepted). Fixture-backed parity since round 88 (OI-84). The empirical null remains (OI-78).
 
 ### L3. `interval` and `bounds`
 
@@ -175,7 +175,7 @@ clipped, rates to [0, 1] and ratios to [0, ∞) (`LogisticStandardization`). ppr
 **Proposed fix.** Both options with pprof_py's defaults, with L2 (`scale_only` matters only for a
 non-theoretical null).
 
-**Status.** Resolved in round 85: `interval` and `bounds`, pprof_py's defaults.
+**Status.** Resolved in round 85: `interval` and `bounds`, pprof_py's defaults. Fixture-backed parity since round 88 (OI-84).
 
 ### L4. `reference="mean"`
 
@@ -191,7 +191,7 @@ all providers including those added by L1, as pprof_py documents.
 
 **Risks.** None by default; fixtures from pprof_py for each mode.
 
-**Status.** Resolved in round 85: `null_value` = `"reference"`, `"mean"`, `"median"`, a number or a callable.
+**Status.** Resolved in round 85: `null_value` = `"reference"`, `"mean"`, `"median"`, a number or a callable. Fixture-backed parity since round 88 (OI-84).
 
 ### L5. Block options for the logistic model
 

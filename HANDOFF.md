@@ -89,6 +89,22 @@ suites, `API=connect`), `app41.sh` (app), `numtest48.sh`, `tk35b.sh`, `cipy.sh` 
   `#ifdef R_version_le_260`: current R's `pt` is exact. Check R's source and output before following it (round 64).
 - Reference tails: pprof_py's upper and near-one tails lose accuracy (X-024); compare only where they are
   reliable. lme4 treats fractional binomial outcomes differently (informational only, spec 2f-3 §9).
+- Format versions: when one changes, search the tests broadly for the old number, including split strings such as
+  "versions 1 to 3" (rounds 83.1 and 86).
+- CI's Python job installs only `pyspark` and `pytest`: no `toPandas()` in `python/tests` (round 84.1).
+- About 350 suites share one test JVM, now 3 GB, whose heap grows with Spark's own bookkeeping (round 83.1); suites
+  also leave cached baselines behind (OI-83).
+- Run the reference before stating how it behaves: reading pprof_py misled round 82 on L6, and a sandbox cross-check
+  against pprof_py caught a bug before round 86 shipped.
+- Floating-point thresholds: α = 1 − level is not exactly 0.05, so tests compute critical values as the engine does.
+- Outputs pinned by tests (`LogisticFE.ProviderColumns`, messages) break when outputs change: search widely before
+  the run.
+- Actions logs need a GitHub sign-in and the API is rate-limited from the sandbox: ask the maintainer for the log or
+  the test-report artifact.
+- A round that changes a fixture generator regenerates that family in the same round: `compare_outputs.py` fails a
+  file whose set of quantities changed, and `FixturesSuite` checks every file against the manifest's checksums
+  (round 84 changed `cox_survival.R` alone; round 88 regenerated).
+- The sandbox has about 3 GB of memory: run one test JVM at a time, with nothing heavy beside it (round 88).
 
 ### 7. Open items to carry
 
@@ -102,8 +118,9 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 The maintainer approved the round 82 review's recommendations (D-49); rounds 83 to 87 delivered all of them (L5, C3,
 C1, L2 to L4, L1, C2); L6 needed no change, and the empirical null remains (OI-78). Next: the maintainer's
-re-validation on production data; the fixture regenerations (OI-82; OI-84 and OI-85 once the generator emits them);
-the scale-test plan's decisions (§12), then its kit. Addenda for OI-65 and OI-66 can run alongside.
+re-validation on production data, on round 87's build; round 89, a refreshed session summary with OI-83; the
+scale-test plan's decisions (§12), then its kit. Round 88 regenerated the fixtures (OI-82, OI-84 and OI-85 closed),
+so a `fixtures.yml` run now only confirms them. Addenda for OI-65 and OI-66 can run alongside.
 
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
@@ -112,6 +129,41 @@ with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 
 OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-70).
 
 ## Round log
+
+## Round 88 (2026-10-16): fixtures for reference points, standardized-test options and added providers
+
+The maintainer reported round 87's CI green and chose to regenerate the fixtures in the sandbox, as the fixture
+rounds up to 68 did, rather than through `fixtures.yml`, whose comparison would have failed on the new quantities.
+
+- `reference/fixtures/logistic_fixtures.py` emits `standardized_test_options` for `lfe-base` and `lfe-clustered`
+  (OI-84): `test_standardized` with mean, median and numeric null values, a `FixedNull` with `inversion` and
+  `scale_only` intervals, bounds `none` and fixed, and all of them together, on `direct_rate` and `indirect_ratio`,
+  with robust variance on clustered data: 16 and 17 sets, each recorded with its options.
+- It emits `added_providers` for `lfe-base` (OI-85), set up as `LogisticAddProvidersSuite`: the two smallest provider
+  keys left out of the fit and added back at -17 and +17, the sixth fitted provider replaced by 0.5; measure tables,
+  the five measures, four standardized tests, four provider tests and predictions for every row, in key order.
+- The Cox and logistic families regenerated from the committed inputs (pprof_py at the pin; R 4.3.3, survival 3.5-8,
+  R pprof and poibin as `fixtures.yml` installs them). Only additions: four quantities in each Cox `r_survival.json`
+  (`basehaz_centered_hazard` and `means`, both tie methods; OI-82) and the two blocks above. Every earlier value is
+  unchanged and every other fixture file byte-identical; the manifest follows.
+- Tests: `CoxBaselineReferenceSuite`'s four R comparisons for `means` run, their skip removed so that a missing
+  quantity fails; `LogisticNullModelSuite` (4 new) and `LogisticAddProvidersSuite` (5 new) compare with the new
+  blocks through `LogisticFixtures.checkTestTable`.
+- Documents: Phase 1b addendum §2a, logistic specification §8a, standardization §2a and the review's statuses; §6
+  above gains the lessons of rounds 76 to 88; `STATUS.md` lists rounds 76 to 88. OI-82, OI-84 and OI-85 closed.
+
+Evidence (assistant sandbox, rebuilt this session from PySpark 4.1.0's jars and its Scala 2.13.17 compiler):
+numerics, testkit, engine, app and their tests compiled with `-Xlint -Wunused -Werror`; scalafmt 3.11.5 clean.
+Regeneration: `compare_outputs.py` found every earlier quantity bit for bit (0 of T-part); a second regeneration
+from the new fixtures reproduced them byte for byte and compares clean; `calibrate.py` passes. `FixturesSuite` 16 of
+16; `CoxBaselineReferenceSuite` 11 of 11, none skipped; `LogisticNullModelSuite` 12 of 12; `LogisticAddProvidersSuite`
+11 of 11; regressions `LogisticStandardizationSuite` 4, `LogisticProviderTestsSuite` 5, `LogisticFESuite` 10,
+`LogisticInferenceSuite` 8 and `CoxBaselineSuite` 28, all passing. Negative controls: six fixture values perturbed
+(an interval end, a flag far from the threshold, a direct rate, a Wald z, a prediction, an R mean) each fail their
+test, at 43 to 100 times the tolerance, and nothing else fails. Not run here: sbt, Spark Connect, Python (unchanged).
+
+What to send back: the CI run; when convenient, a `fixtures.yml` run, which should now pass for the Cox and logistic
+families (whether CI's runner reproduces the three-stage `glmer` blocks is OI-62's open question).
 
 ## Round 87 (2026-10-16): composite row keys (C2)
 

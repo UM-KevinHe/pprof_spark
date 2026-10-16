@@ -53,8 +53,8 @@ baseline times a constant factor exp(c):
 Σxᵢₖ/n for data with entry times (`agreg.fit`, `colMeans`). The means are over all rows and strata
 together. These rules were read in survival 3.8-13's source (`coxph.fit.R`, `agreg.fit.R`, `coxfit6.c`,
 `basehaz.R`, `survfit.coxph.R`); the fixtures pin survival 3.5-8, and `cox_survival.R` emits the R references
-for `means` (`basehaz(fit, centered = TRUE)` and `fit$means`) from round 84, so a regeneration of the
-fixtures confirms them there (OI-82).
+for `means` (`basehaz(fit, centered = TRUE)` and `fit$means`) from round 84. The fixtures carry them since round
+88, and `CoxBaselineReferenceSuite` compares `means` with them (OI-82, closed).
 
 Increments and cumulative hazards are the raw ones times exp(c), as R's `basehaz` scales its curve, and the
 survival column is exp(−cumulative hazard). The sums behind ō and mₖ are compensated, in canonical row order

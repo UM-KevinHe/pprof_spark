@@ -169,4 +169,96 @@ class LogisticAddProvidersSuite extends SparkSuite {
     LogisticFitIO.save(spark, fit, directory.resolve("plain").toString)
     assertEquals(LogisticFitIO.load(spark, directory.resolve("plain").toString).added.size, 0)
   }
+
+  // OI-85 (round 88): pprof_py's add_providers on the same set-up, as the fixtures record it.
+  private lazy val added = json("lfe-base", "pprof_py").get("added_providers")
+  private lazy val viewKeys: Seq[Long] =
+    LogisticProviderView.of(extended).keys.toSeq.map(k => GroupKey.value(k).asInstanceOf[Long])
+
+  test("pprof_py's add_providers (fixture): the same set-up, providers and effects") {
+    assertEquals(ints(added.get("definition"), "keys"), Seq(d0, d1, replacedKey))
+    assertEquals(viewKeys, ints(added, "providers"))
+    check(
+      "T-coef",
+      "gamma",
+      LogisticStandardization.measure(df, extended, "gamma").estimate.toSeq,
+      doubles(added, "gamma")
+    )
+  }
+
+  test("pprof_py's add_providers (fixture): standardized measures and their tables") {
+    def compare(what: String, ours: Array[Double], theirs: Array[Double]): Unit = {
+      assert(
+        ours.indices.forall(i => ours(i).isNaN == theirs(i).isNaN),
+        s"$what: missing values differ"
+      )
+      val finite = theirs.indices.filter(i => theirs(i).isFinite)
+      check("T-meas", what, finite.map(ours), finite.map(theirs).toArray)
+    }
+    val tables = LogisticStandardization.measures(df, extended)
+    Seq(
+      "indirect" -> Seq("indirect_ratio", "indirect_rate", "observed", "expected"),
+      "direct" -> Seq("direct_ratio", "direct_rate", "observed", "expected", "n_pop")
+    ).foreach { case (kind, columns) =>
+      columns.foreach { c =>
+        compare(
+          s"$kind $c",
+          alignedColumn(tables(kind), c, viewKeys),
+          doubles(added.get("measures").get(kind), c)
+        )
+      }
+    }
+    Seq("direct_rate", "direct_ratio", "indirect_ratio", "indirect_rate", "gamma").foreach { m =>
+      val ours = LogisticStandardization.measure(df, extended, m)
+      val r = added.get("measure").get(m)
+      compare(s"$m estimate", ours.estimate.toArray, doubles(r, "estimate"))
+      compare(s"$m se", ours.se.toArray, doubles(r, "se"))
+      check(
+        "T-meas",
+        s"$m reference value",
+        Seq(ours.referenceValue),
+        doubles(r, "reference_value")
+      )
+    }
+  }
+
+  test("pprof_py's add_providers (fixture): tests on standardized measures") {
+    Seq(
+      ("direct_rate_auto", "direct_rate", NullValue.Reference),
+      ("gamma_auto", "gamma", NullValue.Reference),
+      ("indirect_ratio_auto", "indirect_ratio", NullValue.Reference),
+      ("direct_rate_mean", "direct_rate", NullValue.Mean)
+    ).foreach { case (label, measure, nullValue) =>
+      val table = LogisticStandardization.test(df, extended, measure, nullValue)
+      checkTestTable(label, table, added.get("tests").get(label), viewKeys)
+    }
+  }
+
+  test("pprof_py's add_providers (fixture): exact, score and Wald provider tests") {
+    Seq(
+      ("exact_two_sided_median", "poibin_exact", EffectReference.Median),
+      ("exact_two_sided_mean", "poibin_exact", EffectReference.Mean),
+      ("score_two_sided_median", "score", EffectReference.Median),
+      ("wald_two_sided_median", "wald", EffectReference.Median)
+    ).foreach { case (label, method, reference) =>
+      val r = added.get("provider_tests").get(label)
+      val p = doubles(r, "p")
+      // pprof_py's exact tails are unreliable below 1e-7 (X-024): z is compared where the two-sided p is 2e-7 or more.
+      val table = LogisticProviderTests.test(df, extended, method, reference)
+      checkTestTable(label, table, r, viewKeys, i => method != "poibin_exact" || p(i) >= 2e-7)
+    }
+  }
+
+  test(
+    "pprof_py's add_providers (fixture): predictions for every row, the left-out providers' included"
+  ) {
+    val r = added.get("predict")
+    val ours = LogisticFE
+      .predict(all, extended)
+      .select("id", "probability")
+      .collect()
+      .map(row => row.getAs[Number](0).longValue -> row.getDouble(1))
+      .toMap
+    check("T-coef", "predictions", ints(r, "id").map(ours), doubles(r, "value"))
+  }
 }

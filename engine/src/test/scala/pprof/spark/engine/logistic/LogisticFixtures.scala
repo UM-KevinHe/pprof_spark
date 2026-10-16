@@ -103,4 +103,86 @@ object LogisticFixtures {
     actual.indices.filter(i => expected(i) >= 1e-6).foreach { i =>
       check("T-test", s"$what p-value $i", Seq(actual(i)), Array(expected(i)))
     }
+
+  /** A column of a provider-level table aligned to `providers` (integral keys): NaN where a provider has no
+    * row or a null value.
+    */
+  def alignedColumn(table: DataFrame, name: String, providers: Seq[Long]): Array[Double] = {
+    val byKey = table
+      .select("provider", name)
+      .collect()
+      .map(r =>
+        r.getAs[Number](0).longValue -> (if (r.isNullAt(1)) Double.NaN
+                                         else r.getAs[Number](1).doubleValue)
+      )
+      .toMap
+    providers.map(k => byKey.getOrElse(k, Double.NaN)).toArray
+  }
+
+  /** A provider-test table against pprof_py's columns in a fixture node whose rows follow `providers`: the same
+    * providers untested; z, and z_adjusted where the fixture has it, within T-test; p-values where pprof_py's
+    * are accurate; interval ends within T-coef, or identical where not finite; and the same flags except where
+    * the statistic that decides them lies within 1e-8 of the critical value. `reliable` leaves out providers
+    * whose reference z is outside pprof_py's accuracy (X-024).
+    */
+  def checkTestTable(
+      what: String,
+      table: DataFrame,
+      ref: JsonNode,
+      providers: Seq[Long],
+      reliable: Int => Boolean = _ => true,
+      critical: Double = 1.959963984540054
+  ): Unit = {
+    def ours(name: String) = alignedColumn(table, name, providers)
+    val z = ours("z_raw")
+    val expected = doubles(ref, "z")
+    assert(
+      z.indices.forall(i => z(i).isNaN == expected(i).isNaN),
+      s"$what: the untested providers differ"
+    )
+    val compared = expected.indices.filter(i => expected(i).isFinite && reliable(i))
+    check("T-test", s"$what z", compared.map(z), compared.map(expected).toArray)
+    val deciding =
+      if (!ref.has("z_adjusted")) z
+      else {
+        val adjusted = ours("z_adjusted")
+        check(
+          "T-test",
+          s"$what z_adjusted",
+          compared.map(adjusted),
+          compared.map(doubles(ref, "z_adjusted")).toArray
+        )
+        adjusted
+      }
+    checkPValues(what, compared.map(ours("p_value")), compared.map(doubles(ref, "p")).toArray)
+    Seq("ci_lower", "ci_upper").foreach { side =>
+      val (a, e) = (ours(side), doubles(ref, side))
+      compared.filterNot(i => e(i).isFinite).foreach { i =>
+        assert(
+          java.lang.Double.compare(a(i), e(i)) == 0,
+          s"$what $side of provider ${providers(i)}: ${a(i)}, pprof_py ${e(i)}"
+        )
+      }
+      val finite = compared.filter(i => e(i).isFinite)
+      check("T-coef", s"$what $side", finite.map(a), finite.map(e).toArray)
+    }
+    val byKey = table
+      .select("provider", "flag")
+      .collect()
+      .map(r =>
+        r.getAs[Number](0).longValue -> (if (r.isNullAt(1)) None
+                                         else Some(r.getAs[Number](1).intValue))
+      )
+      .toMap
+    val flags = providers.map(k => byKey.getOrElse(k, None))
+    val node = ref.get("flag")
+    val theirs =
+      providers.indices.map(i => if (node.get(i).isNull) None else Some(node.get(i).asInt))
+    providers.indices.filter(i => flags(i) != theirs(i)).foreach { i =>
+      assert(
+        math.abs(math.abs(deciding(i)) - critical) <= 1e-8 * critical,
+        s"$what: the flag of provider ${providers(i)} differs away from the threshold: ${flags(i)}, pprof_py ${theirs(i)}"
+      )
+    }
+  }
 }

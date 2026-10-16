@@ -1,5 +1,8 @@
 package pprof.spark.engine.logistic
 
+import scala.jdk.CollectionConverters._
+
+import com.fasterxml.jackson.databind.JsonNode
 import org.apache.spark.sql.{DataFrame, Row}
 
 import pprof.spark.engine.logistic.LogisticFixtures._
@@ -156,4 +159,67 @@ class LogisticNullModelSuite extends SparkSuite {
     )
     assert(e.getMessage.contains("indirectVariance"), e.getMessage)
   }
+
+  private def nullValueOf(o: JsonNode): NullValue = o.get("null_value").asText() match {
+    case "value" => NullValue.Value(doubles(o, "null_number")(0))
+    case mode    => NullValue.of(mode, Double.NaN)
+  }
+
+  private def nullModelOf(o: JsonNode): NullModel = o.get("null_model").asText() match {
+    case "fixed" =>
+      val p = doubles(o, "null_parameters")
+      NullModel.Fixed(p(0), p(1))
+    case _ => NullModel.Theoretical
+  }
+
+  private def boundsOf(o: JsonNode): IntervalBounds = o.get("bounds").asText() match {
+    case "none"  => IntervalBounds.Unbounded
+    case "fixed" =>
+      val b = doubles(o, "bounds_values")
+      IntervalBounds.Fixed(b(0), b(1))
+    case _ => IntervalBounds.Auto
+  }
+
+  // OI-84 (round 88): pprof_py's own outputs for these options, from the fixtures, which also record the options.
+  for (name <- Seq("lfe-base", "lfe-clustered"); measure <- Seq("direct_rate", "indirect_ratio"))
+    test(
+      s"pprof_py's test_standardized with null values, a fixed null, intervals and bounds: $name, $measure"
+    ) {
+      val df = frame(spark, name)
+      val fit = LogisticFE.fit(df, spec(name))
+      val ref = json(name, "pprof_py").get("standardized_test_options")
+      val providers = ints(ref, "providers")
+      val labels = ref.fieldNames().asScala.toSeq.filter { label =>
+        label != "providers" && ref.get(label).get("options").get("measure").asText() == measure
+      }
+      assert(labels.size >= 8, s"$name $measure: ${labels.size} sets of options")
+      labels.foreach { label =>
+        val r = ref.get(label)
+        val o = r.get("options")
+        val table = LogisticStandardization.test(
+          df,
+          fit,
+          measure,
+          nullValueOf(o),
+          o.get("transform").asText(),
+          variance = o.get("variance").asText(),
+          nullModel = nullModelOf(o),
+          interval = o.get("interval").asText(),
+          bounds = boundsOf(o)
+        )
+        checkTestTable(s"$name $label", table, r, providers)
+        val first = table.orderBy("provider").head()
+        check(
+          "T-meas",
+          s"$name $label null value",
+          Seq(first.getAs[Double]("null_value")),
+          doubles(r, "null_value")
+        )
+        assertEquals(
+          (first.getAs[Double]("null_mean"), first.getAs[Double]("null_sd")),
+          (doubles(r, "null_mean")(0), doubles(r, "null_sd")(0)),
+          s"$name $label"
+        )
+      }
+    }
 }

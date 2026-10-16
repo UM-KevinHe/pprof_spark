@@ -61,6 +61,14 @@ OPTIONS = {
     "provider_tests": "slice 2c at the default fit: test() for poibin_exact (two_sided, greater, less; reference median, "
                       "mean and -0.5), score (median, mean), wald (median), bootstrap_exact (seed 1); controls with the "
                       "reference shifted by 0.01 and one outcome flipped; poibin-tails.json: mpmath tails at 60 digits",
+    "standardized_test_options": "OI-84 (lfe-base, lfe-clustered): test_standardized with mean, median and "
+                                 "numeric null values, a FixedNull with inversion and scale_only intervals, "
+                                 "bounds none and fixed, and all of them together (round 85); rows in "
+                                 "provider-key order",
+    "added_providers": "OI-85 (lfe-base): the two smallest provider keys left out of the fit and added back "
+                       "with add_providers at -17 and +17, the sixth fitted provider replaced by 0.5; "
+                       "measures, tests, provider tests and predictions (round 86); rows in provider-key "
+                       "order",
     "standardization": "slice 2d at the default fit: calculate_standardized_measures (indirect and direct; reference "
                        "median, mean, -0.5; extreme observations with 50 trials), standardized_measure (five measures; "
                        "model, robust and robust_fixed_beta variances; indirect variance null and fitted), "
@@ -323,6 +331,135 @@ def standardization_controls(model, df, case):
     return out
 
 
+TEST_OPTION_CASES = ("lfe-base", "lfe-clustered")
+ADDED_PROVIDERS_CASE = "lfe-base"
+ADDED = {"gamma": (-17.0, 17.0, 0.5), "se_gamma": (0.01, 0.01, 0.01), "group_sizes": (11, 12, 40)}
+ADDED_TESTS = ("exact_two_sided_median", "exact_two_sided_mean", "score_two_sided_median", "wald_two_sided_median")
+
+
+def by_provider(frame, providers):
+    """A pprof_py result indexed by provider and reordered to `providers` (missing providers become NaN)."""
+    for column in ("provider_id", "provider"):
+        if column in frame.columns:
+            return frame.set_index(column).reindex(providers)
+    return frame.reindex(providers)
+
+
+def test_record(t):
+    """The columns of a provider test that the fixtures keep (PROVIDER_TEST_COLUMNS)."""
+    return {"z": hexes(t["z_raw"]), "z_adjusted": hexes(t["z_adjusted"]), "p": hexes(t["p_value"]),
+            "flag": [None if pd.isna(v) else int(v) for v in t["flag"]],
+            "ci_lower": hexes(t["ci_lower"]), "ci_upper": hexes(t["ci_upper"]),
+            "null_value": hexes([t["null_value"].iloc[0]]), "null_mean": hexes([t["null_mean"].iloc[0]]),
+            "null_sd": hexes([t["null_sd"].iloc[0]])}
+
+
+def options_record(options):
+    """The options of a test_standardized call: names as strings, numbers as hexadecimal lists."""
+    record = {"measure": options["measure"], "transform": options.get("transform", "auto"),
+              "variance": options.get("variance", "model"), "interval": options.get("interval", "inversion")}
+    value = options.get("null_value", "reference")
+    if isinstance(value, str):
+        record["null_value"] = value
+    else:
+        record["null_value"], record["null_number"] = "value", hexes([value])
+    if "null_model" in options:
+        record["null_model"], record["null_parameters"] = "fixed", hexes(options["null_model"])
+    else:
+        record["null_model"] = "theoretical"
+    bounds = options.get("bounds", "auto")
+    if bounds is None:
+        record["bounds"] = "none"
+    elif isinstance(bounds, str):
+        record["bounds"] = bounds
+    else:
+        record["bounds"], record["bounds_values"] = "fixed", hexes(bounds)
+    return record
+
+
+def standardized_test_options(model):
+    """OI-84: test_standardized with the options of round 85 (standardization specification §2a): mean,
+    median and numeric null values; a fixed null with both interval methods; interval bounds; all of
+    them together; and, with clustered data, robust variance. Rows in provider-key order."""
+    from pprof_py.inference.empirical_null.models import FixedNull
+    grid = []
+    for measure, value, bounds in (("direct_rate", 0.25, (0.1, 0.5)), ("indirect_ratio", 1.1, (0.5, 1.5))):
+        grid += [(f"{measure}_{label}", dict(options, measure=measure)) for label, options in (
+            ("mean", {"null_value": "mean"}),
+            ("median", {"null_value": "median"}),
+            ("value", {"null_value": value}),
+            ("fixed_inversion", {"null_model": (0.4, 1.7)}),
+            ("fixed_scale_only", {"null_model": (0.4, 1.7), "interval": "scale_only"}),
+            ("identity_unbounded", {"transform": "identity", "bounds": None}),
+            ("identity_bounds", {"transform": "identity", "bounds": bounds}),
+            ("combined", {"null_value": "median", "null_model": (-0.3, 1.4), "interval": "scale_only",
+                          "transform": "identity", "bounds": (0.0, bounds[1])}))]
+    if model.robust_variances_ is not None:
+        grid.append(("direct_rate_robust_fixed_scale_only", {"measure": "direct_rate", "variance": "robust",
+                                                             "null_model": (0.4, 1.7), "interval": "scale_only"}))
+    providers = np.sort(np.asarray(model.provider_ids_))
+    out = {"providers": [int(p) for p in providers]}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for label, options in grid:
+            call = {k: v for k, v in options.items() if k not in ("measure", "null_model")}
+            if "null_model" in options:
+                call["null_model"] = FixedNull(mean=options["null_model"][0], sd=options["null_model"][1])
+            t = by_provider(model.test_standardized(options["measure"], **call), providers)
+            out[label] = dict(test_record(t), options=options_record(options))
+    return out
+
+
+def added_providers(df):
+    """OI-85: providers added after fitting (pprof_py's add_providers; logistic specification §8a), set up
+    as LogisticAddProvidersSuite does: the two providers with the smallest keys are left out of the fit
+    and added back at -17 and +17, and the sixth fitted provider's effect is replaced by 0.5. Every
+    output that lists providers, in provider-key order, and predictions for every input row."""
+    from pprof_py.inference.standardized import standardized_measure
+    dropped = [int(k) for k in np.sort(df["provider"].unique())[:2]]
+    model = fit(df[~df["provider"].isin(dropped)].reset_index(drop=True))
+    replaced = int(np.sort(np.asarray(model.provider_ids_))[5])
+    keys = dropped + [replaced]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model.add_providers(keys, gamma=list(ADDED["gamma"]), se_gamma=list(ADDED["se_gamma"]),
+                            group_sizes=list(ADDED["group_sizes"]))
+        ids = np.asarray(model.provider_ids_)
+        order = np.argsort(ids, kind="stable")
+        providers = ids[order]
+        out = {"definition": {"keys": keys, "gamma": hexes(ADDED["gamma"]), "se_gamma": hexes(ADDED["se_gamma"]),
+                              "group_sizes": list(ADDED["group_sizes"])},
+               "providers": [int(p) for p in providers],
+               "gamma": hexes(np.asarray(model.coefficients_["gamma"], dtype=float).ravel()[order])}
+        r = model.calculate_standardized_measures(stdz=["indirect", "direct"])
+        out["measures"] = {
+            "indirect": {c: hexes(by_provider(r["indirect"], providers)[c])
+                         for c in ("indirect_ratio", "indirect_rate", "observed", "expected")},
+            "direct": {c: hexes(by_provider(r["direct"], providers)[c])
+                       for c in ("direct_ratio", "direct_rate", "observed", "expected", "n_pop")}}
+        out["measure"] = {}
+        for measure in MEASURES:
+            f = standardized_measure(model, measure)
+            out["measure"][measure] = {"estimate": hexes(np.asarray(f.estimate, dtype=float)[order]),
+                                       "se": hexes(np.asarray(f.se, dtype=float)[order]),
+                                       "reference_value": hexes([f.reference_value])}
+        out["tests"] = {}
+        for label, measure, call in (("direct_rate_auto", "direct_rate", {}), ("gamma_auto", "gamma", {}),
+                                     ("indirect_ratio_auto", "indirect_ratio", {}),
+                                     ("direct_rate_mean", "direct_rate", {"null_value": "mean"})):
+            out["tests"][label] = test_record(by_provider(model.test_standardized(measure, **call), providers))
+        out["provider_tests"] = {}
+        for name, options in PROVIDER_TESTS:
+            if name in ADDED_TESTS:
+                t = by_provider(model.test(**options), providers)
+                out["provider_tests"][name] = {"z": hexes(t["z_raw"]), "p": hexes(t["p_value"]),
+                                               "flag": [None if pd.isna(v) else int(v) for v in t["flag"]],
+                                               "ci_lower": hexes(t["ci_lower"]), "ci_upper": hexes(t["ci_upper"])}
+        out["predict"] = {"id": [int(i) for i in df["id"]],
+                          "value": hexes(model.predict(df, x_vars=list(FEATURES), provider_var="provider"))}
+    return out
+
+
 def poibin_tail_fixture():
     """Function-level references: Poisson-binomial tails of fixed probability vectors from mpmath at 60
     digits (the exact recursion), with pprof_py's `poibin_tails` beside them (X-024)."""
@@ -440,13 +577,18 @@ def generate(out, inputs, lock, write_json):
                           trials=int(df["n"].sum()) if "n" in df.columns else len(df), events=int(df["y"].sum()),
                           binomial="max_trials" in case)
         write_json(os.path.join(case_dir, "case.json"), definition)
-        write_json(os.path.join(case_dir, "pprof_py.json"), {
+        outputs = {
             "default": default, "tight": tight, "iterates": iterates(df),
             "function": {"start": start, "fixed": fixed}, "negative_controls": negative_controls(df, case),
             "inference": {"default": inference(model, df), "tight": inference(tight_model, df)},
             "provider_tests": provider_tests(model), "provider_test_controls": provider_test_controls(model, df, case),
             "standardization": standardization(model, case),
-            "standardization_controls": standardization_controls(model, df, case)})
+            "standardization_controls": standardization_controls(model, df, case)}
+        if case["id"] in TEST_OPTION_CASES:
+            outputs["standardized_test_options"] = standardized_test_options(model)
+        if case["id"] == ADDED_PROVIDERS_CASE:
+            outputs["added_providers"] = added_providers(df)
+        write_json(os.path.join(case_dir, "pprof_py.json"), outputs)
         write_json(os.path.join(case_dir, "r_logistic.json"), r_outputs(case_dir, case, default["excluded"], sources))
         names.append(case["id"])
     write_json(os.path.join(root, "poibin-tails.json"), poibin_tail_fixture())

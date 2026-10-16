@@ -67,7 +67,9 @@ are not implemented (OI-78).
 
 Verification: `LogisticNullModelSuite` checks these formulas bit for bit. In the assistant's sandbox, pprof_py
 v0.7.0 itself and pprof_spark agreed on `lfe-base` and `lfe-clustered`, for both measures and every option, to
-9 × 10⁻¹³ relative, with identical flags (round 85). Fixture-backed parity for these options is OI-84.
+9 × 10⁻¹³ relative, with identical flags (round 85). Since round 88 the fixtures carry pprof_py's outputs for these
+options (`standardized_test_options`: 16 sets on `lfe-base`, 17 on `lfe-clustered`), and `LogisticNullModelSuite`
+compares them (OI-84, closed).
 
 ## 3. Direct sums at scale (OI-49)
 

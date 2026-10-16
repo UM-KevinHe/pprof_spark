@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-16, round 87.
+Updated 2026-10-16, round 88.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -97,7 +97,22 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 72 | Slice 3c: `LinearRunSpec`, `LinearJob`, `LinearJobSuite`, the job guide; OI-63 | Merged (eba212c); CI green as reported by the maintainer |
 | 73 | Slice 3c: `PythonApi.linear*`, `pprof_spark.LinearFixedEffect` and `LinearFixedEffectModel`, their tests, the guide section; OI-63 closed | Merged (6722631); CI green as reported by the maintainer |
 | 74 | Phase 3 gate review (`docs/gates/phase-3.md`, D-48); worst ratios measured | Merged (9e33d27); D-48 approved; CI green as reported by the maintainer |
-| 75 | D-48 approved: Phase 3 closed at parity-verified; PROJECT_CONTEXT v2.6; README status | Delivered as a patch |
+| 75 | D-48 approved: Phase 3 closed at parity-verified; PROJECT_CONTEXT v2.6; README status | Merged (efb6329) |
+| 76 | Cox tutorial (`docs/tutorials/cox/`) | Merged (582c3c8) |
+| 77 | OI-64 documentation corrections; PROJECT_CONTEXT v2.7 | Merged (3e70739) |
+| 78 | Logistic fixed-effect tutorial (`docs/tutorials/logistic/`) | Merged (b1d92b6) |
+| 79 | Distributed-correctness tests (OI-67, OI-71) | Merged (20e1e5b) |
+| 80 | Scale-test plan, a draft for approval (`docs/spec/scale/plan.md`); L-01 recorded | Merged (132eca4) |
+| 81 | Databricks build, parity and scale notebooks (`databricks/`, `docs/guide/databricks.md`) | Merged (b670dbb) |
+| 82 | Diagnosis of the production-validation findings (`docs/reviews/production-validation-2026-10.md`) | Merged (29e21ce); D-49 approved |
+| 83 | Block options and growth (L5); stratum byte budget (C3) | Merged (3c77562); CI failed two suites, fixed in 83.1 |
+| 83.1 | CI fixes after round 83; test JVM heap 3 GB | Merged (00c3a46) |
+| 84 | Baseline reference points (C1) | Merged (5151915); CI's Python job failed, fixed in 84.1 |
+| 84.1 | The Python reference-point test without pandas | Merged (0b1fc9e) |
+| 85 | Null models, intervals, bounds and null values for standardized tests (L2 to L4); L6 corrected | Merged (22e9486) |
+| 86 | Providers added after fitting (L1) | Merged (41d83dc); CI green as reported by the maintainer |
+| 87 | Composite row keys for Cox (C2) | Merged (07746bb); CI green as reported by the maintainer |
+| 88 | Fixtures for reference points, standardized-test options and added providers (OI-82, OI-84, OI-85) | Delivered as a patch |
 
 ## Decisions and spikes
 

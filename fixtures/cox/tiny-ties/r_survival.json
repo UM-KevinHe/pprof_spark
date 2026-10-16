@@ -41,6 +41,12 @@
    ]
   },
   "tight": {
+   "basehaz_centered_hazard": [
+    "0x1.fd0d5b8992172p-3",
+    "0x1.a7b37f26dc12fp-2",
+    "0x1.c8c9e71b58fa8p-1",
+    "0x1.5f6d27f17ffdfp+0"
+   ],
    "basehaz_hazard": [
     "0x1.02a6dafc7b5c5p-2",
     "0x1.ae91add193723p-2",
@@ -85,6 +91,9 @@
     "0x1.9f5986fc9dce8p-3",
     "-0x1.5622357656a9ep+0",
     "-0x1.0a33224fb8786p-1"
+   ],
+   "means": [
+    "0x1.8000000000000p-4"
    ],
    "robust_clustered": [
     "0x1.09fe71c40ed18p-3"
@@ -149,6 +158,12 @@
    ]
   },
   "tight": {
+   "basehaz_centered_hazard": [
+    "0x1.10747700f00a6p-2",
+    "0x1.b9946d71c9274p-2",
+    "0x1.fa89e3aa4c788p-1",
+    "0x1.7834b35fc1430p+0"
+   ],
    "basehaz_hazard": [
     "0x1.14f4457f1885ap-2",
     "0x1.c0df3626db5f8p-2",
@@ -193,6 +208,9 @@
     "0x1.0a5bec14dcfb2p-2",
     "-0x1.6e13379854413p+0",
     "-0x1.42a73d494acfep-1"
+   ],
+   "means": [
+    "0x1.8000000000000p-4"
    ],
    "robust_clustered": [
     "0x1.45df7bcb3cebcp-3"

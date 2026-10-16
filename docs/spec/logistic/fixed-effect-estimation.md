@@ -156,7 +156,8 @@ unaffected.
 Verification: `LogisticAddProvidersSuite` checks each row of the table. In the assistant's sandbox, pprof_py
 v0.7.0 itself and pprof_spark agreed on 70 comparisons covering every output, on `lfe-base` fitted without two
 providers that were then added back, with a third replaced, with identical missing values and flags (round 86).
-Fixture-backed parity is OI-85.
+Since round 88 the fixtures carry the same case (`added_providers` in `lfe-base`'s `pprof_py.json`), and
+`LogisticAddProvidersSuite` compares every output with it (OI-85, closed).
 
 ## 9. Edge cases
 
