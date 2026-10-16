@@ -5,7 +5,7 @@ import org.apache.spark.sql.functions.{broadcast, col}
 
 import pprof.spark.engine.backend.{BlockOptions, DriverGuards, OrderedReduction, PlanFrames}
 import pprof.spark.engine.data.Validation
-import pprof.spark.engine.layout.{GroupSizes, LayoutPlan}
+import pprof.spark.engine.layout.{BudgetedLayout, GroupSizes, LayoutPlan}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
 import pprof.spark.numerics.{
@@ -39,7 +39,10 @@ object Ties {
       )
 }
 
-/** Fit options (Cox specification §5); defaults are pprof_py's and R's. */
+/** Fit options (Cox specification §5); defaults are pprof_py's and R's. One task holds a whole stratum
+  * (no TimeRange layout, OI-03), so `maxStratumBytes` caps a stratum's estimated size, 8 (p + 4) bytes a
+  * row; `maxStratumRows`, unlimited by default, can cap its rows as well (production finding C3, D-49).
+  */
 final case class CoxOptions(
     ties: Ties = Ties.Breslow,
     maxIterations: Int = 20,
@@ -47,15 +50,17 @@ final case class CoxOptions(
     maxHalvings: Int = 20,
     aliasTolerance: Double = Cholesky.DefaultTolerance,
     confidenceLevel: Double = 0.95,
-    maxStratumRows: Long = 1000000L,
+    maxStratumRows: Long = Long.MaxValue,
     blocks: BlockOptions = BlockOptions(),
-    robust: Boolean = false
+    robust: Boolean = false,
+    maxStratumBytes: Long = 4L * 1024 * 1024 * 1024
 ) {
   require(
     confidenceLevel > 0.0 && confidenceLevel < 1.0,
     s"confidenceLevel must lie in (0, 1), got $confidenceLevel"
   )
   require(maxStratumRows >= 1, s"maxStratumRows must be positive, got $maxStratumRows")
+  require(maxStratumBytes >= 1, s"maxStratumBytes must be positive, got $maxStratumBytes")
 
   val newton: NewtonOptions = NewtonOptions(maxIterations, eps, maxHalvings, aliasTolerance)
 }
@@ -319,17 +324,24 @@ object CoxPH {
   ): A = {
     val input = CoxValidation.validate(df, spec)
     val p = spec.features.size
-    val plan = LayoutPlan.create(
+    val plan = BudgetedLayout.plan(
       GroupSizes.collectGroupSizes(input.frame, options.blocks),
-      options.blocks.targetRowsPerBlock(p + 2)
+      options.blocks,
+      p + 2,
+      8L * (2L + p + Moments.packedLength(p))
     )
-    plan.placements.find(_.rows > options.maxStratumRows).foreach { g =>
-      throw new IllegalArgumentException(
-        s"stratum ${g.groupIndex} has ${g.rows} rows, more than maxStratumRows = " +
-          s"${options.maxStratumRows}; a stratum must fit in one block: TimeRange layouts, " +
-          "which would split it, are not implemented (OI-03)"
-      )
-    }
+    val rowBytes = 8L * (p + 4)
+    plan.placements
+      .find(g => g.rows > options.maxStratumRows || g.rows * rowBytes > options.maxStratumBytes)
+      .foreach { g =>
+        throw new IllegalArgumentException(
+          s"stratum ${g.groupIndex} has ${g.rows} rows, about ${g.rows * rowBytes} bytes with $p " +
+            s"features, more than maxStratumBytes = ${options.maxStratumBytes} or maxStratumRows = " +
+            s"${options.maxStratumRows}; one task holds a whole stratum: TimeRange layouts, which " +
+            "would split it, are not implemented (OI-03). Raise maxStratumBytes if the executors " +
+            "have the memory"
+        )
+      }
     DriverGuards.requireWithinBudget(
       s"${plan.blockCount} block partials",
       plan.blockCount.toLong * 8L * (2L + p + Moments.packedLength(p)),

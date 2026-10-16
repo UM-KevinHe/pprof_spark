@@ -113,3 +113,26 @@ fit.save("/path/fit"); LinearFixedEffectModel.load(spark, "/path/fit")
 `LinearFixedEffect`'s options are the job runner's `fit` object ([linear-job.md](linear-job.md)): `variance_option`
 (`complete` or `simplified`) and `blocks`. The method names follow pprof_py's `LinearFixedEffectModel`
 (docs/spec/linear/job-and-python.md §5).
+
+## Large data: strata, blocks and row identifiers
+
+These options were added after production validation on about 5 million rows (round 83, D-49).
+
+- **One stratum is one task.** A Cox stratum is never split across tasks, so an unstratified fit holds
+  every row in one task. `CoxPH(..., max_stratum_bytes=...)` caps a stratum's estimated arrays, 8 (p + 4)
+  bytes a row, at 4 GiB by default: 4.8 million rows with 57 features (about 2.3 GB) pass; with 142
+  features they do not, and the error names the option. Raise it when the executors have the memory;
+  `max_stratum_rows`, unlimited by default, can cap rows as well.
+- **Blocks and the driver budget.** Every pass collects one partial result per block to the driver, about
+  8 (p(p+1)/2 + p + 2) bytes each, within `driverBudgetBytes` (64 MiB). When the default 4 MiB blocks would
+  need more, the blocks now grow, doubling up to 256 MiB, until the partials fit; a fit that fitted before
+  is unchanged. The growth is recorded in the fit's layout. `LogisticFixedEffect(..., blocks={...})` now
+  takes the same block options as `CoxPH` and `LinearFixedEffect`: `targetBlockBytes`,
+  `maxGroupsOnDriver`, `driverBudgetBytes`, `storageLevel`.
+- **Row identifiers for counting-process data.** Residuals need a unique `row_id`, and every later call
+  checks that its data are the fit's through a fingerprint that includes the identifiers. Identifiers from
+  `monotonically_increasing_id()` change whenever Spark recomputes the DataFrame, so later calls refuse
+  the data. Derive them from natural keys instead, for example
+  `df.withColumn("row_id", F.xxhash64("patient_id", "start"))`: deterministic, so nothing needs to be
+  written out first. Validation reports any duplicate (two of 5 million rows collide with probability
+  about 7 × 10⁻⁷).

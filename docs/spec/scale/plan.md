@@ -1,6 +1,6 @@
 # Plan: the package-level scale test (D-28)
 
-- Status: **Draft**, proposed in round 80 for the maintainer's approval (to become D-49).
+- Status: **Draft**, proposed in round 80 for the maintainer's approval (to become a decision when approved; D-49 went to the production-validation fixes).
 - Decision references: D-04 (the design envelope; performance targets after the first benchmarks),
   D-14 (assistants never access the maintainer's Databricks workspace), D-28 (the maintainer runs the
   scale test once the package is done).
@@ -51,7 +51,7 @@ which can fail:
 | Layout invariance (R1) | One point per model with half and with twice the default block size | Within T-part |
 | Recovery of the generating parameters | Data come from known β and γ (section 4); for every coefficient, z = (β̂ − β)/SE | Every \|z\| ≤ 4.5 across the grid (with about 2,000 coefficients, the chance of a false alarm is about 1.4%); the 95% intervals of non-degenerate providers cover the true γⱼ at a rate within binomial limits of 95% |
 | Sample parity with pprof_py on the cluster path | A sample of 10⁵ to 10⁶ rows of a grid point is fitted by pprof_py v0.7.0 on the driver and by pprof_spark across the executors | The fixtures' tolerance classes (T-coef, T-var, T-test, T-meas) |
-| Guards | Points just beyond `maxStratumRows`, `maxProvidersOnDriver` and the driver budget for partials | Each fails before any row shuffle, with the documented message |
+| Guards | Points just beyond `maxStratumBytes`, `maxProvidersOnDriver` and the driver budget for partials | Each fails before any row shuffle, with the documented message |
 
 Sample parity is the first T9 evidence: the same comparison as CI's, but with executors in separate
 JVMs, real serialization and the Databricks runtime.
@@ -90,7 +90,7 @@ should, **P3** could.
 | W1, W2, W3 | P1 (W3), P2 | Cox, logistic | 10⁸ | 10⁵ | 10, 50, 100 | equal | Width: compute O(n·p²), partial volume, the driver budget (OI-02) |
 | S1 | P1 | Cox, logistic | 10⁸ | 10⁵ | 20 | zipf | Skew: stragglers, oversized groups |
 | S2 | P2 | Cox, logistic | 10⁸ | 10⁵ | 20 | dominant | One group of 5 × 10⁶ rows |
-| U1, U2 | P1, P2 | Cox, unstratified | 10⁶, 10⁷ | 1 | 20 | — | One task per pass: the default `maxStratumRows` cap, then the cap raised (OI-03, OI-30) |
+| U1, U2 | P1, P2 | Cox, unstratified | 10⁶, 10⁷ | 1 | 20 | — | One task per pass: the default `maxStratumBytes` budget, then the budget raised (OI-03, OI-30) |
 | T1 | P2 | Cox | 10⁸ | 10⁵ | 20 | equal | 30% left-truncated rows, Efron ties, weights, offsets |
 | R1 | P2 | Cox | 10⁸ | 10⁵ | 20 | equal | Patient clusters and clustered robust variance (OI-45) |
 | L1 | P1 | Logistic | 10⁸ | 10⁶ | 20 | equal | γ on the driver near the envelope's m (OI-50) |

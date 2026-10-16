@@ -91,3 +91,11 @@ def test_standardized_measures_and_tests_match_pprof_py(fit, data):
     assert within([row["se"] for row in direct], standard["measure"]["gamma_robust_null"]["se"], 1e-8)
     tested = fit.test_standardized(data, "direct_rate").orderBy("provider").collect()
     assert within([row["z_raw"] for row in tested], standard["tests"]["direct_rate_auto"]["z"], 1e-8)
+
+
+def test_blocks_option_reaches_the_engine(data, fit):
+    small = LogisticFixedEffect("y", FEATURES, "provider", row_id="id", cluster="patient",
+                                blocks={"targetBlockBytes": 4096}).fit(data)
+    assert all(abs(a - b) <= 1e-10 * max(1.0, abs(b)) for a, b in zip(small.coef_, fit.coef_))
+    with pytest.raises(IllegalArgumentException, match="fit.blocks"):
+        LogisticFixedEffect("y", FEATURES, "provider", row_id="id", blocks={"blockBytes": 4096}).fit(data)

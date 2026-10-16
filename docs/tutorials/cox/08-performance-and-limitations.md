@@ -62,7 +62,7 @@ the time of a pass is at least the time to sweep the largest stratum.
 |---|---|---|
 | Many strata of moderate size (providers) | About n / T, balanced by bin packing | The intended case: every executor core busy |
 | A few large strata (regions) | One per stratum | At most that many busy tasks; the largest stratum is the straggler |
-| No strata | One | **One task does every pass.** Above `maxStratumRows` (1,000,000 rows by default) the fit fails; raising the cap keeps it to one task and one block in one executor's memory |
+| No strata | One | **One task does every pass.** Above `maxStratumBytes` (4 GiB of estimated arrays by default since round 83; 1,000,000 rows before) the fit fails; raising the cap keeps it to one task and one block in one executor's memory |
 
 The project's answer for large strata, the TimeRange layout (§6.6), is not implemented (OI-03,
 OI-30). It would split a stratum into time-contiguous blocks with a first pass computing each block's

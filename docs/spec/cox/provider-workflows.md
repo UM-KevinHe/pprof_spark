@@ -95,7 +95,7 @@ providers with heavy-tailed sizes, ties at daily resolution, delayed entry, p = 
 n = 10⁷, 10⁸ and 10⁹ with m = 10⁴ to 10⁶. It runs the job runner end to end and records wall time
 per stage, passes, shuffle bytes, driver and executor memory, and checks R0 across reruns and R1
 across block sizes. Targets are set from the first results (D-04). Known limits it will exercise:
-strata above `maxStratumRows` (TimeRange, OI-03), unstratified prediction (OI-43), clustered robust
+strata above `maxStratumBytes` (TimeRange, OI-03), unstratified prediction (OI-43), clustered robust
 variance (OI-45), large p (OI-02, OI-38).
 
 Site (D-28): the maintainer runs the scale test himself on his Databricks workspace once the whole

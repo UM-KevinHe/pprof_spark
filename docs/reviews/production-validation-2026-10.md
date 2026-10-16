@@ -94,6 +94,8 @@ residual output.
 **Risks.** `CoxSpec.rowId` becomes a list (the Python argument accepts both forms); saved models record the
 list (`CoxFitIO`); a collision is reported, never silent.
 
+**Status.** The workaround is documented in `docs/guide/python.md` (round 83); composite keys remain (OI-74).
+
 ### C3. `max_stratum_rows` for unstratified fits
 
 **Diagnosis.** `CoxOptions.maxStratumRows` defaults to 1,000,000 (`CoxPH.scala`); the guard exists because
@@ -108,6 +110,8 @@ and both options.
 **Risks.** A larger default trades a clean error for a possible executor out-of-memory on small workers;
 the guide states the executor memory needed. The single-task fit stays slow (one core); TimeRange (OI-03,
 OI-30) remains the real fix.
+
+**Status.** Resolved in round 83: `CoxOptions.maxStratumBytes` (4 GiB) with `maxStratumRows` unlimited by default; Python `max_stratum_bytes`; saved models at format version 4, older versions read with the default.
 
 ### C4. Slower than pprof_py at 4.8 M rows
 
@@ -191,6 +195,8 @@ failing, for Cox as well.
 
 **Risks.** Automatic growth changes the block layout for large p: results move within T-part (R1), never
 beyond; recorded in the fit's layout summary.
+
+**Status.** Resolved in round 83: `blocks` in the facade and in `LogisticFixedEffect`; `BudgetedLayout` grows blocks for the Cox, logistic and linear models, in the fit and in every later call.
 
 ### L6. `variance="robust"` for indirect measures
 

@@ -100,10 +100,9 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-Round 82 diagnosed the production-validation findings (`docs/reviews/production-validation-2026-10.md`, OI-73 to OI-81). Next: the maintainer's
-decisions in its section 3 (the addenda; the order), then the fixes, in the proposed order L5 and C3, C1, L2 to L4
-and L6, L1, then C2's composite keys. The scale-test kit (plan §11) follows them; addenda for OI-65 and OI-66
-can run alongside.
+The maintainer approved the round 82 review's recommendations (D-49); round 83 delivered L5 and C3. Next: C1 (the
+baseline's reference options), then L2 to L4 and L6, L1, and C2's composite keys. The scale-test kit (plan §11)
+follows them; addenda for OI-65 and OI-66 can run alongside.
 
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
@@ -112,6 +111,30 @@ with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 
 OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-70).
 
 ## Round log
+
+## Round 83 (2026-10-12): block options and growth (L5); stratum byte budget (C3)
+
+The maintainer approved the round 82 recommendations (D-49). This round delivers the first item of their order.
+
+- `layout/BudgetedLayout`: when a plan's block partials would exceed `driverBudgetBytes`, the block size doubles,
+  up to 256 MiB, until they fit; a plan that fits is unchanged, so no fit that succeeded before changes. Used by
+  the Cox working set, the logistic fit and its two later plans, and the linear fit and its later plan, so later
+  calls rebuild the fit's plan exactly; the grown size shows in the fit's layout summary.
+- `blocks` for the logistic model: parsed by the Python facade (`PythonApi.logisticModel`, unknown keys reported)
+  and accepted by `LogisticFixedEffect`; the job runner already took it.
+- `CoxOptions.maxStratumBytes` (4 GiB, estimated as rows x 8 (p + 4)) with `maxStratumRows` now unlimited by
+  default; the error names both and keeps the TimeRange pointer; the Cox run specification and `CoxPH`
+  (`max_stratum_bytes`) take it; `CoxFitIO` format version 4, versions 1 to 3 read with the default.
+- Docs: a "Large data" section in the Python guide (including C2's `xxhash64` row identifiers), the Cox
+  specifications, the scale plan, the Cox tutorial and the review. OI-75 and OI-80 closed; OI-74 updated.
+
+Evidence (assistant sandbox): engine and app compiled with the build's `-Xlint -Wunused -Werror`; scalafmt
+3.11.5 clean. `CoxLayoutSuite` 15 of 15 (two new: the stratum budget; growth, with a later `baseline` on the
+grown fit) and `LogisticLayoutSuite` 13 of 13 (one new: growth, with later provider tests) through the munit
+stand-in; CoxPHSuite's stratum test passes; Python `test_cox.py` and `test_logistic.py`, 14 of 14 (two new),
+with JARs from this code. Not run here: sbt, the full suites, Spark Connect.
+
+What to send back: the CI run.
 
 ## Round 82 (2026-10-12): diagnosis of the production-validation findings
 

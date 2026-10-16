@@ -85,3 +85,10 @@ def test_spark_connect_sessions_are_refused_with_a_pointer_to_the_job_runner():
 def test_versions_are_compared_in_python_notation(spark):
     assert normalized("0.1.0-SNAPSHOT") == "0.1.0.dev0" == pprof_spark.__version__
     assert normalized(pprof_spark.api(spark).version()) == pprof_spark.__version__
+
+
+def test_max_stratum_bytes_caps_one_stratum(spark):
+    case = "rc-unstratified"
+    features = json.loads((FIXTURES / "cox" / case / "case.json").read_text())["features"]
+    with pytest.raises(IllegalArgumentException, match="maxStratumBytes"):
+        CoxPH("time", "event", features, row_id="id", max_stratum_bytes=1000).fit(frame(spark, case))

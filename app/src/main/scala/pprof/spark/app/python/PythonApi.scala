@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import pprof.spark.app.{LinearRunSpec, RunSpec, ThreeStageJob, ThreeStageRunSpec}
+import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.linear.{
   LinearFE,
   LinearFit,
@@ -230,7 +231,8 @@ object PythonApi {
         "minRecords",
         "confidenceLevel",
         "correlationThreshold",
-        "maxProvidersOnDriver"
+        "maxProvidersOnDriver",
+        "blocks"
       )
     )
     def text(key: String, required: Boolean): Option[String] = Option(columns.get(key)) match {
@@ -271,6 +273,46 @@ object PythonApi {
     val number = (v: JsonNode) => v.isNumber
     val integer = (v: JsonNode) => v.isIntegralNumber
     val boolean = (v: JsonNode) => v.isBoolean
+    val blocksNode: Option[ObjectNode] = Option(fit.get("blocks")).filterNot(_.isNull) match {
+      case Some(node: ObjectNode) =>
+        unknown(
+          node,
+          "fit.blocks",
+          Set("targetBlockBytes", "maxGroupsOnDriver", "driverBudgetBytes", "storageLevel")
+        )
+        Some(node)
+      case Some(_) =>
+        problems += "fit.blocks must be an object"
+        None
+      case None => None
+    }
+    def blockValue[A](
+        key: String,
+        accept: JsonNode => Boolean,
+        read: JsonNode => A,
+        kind: String
+    ): Option[A] =
+      blocksNode.flatMap(node => Option(node.get(key)).filterNot(_.isNull)).flatMap { v =>
+        if (accept(v)) Some(read(v))
+        else {
+          problems += s"fit.blocks.$key must be $kind"
+          None
+        }
+      }
+    def blockOptions: BlockOptions = {
+      val b = defaults.blocks
+      b.copy(
+        targetBlockBytes = blockValue("targetBlockBytes", integer, _.asLong, "an integer")
+          .getOrElse(b.targetBlockBytes),
+        maxGroupsOnDriver = blockValue("maxGroupsOnDriver", integer, _.asInt, "an integer")
+          .getOrElse(b.maxGroupsOnDriver),
+        driverBudgetBytes = blockValue("driverBudgetBytes", integer, _.asLong, "an integer")
+          .getOrElse(b.driverBudgetBytes),
+        storageLevel =
+          blockValue("storageLevel", (v: JsonNode) => v.isTextual, _.asText, "a string")
+            .getOrElse(b.storageLevel)
+      )
+    }
     val options =
       try
         Some(
@@ -288,7 +330,8 @@ object PythonApi {
             correlationThreshold = value("correlationThreshold", number, _.asDouble, "a number")
               .getOrElse(defaults.correlationThreshold),
             maxProvidersOnDriver = value("maxProvidersOnDriver", integer, _.asInt, "an integer")
-              .getOrElse(defaults.maxProvidersOnDriver)
+              .getOrElse(defaults.maxProvidersOnDriver),
+            blocks = blockOptions
           )
         )
       catch {

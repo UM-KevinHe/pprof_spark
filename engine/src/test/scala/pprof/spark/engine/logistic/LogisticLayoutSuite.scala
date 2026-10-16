@@ -288,4 +288,36 @@ class LogisticLayoutSuite extends SparkSuite {
     )
     assert(e.getMessage.contains("maxProvidersOnDriver"), e.getMessage)
   }
+
+  test(
+    "blocks grow until the partials fit the driver budget, and later calls find the same plan (L5)"
+  ) {
+    val partial = 8L * (6L + 3L + 2L)
+    val before = LogisticFE.fit(
+      frame(spark, "lfe-base"),
+      spec("lfe-base"),
+      LogisticOptions(blocks = manyBlocks)
+    )
+    val budget = before.layout.blockCount * partial - 1L
+    val grown = LogisticFE.fit(
+      frame(spark, "lfe-base"),
+      spec("lfe-base"),
+      LogisticOptions(blocks = manyBlocks.copy(driverBudgetBytes = budget))
+    )
+    assert(grown.converged)
+    assert(grown.layout.blockCount * partial <= budget, s"${grown.layout}")
+    assert(grown.layout.targetRowsPerBlock > before.layout.targetRowsPerBlock, s"${grown.layout}")
+    assert(
+      Tolerances("T-part.parameters")
+        .worstRatio(grown.estimates.toArray, before.estimates.toArray) <= 1.0
+    )
+    assert(
+      Tolerances("T-part.parameters")
+        .worstRatio(grown.providers.gamma, before.providers.gamma) <= 1.0
+    )
+    assertEquals(
+      LogisticProviderTests.test(frame(spark, "lfe-base"), grown).count(),
+      grown.providers.size.toLong
+    )
+  }
 }

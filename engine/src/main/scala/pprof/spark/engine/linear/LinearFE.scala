@@ -5,7 +5,7 @@ import org.apache.spark.sql.functions.{array, col, lit, sqrt}
 import org.apache.spark.sql.types.{DoubleType, LongType, StringType}
 import pprof.spark.engine.backend.{DriverGuards, PlanFrames}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
-import pprof.spark.engine.layout.{GroupSizes, LayoutPlan}
+import pprof.spark.engine.layout.{BudgetedLayout, GroupSizes, LayoutPlan}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
 import pprof.spark.numerics.{Cholesky, NeumaierSum, StudentT, Summation}
@@ -28,7 +28,8 @@ object LinearFE {
       throw new InvalidInputException(
         Seq(InputProblem.NoResidualDegreesOfFreedom(input.rowCount, m.toLong, p))
       )
-    val plan = LayoutPlan.create(sizes, options.blocks.targetRowsPerBlock(p + 1))
+    val plan =
+      BudgetedLayout.plan(sizes, options.blocks, p + 1, 8L * (Moments.packedLength(p) + p + 4L))
     DriverGuards.requireWithinBudget(
       s"${plan.blockCount} block partials",
       plan.blockCount.toLong * 8L * (Moments.packedLength(p) + p + 4L),
@@ -314,8 +315,9 @@ object LinearFE {
   ): (LinearWorkingSet, LayoutPlan, LinearInput) = {
     val input = LinearValidation.validate(df, fit.spec)
     val sizes = GroupSizes.collectGroupSizes(input.frame, fit.options.blocks).sortBy(_._1)
+    val q = fit.spec.features.size
     val plan =
-      LayoutPlan.create(sizes, fit.options.blocks.targetRowsPerBlock(fit.spec.features.size + 1))
+      BudgetedLayout.plan(sizes, fit.options.blocks, q + 1, 8L * (Moments.packedLength(q) + q + 4L))
     (LinearWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel), plan, input)
   }
 

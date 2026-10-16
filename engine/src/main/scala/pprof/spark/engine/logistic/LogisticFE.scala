@@ -17,7 +17,7 @@ import org.apache.spark.sql.types.{
 import org.slf4j.LoggerFactory
 import pprof.spark.engine.backend.{DriverGuards, DriverLimitExceededException, OrderedReduction}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
-import pprof.spark.engine.layout.{GroupKey, GroupSizes, LayoutPlan}
+import pprof.spark.engine.layout.{BudgetedLayout, GroupKey, GroupSizes}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
 import pprof.spark.numerics.{
@@ -79,7 +79,8 @@ object LogisticFE {
         s"${fitted.size} providers exceed maxProvidersOnDriver = ${options.maxProvidersOnDriver}; " +
           "the provider effects are held on the driver (Phase 2a specification §11, OI-50)"
       )
-    val plan = LayoutPlan.create(fitted, options.blocks.targetRowsPerBlock(p + 2))
+    val plan =
+      BudgetedLayout.plan(fitted, options.blocks, p + 2, 8L * (Moments.packedLength(p) + p + 2L))
     DriverGuards.requireWithinBudget(
       s"${plan.blockCount} block partials",
       plan.blockCount.toLong * 8L * (Moments.packedLength(p) + p + 2L),
@@ -432,9 +433,11 @@ object LogisticFE {
     val input = LogisticValidation.validate(df, fit.spec)
     val providers = fit.providers
     val m = providers.size
-    val plan = LayoutPlan.create(
+    val plan = BudgetedLayout.plan(
       providers.keys.indices.map(k => providers.keys(k) -> providers.records(k)).toVector,
-      fit.options.blocks.targetRowsPerBlock(p + 2)
+      fit.options.blocks,
+      p + 2,
+      8L * (Moments.packedLength(p) + p + 2L)
     )
     val providersOfBlock = {
       val lists = Array.fill(plan.blockCount)(Array.newBuilder[Int])
@@ -547,9 +550,11 @@ object LogisticFE {
     val p = fit.spec.features.size
     val input = LogisticValidation.validate(df, fit.spec)
     val providers = fit.providers
-    val plan = LayoutPlan.create(
+    val plan = BudgetedLayout.plan(
       providers.keys.indices.map(k => providers.keys(k) -> providers.records(k)).toVector,
-      fit.options.blocks.targetRowsPerBlock(p + 2)
+      fit.options.blocks,
+      p + 2,
+      8L * (Moments.packedLength(p) + p + 2L)
     )
     val providersOfBlock = {
       val lists = Array.fill(plan.blockCount)(Array.newBuilder[Int])

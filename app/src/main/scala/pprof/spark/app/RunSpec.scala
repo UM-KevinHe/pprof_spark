@@ -226,6 +226,8 @@ object RunSpec {
       confidenceLevel = number(fit, "confidenceLevel", "fit").getOrElse(defaults.confidenceLevel),
       maxStratumRows =
         number(fit, "maxStratumRows", "fit").map(_.toLong).getOrElse(defaults.maxStratumRows),
+      maxStratumBytes =
+        number(fit, "maxStratumBytes", "fit").map(_.toLong).getOrElse(defaults.maxStratumBytes),
       blocks = blockOptions,
       robust = flag(fit, "robust", "fit")
     )

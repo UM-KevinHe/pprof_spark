@@ -103,6 +103,16 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-49: Production-validation fixes (Accepted: approved by the maintainer, 2026-10-12)
+
+`docs/reviews/production-validation-2026-10.md` diagnoses the ten issues the maintainer's team found validating
+round 81 on production data (OI-73 to OI-81). Approved: its recommendations and their order (§3): L5 and C3, C1,
+L2 to L4 and L6, L1, then C2's composite keys. New options keep today's defaults, except C3 (a stratum byte
+budget, `maxStratumBytes` = 4 GiB, replaces the 1,000,000-row default of `maxStratumRows`, which becomes
+unlimited) and L5 (blocks grow, doubling up to 256 MiB, where the block partials would exceed the driver budget;
+plans that fit are unchanged). Fixes that change statistical behaviour come with specification addenda. The
+scale-test plan, drafted in round 80 to become D-49, awaits its own decision.
+
 ### D-48: Close Phase 3 at parity-verified (Accepted: approved by the maintainer, 2026-10-11)
 
 `docs/gates/phase-3.md`: slices 3a to 3c meet the parity gate in the sandbox (round 74: every linear engine suite

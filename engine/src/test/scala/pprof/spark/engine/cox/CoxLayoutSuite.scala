@@ -148,4 +148,42 @@ class CoxLayoutSuite extends SparkSuite {
         .worstRatio(Array(many.logLikelihood), Array(one.logLikelihood)) <= 1.0
     )
   }
+
+  test("the stratum budget: a stratum beyond maxStratumBytes fails before any shuffle (C3, D-49)") {
+    assertEquals(CoxOptions().maxStratumRows, Long.MaxValue)
+    assertEquals(CoxOptions().maxStratumBytes, 4L * 1024 * 1024 * 1024)
+    val name = "rc-unstratified"
+    val rows = frame(spark, name).count()
+    val bytes = rows * 8L * (features(name).size + 4)
+    val e = intercept[IllegalArgumentException](
+      CoxPH.fit(frame(spark, name), spec(name), CoxOptions(maxStratumBytes = bytes - 1L))
+    )
+    assert(e.getMessage.contains("maxStratumBytes"), e.getMessage)
+    assert(e.getMessage.contains("TimeRange"), e.getMessage)
+    assert(CoxPH.fit(frame(spark, name), spec(name), CoxOptions(maxStratumBytes = bytes)).converged)
+  }
+
+  test(
+    "blocks grow until the partials fit the driver budget, and later calls find the same plan (L5)"
+  ) {
+    val name = "rc-stratified"
+    val p = features(name).size
+    val partial = 8L * (2L + p + p * (p + 1) / 2)
+    val requested = CoxOptions(blocks = manyBlocks)
+    val before = CoxPH.fit(frame(spark, name), spec(name), requested)
+    val budget = before.layout.blockCount * partial - 1L
+    val grown = CoxPH.fit(
+      frame(spark, name),
+      spec(name),
+      requested.copy(blocks = manyBlocks.copy(driverBudgetBytes = budget))
+    )
+    assert(grown.converged, grown.message)
+    assert(grown.layout.blockCount * partial <= budget, s"${grown.layout}")
+    assert(grown.layout.targetRowsPerBlock > before.layout.targetRowsPerBlock, s"${grown.layout}")
+    assert(
+      Tolerances("T-part.parameters")
+        .worstRatio(grown.estimates.toArray, before.estimates.toArray) <= 1.0
+    )
+    assert(CoxPH.baseline(frame(spark, name), grown).count() > 0L)
+  }
 }

@@ -46,12 +46,13 @@ class LogisticFixedEffect:
                  max_iter: Optional[int] = None, bound: Optional[float] = None, backtrack: Optional[bool] = None,
                  screen: Optional[bool] = None, min_records: Optional[int] = None,
                  confidence_level: Optional[float] = None, correlation_threshold: Optional[float] = None,
-                 max_providers_on_driver: Optional[int] = None):
+                 max_providers_on_driver: Optional[int] = None, blocks: Optional[dict] = None):
         columns = {"outcome": outcome, "features": list(features), "provider": provider, "trials": trials,
                    "rowId": row_id, "cluster": cluster}
         options = {"tol": tol, "maxIter": max_iter, "bound": bound, "backtrack": backtrack, "screen": screen,
                    "minRecords": min_records, "confidenceLevel": confidence_level,
-                   "correlationThreshold": correlation_threshold, "maxProvidersOnDriver": max_providers_on_driver}
+                   "correlationThreshold": correlation_threshold, "maxProvidersOnDriver": max_providers_on_driver,
+                   "blocks": blocks}
         self.columns = {k: v for k, v in columns.items() if v is not None}
         self.options = {k: v for k, v in options.items() if v is not None}
 

@@ -149,7 +149,8 @@ assumptions and failure modes, validation.
   key order, rows, block identifier), the block count and the number of oversized strata.
 - **Steps.** `GroupSizes.collectGroupSizes`: one job grouping by stratum and collecting the counts,
   guarded by `maxGroupsOnDriver` (2,000,000). `LayoutPlan.create` on the driver. Then two guards: no
-  stratum above `maxStratumRows` (1,000,000), and B partials within `driverBudgetBytes` (64 MiB).
+  stratum above `maxStratumBytes` (4 GiB of estimated arrays since round 83; `maxStratumRows` was
+  1,000,000 before), and B partials within `driverBudgetBytes` (64 MiB; since round 83 the blocks grow to fit).
 - **Code.** [GroupSizes.scala lines 17–26](../../../engine/src/main/scala/pprof/spark/engine/layout/GroupSizes.scala#L17-L26),
   [`LayoutPlan.create`](../../../engine/src/main/scala/pprof/spark/engine/layout/LayoutPlan.scala#L80-L110),
   [CoxPH.scala lines 322–337](../../../engine/src/main/scala/pprof/spark/engine/cox/CoxPH.scala#L322-L337),

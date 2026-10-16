@@ -34,12 +34,13 @@ class CoxPH:
                  robust: Optional[bool] = None, max_iterations: Optional[int] = None,
                  eps: Optional[float] = None, max_halvings: Optional[int] = None,
                  confidence_level: Optional[float] = None, max_stratum_rows: Optional[int] = None,
-                 blocks: Optional[dict] = None):
+                 max_stratum_bytes: Optional[int] = None, blocks: Optional[dict] = None):
         columns = {"time": time, "event": event, "features": list(features), "strata": strata,
                    "rowId": row_id, "weight": weight, "offset": offset, "entry": entry, "cluster": cluster}
         fit = {"ties": ties, "robust": robust, "maxIterations": max_iterations, "eps": eps,
                "maxHalvings": max_halvings, "confidenceLevel": confidence_level,
-               "maxStratumRows": max_stratum_rows, "blocks": blocks}
+               "maxStratumRows": max_stratum_rows, "maxStratumBytes": max_stratum_bytes,
+               "blocks": blocks}
         self.columns = {k: v for k, v in columns.items() if v is not None}
         self.options = {k: v for k, v in fit.items() if v is not None}
 

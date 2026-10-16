@@ -26,12 +26,13 @@ import pprof.spark.numerics.IterationRecord
   */
 object CoxFitIO {
 
-  val FormatVersion: Int = 3
+  val FormatVersion: Int = 4
 
   /** Versions this release reads: 1 lacks `entryCol` and `hasBaseline`; 1 and 2 lack the robust
-    * fields, so their fits load as model-based.
+    * fields, so their fits load as model-based.; 1 to 3 lack
+    * `maxStratumBytes`, read as its default (round 83)
     */
-  val ReadableVersions: Set[Int] = Set(1, 2, 3)
+  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4)
   val Kind: String = "pprof.spark.engine.cox.CoxFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -76,6 +77,7 @@ object CoxFitIO {
       field("aliasToleranceBits", LongType),
       field("confidenceLevelBits", LongType),
       field("maxStratumRows", LongType),
+      field("maxStratumBytes", LongType, nullable = true),
       field("targetBlockBytes", LongType),
       field("maxGroupsOnDriver", IntegerType),
       field("driverBudgetBytes", LongType),
@@ -152,6 +154,7 @@ object CoxFitIO {
       bit(o.aliasTolerance),
       bit(o.confidenceLevel),
       o.maxStratumRows,
+      o.maxStratumBytes,
       o.blocks.targetBlockBytes,
       o.blocks.maxGroupsOnDriver,
       o.blocks.driverBudgetBytes,
@@ -251,7 +254,10 @@ object CoxFitIO {
         r.getAs[Long]("driverBudgetBytes"),
         r.getAs[String]("storageLevel")
       ),
-      Option(r.getAs[Any]("robustOption")).contains(true)
+      Option(r.getAs[Any]("robustOption")).contains(true),
+      maxStratumBytes = Option(r.getAs[Any]("maxStratumBytes"))
+        .map(_.asInstanceOf[Long])
+        .getOrElse(CoxOptions().maxStratumBytes)
     )
     val (estimate, se, z, p, lower, upper) = (
       doubles("estimateBits"),

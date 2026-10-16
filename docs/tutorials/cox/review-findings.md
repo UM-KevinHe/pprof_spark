@@ -102,6 +102,8 @@ aggregation for small p·K, before unstratified fits at national scale are neede
 
 **Status.** Round 77 corrected the message; the limit itself remains (OI-03, OI-30).
 
+**Round 83.** The row cap's default gave way to a byte budget, `maxStratumBytes` (4 GiB of estimated arrays), after production validation (finding C3, D-49).
+
 ## F-05. Repeated preparation of the working set
 
 **What.** `fit`, `baseline`, `residuals`, `evaluateAt`, `requireFittedData`, `CoxMeasures.standardized`

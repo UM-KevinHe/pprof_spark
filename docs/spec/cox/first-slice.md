@@ -77,6 +77,7 @@ on each of these inputs (probed at v0.7.0).
 2. Fail if there are no events at all (X-012).
 3. Plan StratumLocal blocks (ADR-0004): whole strata, largest first into the least-loaded block. A
    stratum larger than the block target gets a block of its own; one larger than
+   `maxStratumBytes` (an estimate of its arrays; 4 GiB by default since round 83, D-49) or an explicit
    `maxStratumRows` fails with a message that TimeRange is needed (Phase 1b).
 4. Build the working set once (one shuffle): per block, strata in key order; within a stratum rows
    in canonical order — exit time descending, then event before censoring, then row identifier,
