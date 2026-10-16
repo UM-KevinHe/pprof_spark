@@ -33,6 +33,10 @@ Classic Spark or a standard cluster, where Scala runs through Spark Connect.
 }
 ```
 
+`columns.rowId` may also be an array of columns, a composite row key such as `["patient", "start"]` in
+counting-process data, hashed to a 64-bit identifier; residual outputs then carry those columns (Cox
+specification §4a).
+
 | Field | Meaning |
 |---|---|
 | `input` | Exactly one of `path` (with `format`, default Parquet, and reader `options`) or `table` |

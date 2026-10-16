@@ -114,3 +114,18 @@ def test_baseline_reference_points(spark):
     assert abs(point["offset_mean"] - offset_mean) <= 1e-14
     with pytest.raises(IllegalArgumentException, match="mean_offset"):
         model.baseline(df, reference="centered")
+
+
+def test_composite_row_key(spark):
+    rows = []
+    for patient in range(60):
+        start = 0.0
+        for k in range(1 + patient % 3):
+            stop = start + 5.0 + (patient * 7 + k * 13) % 40
+            rows.append((patient, start, stop, (patient + k) % 2, ((patient * 37) % 64 - 32) / 32.0))
+            start = stop
+    df = spark.createDataFrame(rows, ["patient", "start", "stop", "event", "x1"])
+    model = CoxPH("stop", "event", ["x1"], entry="start", row_id=["patient", "start"]).fit(df)
+    residuals = model.residuals(df)
+    assert residuals.columns[:2] == ["patient", "start"]
+    assert residuals.count() == len(rows)

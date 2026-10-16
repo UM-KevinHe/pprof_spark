@@ -41,6 +41,17 @@ object InputProblem {
       extends InputProblem(name, s"has $nulls null and $nonFinite NaN or infinite values")
   final case class DuplicateRowIds(name: String, duplicates: Long)
       extends InputProblem(name, s"has $duplicates duplicated identifiers")
+
+  /** A composite row key that is not unique, or (with `collision`) two different keys whose 64-bit
+    * hashes coincide, which happens with probability about n²/2⁶⁵.
+    */
+  final case class DuplicateRowKeys(names: Seq[String], duplicates: Long, collision: Boolean)
+      extends InputProblem(
+        names.mkString("(", ", ", ")"),
+        if (collision)
+          "is a row key whose different values share a 64-bit hash; add a column to the key"
+        else s"is a row key with $duplicates rows that repeat a key"
+      )
   case object EmptyInput extends InputProblem("", "the input has no rows")
   final case class NonPositiveValues(name: String, count: Long)
       extends InputProblem(name, s"has $count values that are not positive")

@@ -100,10 +100,10 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-The maintainer approved the round 82 review's recommendations (D-49); rounds 83 to 86 delivered L5, C3, C1, L2 to
-L4 and L1 (the empirical null aside, OI-78); L6 needed no change. Next: C2's composite row keys (OI-74), the last
-item of the order; the maintainer's fixture regenerations (OI-82, with OI-84 and OI-85 once the generator emits
-them). The scale-test kit (plan §11) follows; addenda for OI-65 and OI-66 can run alongside.
+The maintainer approved the round 82 review's recommendations (D-49); rounds 83 to 87 delivered all of them (L5, C3,
+C1, L2 to L4, L1, C2); L6 needed no change, and the empirical null remains (OI-78). Next: the maintainer's
+re-validation on production data; the fixture regenerations (OI-82; OI-84 and OI-85 once the generator emits them);
+the scale-test plan's decisions (§12), then its kit. Addenda for OI-65 and OI-66 can run alongside.
 
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
@@ -112,6 +112,26 @@ with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 
 OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-70).
 
 ## Round log
+
+## Round 87 (2026-10-16): composite row keys (C2)
+
+- `CoxSpec.rowKey` (last parameter; exclusive with `rowId`; exempt from the one-role rule, so a key may include
+  the entry column): `CoxValidation.rowIdentifier` hashes the key with `xxhash64`; validation checks non-null
+  atomic columns and distinct hashes, and on a shortfall counts the keys to report repeated keys or a collision
+  (`InputProblem.DuplicateRowKeys`). Residuals join back through the hash and return the key columns.
+- `CoxFitIO` format version 5 (`rowKeyCols`); the run specification's `columns.rowId` takes a string or an array;
+  the facade's summary lists the key; Python `row_id` takes a string or a list.
+- Specification §4a; the Python and job-runner guides; the review's C2 status. OI-74 closed. The other models keep
+  a single `rowId` column.
+
+Evidence (assistant sandbox): engine, app and tests compiled with `-Xlint -Wunused -Werror`; scalafmt clean.
+`CoxRowKeySuite` 5 of 5 (a fit by key equals the fit by an explicit `xxhash64` column bit for bit; `baseline`
+accepts the data rebuilt in reverse order and repartitioned; residuals carry the key and equal the hashed ones);
+regressions `CoxFitIOSuite` 4, `CoxResidualsSuite` 15, `CoxPHSuite` 89 (85 in one run, whose JVM stopped while in
+the background, and the last 4 in the foreground), all passing; Python `test_cox.py` 9 of 9. Not run here: sbt,
+Spark Connect.
+
+What to send back: the CI run.
 
 ## Round 86 (2026-10-16): providers added after fitting (L1)
 

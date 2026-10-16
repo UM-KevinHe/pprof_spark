@@ -53,6 +53,25 @@ Validation runs before any fit (§5.5): every violation is reported at once with
 counts, never values (NN-7), and no row is dropped silently. This matches pprof_py, which raises
 on each of these inputs (probed at v0.7.0).
 
+
+## 4a. Composite row keys (round 87; production finding C2, D-49)
+
+A row identifier is one integral column (`CoxSpec.rowId`) or a composite key (`CoxSpec.rowKey`, a list of
+columns), never both. Counting-process data have natural composite keys, such as a patient and an interval's
+start, while a single column such as the patient repeats. The key's columns must be non-null and of an atomic
+type, and may also have other roles; the start of an interval is often the entry column.
+
+The engine's 64-bit row identifier is then Spark's `xxhash64` of the key columns, a function of the key values
+alone. Data recomputed in any order or partitioning therefore get the same identifiers, the same canonical
+order (§6) and the same fingerprint (API-3), so later calls (`baseline`, residuals, measures, tests) accept them
+without a synthetic identifier and without writing the data out first. Validation counts the distinct hashes. If
+they fall short of the rows, a second count over the key columns themselves tells repeated keys from a 64-bit
+collision (probability about n²/2⁶⁵, about 7 × 10⁻⁷ for 5 million rows), and either is reported with the key's
+columns named. Residuals join back through the hash and return the key's columns in place of a single
+identifier. Saved models record the key (`CoxFitIO` format version 5; versions 1 to 4 load without one). A fit
+by key is bit for bit the fit by an explicit `xxhash64` column of the same values (`CoxRowKeySuite`). The other
+models keep a single `rowId` column; for them, an `xxhash64` column of the key does the same.
+
 ## 5. Conventions (§7.2)
 
 | Convention | Value in this slice |

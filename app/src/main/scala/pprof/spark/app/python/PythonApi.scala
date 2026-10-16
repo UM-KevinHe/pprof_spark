@@ -136,6 +136,10 @@ object PythonApi {
       "entry" -> fit.spec.entry,
       "cluster" -> fit.spec.cluster
     ).foreach { case (key, value) => value.foreach(v => spec.put(key, v)) }
+    if (fit.spec.rowKey.nonEmpty) {
+      val rowKey = spec.putArray("rowKey")
+      fit.spec.rowKey.foreach(k => rowKey.add(k))
+    }
     val software = root.putObject("software")
     fit.software.toFields.foreach { case (key, value) => software.put(key, value) }
     mapper.writeValueAsString(root)

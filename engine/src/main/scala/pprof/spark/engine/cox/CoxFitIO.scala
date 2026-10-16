@@ -26,13 +26,14 @@ import pprof.spark.numerics.IterationRecord
   */
 object CoxFitIO {
 
-  val FormatVersion: Int = 4
+  val FormatVersion: Int = 5
 
   /** Versions this release reads: 1 lacks `entryCol` and `hasBaseline`; 1 and 2 lack the robust
     * fields, so their fits load as model-based.; 1 to 3 lack
-    * `maxStratumBytes`, read as its default (round 83)
+    * `maxStratumBytes`, read as its default (round 83); 1 to 4 lack
+    * `rowKeyCols`, read as no row key (round 87)
     */
-  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4)
+  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4, 5)
   val Kind: String = "pprof.spark.engine.cox.CoxFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -66,6 +67,7 @@ object CoxFitIO {
       field("entryCol", StringType, nullable = true),
       field("hasBaseline", BooleanType, nullable = true),
       field("clusterCol", StringType, nullable = true),
+      field("rowKeyCols", ArrayType(StringType, containsNull = false), nullable = true),
       field("robust", BooleanType, nullable = true),
       field("clusters", LongType, nullable = true),
       field("naiveCovarianceBits", ArrayType(LongType, containsNull = false), nullable = true),
@@ -143,6 +145,7 @@ object CoxFitIO {
       fit.spec.entry.orNull,
       baseline.isDefined,
       fit.spec.cluster.orNull,
+      if (fit.spec.rowKey.isEmpty) null else fit.spec.rowKey,
       fit.robust,
       fit.clusters,
       bits(fit.modelCovariance),
@@ -238,7 +241,9 @@ object CoxFitIO {
       optional("weightCol"),
       optional("offsetCol"),
       optional("entryCol"),
-      optional("clusterCol")
+      optional("clusterCol"),
+      rowKey =
+        Option(r.getAs[scala.collection.Seq[String]]("rowKeyCols")).map(_.toSeq).getOrElse(Nil)
     )
     val options = CoxOptions(
       Ties.fromName(r.getAs[String]("ties")),

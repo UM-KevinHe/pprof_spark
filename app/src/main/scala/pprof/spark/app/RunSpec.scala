@@ -201,6 +201,17 @@ object RunSpec {
       tests
     )
 
+    // columns.rowId: one integral column, or an array of columns forming a row key (§4a).
+    val (rowId, rowKey) = node(columns, "rowId") match {
+      case Some(v) if v.isArray =>
+        val names = (0 until v.size).map(v.get)
+        if (names.nonEmpty && names.forall(_.isTextual)) (None, names.map(_.asText))
+        else {
+          problems += "columns.rowId must be a string or a non-empty array of strings"
+          (None, Nil)
+        }
+      case _ => (text(columns, "rowId", "columns"), Nil)
+    }
     val found = problems.result()
     if (found.nonEmpty)
       throw new IllegalArgumentException(
@@ -211,11 +222,12 @@ object RunSpec {
       event.get,
       features,
       text(columns, "strata", "columns"),
-      text(columns, "rowId", "columns"),
+      rowId,
       text(columns, "weight", "columns"),
       text(columns, "offset", "columns"),
       text(columns, "entry", "columns"),
-      text(columns, "cluster", "columns")
+      text(columns, "cluster", "columns"),
+      rowKey = rowKey
     )
     val options = CoxOptions(
       ties = ties.getOrElse(defaults.ties),

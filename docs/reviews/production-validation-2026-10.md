@@ -98,6 +98,8 @@ list (`CoxFitIO`); a collision is reported, never silent.
 
 **Status.** The workaround is documented in `docs/guide/python.md` (round 83); composite keys remain (OI-74).
 
+**Status.** Resolved in round 87: `CoxSpec.rowKey` and Python `row_id=[...]`, hashed with `xxhash64`; residuals return the key columns; saved models keep the key (Cox specification §4a).
+
 ### C3. `max_stratum_rows` for unstratified fits
 
 **Diagnosis.** `CoxOptions.maxStratumRows` defaults to 1,000,000 (`CoxPH.scala`); the guard exists because

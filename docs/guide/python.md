@@ -129,13 +129,13 @@ These options were added after production validation on about 5 million rows (ro
   is unchanged. The growth is recorded in the fit's layout. `LogisticFixedEffect(..., blocks={...})` now
   takes the same block options as `CoxPH` and `LinearFixedEffect`: `targetBlockBytes`,
   `maxGroupsOnDriver`, `driverBudgetBytes`, `storageLevel`.
-- **Row identifiers for counting-process data.** Residuals need a unique `row_id`, and every later call
-  checks that its data are the fit's through a fingerprint that includes the identifiers. Identifiers from
-  `monotonically_increasing_id()` change whenever Spark recomputes the DataFrame, so later calls refuse
-  the data. Derive them from natural keys instead, for example
-  `df.withColumn("row_id", F.xxhash64("patient_id", "start"))`: deterministic, so nothing needs to be
-  written out first. Validation reports any duplicate (two of 5 million rows collide with probability
-  about 7 × 10⁻⁷).
+- **Row identifiers for counting-process data.** Residuals need a unique row identifier, and every later call
+  checks that its data are the fit's through a fingerprint that includes it. Identifiers from
+  `monotonically_increasing_id()` change whenever Spark recomputes the DataFrame, so later calls refuse the
+  data. Give `CoxPH` the natural key instead: `row_id=["patient_id", "start"]` (round 87). It is hashed to a
+  64-bit identifier, so nothing needs to be written out first, and residuals come back with those columns.
+  Repeated keys are reported by name. The logistic and linear models take one column; for them,
+  `df.withColumn("row_id", F.xxhash64("patient_id", "start"))` does the same.
 
 ## Cox baselines: reference points
 

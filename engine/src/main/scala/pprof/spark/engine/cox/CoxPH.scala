@@ -308,15 +308,15 @@ object CoxPH {
 
   /** Martingale, score and dfbeta residuals of `fit` (Phase 1c specification §1 and §3), keyed by
     * the row identifier, computed on the executors from the training data `df`, whose
-    * fingerprint must match the fit's (API-3). Columns: the row identifier, `martingale`,
-    * `score_<feature>` and `dfbeta_<feature>`. Persisted and never collected (DIST-1).
+    * fingerprint must match the fit's (API-3). Columns: the row identifier (the `rowId` column, or
+    * the `rowKey` columns, joined back through their hash, §4a), `martingale`, `score_<feature>` and
+    * `dfbeta_<feature>`. Persisted and never collected (DIST-1).
     */
   def residuals(df: DataFrame, fit: CoxFit): DataFrame = {
-    val rowId = fit.spec.rowId.getOrElse(
+    if (!fit.spec.identified)
       throw new IllegalArgumentException(
-        "residuals need CoxSpec.rowId, so that they can be joined back to the input rows"
+        "residuals need CoxSpec.rowId or CoxSpec.rowKey, so that they can be joined back to the input rows"
       )
-    )
     withWorkingSet(df, fit.spec, fit.options) { prepared =>
       if (prepared.fingerprint != fit.fingerprint)
         throw new IllegalArgumentException(
@@ -330,13 +330,23 @@ object CoxPH {
         CoxKernel.residuals(block, beta, center, efron, covariance)
       )(Encoders.product[CoxResidualRow])
       val features = fit.spec.features
-      val table = rows
-        .select(
-          Seq(col("rowId").as(rowId), col("martingale")) ++
-            features.indices.map(j => col("score").getItem(j).as(s"score_${features(j)}")) ++
-            features.indices.map(j => col("dfbeta").getItem(j).as(s"dfbeta_${features(j)}")): _*
-        )
-        .persist(fit.options.blocks.resolvedStorageLevel)
+      val values = Seq(col("martingale")) ++
+        features.indices.map(j => col("score").getItem(j).as(s"score_${features(j)}")) ++
+        features.indices.map(j => col("dfbeta").getItem(j).as(s"dfbeta_${features(j)}"))
+      val keyed = fit.spec.rowId match {
+        case Some(rowId) => rows.select(col("rowId").as(rowId) +: values: _*)
+        case None        =>
+          // A composite key: join back to the key columns through the 64-bit hash (§4a).
+          val keys = df.select(
+            CoxValidation.rowIdentifier(fit.spec).as(Validation.RowIdColumn) +:
+              fit.spec.rowKey.map(Validation.column): _*
+          )
+          rows
+            .withColumnRenamed("rowId", Validation.RowIdColumn)
+            .join(keys, Seq(Validation.RowIdColumn))
+            .select(fit.spec.rowKey.map(Validation.column) ++ values: _*)
+      }
+      val table = keyed.persist(fit.options.blocks.resolvedStorageLevel)
       table.count()
       table
     }

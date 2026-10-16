@@ -1,21 +1,34 @@
 package pprof.spark.engine.cox
 
 import org.apache.spark.sql.{Column, DataFrame}
-import org.apache.spark.sql.functions.{array, coalesce, count, countDistinct, lit, sum, when}
+import org.apache.spark.sql.functions.{
+  array,
+  coalesce,
+  count,
+  countDistinct,
+  lit,
+  sum,
+  when,
+  xxhash64
+}
 import org.apache.spark.sql.types.{
+  ArrayType,
   BooleanType,
   DataType,
   DoubleType,
   LongType,
+  MapType,
   NumericType,
-  StringType
+  StringType,
+  StructType
 }
 
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 
 /** Column roles of a Cox fit (Cox specification §4 and addendum §3): exit time, event indicator and
   * features, and optionally strata, a row identifier, case weights and offsets. Every subject enters
-  * at time 0.
+  * at time 0. The row identifier is one integral column (`rowId`) or a composite key (`rowKey`, hashed
+  * to 64 bits; §4a), whose columns may also have other roles, such as the entry time.
   */
 final case class CoxSpec(
     time: String,
@@ -26,9 +39,18 @@ final case class CoxSpec(
     weight: Option[String] = None,
     offset: Option[String] = None,
     entry: Option[String] = None,
-    cluster: Option[String] = None
+    cluster: Option[String] = None,
+    rowKey: Seq[String] = Nil
 ) {
   require(features.nonEmpty, "at least one feature column is required")
+  require(
+    rowId.isEmpty || rowKey.isEmpty,
+    "give a row identifier (rowId) or a row key (rowKey), not both"
+  )
+  require(
+    rowKey.distinct.size == rowKey.size,
+    s"the row key repeats a column: ${rowKey.mkString(", ")}"
+  )
   require(
     columns.distinct.size == columns.size,
     s"each column may have one role only: ${columns.mkString(", ")}"
@@ -37,6 +59,9 @@ final case class CoxSpec(
   def columns: Seq[String] =
     Seq(time, event) ++ features ++ strata.toSeq ++ rowId.toSeq ++ weight.toSeq ++ offset.toSeq ++
       entry.toSeq ++ cluster.toSeq
+
+  /** Whether rows have an identifier, so that residuals can be joined back to them. */
+  def identified: Boolean = rowId.isDefined || rowKey.nonEmpty
 }
 
 /** A validated Cox input: the internal columns only, with its row and event counts. */
@@ -59,6 +84,16 @@ object CoxValidation {
   val OffsetColumn: String = "__pprof_offset"
   val EntryColumn: String = "__pprof_entry"
   val ClusterColumn: String = "__pprof_cluster"
+
+  /** The 64-bit row identifier (§4a): the `rowId` column, the xxhash64 of the `rowKey` columns, or 0
+    * without either. A hash is a function of the key values alone, so data recomputed in any order or
+    * partitioning get the same identifiers and the same fingerprint.
+    */
+  private[cox] def rowIdentifier(spec: CoxSpec): Column = spec.rowId match {
+    case Some(name)                   => Validation.column(name).cast(LongType)
+    case None if spec.rowKey.nonEmpty => xxhash64(spec.rowKey.map(Validation.column): _*)
+    case None                         => lit(0L)
+  }
 
   def validate(df: DataFrame, spec: CoxSpec): CoxInput = {
     val types = df.schema.fields.map(f => f.name -> f.dataType).toMap
@@ -103,6 +138,22 @@ object CoxValidation {
       if (nulls > 0) problems += InputProblem.InvalidValues(name, nulls, 0L)
       if (duplicates > 0) problems += InputProblem.DuplicateRowIds(name, duplicates)
     }
+    if (spec.rowKey.nonEmpty) {
+      val nulls = spec.rowKey.map(name => name -> next())
+      val distinctHashes = next()
+      nulls.foreach { case (name, n) =>
+        if (n > 0) problems += InputProblem.InvalidValues(name, n, 0L)
+      }
+      if (nulls.forall(_._2 == 0L) && distinctHashes < rows) {
+        // Rare: tell repeated keys from a 64-bit collision with one more count.
+        val keys = df.select(spec.rowKey.map(Validation.column): _*).distinct().count()
+        problems += InputProblem.DuplicateRowKeys(
+          spec.rowKey,
+          rows - keys,
+          collision = keys == rows
+        )
+      }
+    }
     spec.weight.foreach { name =>
       val nulls = next()
       val nonFinite = next()
@@ -145,9 +196,7 @@ object CoxValidation {
       (if (types(spec.event) == BooleanType) event else event === 1).as(EventColumn),
       array(spec.features.map(name => Validation.column(name).cast(DoubleType)): _*)
         .as(Validation.FeaturesColumn),
-      spec.rowId
-        .fold(lit(0L))(name => Validation.column(name).cast(LongType))
-        .as(Validation.RowIdColumn),
+      rowIdentifier(spec).as(Validation.RowIdColumn),
       spec.weight.fold(lit(1.0))(name => Validation.column(name).cast(DoubleType)).as(WeightColumn),
       spec.offset.fold(lit(0.0))(name => Validation.column(name).cast(DoubleType)).as(OffsetColumn),
       spec.entry.fold(lit(0.0))(name => Validation.column(name).cast(DoubleType)).as(EntryColumn),
@@ -180,6 +229,14 @@ object CoxValidation {
         check(name, t => Validation.isIntegral(t) || t == StringType, "an integral or string type")
       ) ++
       spec.rowId.toSeq.flatMap(name => check(name, Validation.isIntegral, "an integral type")) ++
+      spec.rowKey.flatMap(name =>
+        check(
+          name,
+          t =>
+            !(t.isInstanceOf[ArrayType] || t.isInstanceOf[MapType] || t.isInstanceOf[StructType]),
+          "an atomic type"
+        )
+      ) ++
       (spec.weight.toSeq ++ spec.offset.toSeq ++ spec.entry.toSeq).flatMap(name =>
         check(name, numeric, "a numeric type")
       ) ++
@@ -247,11 +304,17 @@ object CoxValidation {
     val rowId = spec.rowId.toSeq.flatMap { name =>
       Seq(countWhere(Validation.column(name).isNull), countDistinct(Validation.column(name)))
     }
+    val rowKey =
+      if (spec.rowKey.isEmpty) Nil
+      else
+        spec.rowKey.map(name => countWhere(Validation.column(name).isNull)) :+
+          countDistinct(rowIdentifier(spec))
     Seq(
       count(lit(1)),
       countWhere(time.isNull),
       countWhere(Validation.nonFinite(time, types(spec.time))),
       countWhere(time <= 0)
-    ) ++ eventCounts ++ features ++ strata ++ rowId ++ weight ++ offset ++ entry ++ cluster :+ weightedEvents
+    ) ++ eventCounts ++ features ++ strata ++ rowId ++ rowKey ++ weight ++ offset ++ entry ++ cluster :+
+      weightedEvents
   }
 }

@@ -1,7 +1,7 @@
 """Cox proportional hazards through the JVM engine (docs/spec/cox/, docs/guide/cox-job.md)."""
 import json
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Union
 
 from pyspark.sql import DataFrame
 
@@ -29,14 +29,14 @@ class CoxPH:
     specification; options left as None take the engine's defaults."""
 
     def __init__(self, time: str, event: str, features: Sequence[str], *, strata: Optional[str] = None,
-                 row_id: Optional[str] = None, weight: Optional[str] = None, offset: Optional[str] = None,
+                 row_id: Optional[Union[str, Sequence[str]]] = None, weight: Optional[str] = None, offset: Optional[str] = None,
                  entry: Optional[str] = None, cluster: Optional[str] = None, ties: Optional[str] = None,
                  robust: Optional[bool] = None, max_iterations: Optional[int] = None,
                  eps: Optional[float] = None, max_halvings: Optional[int] = None,
                  confidence_level: Optional[float] = None, max_stratum_rows: Optional[int] = None,
                  max_stratum_bytes: Optional[int] = None, blocks: Optional[dict] = None):
         columns = {"time": time, "event": event, "features": list(features), "strata": strata,
-                   "rowId": row_id, "weight": weight, "offset": offset, "entry": entry, "cluster": cluster}
+                   "rowId": row_id if row_id is None or isinstance(row_id, str) else list(row_id), "weight": weight, "offset": offset, "entry": entry, "cluster": cluster}
         fit = {"ties": ties, "robust": robust, "maxIterations": max_iterations, "eps": eps,
                "maxHalvings": max_halvings, "confidenceLevel": confidence_level,
                "maxStratumRows": max_stratum_rows, "maxStratumBytes": max_stratum_bytes,
