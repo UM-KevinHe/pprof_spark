@@ -152,3 +152,19 @@ right-censored data and unweighted means for data with entry times. `model.refer
 these means and the mean offset; R's `predict(fit, type = "lp")` equals this package's linear predictor minus
 the sum of each coefficient times its mean. Expected values and residuals do not depend on the reference
 point.
+
+## Logistic tests on standardized measures: null values, null models, intervals and bounds
+
+`model.test_standardized(df, measure, ...)` takes pprof_py's options (standardization specification §2a):
+
+- `null_value`: `"reference"` (default; the measure at the reference provider effect), `"mean"` or `"median"`
+  of the providers' estimates (the mean of the direct rates, not the rate at the mean effect), a number, or a
+  callable given the estimates.
+- `null_model`: `None` for N(0, 1), or `FixedNull(mean, sd)` (`from pprof_spark import FixedNull`; pprof_py's
+  own `FixedNull` objects work too). z is calibrated to (z − mean)/sd before p-values, flags and intervals:
+  `FixedNull(sd=1.81)` is a null whose z-scores are 1.81 times as spread.
+- `interval`: `"inversion"` (default) or `"scale_only"`. `bounds`: `"auto"` (default), a `(lower, upper)` pair,
+  or `None` to leave intervals unclipped.
+
+Empirical nulls are not available yet. Indirect measures use `indirect_variance`; `variance="robust"` is refused
+for them, as in pprof_py.

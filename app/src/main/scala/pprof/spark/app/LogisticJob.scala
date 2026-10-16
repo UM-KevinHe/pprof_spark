@@ -10,7 +10,8 @@ import pprof.spark.engine.logistic.{
   LogisticFitIO,
   LogisticProviderTests,
   LogisticStandardization,
-  LogisticTest
+  LogisticTest,
+  NullValue
 }
 
 /** The `spark-submit` entry point for logistic fixed-effect runs (Phase 2e specification §3).
@@ -136,7 +137,7 @@ object LogisticJob {
             df,
             fit,
             t.measure,
-            t.nullValue,
+            t.nullValue.fold[NullValue](NullValue.Reference)(NullValue.Value(_)),
             t.transform,
             t.reference,
             t.variance,

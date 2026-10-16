@@ -113,6 +113,9 @@ unlimited) and L5 (blocks grow, doubling up to 256 MiB, where the block partials
 plans that fit are unchanged). Fixes that change statistical behaviour come with specification addenda. The
 scale-test plan, drafted in round 80 to become D-49, awaits its own decision.
 
+Correction (round 85): L6's recommendation rested on a misreading of pprof_py, which refuses robust variance for
+indirect measures too; pprof_spark keeps refusing it, and that recommendation is withdrawn.
+
 ### D-48: Close Phase 3 at parity-verified (Accepted: approved by the maintainer, 2026-10-11)
 
 `docs/gates/phase-3.md`: slices 3a to 3c meet the parity gate in the sandbox (round 74: every linear engine suite

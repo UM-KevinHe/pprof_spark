@@ -6,7 +6,8 @@ from ._jvm import __version__, api
 from .cox import Coefficient, CoxPH, CoxPHModel
 from .linear import LinearCoefficient, LinearFixedEffect, LinearFixedEffectModel, LinearTest
 from .logistic import LogisticFixedEffect, LogisticFixedEffectModel, Test
+from .nulls import FixedNull, TheoreticalNull
 from .three_stage import SigmaSensitivity, ThreeStage, ThreeStageModel
 
-__all__ = ["__version__", "api", "Coefficient", "CoxPH", "CoxPHModel", "LogisticFixedEffect",
-           "LinearCoefficient", "LinearFixedEffect", "LinearFixedEffectModel", "LinearTest", "LogisticFixedEffectModel", "SigmaSensitivity", "Test", "ThreeStage", "ThreeStageModel"]
+__all__ = ["__version__", "api", "Coefficient", "CoxPH", "CoxPHModel", "FixedNull", "LogisticFixedEffect",
+           "LinearCoefficient", "LinearFixedEffect", "LinearFixedEffectModel", "LinearTest", "LogisticFixedEffectModel", "SigmaSensitivity", "Test", "TheoreticalNull", "ThreeStage", "ThreeStageModel"]

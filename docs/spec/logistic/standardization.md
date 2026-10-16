@@ -42,6 +42,33 @@ Intervals: x ± c·SE on the working scale, transformed back, clipped to [0, 1] 
 rates and [0, ∞) for identity-scale ratios (`bounds = auto`). On the log scale a provider without
 events cannot be tested (NaN), as in pprof_py.
 
+
+## 2a. Null values, null models, intervals and bounds (round 85; production findings L2 to L4, D-49)
+
+`LogisticStandardization.test` (Python `test_standardized`) takes pprof_py v0.7.0's remaining options. Their
+defaults give the test of §2 unchanged, bit for bit.
+
+| Option | Values | pprof_py |
+|---|---|---|
+| `nullValue` (`null_value`) | `Reference` (default): the measure at the reference effect. `Mean`, `Median`: of the providers' finite estimates, on the measure's scale, over every provider before any `providers` filter; the median of an even count is the mean of the middle two. `Value(v)`. In Python also a callable, given the finite estimates | `z_statistic` |
+| `nullModel` (`null_model`) | `Theoretical` (default), N(0, 1); `Fixed(mean, sd)`, N(mean, sd²), both finite and sd > 0 | `TheoreticalNull`, `FixedNull` |
+| `interval` | `inversion` (default) or `scale_only` | `intervals(form = ...)` |
+| `bounds` | `Auto` (default): [0, 1] for rates and [0, ∞) for ratios on the identity scale, otherwise none; `Unbounded`; `Fixed(lower, upper)` | `bounds` |
+
+With μ and σ the null's mean and sd, z_adjusted = (z − μ)/σ, and the p-value and flag come from z_adjusted as
+§2 says. With c the critical value (from `level`, or `critical`), the working-scale limits are t − (μ + cσ)·se
+and t − (μ − cσ)·se for `inversion`, and t − cσ·se and t + cσ·se for `scale_only`; they are then mapped back and
+clipped to the bounds. The columns `null_mean`, `null_sd` and `z_adjusted` report μ, σ and the calibrated z;
+`null_group` stays empty. pprof_py's empirical nulls (location-scale and M-estimators, by provider-size groups)
+are not implemented (OI-78).
+
+`variance` other than `model` is refused for indirect measures, as pprof_py v0.7.0 refuses it in its
+`standardized_measure`. The round 82 review said otherwise; that diagnosis was wrong (L6, corrected in round 85).
+
+Verification: `LogisticNullModelSuite` checks these formulas bit for bit. In the assistant's sandbox, pprof_py
+v0.7.0 itself and pprof_spark agreed on `lfe-base` and `lfe-clustered`, for both measures and every option, to
+9 × 10⁻¹³ relative, with identical flags (round 85). Fixture-backed parity for these options is OI-84.
+
 ## 3. Direct sums at scale (OI-49)
 
 Dⱼ and Sⱼ sum over every row for every provider: O(n·m) evaluations, 10¹⁵ at the top of the

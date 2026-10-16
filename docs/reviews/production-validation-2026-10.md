@@ -20,7 +20,7 @@ change statistical behaviour need the maintainer's decision first (section 3).
 | L3 | No `interval`, `bounds` on `test_standardized()` (Low) | Confirmed: intervals by inversion, always clipped | pprof_py's `interval` and `bounds` | No |
 | L4 | `reference="mean"` gives expit(xβ + E[γ]) (Medium) | **Refined:** that is pprof_py's `null_value="reference"`; the pipelines need `null_value="mean"` (the mean of the providers' measures), which pprof_spark's wrapper cannot express | `null_value` = `reference`, `mean`, `median` or a number | No |
 | L5 | No `blocks` for the logistic model; p = 142 exceeds the driver budget (Medium) | Confirmed: the facade drops block options; 4 MiB blocks give ~1,400 partials of 82 KB against a 64 MiB budget | Expose `blocks`; grow blocks automatically to fit the budget | Yes, for large p only |
-| L6 | `variance="robust"` rejected for indirect measures (Low) | Confirmed, by design; pprof_py ignores `variance` for indirect measures | Accept and ignore with a warning | No (an error becomes a warning) |
+| L6 | `variance="robust"` rejected for indirect measures (Low) | **Corrected in round 85:** pprof_py v0.7.0 refuses it too, so the refusal is parity; the round 82 diagnosis misread pprof_py | None | No |
 
 ## 2. The issues
 
@@ -159,6 +159,8 @@ under its own specification.
 **Risks.** None by default. The team's R `FixedNull(sd = 1.81)` should be checked against pprof_py's
 definition (location, scale, and how intervals use them) before fixtures are made.
 
+**Status.** Round 85: the theoretical and fixed nulls, in the engine and Python (`FixedNull`; pprof_py's `FixedNull` objects are accepted). The empirical null remains (OI-78).
+
 ### L3. `interval` and `bounds`
 
 **Diagnosis.** Confirmed: intervals come from inverting the test on the working scale and are always
@@ -168,6 +170,8 @@ clipped, rates to [0, 1] and ratios to [0, ∞) (`LogisticStandardization`). ppr
 
 **Proposed fix.** Both options with pprof_py's defaults, with L2 (`scale_only` matters only for a
 non-theoretical null).
+
+**Status.** Resolved in round 85: `interval` and `bounds`, pprof_py's defaults.
 
 ### L4. `reference="mean"`
 
@@ -182,6 +186,8 @@ differ slightly when m is even.
 all providers including those added by L1, as pprof_py documents.
 
 **Risks.** None by default; fixtures from pprof_py for each mode.
+
+**Status.** Resolved in round 85: `null_value` = `"reference"`, `"mean"`, `"median"`, a number or a callable.
 
 ### L5. Block options for the logistic model
 
@@ -208,6 +214,8 @@ indirect measures use the variance of the observed count (`indirect_variance`). 
 
 **Proposed fix.** Accept and ignore it for indirect measures with a warning, as pprof_py does; record as a
 discrepancy entry.
+
+**Correction (round 85).** The diagnosis above is wrong. pprof_py v0.7.0's `standardized_measure` refuses `variance="robust"` for indirect measures, with the same explanation as pprof_spark; the round 82 reading missed that refusal and saw only the result's attributes. pprof_spark's refusal is parity, so nothing changed, and the recommendation to accept and ignore the option is withdrawn.
 
 ## 3. Decisions needed and a proposed order
 

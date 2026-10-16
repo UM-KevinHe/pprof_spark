@@ -20,6 +20,9 @@ import pprof.spark.engine.linear.{
 import pprof.spark.engine.BuildInfo
 import pprof.spark.engine.layout.GroupKey
 import pprof.spark.engine.logistic.{
+  IntervalBounds,
+  NullModel,
+  NullValue,
   EffectReference,
   LogisticFE,
   LogisticFit,
@@ -598,7 +601,7 @@ object PythonApi {
       df,
       fit,
       measure,
-      if (nullValue.isNaN) None else Some(nullValue),
+      if (nullValue.isNaN) NullValue.Reference else NullValue.Value(nullValue),
       transform,
       effectReference(reference),
       variance,
@@ -608,6 +611,57 @@ object PythonApi {
       if (critical.isNaN) None else Some(critical),
       stringList(providersJson, "providers"),
       method
+    )
+
+  /** Tests on a measure with pprof_py's `null_value`, `null_model`, `interval` and `bounds` (§2a):
+    * `nullValueMode` reference, mean, median or value; `nullSd` NaN for the theoretical null;
+    * `boundsMode` auto, none or fixed.
+    */
+  def logisticTestStandardizedWith(
+      df: DataFrame,
+      fit: LogisticFit,
+      measure: String,
+      nullValueMode: String,
+      nullValue: Double,
+      transform: String,
+      reference: String,
+      variance: String,
+      indirectVariance: String,
+      alternative: String,
+      level: Double,
+      critical: Double,
+      providersJson: String,
+      method: String,
+      nullMean: Double,
+      nullSd: Double,
+      interval: String,
+      boundsMode: String,
+      boundsLower: Double,
+      boundsUpper: Double
+  ): DataFrame =
+    LogisticStandardization.test(
+      df,
+      fit,
+      measure,
+      NullValue.of(nullValueMode, nullValue),
+      transform,
+      effectReference(reference),
+      variance,
+      indirectVariance,
+      alternative,
+      level,
+      if (critical.isNaN) None else Some(critical),
+      stringList(providersJson, "providers"),
+      method,
+      if (nullSd.isNaN) NullModel.Theoretical else NullModel.Fixed(nullMean, nullSd),
+      interval,
+      boundsMode match {
+        case "auto"  => IntervalBounds.Auto
+        case "none"  => IntervalBounds.Unbounded
+        case "fixed" => IntervalBounds.Fixed(boundsLower, boundsUpper)
+        case other   =>
+          throw new IllegalArgumentException(s"bounds must be auto, none or a pair, got $other")
+      }
     )
 
   def logisticPredict(df: DataFrame, fit: LogisticFit): DataFrame = LogisticFE.predict(df, fit)

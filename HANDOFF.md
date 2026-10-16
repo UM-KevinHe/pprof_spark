@@ -100,10 +100,10 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-The maintainer approved the round 82 review's recommendations (D-49); rounds 83 and 84 delivered L5, C3 and C1.
-Next: L2 to L4 and L6 (null models, interval and bounds, null values, robust variance for indirect measures),
-then L1 and C2's composite keys; the maintainer's fixture regeneration (OI-82) lets the R comparisons for
-`means` run. The scale-test kit (plan §11) follows; addenda for OI-65 and OI-66 can run alongside.
+The maintainer approved the round 82 review's recommendations (D-49); rounds 83 to 85 delivered L5, C3, C1 and L2 to
+L4 (the empirical null aside, OI-78); L6 needed no change (round 85's correction). Next: L1 (`add_providers`), then
+C2's composite keys; the maintainer's fixture regeneration (OI-82) lets the R comparisons for `means` run. The
+scale-test kit (plan §11) follows; addenda for OI-65 and OI-66 can run alongside.
 
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
@@ -112,6 +112,28 @@ with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 
 OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-70).
 
 ## Round log
+
+## Round 85 (2026-10-16): null models, intervals, bounds and null values for standardized tests (L2 to L4)
+
+- `NullValue` (reference, mean, median, a value), `NullModel` (theoretical, fixed) and `IntervalBounds` (auto,
+  unbounded, fixed) in `engine/.../logistic/StandardizedTestOptions.scala`; `LogisticStandardization.test` applies
+  them with pprof_py's formulas (z_adjusted = (z - mu)/sigma; p-values and flags from it; `inversion` and
+  `scale_only` limits; clipping), and its defaults reproduce the old output bit for bit. The job runner maps its
+  numeric null value; the facade's `logisticTestStandardizedWith` carries the new options.
+- Python: `test_standardized(null_value=..., null_model=..., interval=..., bounds=...)`; `FixedNull` and
+  `TheoreticalNull` (`pprof_spark.nulls`); pprof_py's `FixedNull` objects and dicts accepted; callable null values.
+- L6 corrected: pprof_py v0.7.0 refuses `variance="robust"` for indirect measures, so pprof_spark's refusal is
+  parity. A change made early in the round was reverted; the review, D-49 and the specification record the
+  correction.
+- Specification addendum, standardization §2a; the Python guide; OI-79 and OI-81 closed, OI-78 narrowed, OI-84 opened.
+
+Evidence (assistant sandbox): engine, app and tests compiled with `-Xlint -Wunused -Werror`; scalafmt clean.
+`LogisticNullModelSuite` 8 of 8; `LogisticStandardizationSuite` 4 of 4 (unchanged against `main`); Python
+`test_logistic.py` 8 of 8. pprof_py v0.7.0, installed in the sandbox, against pprof_spark on `lfe-base` and
+`lfe-clustered`, both measures, every option: within 9e-13 relative, flags identical; both refuse robust variance
+for indirect measures. Not run here: sbt, Spark Connect.
+
+What to send back: the CI run.
 
 ## Round 84.1 (2026-10-16): the Python reference-point test without pandas
 

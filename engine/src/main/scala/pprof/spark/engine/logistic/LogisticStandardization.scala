@@ -334,15 +334,17 @@ object LogisticStandardization {
     }.toMap
   }
 
-  /** pprof_py's `test_standardized` with the theoretical null: z on the working scale (`auto`: logit for
-    * the direct rate, log for the direct ratio, identity otherwise), the null at the reference value
-    * unless given, p-values, flags and intervals as specified (§2).
+  /** pprof_py's `test_standardized` (§2, §2a): z on the working scale (`auto`: logit for the direct rate,
+    * log for the direct ratio, identity otherwise) against the null value, calibrated by the null model
+    * to (z - mean) / sd; p-values and flags from the calibrated z; intervals by inverting the calibrated
+    * test (`inversion`) or from the null-scaled standard error alone (`scale_only`), clipped to `bounds`.
+    * The defaults (the reference value, the theoretical null, `inversion`, `Auto`) are pprof_py's.
     */
   def test(
       df: DataFrame,
       fit: LogisticFit,
       name: String = "direct_rate",
-      nullValue: Option[Double] = None,
+      nullValue: NullValue = NullValue.Reference,
       transform: String = "auto",
       reference: EffectReference = EffectReference.Median,
       variance: String = "model",
@@ -351,8 +353,15 @@ object LogisticStandardization {
       level: Double = 0.95,
       critical: Option[Double] = None,
       providers: Option[Seq[Any]] = None,
-      method: String = "binned"
+      method: String = "binned",
+      nullModel: NullModel = NullModel.Theoretical,
+      interval: String = "inversion",
+      bounds: IntervalBounds = IntervalBounds.Auto
   ): DataFrame = {
+    require(
+      interval == "inversion" || interval == "scale_only",
+      s"interval must be inversion or scale_only, got $interval"
+    )
     require(
       LogisticProviderTests.Alternatives.contains(alternative),
       s"unknown alternative $alternative"
@@ -383,7 +392,22 @@ object LogisticStandardization {
       case _       => t
     }
     val m = measure(df, fit, name, reference, variance, indirectVariance, method)
-    val nv = nullValue.getOrElse(m.referenceValue)
+    val nv = nullValue match {
+      case NullValue.Reference               => m.referenceValue
+      case NullValue.Value(v)                => v
+      case NullValue.Mean | NullValue.Median =>
+        val finite = m.estimate.filter(java.lang.Double.isFinite)
+        require(finite.nonEmpty, s"the null value $nullValue needs at least one finite estimate")
+        if (nullValue == NullValue.Mean) {
+          val sum = new NeumaierSum
+          finite.foreach(sum.add)
+          sum.value / finite.length
+        } else {
+          val sorted = finite.sorted
+          val n = sorted.length
+          if (n % 2 == 1) sorted(n / 2) else (sorted(n / 2 - 1) + sorted(n / 2)) / 2.0
+        }
+    }
     val nt = forward(nv)
     require(
       java.lang.Double.isFinite(nt),
@@ -393,10 +417,18 @@ object LogisticStandardization {
     val c = critical.getOrElse(
       Normal.upperQuantile(if (alternative == "two_sided") alpha / 2.0 else alpha)
     )
-    val bounds =
-      if (scale == "identity" && name.endsWith("_rate")) Some((0.0, 1.0))
-      else if (scale == "identity" && name.endsWith("_ratio")) Some((0.0, Double.PositiveInfinity))
-      else None
+    val clip = bounds match {
+      case IntervalBounds.Auto =>
+        if (scale == "identity" && name.endsWith("_rate")) Some((0.0, 1.0))
+        else if (scale == "identity" && name.endsWith("_ratio"))
+          Some((0.0, Double.PositiveInfinity))
+        else None
+      case IntervalBounds.Unbounded   => None
+      case IntervalBounds.Fixed(a, b) => Some((a, b))
+    }
+    val (mu, sigma) = (nullModel.mean, nullModel.sd)
+    val (upperZ, lowerZ) =
+      if (interval == "inversion") (mu + c * sigma, mu - c * sigma) else (c * sigma, -c * sigma)
     val keys = fit.providers.keys
     val wanted = providers.map(_.map(_.toString).toSet)
     val rows =
@@ -409,28 +441,30 @@ object LogisticStandardization {
             st
           ) && st > 0.0 && java.lang.Double.isFinite(raw)
           val z = if (testable) raw else Double.NaN
+          val zc = (z - mu) / sigma
           val (p, flag) =
             if (!testable) (Double.NaN, null)
             else {
-              val (pValue, _) = LogisticProviderTests.decide(z, alternative, c)
+              val (pValue, _) = LogisticProviderTests.decide(zc, alternative, c)
               val significant = critical match {
                 case None    => pValue < alpha
                 case Some(v) =>
-                  if (alternative == "less") z < -v
-                  else if (alternative == "greater") z > v
-                  else math.abs(z) > v
+                  if (alternative == "less") zc < -v
+                  else if (alternative == "greater") zc > v
+                  else math.abs(zc) > v
               }
-              val up = significant && z > 0.0 && alternative != "less"
-              val down = significant && z < 0.0 && alternative != "greater"
+              val up = significant && zc > 0.0 && alternative != "less"
+              val down = significant && zc < 0.0 && alternative != "greater"
               (pValue, Integer.valueOf(if (up) 1 else if (down) -1 else 0))
             }
-          var lo = inverse(if (alternative == "less") Double.NegativeInfinity else t - c * st)
-          var hi = inverse(if (alternative == "greater") Double.PositiveInfinity else t + c * st)
+          var lo = inverse(if (alternative == "less") Double.NegativeInfinity else t - upperZ * st)
+          var hi =
+            inverse(if (alternative == "greater") Double.PositiveInfinity else t - lowerZ * st)
           if (!testable) {
             lo = Double.NaN
             hi = Double.NaN
           }
-          bounds.foreach { case (a, b) =>
+          clip.foreach { case (a, b) =>
             lo = math.min(math.max(lo, a), b)
             hi = math.min(math.max(hi, a), b)
           }
@@ -443,10 +477,10 @@ object LogisticStandardization {
             st,
             nt,
             z,
-            0.0,
-            1.0,
+            mu,
+            sigma,
             null,
-            z,
+            zc,
             p,
             flag,
             lo,
