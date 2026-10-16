@@ -136,3 +136,19 @@ These options were added after production validation on about 5 million rows (ro
   `df.withColumn("row_id", F.xxhash64("patient_id", "start"))`: deterministic, so nothing needs to be
   written out first. Validation reports any duplicate (two of 5 million rows collide with probability
   about 7 × 10⁻⁷).
+
+## Cox baselines: reference points
+
+`model.baseline(df)` is the baseline hazard at x = 0 and offset 0, the one every prediction here uses.
+Other tools report it elsewhere, so `baseline` takes `reference=`:
+
+- `"raw"` (default): x = 0, offset 0.
+- `"mean_offset"`: at the weighted mean offset; pprof_py's `baseline_hazard_` and R's
+  `basehaz(fit, centered = FALSE)`.
+- `"means"`: also at R's covariate means; R's `survfit(fit)` default curve and `basehaz(fit)`.
+
+R does not centre covariates whose values all lie in {−1, 0, 1}; it uses case-weighted means for
+right-censored data and unweighted means for data with entry times. `model.reference_point(df)` returns
+these means and the mean offset; R's `predict(fit, type = "lp")` equals this package's linear predictor minus
+the sum of each coefficient times its mean. Expected values and residuals do not depend on the reference
+point.

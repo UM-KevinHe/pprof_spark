@@ -235,12 +235,32 @@ object CoxPH {
   val BaselineColumns: Seq[String] =
     Seq("stratum", "time", "hazard_increment", "cumulative_hazard", "survival")
 
-  /** The per-stratum baseline hazard of `fit` at x = 0 and offset 0 (Phase 1b specification §2,
-    * X-014), computed on the executors from the training data `df`, whose fingerprint must match
-    * the fit's (API-3). The table is persisted at the fit's storage level and never collected
-    * (DIST-1); the caller may unpersist it.
+  /** The training data's weighted mean offset and R's covariate means (Phase 1b specification §2a),
+    * from `df`, whose fingerprint must match the fit's (API-3).
     */
-  def baseline(df: DataFrame, fit: CoxFit): DataFrame =
+  def referencePoint(df: DataFrame, fit: CoxFit): CoxReferencePoint =
+    withWorkingSet(df, fit.spec, fit.options) { prepared =>
+      if (prepared.fingerprint != fit.fingerprint)
+        throw new IllegalArgumentException(
+          "the data differ from the data the model was fitted to (fingerprint mismatch, API-3)"
+        )
+      CoxReference.point(
+        prepared.workingSet.blocks,
+        fit.spec.features.size,
+        fit.spec.entry.isDefined
+      )
+    }
+
+  /** The per-stratum baseline hazard of `fit` at `reference` (Phase 1b specification §2 and §2a), by
+    * default x = 0 and offset 0 (X-014), the baseline every prediction uses; computed on the
+    * executors from the training data `df`, whose fingerprint must match the fit's (API-3). The table
+    * is persisted at the fit's storage level and never collected (DIST-1); the caller may unpersist it.
+    */
+  def baseline(
+      df: DataFrame,
+      fit: CoxFit,
+      reference: BaselineReference = BaselineReference.Raw
+  ): DataFrame =
     withWorkingSet(df, fit.spec, fit.options) { prepared =>
       if (prepared.fingerprint != fit.fingerprint)
         throw new IllegalArgumentException(
@@ -248,10 +268,24 @@ object CoxPH {
         )
       val beta = fit.estimates.toArray
       val efron = fit.options.ties == Ties.Efron
-      val rows = prepared.workingSet.blocks
+      val raw = prepared.workingSet.blocks
         .flatMap((block: CoxBlock) => CoxKernel.baseline(block, beta, efron))(
           Encoders.product[CoxBaselineRow]
         )
+      val rows =
+        if (reference == BaselineReference.Raw) raw
+        else {
+          val factor = CoxReference
+            .point(prepared.workingSet.blocks, fit.spec.features.size, fit.spec.entry.isDefined)
+            .factor(reference, fit.estimates)
+          raw.map((r: CoxBaselineRow) =>
+            r.copy(
+              increment = r.increment * factor,
+              cumulativeHazard = r.cumulativeHazard * factor,
+              survival = StrictMath.exp(-(r.cumulativeHazard * factor))
+            )
+          )(Encoders.product[CoxBaselineRow])
+        }
       val keys = PlanFrames
         .placements(df.sparkSession, prepared.plan, prepared.strataKeyIsText)
         .select(

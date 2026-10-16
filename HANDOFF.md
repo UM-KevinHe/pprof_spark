@@ -100,9 +100,10 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-The maintainer approved the round 82 review's recommendations (D-49); round 83 delivered L5 and C3. Next: C1 (the
-baseline's reference options), then L2 to L4 and L6, L1, and C2's composite keys. The scale-test kit (plan §11)
-follows them; addenda for OI-65 and OI-66 can run alongside.
+The maintainer approved the round 82 review's recommendations (D-49); rounds 83 and 84 delivered L5, C3 and C1.
+Next: L2 to L4 and L6 (null models, interval and bounds, null values, robust variance for indirect measures),
+then L1 and C2's composite keys; the maintainer's fixture regeneration (OI-82) lets the R comparisons for
+`means` run. The scale-test kit (plan §11) follows; addenda for OI-65 and OI-66 can run alongside.
 
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
@@ -111,6 +112,28 @@ with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 
 OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-70).
 
 ## Round log
+
+## Round 84 (2026-10-16): baseline reference points (C1)
+
+- `BaselineReference` (`raw`, `mean_offset`, `means`) and `CoxReferencePoint` (`engine/.../cox/CoxReference.scala`):
+  `CoxPH.baseline(df, fit, reference = Raw)` scales the raw increments and cumulative hazards by exp(c) and
+  recomputes survival; `CoxPH.referencePoint(df, fit)` gives the weighted mean offset and R's covariate means
+  (`nocenter` for values in {-1, 0, 1}; weighted for right-censored data, unweighted with entry times), from
+  compensated block sums reduced in block order. Rules read in survival's source (3.8-13); specification
+  addendum Phase 1b §2a; X-014 updated.
+- Facade `coxBaselineAt`, `coxReferencePoint`; Python `baseline(df, reference=...)`, `reference_point(df)`.
+- `cox_survival.R` emits `basehaz(fit, centered = TRUE)` and `fit$means` (OI-82: regenerate the fixtures).
+- Docs: the Python guide, the review's C1 status. OI-73 closed; OI-82 and OI-83 opened. The job runner's
+  baseline output stays raw (saved models need it).
+
+Evidence (assistant sandbox): engine, app and tests compiled with `-Xlint -Wunused -Werror`; scalafmt clean.
+`CoxBaselineReferenceSuite`: 7 passed (raw unchanged bit for bit; `mean_offset` against pprof_py's public
+baseline and R's `basehaz(centered = FALSE)` within T-base on both fixtures with offsets, both tie methods;
+`means` against an independent computation with added 0/1 and -1/0/1 covariates), 4 skipped until OI-82.
+`CoxBaselineSuite` 28 of 28. Python: the new test and the baseline tests, 3 of 3. Not run here: sbt, R,
+Spark Connect.
+
+What to send back: the CI run; then, when convenient, the fixture regeneration (OI-82).
 
 ## Round 83.1 (2026-10-16): CI fixes after round 83
 

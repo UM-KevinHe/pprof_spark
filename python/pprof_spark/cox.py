@@ -84,9 +84,21 @@ class CoxPHModel:
     def _frame(self, jdf) -> DataFrame:
         return DataFrame(jdf, self._spark)
 
-    def baseline(self, df: DataFrame) -> DataFrame:
-        """The per-stratum baseline hazard from the training data `df` (Phase 1b §2)."""
-        return self._frame(api(self._spark).coxBaseline(df._jdf, self._handle))
+    def baseline(self, df: DataFrame, reference: str = "raw") -> DataFrame:
+        """The per-stratum baseline hazard from the training data `df` (Phase 1b §2 and §2a).
+
+        `reference` is the point it refers to: "raw" (x = 0 and offset 0, the baseline every prediction here
+        uses), "mean_offset" (pprof_py's `baseline_hazard_`, R's `basehaz(fit, centered=FALSE)`) or "means"
+        (R's `survfit(fit)` default curve and `basehaz(fit)`)."""
+        if reference == "raw":
+            return self._frame(api(self._spark).coxBaseline(df._jdf, self._handle))
+        return self._frame(api(self._spark).coxBaselineAt(df._jdf, self._handle, reference))
+
+    def reference_point(self, df: DataFrame) -> dict:
+        """The training data's weighted mean offset and R's covariate means (Phase 1b §2a), as R's `fit$means`
+        holds them: features, means, whether each is centred, and offset_mean. R's linear predictor is this
+        package's minus the sum of each coefficient times its mean."""
+        return json.loads(api(self._spark).coxReferencePoint(df._jdf, self._handle))
 
     def linear_predictor(self, df: DataFrame) -> DataFrame:
         return self._frame(api(self._spark).coxLinearPredictor(self._handle, df._jdf))

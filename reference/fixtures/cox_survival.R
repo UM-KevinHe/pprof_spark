@@ -45,6 +45,9 @@ for (ties in c("breslow", "efron")) {
       bh <- basehaz(fit, centered = FALSE)
       emit(paste0(key, ".basehaz_time"), bh$time)
       emit(paste0(key, ".basehaz_hazard"), bh$hazard)
+      # Round 84: the centred baseline (survfit's default curve) and the means it uses.
+      emit(paste0(key, ".basehaz_centered_hazard"), basehaz(fit, centered = TRUE)$hazard)
+      emit(paste0(key, ".means"), unname(fit$means))
       if (stratified) emit(paste0(key, ".basehaz_stratum"), as.numeric(sub("^stratum=", "", as.character(bh$strata))))
       # Residuals and robust variances (Phase 1c specification §5); clusters are id mod 40.
       emit(paste0(key, ".martingale"), residuals(fit, type = "martingale"))

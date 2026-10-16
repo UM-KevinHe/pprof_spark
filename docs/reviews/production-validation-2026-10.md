@@ -71,6 +71,8 @@ sums. Fixtures gain R's `basehaz` both ways and `survfit`.
 **Risks.** None by default. R computes `fit$means` over rows weighted by case weights; this is to be
 confirmed in the fixtures, including for counting-process rows and strata (R uses overall means).
 
+**Status.** Resolved in round 84: `baseline(reference = "raw" | "mean_offset" | "means")` and `reference_point()`, which gives R's means for centring the linear predictor (in place of a `centered` flag on `linear_predictor`). R's `nocenter` rule and its weighted and unweighted means are followed; the R references for `means` arrive with the next fixture regeneration (OI-82).
+
 ### C2. `row_id` for counting-process data
 
 **Diagnosis, refined.** A row identifier is optional for fitting, baselines and predictions: without one,

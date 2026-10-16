@@ -33,6 +33,37 @@ is x = 0 with offset 0, pprof_py's raw baseline. pprof_py's public `baseline_haz
 `basehaz(fit, centered = FALSE)` equal this baseline times exp of the weighted mean offset; pprof_spark
 reports the raw baseline and documents the factor (X-014).
 
+
+## 2a. Reference points (round 84; production finding C1, D-49)
+
+The baseline of §2 is at x = 0 and offset 0, the raw baseline that every prediction uses (X-014). Other
+tools report it at other points. `CoxPH.baseline(df, fit, reference)` reports any of three, each the raw
+baseline times a constant factor exp(c):
+
+| Reference | c | Equals |
+|---|---|---|
+| `raw` (default) | 0 | pprof_py's raw baseline, which its predictions use |
+| `mean_offset` | ō | pprof_py's `baseline_hazard_`; R's `basehaz(fit, centered = FALSE)` |
+| `means` | ō + Σₖ β̂ₖ mₖ | R's `survfit(fit)` without `newdata`; R's `basehaz(fit)` (`centered = TRUE`) |
+
+ō is the weighted mean offset Σwᵢoᵢ/Σwᵢ over all rows (R's `survfit.coxph`, `offset.mean`; pprof_py's
+`offset_mean`). mₖ is R's `fit$means[k]`: 0 when every value of covariate k lies in {−1, 0, 1} (R's
+`nocenter = c(-1, 0, 1)`, so indicator variables are not centred); otherwise the case-weighted mean
+Σwᵢxᵢₖ/Σwᵢ for right-censored data (`coxph.fit`, through the C routine `coxfit6`), and the unweighted mean
+Σxᵢₖ/n for data with entry times (`agreg.fit`, `colMeans`). The means are over all rows and strata
+together. These rules were read in survival 3.8-13's source (`coxph.fit.R`, `agreg.fit.R`, `coxfit6.c`,
+`basehaz.R`, `survfit.coxph.R`); the fixtures pin survival 3.5-8, and `cox_survival.R` emits the R references
+for `means` (`basehaz(fit, centered = TRUE)` and `fit$means`) from round 84, so a regeneration of the
+fixtures confirms them there (OI-82).
+
+Increments and cumulative hazards are the raw ones times exp(c), as R's `basehaz` scales its curve, and the
+survival column is exp(−cumulative hazard). The sums behind ō and mₖ are compensated, in canonical row order
+within each block, and reduced in block order (DIST-6), so the factor is reproducible bit for bit.
+`CoxPH.referencePoint(df, fit)` returns ō, the mₖ and which covariates are centred; R's linear predictor is
+pprof_spark's minus Σₖ β̂ₖ mₖ. Predictions keep the raw baseline with the uncentred linear predictor, so
+expected values and residuals do not depend on the reference point. The job runner's baseline output stays
+raw, because saved models need it for their predictions.
+
 ## 3. Prediction
 
 For a row with covariates x, offset o, stratum s and time t:

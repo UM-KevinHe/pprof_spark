@@ -1,3 +1,4 @@
+import math
 """The Python wrappers carry the engine's Cox results unchanged (ADR-0009)."""
 import json
 
@@ -92,3 +93,23 @@ def test_max_stratum_bytes_caps_one_stratum(spark):
     features = json.loads((FIXTURES / "cox" / case / "case.json").read_text())["features"]
     with pytest.raises(IllegalArgumentException, match="maxStratumBytes"):
         CoxPH("time", "event", features, row_id="id", max_stratum_bytes=1000).fit(frame(spark, case))
+
+
+def test_baseline_reference_points(spark):
+    case = "lt-weights-offset"
+    info = json.loads((FIXTURES / "cox" / case / "case.json").read_text())
+    py = json.loads((FIXTURES / "cox" / case / "pprof_py.json").read_text())["breslow"]["baseline"]
+    df = frame(spark, case)
+    model = CoxPH("time", "event", info["features"], strata="stratum" if info.get("stratified") else None,
+                  row_id="id", weight="weight", offset="offset", entry="entry").fit(df)
+    raw = model.baseline(df).orderBy("stratum", "time").toPandas()
+    shifted = model.baseline(df, reference="mean_offset").orderBy("stratum", "time").toPandas()
+    offset_mean = float.fromhex(py["offset_mean"][0])
+    factor = math.exp(offset_mean)
+    assert all(abs(s - r * factor) <= 1e-14 * r * factor
+               for s, r in zip(shifted.cumulative_hazard, raw.cumulative_hazard))
+    point = model.reference_point(df)
+    assert point["features"] == info["features"] and len(point["means"]) == len(info["features"])
+    assert abs(point["offset_mean"] - offset_mean) <= 1e-14
+    with pytest.raises(IllegalArgumentException, match="mean_offset"):
+        model.baseline(df, reference="centered")

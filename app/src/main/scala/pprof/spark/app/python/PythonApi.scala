@@ -38,6 +38,7 @@ import pprof.spark.engine.logistic.{
   ThreeStageSpec
 }
 import pprof.spark.engine.cox.{
+  BaselineReference,
   CoxFit,
   CoxFitIO,
   CoxMeasures,
@@ -138,6 +139,25 @@ object PythonApi {
   }
 
   def coxBaseline(df: DataFrame, fit: CoxFit): DataFrame = CoxPH.baseline(df, fit)
+
+  /** The baseline at a named reference point: raw, mean_offset or means (Phase 1b §2a). */
+  def coxBaselineAt(df: DataFrame, fit: CoxFit, reference: String): DataFrame =
+    CoxPH.baseline(df, fit, BaselineReference.fromName(reference))
+
+  /** The training data's weighted mean offset and R's covariate means, as JSON (Phase 1b §2a). */
+  def coxReferencePoint(df: DataFrame, fit: CoxFit): String = {
+    val point = CoxPH.referencePoint(df, fit)
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    root.put("offset_mean", point.offsetMean)
+    val features = root.putArray("features")
+    fit.spec.features.foreach(f => features.add(f))
+    val means = root.putArray("means")
+    point.means.foreach(v => means.add(v))
+    val centered = root.putArray("centered")
+    point.centered.foreach(c => centered.add(c))
+    mapper.writeValueAsString(root)
+  }
 
   def coxResiduals(df: DataFrame, fit: CoxFit): DataFrame = CoxPH.residuals(df, fit)
 
