@@ -99,6 +99,28 @@ final class LogisticProviders(
   def allEvents(k: Int): Boolean = trials(k) > 0.0 && events(k) >= trials(k)
 }
 
+/** Providers added to a fit after fitting (pprof_py's `add_providers`; specification §8a): each with a
+  * fixed effect, its standard error and, for providers not in the fit, a group size.
+  */
+final class LogisticAddedProviders(
+    val keys: Array[GroupKey],
+    val gamma: Array[Double],
+    val seGamma: Array[Double],
+    val sizes: Array[Long]
+) extends Serializable {
+  def size: Int = keys.length
+}
+
+object LogisticAddedProviders {
+  val empty: LogisticAddedProviders =
+    new LogisticAddedProviders(
+      Array.empty,
+      Array.emptyDoubleArray,
+      Array.emptyDoubleArray,
+      Array.emptyLongArray
+    )
+}
+
 /** A fitted logistic fixed-effect model (specification §8). Holds no SparkSession and no reference
   * to the training data (ARCH-4).
   */
@@ -127,8 +149,59 @@ final case class LogisticFit(
     status: String = "experimental",
     robustCovariance: Option[Vector[Double]] = None,
     clusters: Long = 0L,
-    auc: Option[Double] = None
+    auc: Option[Double] = None,
+    added: LogisticAddedProviders = LogisticAddedProviders.empty
 ) {
+
+  /** This fit with providers added after fitting (pprof_py's `add_providers`; specification §8a,
+    * production finding L1). Each given provider takes the effect `gamma` and, for every variance of
+    * its effect, `seGamma` squared; one not in the fit is added with `groupSizes` records, which weight
+    * the mean reference, while a fitted one keeps its records and its data-based statistics. A later
+    * call replaces earlier values. The estimation (β, the likelihood, the AUC) never involves them.
+    */
+  def withProviders(
+      keys: Seq[GroupKey],
+      gamma: Seq[Double],
+      seGamma: Seq[Double],
+      groupSizes: Seq[Long]
+  ): LogisticFit = {
+    val n = keys.length
+    require(
+      gamma.length == n && seGamma.length == n && groupSizes.length == n,
+      "keys, gamma, seGamma and groupSizes must have the same length"
+    )
+    require(keys.distinct.length == n, "a provider may be added once per call")
+    require(gamma.forall(java.lang.Double.isFinite), "gamma must be finite")
+    require(
+      seGamma.forall(s => java.lang.Double.isFinite(s) && s > 0.0),
+      "seGamma must be positive and finite"
+    )
+    require(groupSizes.forall(_ >= 0L), "groupSizes must not be negative")
+    val text = providers.keys.headOption.exists(_.isInstanceOf[GroupKey.Text])
+    require(
+      keys.forall(_.isInstanceOf[GroupKey.Text] == text),
+      s"the added providers' keys must be ${if (text) "text" else "integral"}, as the fit's"
+    )
+    val previous = added.keys.zipWithIndex.toMap
+    val k = added.keys.toBuffer
+    val g = added.gamma.toBuffer
+    val s = added.seGamma.toBuffer
+    val z = added.sizes.toBuffer
+    keys.indices.foreach { i =>
+      previous.get(keys(i)) match {
+        case Some(j) =>
+          g(j) = gamma(i)
+          s(j) = seGamma(i)
+        case None =>
+          k += keys(i)
+          g += gamma(i)
+          s += seGamma(i)
+          z += groupSizes(i)
+      }
+    }
+    copy(added = new LogisticAddedProviders(k.toArray, g.toArray, s.toArray, z.toArray))
+  }
+
   def estimates: Vector[Double] = coefficients.map(_.estimate)
   def standardErrors: Vector[Double] = coefficients.map(_.standardError)
   def degenerateProviders: Int =

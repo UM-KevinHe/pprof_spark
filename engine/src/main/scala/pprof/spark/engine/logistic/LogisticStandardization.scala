@@ -198,19 +198,20 @@ object LogisticStandardization {
     finally workingSet.release()
   }
 
-  private def gammaSe(fit: LogisticFit, variance: String): Array[Double] = variance match {
-    case "model"                        => fit.providers.varCaseMix.map(math.sqrt)
-    case "robust" | "robust_fixed_beta" =>
-      val v =
-        if (variance == "robust") fit.providers.robustVarCaseMix
-        else fit.providers.robustVarFixedBeta
-      require(v.nonEmpty, "robust variances need a fit with a cluster column")
-      v.map(math.sqrt)
-    case other =>
-      throw new IllegalArgumentException(
-        s"variance must be model, robust or robust_fixed_beta, got $other"
-      )
-  }
+  private def gammaSe(view: LogisticProviderView, variance: String): Array[Double] =
+    variance match {
+      case "model"                        => view.varCaseMix.map(math.sqrt)
+      case "robust" | "robust_fixed_beta" =>
+        val v =
+          if (variance == "robust") view.robustVarCaseMix
+          else view.robustVarFixedBeta
+        require(v.nonEmpty, "robust variances need a fit with a cluster column")
+        v.map(math.sqrt)
+      case other =>
+        throw new IllegalArgumentException(
+          s"variance must be model, robust or robust_fixed_beta, got $other"
+        )
+    }
 
   /** pprof_py's `standardized_measure` (specification §1). */
   def measure(
@@ -232,11 +233,12 @@ object LogisticStandardization {
           "to direct measures and the provider effect"
       )
     val g0 = LogisticProviderTests.reference(fit, reference)
-    val gamma = fit.providers.gamma
+    val view = LogisticProviderView.of(fit)
+    val gamma = view.gamma
     name match {
-      case "gamma" => Measure(name, gamma.clone(), gammaSe(fit, variance), g0)
+      case "gamma" => Measure(name, gamma.clone(), gammaSe(view, variance), g0)
       case "direct_rate" | "direct_ratio" =>
-        val se = gammaSe(fit, variance)
+        val se = gammaSe(view, variance)
         val (d, s) = direct(df, fit, gamma :+ g0, method)
         val denominator = if (name == "direct_rate") fit.trials else fit.events
         val m = gamma.length
@@ -247,8 +249,12 @@ object LogisticStandardization {
           d(m) / denominator
         )
       case _ =>
-        val (expected, varianceO) = indirect(df, fit, g0, indirectVariance)
-        val observed = fit.providers.events
+        // Indirect measures need the provider's rows: none for a provider added after fitting.
+        val (fittedExpected, fittedVariance) = indirect(df, fit, g0, indirectVariance)
+        def onView(values: Int => Double) = view.fitted.map(k => if (k >= 0) values(k) else 0.0)
+        val expected = onView(k => fittedExpected(k))
+        val varianceO = onView(k => fittedVariance(k))
+        val observed = onView(k => fit.providers.events(k))
         val ratio = expected.indices
           .map(j => if (expected(j) > 1e-10) observed(j) / expected(j) else Double.NaN)
           .toArray
@@ -280,11 +286,12 @@ object LogisticStandardization {
       "kinds must be indirect and/or direct"
     )
     val spark = df.sparkSession
-    val keys = fit.providers.keys
+    val view = LogisticProviderView.of(fit)
+    val keys = view.keys
     val wanted = providers.map(_.map(_.toString).toSet)
     val selected =
       keys.indices.filter(k => wanted.forall(_.contains(GroupKey.value(keys(k)).toString)))
-    val observed = fit.providers.events
+    val observed = view.fitted.map(k => if (k >= 0) fit.providers.events(k) else 0.0)
     def frame(columns: Seq[String], values: Int => Seq[Any]): DataFrame = {
       val schema = StructType(
         StructField(fit.spec.provider, if (text(fit)) StringType else LongType, nullable = false) +:
@@ -298,7 +305,8 @@ object LogisticStandardization {
     kinds.map {
       case "indirect" =>
         val g0 = LogisticProviderTests.reference(fit, reference)
-        val (expected, _) = indirect(df, fit, g0, "null")
+        val (fittedExpected, _) = indirect(df, fit, g0, "null")
+        val expected = view.fitted.map(k => if (k >= 0) fittedExpected(k) else 0.0)
         val populationRate = observed.sum / fit.trials * 100.0
         "indirect" -> frame(
           Seq("indirect_ratio", "indirect_rate", "observed", "expected"),
@@ -313,14 +321,14 @@ object LogisticStandardization {
           }
         )
       case _ =>
-        val (d, _) = direct(df, fit, fit.providers.gamma, method)
+        val (d, _) = direct(df, fit, view.gamma, method)
         val total = fit.events
         val population = fit.trials + extremeTrials
         "direct" -> frame(
           Seq("direct_ratio", "direct_rate", "observed", "expected", "n_pop"),
           k => {
             val preds = d(k) + (if (extremeTrials > 0.0)
-                                  extremeTrials * Kernel.sigmoid(fit.providers.gamma(k))
+                                  extremeTrials * Kernel.sigmoid(view.gamma(k))
                                 else 0.0)
             Seq(
               preds / total,
@@ -429,7 +437,7 @@ object LogisticStandardization {
     val (mu, sigma) = (nullModel.mean, nullModel.sd)
     val (upperZ, lowerZ) =
       if (interval == "inversion") (mu + c * sigma, mu - c * sigma) else (c * sigma, -c * sigma)
-    val keys = fit.providers.keys
+    val keys = LogisticProviderView.of(fit).keys
     val wanted = providers.map(_.map(_.toString).toSet)
     val rows =
       keys.indices.filter(k => wanted.forall(_.contains(GroupKey.value(keys(k)).toString))).map {
@@ -517,7 +525,7 @@ object LogisticStandardization {
 
   /** The measure as a table: provider, estimate, se and the reference value. */
   def measureTable(spark: SparkSession, fit: LogisticFit, m: Measure): DataFrame = {
-    val keys = fit.providers.keys
+    val keys = LogisticProviderView.of(fit).keys
     spark.createDataFrame(
       keys.indices
         .map(k => Row(GroupKey.value(keys(k)), m.estimate(k), m.se(k), m.referenceValue))

@@ -144,6 +144,8 @@ standardized measures, tests and null values. Python: `add_providers(...)`, retu
 the provider's rows (exact, score) have none for added providers and return missing values, as is to be
 confirmed against pprof_py.
 
+**Status.** Resolved in round 86: `LogisticFit.withProviders` and Python `add_providers`, with every output that lists providers following pprof_py v0.7.0 (logistic specification §8a); checked against pprof_py itself on 70 comparisons in the sandbox.
+
 ### L2. Null model for `test_standardized()`
 
 **Diagnosis.** Confirmed: `LogisticStandardization.testStandardized` implements pprof_py's test with the

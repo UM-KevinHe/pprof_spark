@@ -91,9 +91,9 @@ class LogisticFitIOSuite extends SparkSuite {
       .json(s"$other/metadata")
     val failure = intercept[IllegalArgumentException](LogisticFitIO.load(spark, other))
     assert(
-      failure.getMessage.contains("format version 99") && failure.getMessage.contains(
-        "versions 1 to 3"
-      )
+      failure.getMessage.contains("format version 99") &&
+        failure.getMessage.contains(s"versions 1 to ${LogisticFitIO.FormatVersion}"),
+      failure.getMessage
     )
     val version1 = freshPath()
     spark.read

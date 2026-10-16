@@ -664,6 +664,35 @@ object PythonApi {
       }
     )
 
+  /** pprof_py's `add_providers` (logistic specification §8a): the fit with providers added after
+    * fitting, from JSON arrays of one length: keys (numbers or strings, as the fit's provider column),
+    * gamma, seGamma and groupSizes.
+    */
+  def logisticWithProviders(
+      fit: LogisticFit,
+      keysJson: String,
+      gammaJson: String,
+      seGammaJson: String,
+      groupSizesJson: String
+  ): LogisticFit = {
+    val mapper = new ObjectMapper()
+    def array(json: String, what: String): IndexedSeq[JsonNode] = {
+      val node = mapper.readTree(json)
+      require(node != null && node.isArray, s"$what must be a JSON array")
+      (0 until node.size).map(node.get)
+    }
+    val text = fit.providers.keys.headOption.exists(_.isInstanceOf[GroupKey.Text])
+    val keys = array(keysJson, "provider_ids").map(n =>
+      if (text) GroupKey.Text(n.asText) else GroupKey.Integral(n.asLong)
+    )
+    fit.withProviders(
+      keys,
+      array(gammaJson, "gamma").map(_.asDouble),
+      array(seGammaJson, "se_gamma").map(_.asDouble),
+      array(groupSizesJson, "group_sizes").map(_.asLong)
+    )
+  }
+
   def logisticPredict(df: DataFrame, fit: LogisticFit): DataFrame = LogisticFE.predict(df, fit)
 
   def logisticSave(spark: SparkSession, fit: LogisticFit, path: String): Unit =

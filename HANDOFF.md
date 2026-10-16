@@ -100,10 +100,10 @@ pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
 
 ### 8. Next
 
-The maintainer approved the round 82 review's recommendations (D-49); rounds 83 to 85 delivered L5, C3, C1 and L2 to
-L4 (the empirical null aside, OI-78); L6 needed no change (round 85's correction). Next: L1 (`add_providers`), then
-C2's composite keys; the maintainer's fixture regeneration (OI-82) lets the R comparisons for `means` run. The
-scale-test kit (plan §11) follows; addenda for OI-65 and OI-66 can run alongside.
+The maintainer approved the round 82 review's recommendations (D-49); rounds 83 to 86 delivered L5, C3, C1, L2 to
+L4 and L1 (the empirical null aside, OI-78); L6 needed no change. Next: C2's composite row keys (OI-74), the last
+item of the order; the maintainer's fixture regenerations (OI-82, with OI-84 and OI-85 once the generator emits
+them). The scale-test kit (plan §11) follows; addenda for OI-65 and OI-66 can run alongside.
 
 Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
 scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
@@ -112,6 +112,29 @@ with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 
 OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-70).
 
 ## Round log
+
+## Round 86 (2026-10-16): providers added after fitting (L1)
+
+- `LogisticAddedProviders` and `LogisticFit.added` (default empty) with `withProviders(keys, gamma, seGamma,
+  groupSizes)`; `LogisticProviderView` merges fitted and added providers in key order for the outputs that list
+  providers: the reference effect, `measure`, `measures`, `measureTable`, `test`, provider tests (data-based rows
+  re-indexed into the view, added rows with z 0 and p 1, Wald from the view), `providerTable` (new `added`
+  column, in `ProviderColumns`) and `predict`. Passes over the data use the fitted providers only.
+- `LogisticFitIO` format version 4: an `added` table and count; `load` wraps the old reader (`loadFitted`).
+- Facade `logisticWithProviders`; Python `add_providers` (changes the model in place and returns it, as pprof_py).
+- `LogisticFitIOSuite` no longer hard-codes "versions 1 to 3" (the round 83.1 lesson; a narrow search missed it).
+- Specification §8a; the Python guide; the review's L1 status. OI-77 closed; OI-85 and OI-86 opened.
+
+Evidence (assistant sandbox): engine, app and tests compiled with `-Xlint -Wunused -Werror`; scalafmt clean.
+`LogisticAddProvidersSuite` 6 of 6; regressions `LogisticProviderTestsSuite` 5, `LogisticFitIOSuite` 4,
+`LogisticBehaviourSuite` 7, `LogisticNullModelSuite` 8, `LogisticStandardizationSuite` 4, all passing; Python
+`test_logistic.py` 9 of 9. pprof_py v0.7.0 against pprof_spark, `lfe-base` fitted without two providers that were
+added back at -17 and +17 with a third replaced: 70 comparisons of every output, 0 mismatches in missing values
+or flags, within 4.4e-12 relative except the tiny direct standard errors of the added providers (7.3e-10, from the
+binned sums, X-026). The cross-check found one bug before it shipped: `measureTable` took the fitted providers'
+keys; fixed and tested. Not run here: sbt, Spark Connect.
+
+What to send back: the CI run.
 
 ## Round 85 (2026-10-16): null models, intervals, bounds and null values for standardized tests (L2 to L4)
 

@@ -53,7 +53,8 @@ object LogisticFE {
     "all_events",
     "at_bound",
     "robust_var_case_mix",
-    "robust_var_fixed_beta"
+    "robust_var_fixed_beta",
+    "added"
   )
 
   /** The margin of `at_bound` below the bound (pprof_py's `at_bound(tol = 0.1)`). */
@@ -311,11 +312,12 @@ object LogisticFE {
     } finally workingSet.release()
   }
 
-  /** The fitted providers as a table with [[ProviderColumns]]: m rows built on the driver, where the
+  /** The providers as a table with [[ProviderColumns]], those added after fitting included (§8a): rows built on the driver, where the
     * fit holds them (specification §8 and §11).
     */
   def providerTable(spark: SparkSession, fit: LogisticFit): DataFrame = {
     val providers = fit.providers
+    val view = LogisticProviderView.of(fit)
     val keyIsText = providers.keys.headOption.exists(_.isInstanceOf[GroupKey.Text])
     val schema = StructType(
       Seq(
@@ -330,23 +332,28 @@ object LogisticFE {
         StructField("all_events", BooleanType, nullable = false),
         StructField("at_bound", BooleanType, nullable = false),
         StructField("robust_var_case_mix", DoubleType, nullable = true),
-        StructField("robust_var_fixed_beta", DoubleType, nullable = true)
+        StructField("robust_var_fixed_beta", DoubleType, nullable = true),
+        StructField("added", BooleanType, nullable = false)
       )
     )
-    val rows = (0 until providers.size).map { k =>
+    // The view's providers: fitted ones keep their data-based counts and flags; one added after
+    // fitting has its group size as records, no trials or events, and no flags (§8a).
+    val rows = (0 until view.size).map { v =>
+      val k = view.fitted(v)
       Row(
-        GroupKey.value(providers.keys(k)),
-        providers.records(k),
-        providers.trials(k),
-        providers.events(k),
-        providers.gamma(k),
-        providers.varGamma(k),
-        providers.varCaseMix(k),
-        providers.zeroEvents(k),
-        providers.allEvents(k),
-        providers.atBound(k),
-        if (providers.robustVarCaseMix.isEmpty) null else providers.robustVarCaseMix(k),
-        if (providers.robustVarFixedBeta.isEmpty) null else providers.robustVarFixedBeta(k)
+        GroupKey.value(view.keys(v)),
+        view.records(v),
+        if (k >= 0) providers.trials(k) else 0.0,
+        if (k >= 0) providers.events(k) else 0.0,
+        view.gamma(v),
+        view.varGamma(v),
+        view.varCaseMix(v),
+        k >= 0 && providers.zeroEvents(k),
+        k >= 0 && providers.allEvents(k),
+        k >= 0 && providers.atBound(k),
+        if (view.robustVarCaseMix.isEmpty) null else view.robustVarCaseMix(v),
+        if (view.robustVarFixedBeta.isEmpty) null else view.robustVarFixedBeta(v),
+        view.added(v)
       )
     }
     spark.createDataFrame(rows.asJava, schema)
@@ -600,7 +607,7 @@ object LogisticFE {
     val spark = df.sparkSession
     val missing = (fit.spec.features :+ fit.spec.provider).filterNot(df.columns.contains)
     if (missing.nonEmpty) throw new InvalidInputException(missing.map(InputProblem.MissingColumn))
-    val providers = fit.providers
+    val providers = LogisticProviderView.of(fit)
     val text = providers.keys.headOption.exists(_.isInstanceOf[GroupKey.Text])
     val keyColumn = "__pprof_provider_key"
     val gammaColumn = "__pprof_gamma"

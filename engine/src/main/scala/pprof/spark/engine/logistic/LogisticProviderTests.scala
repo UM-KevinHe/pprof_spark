@@ -56,18 +56,20 @@ object LogisticProviderTests {
     CoxProviderTests.Columns
       .takeWhile(_ != "observed") ++ Seq("observed", "expected", "trials", "records")
 
-  def reference(fit: LogisticFit, reference: EffectReference): Double = reference match {
-    case EffectReference.Median => Serbin.median(fit.providers.gamma)
-    case EffectReference.Mean   =>
-      val providers = fit.providers
-      var weighted = 0.0
-      var total = 0.0
-      providers.gamma.indices.foreach { k =>
-        weighted += providers.records(k) * providers.gamma(k)
-        total += providers.records(k).toDouble
-      }
-      weighted / total
-    case EffectReference.Value(v) => v
+  def reference(fit: LogisticFit, reference: EffectReference): Double = {
+    val view = LogisticProviderView.of(fit)
+    reference match {
+      case EffectReference.Median => Serbin.median(view.gamma)
+      case EffectReference.Mean   =>
+        var weighted = 0.0
+        var total = 0.0
+        view.gamma.indices.foreach { k =>
+          weighted += view.records(k) * view.gamma(k)
+          total += view.records(k).toDouble
+        }
+        weighted / total
+      case EffectReference.Value(v) => v
+    }
   }
 
   /** One row per tested provider of the fit (all, or `providers`), with the fit's provider column and
@@ -101,20 +103,31 @@ object LogisticProviderTests {
     val c = critical.getOrElse(
       Normal.upperQuantile(if (alternative == "two_sided") alpha / 2.0 else alpha)
     )
-    val keys = fit.providers.keys
+    val view = LogisticProviderView.of(fit)
+    val keys = view.keys
     val wanted = providers.map(_.map(_.toString).toSet)
     val tested =
       keys.indices.filter(k => wanted.forall(_.contains(GroupKey.value(keys(k)).toString))).toSet
     val rows: Dataset[LogisticProviderTestRow] =
       if (method == "wald")
-        spark.createDataset(waldRows(fit, g0, alternative, c, tested))(Encoders.product)
+        spark.createDataset(waldRows(fit, view, g0, alternative, c, tested))(Encoders.product)
       else {
         val (workingSet, providersOfBlock) = LogisticFE.trainingWorkingSet(df, fit)
         val p = fit.spec.features.size
         val beta = fit.estimates.toArray
-        val testedArray = (0 until keys.length).map(tested.contains).toArray
-        try
-          spark.createDataset(
+        // Data-based rows for the fitted providers, indexed into the view; a replaced provider shows
+        // its new effect. A provider added after fitting has no rows: z 0 and p 1, as in pprof_py.
+        val testedArray = Array.fill(fit.providers.size)(false)
+        val viewOf = new Array[Int](fit.providers.size)
+        view.fitted.indices.foreach { v =>
+          val k = view.fitted(v)
+          if (k >= 0) {
+            viewOf(k) = v
+            testedArray(k) = tested.contains(v)
+          }
+        }
+        val fittedRows =
+          try
             LogisticFE
               .withEffects(workingSet.blocks, providersOfBlock, p, fit.providers.gamma)
               .flatMap { (block: LogisticBlock) =>
@@ -126,11 +139,36 @@ object LogisticProviderTests {
               }(Encoders.product[LogisticProviderTestRow])
               .collect()
               .toSeq
-          )(Encoders.product)
-        finally workingSet.release()
+          finally workingSet.release()
+        val unbounded = method == "poibin_exact"
+        val addedRows = tested.toSeq.sorted.filter(v => view.fitted(v) < 0).map { v =>
+          LogisticProviderTestRow(
+            v,
+            view.gamma(v),
+            Double.NaN,
+            0.0,
+            1.0,
+            0,
+            if (unbounded) Double.NegativeInfinity else Double.NaN,
+            if (unbounded) Double.PositiveInfinity else Double.NaN,
+            0.0,
+            0.0,
+            0.0,
+            view.records(v)
+          )
+        }
+        spark.createDataset(
+          fittedRows.map { r =>
+            val v = viewOf(r.groupIndex)
+            r.copy(groupIndex = v, estimate = view.gamma(v))
+          } ++ addedRows
+        )(Encoders.product)
       }
     if (method == "wald") {
-      val degenerate = tested.count(k => fit.providers.zeroEvents(k) || fit.providers.allEvents(k))
+      val degenerate = tested.count { v =>
+        val k = view.fitted(v)
+        k >= 0 && (fit.providers.zeroEvents(k) || fit.providers.allEvents(k))
+      }
       if (degenerate > 0)
         log.warn(
           s"$degenerate providers have no events or only events, so their effects have no finite estimate; " +
@@ -187,31 +225,33 @@ object LogisticProviderTests {
 
   private def waldRows(
       fit: LogisticFit,
+      view: LogisticProviderView,
       g0: Double,
       alternative: String,
       c: Double,
       tested: Set[Int]
   ) = {
     val pr = fit.providers
-    (0 until pr.size).filter(tested.contains).map { k =>
-      val se = math.sqrt(pr.varCaseMix(k))
-      val z = (pr.gamma(k) - g0) / se
+    (0 until view.size).filter(tested.contains).map { v =>
+      val k = view.fitted(v)
+      val se = math.sqrt(view.varCaseMix(v))
+      val z = (view.gamma(v) - g0) / se
       val (p, flag) = decide(z, alternative, c)
-      val lower = if (alternative == "less") Double.NegativeInfinity else pr.gamma(k) - c * se
-      val upper = if (alternative == "greater") Double.PositiveInfinity else pr.gamma(k) + c * se
+      val lower = if (alternative == "less") Double.NegativeInfinity else view.gamma(v) - c * se
+      val upper = if (alternative == "greater") Double.PositiveInfinity else view.gamma(v) + c * se
       LogisticProviderTestRow(
-        k,
-        pr.gamma(k),
+        v,
+        view.gamma(v),
         se,
         z,
         p,
         flag,
         lower,
         upper,
-        pr.events(k),
+        if (k >= 0) pr.events(k) else 0.0,
         Double.NaN,
-        pr.trials(k),
-        pr.records(k)
+        if (k >= 0) pr.trials(k) else 0.0,
+        view.records(v)
       )
     }
   }

@@ -29,12 +29,13 @@ import pprof.spark.numerics.SerbinStep
   */
 object LogisticFitIO {
 
-  val FormatVersion: Int = 3
+  val FormatVersion: Int = 4
 
   /** Version 1 lacks `correlationThresholdBits` (its fits load with the default threshold); versions 1
-    * and 2 lack slice 2b's cluster column, robust variances and AUC.
+    * and 2 lack slice 2b's cluster column, robust variances and AUC; versions 1 to 3 lack providers
+    * added after fitting (§8a), and read as having none.
     */
-  val ReadableVersions: Set[Int] = Set(1, 2, 3)
+  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4)
   val Kind: String = "pprof.spark.engine.logistic.LogisticFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -110,7 +111,19 @@ object LogisticFitIO {
       field("fingerprint", LongType),
       field("robustCovarianceBits", Longs, nullable = true),
       field("clusters", LongType, nullable = true),
-      field("aucBits", LongType, nullable = true)
+      field("aucBits", LongType, nullable = true),
+      field("added", IntegerType, nullable = true)
+    )
+  )
+
+  /** One row per provider added after fitting (§8a); `position` is its order of addition. */
+  val AddedSchema: StructType = StructType(
+    Seq(
+      field("position", IntegerType),
+      field("key", StringType),
+      field("gamma", DoubleType),
+      field("se_gamma", DoubleType),
+      field("size", LongType)
     )
   )
 
@@ -200,7 +213,8 @@ object LogisticFitIO {
       fit.fingerprint,
       fit.robustCovariance.map(v => bits(v)).orNull,
       fit.clusters,
-      fit.auc.map(v => java.lang.Long.valueOf(bit(v))).orNull
+      fit.auc.map(v => java.lang.Long.valueOf(bit(v))).orNull,
+      Integer.valueOf(fit.added.size)
     )
     spark
       .createDataFrame(java.util.List.of(record), MetadataSchema)
@@ -229,6 +243,19 @@ object LogisticFitIO {
       .write
       .mode("errorifexists")
       .parquet(s"$path/providers")
+    val a = fit.added
+    if (a.size > 0)
+      spark
+        .createDataFrame(
+          (0 until a.size)
+            .map(i => Row(i, keyText(a.keys(i)), a.gamma(i), a.seGamma(i), a.sizes(i)))
+            .asJava,
+          AddedSchema
+        )
+        .coalesce(1)
+        .write
+        .mode("errorifexists")
+        .parquet(s"$path/added")
   }
 
   private def metadata(spark: SparkSession, path: String): Row = {
@@ -253,6 +280,33 @@ object LogisticFitIO {
     * are collected to the driver under the saved `maxProvidersOnDriver` (DIST-1).
     */
   def load(spark: SparkSession, path: String): LogisticFit = {
+    val fit = loadFitted(spark, path)
+    val r = metadata(spark, path)
+    val count = Option(r.getAs[Any]("added")).map(_.asInstanceOf[Int]).getOrElse(0)
+    if (count == 0) fit
+    else {
+      val text = r.getAs[Boolean]("providerKeyIsText")
+      val rows =
+        spark.read.schema(AddedSchema).parquet(s"$path/added").collect().sortBy(_.getInt(0))
+      require(
+        rows.length == count,
+        s"$path/added holds ${rows.length} providers; the metadata records $count"
+      )
+      fit.copy(added =
+        new LogisticAddedProviders(
+          rows.map(row =>
+            if (text) GroupKey.Text(row.getString(1))
+            else GroupKey.Integral(row.getString(1).toLong)
+          ),
+          rows.map(_.getDouble(2)),
+          rows.map(_.getDouble(3)),
+          rows.map(_.getLong(4))
+        )
+      )
+    }
+  }
+
+  private def loadFitted(spark: SparkSession, path: String): LogisticFit = {
     val r = metadata(spark, path)
     def seq[A](name: String): Seq[A] = r.getSeq[A](r.fieldIndex(name)).toSeq
     def double(name: String): Double = java.lang.Double.longBitsToDouble(r.getAs[Long](name))

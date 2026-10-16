@@ -168,3 +168,21 @@ point.
 
 Empirical nulls are not available yet. Indirect measures use `indirect_variance`; `variance="robust"` is refused
 for them, as in pprof_py.
+
+## Logistic models: providers added after fitting
+
+R's PPPW step fits without the providers whose outcomes are all 0 or all 1, then adds them back with fixed
+effects. `add_providers` does the same, as pprof_py's does:
+
+```python
+model = LogisticFixedEffect("y", features, "provider", row_id="id").fit(df_without_extremes)
+model.add_providers(zero_event_ids + all_event_ids,
+                    [-17.0] * len(zero_event_ids) + [17.0] * len(all_event_ids),
+                    se_gamma=0.01, group_sizes=sizes)
+model.test_standardized(df_without_extremes, "direct_rate", null_value="mean")
+```
+
+The added providers enter the reference effect, the direct measures, the tests on standardized measures (and so
+a mean null value), the provider tests, the provider table (`added` is true) and predictions. Their indirect
+measures are missing, since they have no rows in the data. A provider already in the fit is replaced instead.
+The model changes in place and is returned, and saved models keep the additions (logistic specification §8a).

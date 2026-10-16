@@ -123,3 +123,20 @@ def test_standardized_null_models_and_options(data, fit):
         fit.test_standardized(data, measure="indirect_ratio", variance="robust")
     with pytest.raises(ValueError):
         fit.test_standardized(data, bounds="tight")
+
+
+def test_add_providers_as_pprof_py(spark):
+    df = spark.read.csv(str(FIXTURES / "logistic" / "lfe-base" / "input.csv"), header=True, inferSchema=True)
+    keys = sorted(r[0] for r in df.select("provider").distinct().collect())
+    kept = df.filter(~df.provider.isin(keys[:2]))
+    model = LogisticFixedEffect("y", ["x1", "x2", "x3"], "provider", row_id="id").fit(kept)
+    same = model.add_providers(keys[:2], [-17.0, 17.0], se_gamma=0.01, group_sizes=[11, 12])
+    assert same is model
+    table = {r["provider"]: r for r in model.providers().collect()}
+    assert len(table) == len(keys)
+    assert table[keys[0]]["gamma"] == -17.0 and table[keys[0]]["added"]
+    assert table[keys[1]]["records"] == 12 and table[keys[1]]["trials"] == 0.0
+    tests = {r["provider"]: r for r in model.test_standardized(kept, null_value="mean").collect()}
+    assert len(tests) == len(keys) and tests[keys[0]]["flag"] == -1 and tests[keys[1]]["flag"] == 1
+    exact = {r["provider"]: r for r in model.provider_tests(kept).collect()}
+    assert exact[keys[0]]["z_raw"] == 0.0 and exact[keys[0]]["p_value"] == 1.0

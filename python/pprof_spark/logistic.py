@@ -139,6 +139,27 @@ class LogisticFixedEffectModel:
         return self._frame(api(self._spark).logisticStandardizedMeasure(
             df._jdf, self._handle, measure, str(reference), variance, indirect_variance, method))
 
+    def add_providers(self, provider_ids, gamma, se_gamma=0.01, group_sizes=None) -> "LogisticFixedEffectModel":
+        """Providers added after fitting, as pprof_py's `add_providers` (logistic specification §8a): each takes the
+        effect `gamma` and the standard error `se_gamma` (a number, or one per provider). A provider not in the fit is
+        added with `group_sizes` records (0 when None), which weight the mean reference; a fitted one is replaced and
+        keeps its records and data-based statistics. Like pprof_py, this changes the model and returns it. R's PPPW
+        step adds zero-event providers with gamma -17 and all-event ones with +17, se_gamma 0.01."""
+        ids = list(provider_ids)
+        if not ids:
+            return self
+        gammas = [float(g) for g in (list(gamma) if hasattr(gamma, "__len__") else [gamma])]
+        if len(gammas) == 1 and len(ids) > 1:
+            gammas = gammas * len(ids)
+        ses = [float(v) for v in (list(se_gamma) if hasattr(se_gamma, "__len__") else [se_gamma])]
+        if len(ses) == 1 and len(ids) > 1:
+            ses = ses * len(ids)
+        sizes = [0] * len(ids) if group_sizes is None else [int(v) for v in group_sizes]
+        keys = [v if isinstance(v, str) else int(v) for v in ids]
+        self._handle = api(self._spark).logisticWithProviders(
+            self._handle, json.dumps(keys), json.dumps(gammas), json.dumps(ses), json.dumps(sizes))
+        return self
+
     def test_standardized(self, df: DataFrame, measure: str = "direct_rate", null_value="reference",
                           transform: str = "auto", reference="median", variance: str = "model",
                           indirect_variance: str = "null", alternative: str = "two_sided", level: float = 0.95,

@@ -125,6 +125,39 @@ slices (plan.md).
 
 The fit is persisted bit for bit like `CoxFit` (PERS-1), in a new kind with its own format version.
 
+
+## 8a. Providers added after fitting (round 86; production finding L1, D-49)
+
+`LogisticFit.withProviders(keys, gamma, seGamma, groupSizes)` (Python `add_providers`) is pprof_py v0.7.0's
+`add_providers`, which R's PPPW step uses: providers left out of the fit (zero-event and all-event ones) are
+added back with fixed effects, conventionally −17 and +17 with standard error 0.01. A provider not in the fit is
+added with `groupSizes` records (0 by default). A fitted one is replaced, and keeps its records and data-based
+statistics. A later call replaces earlier values. The fit itself does not change: β, the likelihood, the AUC
+and every pass over the training data use the fitted providers only. The outputs that list providers follow
+pprof_py:
+
+| Output | Added provider | Replaced provider |
+|---|---|---|
+| Reference effect | In the median of γ, and in the mean weighted by its group size | Its new γ, weighted by its records |
+| γ and direct measures | From its γ, and se² for every variance of its effect, over the whole population | Its new γ and se |
+| Indirect measures; the measures table | Missing: observed 0, expected 0 | Data-based, unchanged |
+| Tests on standardized measures | Included, so also in a mean or median null value | Its new values |
+| Provider tests: exact, score, bootstrap | z 0, p 1, flag 0; interval (−∞, ∞) for the exact test, missing otherwise | Data-based; the estimate column shows the new γ |
+| Provider tests: Wald | From its γ and se | From its new γ and se |
+| Provider table | Its group size as records; no trials, events or flags; `added` true | `added` true |
+| Predictions | Its γ | Its new γ |
+
+Saved models keep the additions: `LogisticFitIO` format version 4 writes them to a separate `added` table, and
+versions 1 to 3 load with none. At γ = ±17 a direct rate's standard error is about 10⁻¹⁰, while the binned direct
+sums carry an absolute error of about 10⁻¹⁷ per row (X-026). Those standard errors, and the z values of tests on
+them, therefore agree with pprof_py only to about 10⁻⁹ relative; `method = "exact"` avoids this, and flags are
+unaffected.
+
+Verification: `LogisticAddProvidersSuite` checks each row of the table. In the assistant's sandbox, pprof_py
+v0.7.0 itself and pprof_spark agreed on 70 comparisons covering every output, on `lfe-base` fitted without two
+providers that were then added back, with a third replaced, with identical missing values and flags (round 86).
+Fixture-backed parity is OI-85.
+
 ## 9. Edge cases
 
 | Case | pprof_py v0.7.0 (probed in round 25 unless marked as read in the source) | pprof_spark |
