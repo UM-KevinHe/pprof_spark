@@ -113,6 +113,13 @@ OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the 
 
 ## Round log
 
+## Round 84.1 (2026-10-16): the Python reference-point test without pandas
+
+CI's Python job failed with `PySparkImportError: Pandas >= 2.2.0 must be installed`: round 84's
+`test_baseline_reference_points` called `toPandas()`, and the job installs only `pyspark` and `pytest`. The test
+now uses `collect()`, as the other Python tests do. Evidence: the test passes in the sandbox; no `toPandas` remains
+in `python/tests`.
+
 ## Round 84 (2026-10-16): baseline reference points (C1)
 
 - `BaselineReference` (`raw`, `mean_offset`, `means`) and `CoxReferencePoint` (`engine/.../cox/CoxReference.scala`):

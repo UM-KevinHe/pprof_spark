@@ -102,12 +102,13 @@ def test_baseline_reference_points(spark):
     df = frame(spark, case)
     model = CoxPH("time", "event", info["features"], strata="stratum" if info.get("stratified") else None,
                   row_id="id", weight="weight", offset="offset", entry="entry").fit(df)
-    raw = model.baseline(df).orderBy("stratum", "time").toPandas()
-    shifted = model.baseline(df, reference="mean_offset").orderBy("stratum", "time").toPandas()
+    raw = model.baseline(df).orderBy("stratum", "time").collect()
+    shifted = model.baseline(df, reference="mean_offset").orderBy("stratum", "time").collect()
     offset_mean = float.fromhex(py["offset_mean"][0])
     factor = math.exp(offset_mean)
-    assert all(abs(s - r * factor) <= 1e-14 * r * factor
-               for s, r in zip(shifted.cumulative_hazard, raw.cumulative_hazard))
+    assert len(shifted) == len(raw)
+    assert all(abs(s["cumulative_hazard"] - r["cumulative_hazard"] * factor) <= 1e-14 * r["cumulative_hazard"] * factor
+               for s, r in zip(shifted, raw))
     point = model.reference_point(df)
     assert point["features"] == info["features"] and len(point["means"]) == len(info["features"])
     assert abs(point["offset_mean"] - offset_mean) <= 1e-14
