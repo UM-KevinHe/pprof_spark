@@ -48,6 +48,7 @@ round 88 as the maintainer reported (rounds 83 and 84 failed and were fixed by 8
 | `engine.logistic` | `LogisticSpec` (`withProviders`), `LogisticFE`, `LogisticBlocks` (block options and growth), `LogisticFitIO` v4, `LogisticProviderView`, `LogisticProviderTests`, `LogisticStandardization` (null values, the fixed null, intervals, bounds); `ThreeStage`, `ThreeStagePipeline`, `ThreeStageFitIO` v1 |
 | `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE`, `LinearFitIO` v1, `LinearProviderTests`, `LinearStandardization` |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob`, `LinearJob` and their run specifications (version 1); `python.PythonApi` |
+| `bench` | `DeterminismCost` (S-05); `synthetic`, the scale tests' data generators (round 92, M1) |
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage and linear wrappers, ADR-0009) and its pytest suite |
 | `databricks/` | `00_build` (builds a commit on the driver into workspace files), `01_parity` (fixtures and R0 on the cluster), `02_scale` (a first look at scale); guide `docs/guide/databricks.md` |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py`; `fixtures.yml` (manual dispatch) regenerates and compares on CI's runner |
@@ -75,7 +76,7 @@ round 88 as the maintainer reported (rounds 83 and 84 failed and were fixed by 8
 ### 5. Verifying in the sandbox
 
 sbt cannot run in the sandbox (no Maven Central). `sandbox-tools.zip` (outside the repository, rebuilt in rounds 88
-and 89; `SETUP.md` inside) emulates the build:
+and 89, `bench` added in round 92; `SETUP.md` inside) emulates the build:
 
 - `setup.sh`: a CI-like Python environment (`pyspark==4.1.0`, `pytest==8.4.2`), whose jars supply Spark 4.1.0 and
   Scala 2.13.17, the compiler included; the reference environment (pprof_py at `9320766` with the fixtures' pinned
@@ -140,7 +141,8 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
   likelihood; per-stratum shift, scaling and a condition estimate), OI-58 (external standard populations), OI-03
   (TimeRange), OI-61 (TSQR).
 - Scale and costs, for the scale kit to measure: OI-02 and OI-38 (large p, the Breslow kernel), OI-29, OI-30,
-  OI-43, OI-45, OI-46, OI-50, OI-57, OI-59 (the dense Schur complement of stage 2), OI-68, OI-70 and OI-76.
+  OI-43, OI-45, OI-46, OI-50, OI-57, OI-59 (the dense Schur complement of stage 2), OI-68, OI-70 and OI-76;
+  OI-92 (the plan's Zipf exponent).
 - Interfaces: OI-86 (added providers in the job runner), OI-53 (Databricks access modes), OI-55 (a wheel), OI-56
   (PySpark CSV pushdown with a literal provider column).
 - Process: OI-40 (a CI check of the parity matrix), OI-41 (per-release model fixtures), OI-33 and OI-42 (reports
@@ -154,9 +156,12 @@ as round 82 did:
 - propose fixes with files, risks and compatibility;
 - record them in the review document and as open items.
 
-1. M1: the scale kit's data generators (Cox, logistic, linear, three-stage) and `ScaleJob`'s measurements, as a
-   Spark application, with S0's plan and a local dry run (`docs/spec/scale/plan.md` §9.1 and §11), for the
-   maintainer to run S0. Alongside, the specifications for the empirical null (OI-78) and funnel limits (OI-88).
+1. M1, in progress:
+   - Done in round 92: the data generators for the Cox, logistic and linear models.
+   - Next: `ScaleJob`'s measurements as a Spark application, with Python access to them and to the generators.
+   - Then: the three-stage generator, S0's plan file and a local dry run (`docs/spec/scale/plan.md` §9.1 and
+     §11), for the maintainer to run S0.
+   - Alongside: the specifications for the empirical null (OI-78) and funnel limits (OI-88).
 2. M2 and M3: P0's inference parity (OI-87 to OI-90, OI-78, OI-58), and fixes for S0's complexity problems.
 3. M4: the random-effect models (linear, logistic, fixed effects with random clusters), each with a
    specification, fixtures and an S1 scale smoke.
@@ -167,6 +172,48 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 92 (2026-10-19): the scale kit's synthetic data (M1)
+
+The first part of milestone M1 (D-50): deterministic synthetic data for the Cox, logistic and linear models.
+
+- `pprof.spark.bench.synthetic`:
+  - `Draws`: counter-based uniforms, and Box–Muller normals with `StrictMath`, in the bootstrap's SplitMix64
+    construction.
+  - `Sizes`: equal, dominant and Zipf provider sizes, each provider owning a contiguous range of identifiers.
+  - `Design` and `Model`: the processes of the plan's §4, with defaults for the parameters it leaves open.
+  - `Synthetic`:
+    - rows from `spark.range` in any number of partitions;
+    - the true provider effects;
+    - an order-independent checksum;
+    - writing a point with its manifest.
+  - The provider starts are computed once per JVM, so generation needs neither a broadcast nor a `SparkContext`.
+- Tests:
+  - `DrawsSuite`: SplitMix64 values checked against an independent implementation; the moments of the uniforms
+    and normals; no correlation across streams, draws, seeds or neighbouring rows.
+  - `SizesSuite`: provider sizes and identifier ranges.
+  - `SyntheticSuite`:
+    - identical rows and checksums for 1 and 7 partitions;
+    - the designed sizes and feature distributions;
+    - recovery of the true coefficients within 4.5 standard errors by the logistic (single trials and counts),
+      linear and stratified Cox fits;
+    - a written point verifies against its manifest, and a regeneration matches its checksum.
+- The plan:
+  - §4 records the implementation and its defaults.
+  - The grid's skew points S1 and S2 become K1 and K2, since S0 to S3 now name the phases; round 90's memo
+    follows.
+  - The Zipf exponent the plan states contradicts its "about 1%" (OI-92).
+
+Evidence (assistant sandbox): `bench` and its tests compiled with the build's flags, and scalafmt is clean on the
+whole repository. `DrawsSuite` passed 4 of 4, `SizesSuite` 5 of 5 and `SyntheticSuite` 6 of 6.
+
+Negative control: generating without the covariate effects fails the three recovery tests (estimates 5.6, 16 and
+8.4 standard errors from the truth) and nothing else.
+
+Not run here: sbt, Spark Connect, JDK 21.
+
+What to send back: the CI runs for rounds 91 and 92 (the bench tests now run in CI's main job), and the notebook
+results when you have them.
 
 ## Round 91 (2026-10-19): the roadmap after Phase 3 (D-50); scale testing in phases
 

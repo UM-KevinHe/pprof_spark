@@ -67,7 +67,7 @@ against that estimate.
   - At 10⁹ rows, a 64-bit hash collides with probability about 3% (n²/2⁶⁵), and validation would report that
     as a failure.
 
-P1 then holds C1, C2, W4, S1, U1, L1 and X1 to X4.
+P1 then holds C1, C2, W4, K1, U1, L1 and X1 to X4.
 
 ## 4. The three-stage SRR model
 

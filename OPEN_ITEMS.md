@@ -97,3 +97,4 @@ decision is approved.
 | OI-89 | The logistic fixed-effect model has no confidence-interval method: pprof_py's `calculate_confidence_intervals` gives intervals for γ or for standardized measures by exact, score or Wald methods; pprof_spark gives them only through its tests | D-50, P0: specify, reusing the three-stage model's interval code |
 | OI-90 | Two pprof_py options are missing: the provider tests' `interval` and the logistic fit's VIF screening (`threshold_vif`) | D-50, P0 |
 | OI-91 | The Python facade has 27 tests for about 45 public methods and their options | Extend with each P0 and P1 feature (D-50) |
+| OI-92 | The scale-test plan's Zipf sizes: rank^−1.1 gives the largest provider about 13% of the rows at m = 10⁵ (12% at 10⁶), while its §4 says about 1%, which an exponent of 0.7 gives | The maintainer chooses before S2 (points K1 and L2); the generator takes the exponent explicitly (round 92) |

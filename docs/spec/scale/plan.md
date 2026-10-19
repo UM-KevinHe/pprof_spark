@@ -80,6 +80,33 @@ mixes with model time.
 | Linear fixed effects | y = γⱼ + xᵀβ + σε, ε standard normal | — |
 | Three-stage SRR | Provider × cluster cells as the three-stage specification describes | S0's A10 and A11 (section 9.1); the rest in a second wave (section 12) |
 
+**Implementation (round 92).** `pprof.spark.bench.synthetic` generates the Cox, logistic and linear data. The
+three-stage generator follows in M1. The Cox and logistic options (left truncation, weights, offsets, patient
+clusters) follow before S2.
+
+Every value is a function of the seed, a row or provider identifier, a stream and a draw, through SplitMix64's
+finalizer: the construction of the bootstrap's draws (STAT-2). The data are therefore identical for any
+partitioning.
+
+The parameters this section leaves open have these defaults, recorded in every manifest:
+
+| Model | Defaults |
+|---|---|
+| All | Seed 79 |
+| Logistic | γ̄ = −1, σ_γ = 0.5 |
+| Linear | γ̄ = 0, σ_γ = 0.5, σ = 1 |
+| Cox | λ̄ = 0.1 (at η = 0, half of the event times fall within the horizon), shape 1.2, stratum spread 0.3, 5-year horizon |
+
+A point is written under one path:
+- `data/`: Parquet, in files of about 128 MB before compression.
+- `providers/`: each provider's first row, size and true effect.
+- `manifest/`: one line of JSON with the generator and its version, the design, the true coefficients, the row
+  count and the files. It also holds checksums, each the wrapping sum of the rows' `xxhash64`.
+
+Zipf sizes take their exponent explicitly. With rank^−1.1, the largest provider holds about 13% of the rows at
+m = 10⁵ (12% at 10⁶), not the 1% the table above states; an exponent of 0.7 gives about 1% at m = 10⁵. Points K1
+and L2 need that choice before S2 (OI-92). S0 uses no Zipf sizes.
+
 ## 5. The grid
 
 Points are grouped in tiers so the maintainer can trim to budget: **P1** must run in Stage A, **P2**
@@ -91,8 +118,8 @@ should, **P3** could.
 | C2 | P1 | Cox (stratified), logistic, linear | 10⁸ | 10⁵ | 20 | equal | Core path; most operations and checks |
 | C3 | P2 | Cox (stratified), logistic, linear | 10⁹ | 10⁶ | 20 | equal | Top of the envelope |
 | W1, W2, W3 | P1 (W3), P2 | Cox, logistic | 10⁸ | 10⁵ | 10, 50, 100 | equal | Width: compute O(n·p²), partial volume, the driver budget (OI-02) |
-| S1 | P1 | Cox, logistic | 10⁸ | 10⁵ | 20 | zipf | Skew: stragglers, oversized groups |
-| S2 | P2 | Cox, logistic | 10⁸ | 10⁵ | 20 | dominant | One group of 5 × 10⁶ rows |
+| K1 | P1 | Cox, logistic | 10⁸ | 10⁵ | 20 | zipf | Skew: stragglers, oversized groups |
+| K2 | P2 | Cox, logistic | 10⁸ | 10⁵ | 20 | dominant | One group of 5 × 10⁶ rows |
 | U1, U2 | P1, P2 | Cox, unstratified | 10⁶, 10⁷ | 1 | 20 | — | One task per pass: the default `maxStratumBytes` budget, then the budget raised (OI-03, OI-30) |
 | T1 | P2 | Cox | 10⁸ | 10⁵ | 20 | equal | 30% left-truncated rows, Efron ties, weights, offsets |
 | R1 | P2 | Cox | 10⁸ | 10⁵ | 20 | equal | Patient clusters and clustered robust variance (OI-45) |
@@ -100,7 +127,9 @@ should, **P3** could.
 | L2 | P2 | Logistic | 10⁸ | 10⁵ | 20 | zipf | Exact provider tests and their limits on skewed sizes (OI-57) |
 | X1, X2, X3 | P1 | Cox (stratified), logistic | 10⁵, 10⁶, 10⁷ | n/10³ | 20 | equal | Crossover with pprof_py (PERF-1) |
 
-Operations per point: every point fits; C2, S1 and L1 also run each model's downstream calls (Cox:
+The skew points K1 and K2 were S1 and S2 until round 92; S0 to S3 now name the phases of section 9.
+
+Operations per point: every point fits; C2, K1 and L1 also run each model's downstream calls (Cox:
 baseline, residuals, per-row robust variance, provider measures and tests; logistic: covariate Wald and
 likelihood-ratio tests for two covariates, exact provider tests, indirect and direct standardization,
 prediction; linear: provider tests and standardized differences); C2 also runs the three job runners
@@ -108,7 +137,7 @@ end to end, whose run records give per-stage timings.
 
 Cluster shapes: C2 on 4, 16 and 64 workers (strong scaling); C1, C2 and C3 on workers in proportion to n
 (weak scaling); X1 to X3 on 1, 4 and 16 workers, against pprof_py on the driver alone. R0 reruns: C2 and
-S1 for Cox and logistic. R1 reruns: C2 with 2 MiB and 8 MiB blocks. Each timed configuration runs twice.
+K1 for Cox and logistic. R1 reruns: C2 with 2 MiB and 8 MiB blocks. Each timed configuration runs twice.
 
 ## 6. The runner
 
@@ -144,7 +173,7 @@ the cascade as a behavioural change (NUM-2, with the fixtures re-compared).
 | Item | Measured at | Proposed decision rule |
 |---|---|---|
 | OI-68 Cox: rebuilt working sets; tasks per pass that follow shuffle partitions | C2 job runner; C2 with shuffle partitions at the default and matched to cores | Rebuilds above 30% of a job runner's time → propose a reusable prepared working set; task mismatch above 20% of pass time → propose deterministic partitioning by block |
-| OI-70 logistic: two jobs per pass; provider tests through the driver; rebuilds; no cap on a provider's block | C2, L1, S2 | Job overhead above 20% of pass time → ship γ once per step; driver memory or time of the provider-test round trip beyond the targets at m = 10⁶ → keep the table distributed |
+| OI-70 logistic: two jobs per pass; provider tests through the driver; rebuilds; no cap on a provider's block | C2, L1, K2 | Job overhead above 20% of pass time → ship γ once per step; driver memory or time of the provider-test round trip beyond the targets at m = 10⁶ → keep the table distributed |
 | OI-38 Neumaier cost | Section 7 | As in section 7 |
 | OI-02 large p | W3: bytes of partials per pass against the driver budget | The budget binds at p = 100 for n ≥ 10⁸ → propose reduction groups |
 | OI-03, OI-30 TimeRange | U1, U2: single-task time and memory | Above the target at 10⁷ rows → schedule TimeRange |
