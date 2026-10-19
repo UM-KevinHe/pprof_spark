@@ -18,6 +18,14 @@ abstract class SparkSuite extends munit.FunSuite {
   /** The shared session. A stable identifier, so suites can `import spark.implicits._`. */
   protected final lazy val spark: SparkSession = TestSessions.current
 
+  /** Clears the shared session's cache after each suite. Every `CoxPH.baseline` call caches its result, and about
+    * 350 suites share one session in one test JVM, so cached tables would otherwise outlive their suite and add to
+    * that JVM's heap (OI-83, round 83.1).
+    */
+  override def afterAll(): Unit =
+    try spark.catalog.clearCache()
+    finally super.afterAll()
+
   /** Registers `name` twice: with ANSI SQL mode on and with it off (§5.5). */
   protected def testAnsiOnAndOff(name: String)(body: => Any)(implicit loc: munit.Location): Unit =
     Seq(true, false).foreach { ansi =>

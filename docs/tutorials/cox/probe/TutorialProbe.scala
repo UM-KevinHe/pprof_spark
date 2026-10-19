@@ -9,7 +9,11 @@ import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
 import scala.jdk.CollectionConverters._
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import org.apache.spark.scheduler.{SparkListener, SparkListenerJobStart, SparkListenerStageCompleted}
+import org.apache.spark.scheduler.{
+  SparkListener,
+  SparkListenerJobStart,
+  SparkListenerStageCompleted
+}
 import org.apache.spark.sql.{DataFrame, Encoders, Row, SparkSession}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StructField, StructType}
 
@@ -71,10 +75,14 @@ object TutorialProbe {
   lazy val tinyRows: Vector[(Long, Long, Double, Int, Double)] = {
     val src = scala.io.Source.fromFile(s"$fixtures/input.csv")
     try
-      src.getLines().drop(1).map { line =>
-        val f = line.split(",")
-        (f(0).toLong, f(1).toLong, f(2).toDouble, f(3).toInt, f(6).toDouble)
-      }.toVector
+      src
+        .getLines()
+        .drop(1)
+        .map { line =>
+          val f = line.split(",")
+          (f(0).toLong, f(1).toLong, f(2).toDouble, f(3).toInt, f(6).toDouble)
+        }
+        .toVector
     finally src.close()
   }
 
@@ -83,14 +91,20 @@ object TutorialProbe {
   def partA(): Unit = {
     println("=" * 100)
     println("PART A: the real CoxBlockBuilder / CoxKernel / Newton on tiny-ties, without Spark")
-    val rows = tinyRows.map { case (i, _, t, e, x) => CoxRow(0, 0, i, t, e == 1, 1.0, 0.0, Array(x)) }
+    val rows = tinyRows.map { case (i, _, t, e, x) =>
+      CoxRow(0, 0, i, t, e == 1, 1.0, 0.0, Array(x))
+    }
     val block = CoxBlockBuilder.build(0, rows.iterator, 1)
     println(
       "canonical order (id:time:event:x) = " + block.rowId.indices
-        .map(r => s"${block.rowId(r)}:${block.time(r)}:${if (block.event(r)) 1 else 0}:${block.x(r)}")
+        .map(r =>
+          s"${block.rowId(r)}:${block.time(r)}:${if (block.event(r)) 1 else 0}:${block.x(r)}"
+        )
         .mkString("  ")
     )
-    println(s"entryOrder = ${block.entryOrder.mkString(",")}  groupStart = ${block.groupStart.mkString(",")}")
+    println(
+      s"entryOrder = ${block.entryOrder.mkString(",")}  groupStart = ${block.groupStart.mkString(",")}"
+    )
     val center = Array(Moments.columnSums(block.x, 1, 0, block.rowCount)(0) / block.rowCount)
     println(s"center (column mean) = ${center(0)}")
     for (ties <- Seq("breslow", "efron")) {
@@ -113,7 +127,9 @@ object TutorialProbe {
       def runNewton(label: String, o: NewtonOptions): NewtonResult = {
         val res = Newton.maximize(ev, Array(0.0), o)
         println(s"[$ties] Newton ($label: eps=${o.eps}, maxIterations=${o.maxIterations})")
-        println(f"  it 0  beta ${g(0.0)}  loglik ${g(res.initial.value)}  U ${g(res.initial.gradient(0))}  I ${g(res.initial.information(0))}")
+        println(
+          f"  it 0  beta ${g(0.0)}  loglik ${g(res.initial.value)}  U ${g(res.initial.gradient(0))}  I ${g(res.initial.information(0))}"
+        )
         var previous = res.initial.value
         var previousBeta = 0.0
         res.log.foreach { r =>
@@ -124,16 +140,22 @@ object TutorialProbe {
           previous = r.value
           previousBeta = r.beta(0)
         }
-        println(s"  converged=${res.converged} iterations=${res.iterations} halvings=${res.halvings}  beta hex ${hx(res.beta(0))}")
+        println(
+          s"  converged=${res.converged} iterations=${res.iterations} halvings=${res.halvings}  beta hex ${hx(res.beta(0))}"
+        )
         res
       }
       val default = runNewton("default", NewtonOptions())
       kernelBits += (s"$ties.default.beta" -> java.lang.Double.doubleToLongBits(default.beta(0)))
-      kernelBits += (s"$ties.default.loglik" -> java.lang.Double.doubleToLongBits(default.evaluation.value))
+      kernelBits += (s"$ties.default.loglik" -> java.lang.Double.doubleToLongBits(
+        default.evaluation.value
+      ))
       val pyDefault = pv(ties, "default", "coef")(0)
       val pyIterations = pyRef.get(ties).get("default").get("iterations").asInt()
       val rDefault = rv(ties, "default", "coef")(0)
-      println(s"  default beta vs pprof_py ${g(pyDefault)} (rel ${rel(default.beta(0), pyDefault)}, pprof_py iterations $pyIterations); vs R ${g(rDefault)} (rel ${rel(default.beta(0), rDefault)})")
+      println(
+        s"  default beta vs pprof_py ${g(pyDefault)} (rel ${rel(default.beta(0), pyDefault)}, pprof_py iterations $pyIterations); vs R ${g(rDefault)} (rel ${rel(default.beta(0), rDefault)})"
+      )
       val tight = runNewton("tight", NewtonOptions(maxIterations = 100, eps = 1e-11))
       val b = tight.beta(0)
       val factor = Cholesky.factor(tight.evaluation.information, 1)
@@ -141,17 +163,32 @@ object TutorialProbe {
       val se = math.sqrt(v)
       val z = b / se
       val q = Normal.upperQuantile(0.025)
-      println(f"[$ties] tight inference: beta ${g(b)}  I(beta) ${g(tight.evaluation.information(0))}  var ${g(v)}  se ${g(se)}")
-      println(f"  z ${g(z)}  p ${g(Normal.twoSidedPValue(z))}  q ${g(q)}  CI [${g(b - q * se)}, ${g(b + q * se)}]  HR ${g(math.exp(b))}")
-      for ((k, a) <- Seq("coef" -> b, "se" -> se, "loglik" -> tight.evaluation.value, "loglik_null" -> tight.initial.value)) {
+      println(
+        f"[$ties] tight inference: beta ${g(b)}  I(beta) ${g(tight.evaluation.information(0))}  var ${g(v)}  se ${g(se)}"
+      )
+      println(
+        f"  z ${g(z)}  p ${g(Normal.twoSidedPValue(z))}  q ${g(q)}  CI [${g(b - q * se)}, ${g(b + q * se)}]  HR ${g(math.exp(b))}"
+      )
+      for (
+        (k, a) <- Seq(
+          "coef" -> b,
+          "se" -> se,
+          "loglik" -> tight.evaluation.value,
+          "loglik_null" -> tight.initial.value
+        )
+      ) {
         val r = rv(ties, "tight", k)(0)
         val py = pv(ties, "tight", k)(0)
-        println(f"  $k%-12s ours ${g(a)}  R ${g(r)} (rel ${rel(a, r)})  pprof_py ${g(py)} (rel ${rel(a, py)})")
+        println(
+          f"  $k%-12s ours ${g(a)}  R ${g(r)} (rel ${rel(a, r)})  pprof_py ${g(py)} (rel ${rel(a, py)})"
+        )
       }
       val base = CoxKernel.baseline(block, Array(b), efron)
       val rBase = rv(ties, "tight", "basehaz_hazard")
       base.zip(rBase).foreach { case (row, r) =>
-        println(f"  baseline t=${row.time}%-4s dLambda ${g(row.increment)}  Lambda ${g(row.cumulativeHazard)}  S0 ${g(row.survival)}  R Lambda ${g(r)} (rel ${rel(row.cumulativeHazard, r)})")
+        println(
+          f"  baseline t=${row.time}%-4s dLambda ${g(row.increment)}  Lambda ${g(row.cumulativeHazard)}  S0 ${g(row.survival)}  R Lambda ${g(r)} (rel ${rel(row.cumulativeHazard, r)})"
+        )
       }
       val res = CoxKernel.residuals(block, Array(b), center, efron, Array(v)).sortBy(_.rowId)
       val rm = rv(ties, "tight", "martingale")
@@ -163,11 +200,15 @@ object TutorialProbe {
           f"  resid id $i  martingale ${g(row.martingale)} (R rel ${rel(row.martingale, rm(i))})  score ${g(row.score(0))} (R rel ${rel(row.score(0), rs(i))})  dfbeta ${g(row.dfbeta(0))} (R rel ${rel(row.dfbeta(0), rd(i))})"
         )
       }
-      println(f"  sum of martingale ${g(res.map(_.martingale).sum)}  sum of score ${g(res.map(_.score(0)).sum)}  U(beta) ${g(tight.evaluation.gradient(0))}")
+      println(
+        f"  sum of martingale ${g(res.map(_.martingale).sum)}  sum of score ${g(res.map(_.score(0)).sum)}  U(beta) ${g(tight.evaluation.gradient(0))}"
+      )
       val meat = CoxKernel.robustPerRow(block, Array(b), center, efron).outer(0)
       val robust = v * meat * v
       val rRobust = rv(ties, "tight", "robust_per_row")(0)
-      println(f"  robust per row: B ${g(meat)}  V B V ${g(robust)}  robust se ${g(math.sqrt(robust))}  R ${g(rRobust)} (rel ${rel(robust, rRobust)})")
+      println(
+        f"  robust per row: B ${g(meat)}  V B V ${g(robust)}  robust se ${g(math.sqrt(robust))}  R ${g(rRobust)} (rel ${rel(robust, rRobust)})"
+      )
     }
   }
 
@@ -194,7 +235,9 @@ object TutorialProbe {
 
   def partB(): Unit = {
     println("=" * 100)
-    println("PART B: the real engine in local Spark (local[4], 4 shuffle partitions, ANSI on, as testkit)")
+    println(
+      "PART B: the real engine in local Spark (local[4], 4 shuffle partitions, ANSI on, as testkit)"
+    )
     val spark: SparkSession = org.apache.spark.sql.classic.SparkSession
       .builder()
       .master("local[4]")
@@ -223,13 +266,18 @@ object TutorialProbe {
 
     val tiny = frame(spark, tinyRows)
     val tinySpec = CoxSpec("time", "event", Seq("x1"), rowId = Some("id"))
-    val fit1 = phase("1: CoxPH.fit(tiny-ties, Breslow, defaults)")(CoxPH.fit(tiny, tinySpec, CoxOptions()))
-    println(s"tiny-ties engine fit: beta ${g(fit1.estimates(0))} se ${g(fit1.standardErrors(0))} loglik ${g(fit1.logLikelihood)} iterations ${fit1.iterations} halvings ${fit1.halvings} converged ${fit1.converged}")
+    val fit1 =
+      phase("1: CoxPH.fit(tiny-ties, Breslow, defaults)")(CoxPH.fit(tiny, tinySpec, CoxOptions()))
+    println(
+      s"tiny-ties engine fit: beta ${g(fit1.estimates(0))} se ${g(fit1.standardErrors(0))} loglik ${g(fit1.logLikelihood)} iterations ${fit1.iterations} halvings ${fit1.halvings} converged ${fit1.converged}"
+    )
     println(s"  layout ${fit1.layout}")
     println(
       s"  bitwise equal to Part A (single-block kernel + Newton): beta ${java.lang.Double.doubleToLongBits(fit1.estimates(0)) == kernelBits("breslow.default.beta")}, loglik ${java.lang.Double.doubleToLongBits(fit1.logLikelihood) == kernelBits("breslow.default.loglik")}"
     )
-    println(s"  iteration log: ${fit1.iterationLog.map(r => s"(${r.iteration}, ${g(r.beta(0))}, ${g(r.value)}, h=${r.halvings})").mkString(" ")}")
+    println(
+      s"  iteration log: ${fit1.iterationLog.map(r => s"(${r.iteration}, ${g(r.beta(0))}, ${g(r.value)}, h=${r.halvings})").mkString(" ")}"
+    )
 
     val toyRows: Vector[(Long, Long, Double, Int, Double)] =
       tinyRows.map { case (i, _, t, e, x) => (i, 10L, t, e, x) } ++ Vector(
@@ -245,34 +293,72 @@ object TutorialProbe {
     val toy = frame(spark, toyRows)
     val toySpec = CoxSpec("time", "event", Seq("x1"), strata = Some("stratum"), rowId = Some("id"))
     val twoBlocks = CoxOptions(blocks = BlockOptions(targetBlockBytes = 400L))
-    val fitOne = phase("2: CoxPH.fit(toy, 3 strata, default blocks)")(CoxPH.fit(toy, toySpec, CoxOptions()))
-    val fitTwo = phase("3: CoxPH.fit(toy, 3 strata, targetBlockBytes=400)")(CoxPH.fit(toy, toySpec, twoBlocks))
+    val fitOne =
+      phase("2: CoxPH.fit(toy, 3 strata, default blocks)")(CoxPH.fit(toy, toySpec, CoxOptions()))
+    val fitTwo =
+      phase("3: CoxPH.fit(toy, 3 strata, targetBlockBytes=400)")(CoxPH.fit(toy, toySpec, twoBlocks))
     println(s"toy default layout ${fitOne.layout}")
     println(s"toy small-block layout ${fitTwo.layout}")
-    println(s"  toy beta: one block ${g(fitOne.estimates(0))} [${hx(fitOne.estimates(0))}]; two blocks ${g(fitTwo.estimates(0))} [${hx(fitTwo.estimates(0))}]; rel ${rel(fitTwo.estimates(0), fitOne.estimates(0))}")
-    println(s"  toy loglik: one block ${g(fitOne.logLikelihood)}; two blocks ${g(fitTwo.logLikelihood)}; rel ${rel(fitTwo.logLikelihood, fitOne.logLikelihood)}; iterations ${fitOne.iterations}/${fitTwo.iterations}")
+    println(
+      s"  toy beta: one block ${g(fitOne.estimates(0))} [${hx(fitOne.estimates(0))}]; two blocks ${g(fitTwo.estimates(0))} [${hx(fitTwo.estimates(0))}]; rel ${rel(fitTwo.estimates(0), fitOne.estimates(0))}"
+    )
+    println(
+      s"  toy loglik: one block ${g(fitOne.logLikelihood)}; two blocks ${g(fitTwo.logLikelihood)}; rel ${rel(fitTwo.logLikelihood, fitOne.logLikelihood)}; iterations ${fitOne.iterations}/${fitTwo.iterations}"
+    )
 
     phase("4: inspect the two-block working set (probe only)") {
       CoxPH.withWorkingSet(toy, toySpec, twoBlocks) { prepared =>
-        println(s"plan: targetRowsPerBlock ${prepared.plan.targetRowsPerBlock}, blockCount ${prepared.plan.blockCount}, oversized ${prepared.plan.oversizedGroups}")
-        prepared.plan.placements.foreach(pl => println(s"  stratum key ${pl.key} -> groupIndex ${pl.groupIndex}, rows ${pl.rows}, block ${pl.blockId}"))
-        println(s"center ${g(prepared.center(0))}; rows ${prepared.rows}; events ${prepared.events}; fingerprint ${prepared.fingerprint}")
+        println(
+          s"plan: targetRowsPerBlock ${prepared.plan.targetRowsPerBlock}, blockCount ${prepared.plan.blockCount}, oversized ${prepared.plan.oversizedGroups}"
+        )
+        prepared.plan.placements.foreach(pl =>
+          println(
+            s"  stratum key ${pl.key} -> groupIndex ${pl.groupIndex}, rows ${pl.rows}, block ${pl.blockId}"
+          )
+        )
+        println(
+          s"center ${g(prepared.center(0))}; rows ${prepared.rows}; events ${prepared.events}; fingerprint ${prepared.fingerprint}"
+        )
         val blocks = prepared.workingSet.blocks.collect().sortBy(_.blockId)
         val beta = fitTwo.estimates.toArray
         val c = prepared.center.clone()
         blocks.foreach { b =>
-          println(s"  block ${b.blockId}: groups ${b.groupIndex.mkString(",")} starts ${b.groupStart.mkString(",")} rowIds ${b.rowId.mkString(",")}")
+          println(
+            s"  block ${b.blockId}: groups ${b.groupIndex.mkString(",")} starts ${b.groupStart.mkString(",")} rowIds ${b.rowId.mkString(",")}"
+          )
           (0 until b.groupCount).foreach { k =>
             val t = new CoxTotals(1)
-            CoxStratum.add(b.time, b.entry, b.entryOrder, b.event, b.weight, b.offset, b.x, 1, b.groupStart(k), b.groupEnd(k), beta, c, false, t)
-            println(f"    group ${b.groupIndex(k)}: loglik ${g(t.value.value)}  U ${g(t.score.values(0))}  I ${g(t.information.values(0))}")
+            CoxStratum.add(
+              b.time,
+              b.entry,
+              b.entryOrder,
+              b.event,
+              b.weight,
+              b.offset,
+              b.x,
+              1,
+              b.groupStart(k),
+              b.groupEnd(k),
+              beta,
+              c,
+              false,
+              t
+            )
+            println(
+              f"    group ${b.groupIndex(k)}: loglik ${g(t.value.value)}  U ${g(t.score.values(0))}  I ${g(t.information.values(0))}"
+            )
           }
           val part = CoxKernel.partial(b, beta, c, false)
-          println(f"    partial(block ${part.blockId}) at beta-hat: loglik ${g(part.value)}  U ${g(part.score(0))}  I ${g(part.information(0))}")
+          println(
+            f"    partial(block ${part.blockId}) at beta-hat: loglik ${g(part.value)}  U ${g(part.score(0))}  I ${g(part.information(0))}"
+          )
         }
         val evaluation = CoxPH.evaluateAt(toy, toySpec, beta, twoBlocks)
-        println(f"  driver reduction in block order: loglik ${g(evaluation.value)}  U ${g(evaluation.gradient(0))}  I ${g(evaluation.information(0))}")
-        val cached = prepared.workingSet.blocks.asInstanceOf[org.apache.spark.sql.classic.Dataset[CoxBlock]]
+        println(
+          f"  driver reduction in block order: loglik ${g(evaluation.value)}  U ${g(evaluation.gradient(0))}  I ${g(evaluation.information(0))}"
+        )
+        val cached =
+          prepared.workingSet.blocks.asInstanceOf[org.apache.spark.sql.classic.Dataset[CoxBlock]]
         println("-- physical plan of the persisted working set (built once, one shuffle):")
         println(shortPlan(cached.queryExecution.executedPlan.toString))
         val evalDs = prepared.workingSet.blocks
@@ -291,12 +377,16 @@ object TutorialProbe {
       spark.conf.set("spark.sql.shuffle.partitions", "4")
       def bits(f: CoxFit) =
         (f.estimates ++ f.covariance :+ f.logLikelihood).map(java.lang.Double.doubleToLongBits)
-      println(s"  R0 bitwise: shuffle.partitions=1 vs 4: ${bits(a) == bits(fitTwo)}; reversed+repartition(3) with 7: ${bits(b) == bits(fitTwo)}")
+      println(
+        s"  R0 bitwise: shuffle.partitions=1 vs 4: ${bits(a) == bits(fitTwo)}; reversed+repartition(3) with 7: ${bits(b) == bits(fitTwo)}"
+      )
     }
 
     Thread.sleep(2500)
     println("=" * 100)
-    println("Spark jobs by phase (call site = first engine frame; stages run/skipped; tasks; shuffle bytes)")
+    println(
+      "Spark jobs by phase (call site = first engine frame; stages run/skipped; tasks; shuffle bytes)"
+    )
     val all = rec.jobs.asScala.toVector.sortBy(_.id)
     order.foreach { ph =>
       println(s"[$ph]")
@@ -305,7 +395,9 @@ object TutorialProbe {
         val tasks = done.map(_.tasks).sum
         val w = done.map(_.shuffleWrite).sum
         val r = done.map(_.shuffleRead).sum
-        println(f"  job ${j.id}%3d  ${j.site}%-44s stages ${done.size}/${j.stageIds.size - done.size}  tasks $tasks%3d  shuffle write $w%6d B  read $r%6d B")
+        println(
+          f"  job ${j.id}%3d  ${j.site}%-44s stages ${done.size}/${j.stageIds.size - done.size}  tasks $tasks%3d  shuffle write $w%6d B  read $r%6d B"
+        )
       }
     }
     spark.stop()

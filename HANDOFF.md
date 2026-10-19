@@ -1,6 +1,6 @@
 # Handoff
 
-## Session handoff: Phase 3 closed (2026-10-11)
+## Session handoff: production fixes delivered (2026-10-19)
 
 This section stands on its own for a new session. The round log below it is the detailed history.
 
@@ -11,64 +11,87 @@ Kevin He) reimplements the validated statistical methods of pprof_py, pinned at 
 (D-05), as distributed Spark algorithms that keep their statistical definitions and validated behavior.
 Stack: Spark 4.1.0, Scala 2.13.16 (PLAT-3), Java 17 bytecode; CI on JDK 17 and 21, under Classic Spark and
 Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative context is
-`docs/PROJECT_CONTEXT.md` v2.6; recorded decisions in `DECISIONS.md` take precedence over it.
+`docs/PROJECT_CONTEXT.md` v2.7; recorded decisions in `DECISIONS.md` take precedence over it.
 
 ### 2. Where things stand
 
-| Phase or slice | Status |
+| Phase or work | Status |
 |---|---|
-| 0 and 1a to 1d (Cox) | Closed at parity-verified (D-22, D-24, D-26, D-29) |
-| 2a, logistic fixed effects (SerBIN) | Closed at parity-verified (D-32) |
-| 2b, covariate inference, robust variance, prediction, AUC | Closed at parity-verified (D-34, D-44) |
-| 2c, provider tests (exact Poisson-binomial, score, Wald, bootstrap) | Closed at parity-verified (D-35, D-44) |
-| 2d, indirect and direct standardization | Closed at parity-verified (D-36, D-44) |
-| 2e, `LogisticJob` | Closed at parity-verified (D-37, D-44) |
-| 2f, the three-stage SRR model | Closed at parity-verified (D-38 to D-44): preparation and stage 1, stage 3, stage 2 (crossed GLMM), the pipeline with stage 3's tests, measures and intervals, σ sensitivity, persistence, `ThreeStageJob` and the Python wrapper |
-| Phase 2 | Closed at parity-verified on 2026-10-09 (D-44; gate review `docs/gates/phase-2.md`) |
-| 3, linear fixed effects (3a to 3c) | Closed at parity-verified (D-45 to D-48): estimation and covariate inference, provider tests, intervals and standardized differences, persistence, `LinearJob` and the Python wrapper |
-| Phase 3 | Closed at parity-verified on 2026-10-11 (D-48; gate review `docs/gates/phase-3.md`) |
+| Phase 1, Cox (1a to 1d) | Closed at parity-verified (D-22, D-24, D-26, D-29) |
+| Phase 2, logistic fixed effects and the three-stage model (2a to 2f) | Closed at parity-verified on 2026-10-09 (D-32 to D-44; `docs/gates/phase-2.md`) |
+| Phase 3, linear fixed effects (3a to 3c) | Closed at parity-verified on 2026-10-11 (D-45 to D-48; `docs/gates/phase-3.md`) |
+| Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
+| Production validation, rounds 82 to 88 | Ten findings on round 81's build, diagnosed in round 82 (`docs/reviews/production-validation-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
+| Scale test (D-28) | Plan drafted (`docs/spec/scale/plan.md`), awaiting the maintainer's decisions (§12) |
 
-Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his
-Databricks workspace once the whole package is done (D-28). AI assistants never access his Databricks
-environment (D-14 as clarified). CI: round 56's run (37945209150) passed every Scala job (engine 295, numerics
-83, testkit 20, app 12 tests); the `python` job had failed since round 30 on relative JAR paths and has passed
-since round 57.1 (reported by the maintainer). Runs for rounds 31 to 55 were not reported individually. The maintainer reported CI green for every run since round 57.1 (2026-10-11).
+The maintainer's team validated round 81's build against R and pprof_py on production data in five
+provider-profiling pipelines and reported ten findings. Delivered: logistic `blocks`, with blocks that grow until
+their partials fit the driver budget (L5); a stratum byte budget, `maxStratumBytes` = 4 GiB (C3); baseline reference
+points `raw`, `mean_offset` and `means`, with `reference_point()` (C1, a convention difference, not an estimator
+bug); for `test_standardized`, the fixed null, `interval`, `bounds` and `null_value` = mean, median, a number or a
+callable (L2 to L4); `add_providers()` (L1); composite row keys, `row_id=[...]` hashed with `xxhash64` (C2). L6
+needed no change, as pprof_py refuses that option too; C4, performance, is left to the scale test; the empirical
+null remains (OI-78). The maintainer is re-validating the five pipelines on round 87's build: expect new findings.
+
+Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his Databricks
+workspace (D-28). AI assistants never access his Databricks environment (D-14 as clarified). CI is green through
+round 88 as the maintainer reported (rounds 83 and 84 failed and were fixed by 83.1 and 84.1), and his
+`fixtures.yml` run on round 88's tree regenerated every family on CI's runner within T-part (OI-62 closed).
 
 ### 3. What exists
 
 | Area | Content |
 |---|---|
-| `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile); `StudentT` and kernels `LinearFE` (Phase 3) |
-| `engine.cox` | `CoxPH` (fit, baseline, residuals, robust), `CoxFitIO` v3, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
-| `engine.logistic` | `LogisticSpec`, `LogisticFE`, `LogisticBlocks`, `LogisticFitIO` v3, `LogisticProviderTests`, `LogisticStandardization`; `ThreeStage` (prepare, compress, stage2, stage3, laplace, marginal, fitted), `ThreeStagePipeline` (fit, test, measures, intervals, profileInterval, sigmaSensitivity), `ThreeStageFitIO` v1 |
-| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE` (fit, `summary`, `predict`, `score`; the provider table distributed), `LinearFitIO` v1; `LinearProviderTests`; `LinearStandardization` |
-| `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob`, `LinearJob` and their run specifications (version 1, `model`); `python.PythonApi` |
+| `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile); `StudentT` and kernels `LinearFE` |
+| `engine.cox` | `CoxPH` (fit under a stratum byte budget, baseline at a reference point, `referencePoint`, residuals, robust), composite row keys (`CoxSpec.rowKey`), `CoxFitIO` v5, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
+| `engine.logistic` | `LogisticSpec` (`withProviders`), `LogisticFE`, `LogisticBlocks` (block options and growth), `LogisticFitIO` v4, `LogisticProviderView`, `LogisticProviderTests`, `LogisticStandardization` (null values, the fixed null, intervals, bounds); `ThreeStage`, `ThreeStagePipeline`, `ThreeStageFitIO` v1 |
+| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE`, `LinearFitIO` v1, `LinearProviderTests`, `LinearStandardization` |
+| `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob`, `LinearJob` and their run specifications (version 1); `python.PythonApi` |
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage and linear wrappers, ADR-0009) and its pytest suite |
-| Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4: ts-golden-prep, ts-golden, ts-synthetic, ts-shuffled), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py` |
-| Documents | `docs/spec/cox/` (5), `docs/spec/logistic/` (2a to 2f), `docs/spec/linear/` (3a to 3c), guides (`cox-job.md`, `logistic-job.md`, `three-stage-job.md`, `linear-job.md`, Python), the Cox tutorial (`docs/tutorials/cox/`), `docs/parity/` (matrix, calibrations), `DECISIONS.md` (to D-48), `DISCREPANCIES.md` (to X-036), `OPEN_ITEMS.md` (to OI-63) |
+| `databricks/` | `00_build` (builds a commit on the driver into workspace files), `01_parity` (fixtures and R0 on the cluster), `02_scale` (a first look at scale); guide `docs/guide/databricks.md` |
+| Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py`; `fixtures.yml` (manual dispatch) regenerates and compares on CI's runner |
+| Documents | Specifications in `docs/spec/` (cox, logistic, linear, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the production review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-49), `DISCREPANCIES.md` (to X-036), `OPEN_ITEMS.md` (to OI-86), `STATUS.md` |
 
 ### 4. How the work runs
 
-- Rounds. Each round is one commit delivered as a patch (`git format-patch -1`), rehearsed by applying it
-  to a fresh clone of `main` and checking the tree, with an evidence log and a one-line commit message. The
-  maintainer applies, pushes and reports CI; CI is never recorded as green without his report (NN-8).
-- Specification first (NN-2): spec, then fixtures and calibration, then code, each approved where a
-  decision is needed. Discrepancies (classes A to E) are proposed, never assumed. He often answers
-  "continue"; a direct question gets a direct answer; one question per reply.
-- Parity: function-level, lockstep and end-to-end, under the tolerance classes of §8.4 (T-opt, D-42, for
-  optimizer-limited estimates). Where implementations' estimates differ, downstream quantities are compared
-  at the reference's own stage outputs (its β, effects, posterior moments) fed into pprof_spark.
+- Rounds. Each round is one commit delivered as a patch (`git format-patch -1`) with a brief one-line commit
+  message, rehearsed by applying it to a fresh clone of `main` (identical tree, scalafmt clean), with an evidence
+  log and the updated `HANDOFF.md`. The maintainer applies, pushes and reports CI; CI is never recorded as green
+  without his report (NN-8).
+- Specification first (NN-2) for anything that changes statistical behaviour: spec, then fixtures and calibration,
+  then code. Decisions need his approval (`DECISIONS.md`); discrepancies (classes A to E) are proposed, never
+  assumed (`DISCREPANCIES.md`); follow-ups go to `OPEN_ITEMS.md`, and every round to this log and `STATUS.md`.
+- Replies: one question per reply where possible; he often answers "continue".
+- Parity: against pprof_py v0.7.0 and R (survival 3.5-8 in the fixtures), function-level, lockstep and end-to-end,
+  under the tolerance classes of §8.4 (T-opt, D-42, for optimizer-limited estimates). Run pprof_py and R before
+  stating how they behave.
 - Reproducibility: R0 bitwise per layout, R1 within T-part across layouts, R2 across JDKs and APIs.
+- The repository is public: no internal paths or production details in commits.
+- His environment: a personal dedicated Databricks cluster on Runtime 18 (Spark 4.1), installing from workspace
+  files or `s3://` addresses (no Unity Catalog volumes, no DBFS); GitHub Actions on standard runners only; CI's
+  Python job installs only `pyspark` and `pytest`; no local Scala or sbt.
 
 ### 5. Verifying in the sandbox
 
-sbt cannot run in the sandbox (no Maven Central). `sandbox-tools.zip` (outside the repository; `SETUP.md`
-inside) rebuilds the emulation: the real Scala 2.13.16 compiler with the build's flags, Spark 4.1.0 jars from
-PySpark, a munit stand-in that enforces timeouts, the reference environment (Python 3.12 with pprof_py at
-`9320766`; R 4.3.3 with survival 3.5-8, sandwich 3.1-0, poibin 1.6, lme4 1.1-35.1) and a virtual environment
-that runs the Python tests as CI does. Scripts: `build33.sh` (numerics, engine, linkage), `test36.sh` (engine
-suites, `API=connect`), `app41.sh` (app), `numtest48.sh`, `tk35b.sh`, `cipy.sh` (Python as in CI),
-`mdcheck.py`. A tool call ends after about five minutes and a turn allows about twenty calls.
+sbt cannot run in the sandbox (no Maven Central). `sandbox-tools.zip` (outside the repository, rebuilt in rounds 88
+and 89; `SETUP.md` inside) emulates the build:
+
+- `setup.sh`: a CI-like Python environment (`pyspark==4.1.0`, `pytest==8.4.2`), whose jars supply Spark 4.1.0 and
+  Scala 2.13.17, the compiler included; the reference environment (pprof_py at `9320766` with the fixtures' pinned
+  requirements; R 4.3.3, survival 3.5-8, Rcpp, RcppArmadillo, RcppParallel, sandwich, lme4 and poibin 1.6, as
+  `fixtures.yml` installs them); JDK 17; scalafmt 3.11.5.
+- `build.sh`: scalac 2.13.17 with the build's flags, module by module; a munit 1.2.0 stand-in (its `Compare` rule,
+  timeouts enforced); a `BuildInfo` stub; the Spark Connect client stubbed, so layer T8 cannot run here.
+- `test.sh`: CI's forked test JVM, one line per test with time and heap; `-t` filters by a word, `-gc` measures
+  retained heap, and `FIXTURES=` points at a perturbed copy for negative controls.
+- `pytest.sh`: the Python tests as CI's python job runs them, with JARs packaged from the compiled classes.
+- `regen_check.sh` regenerates the Cox and logistic fixtures, then compares and calibrates; `probe_check.sh`
+  compiles the tutorial probes.
+- Not rebuilt: the harness that runs the Databricks notebooks with stand-ins for `dbutils` and `display`.
+
+Limits: a tool call ends after about five minutes and a turn allows about twenty calls; about 3 GB of memory, so one
+JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the GitHub API is rate-limited, but
+`git clone` works.
 
 ### 6. Lessons that cost a round
 
@@ -92,8 +115,8 @@ suites, `API=connect`), `app41.sh` (app), `numtest48.sh`, `tk35b.sh`, `cipy.sh` 
 - Format versions: when one changes, search the tests broadly for the old number, including split strings such as
   "versions 1 to 3" (rounds 83.1 and 86).
 - CI's Python job installs only `pyspark` and `pytest`: no `toPandas()` in `python/tests` (round 84.1).
-- About 350 suites share one test JVM, now 3 GB, whose heap grows with Spark's own bookkeeping (round 83.1); suites
-  also leave cached baselines behind (OI-83).
+- About 350 suites share one test JVM, now 3 GB, whose heap grows with Spark's own bookkeeping (round 83.1); since
+  round 89 each suite's end clears the session's cache (OI-83).
 - Run the reference before stating how it behaves: reading pprof_py misled round 82 on L6, and a sandbox cross-check
   against pprof_py caught a bug before round 86 shipped.
 - Floating-point thresholds: α = 1 − level is not exactly 0.05, so tests compute critical values as the engine does.
@@ -105,30 +128,61 @@ suites, `API=connect`), `app41.sh` (app), `numtest48.sh`, `tk35b.sh`, `cipy.sh` 
   file whose set of quantities changed, and `FixturesSuite` checks every file against the manifest's checksums
   (round 84 changed `cox_survival.R` alone; round 88 regenerated).
 - The sandbox has about 3 GB of memory: run one test JVM at a time, with nothing heavy beside it (round 88).
+- Negative controls: the tolerance classes scale a vector by its largest element (D-09), so perturb a value that is
+  large against the vector's maximum, or by an absolute amount; a relative change to a tiny element passes (round 88).
 
 ### 7. Open items to carry
 
-OI-02 and OI-38 (large p), OI-03 (TimeRange), OI-29 (distributed result tables at large m), OI-40 (CI check
-of the parity matrix), OI-41 (per-release model fixtures), OI-43, OI-45, OI-46 and OI-59 (scale costs: the
-dense Schur complement of stage 2), OI-56 (PySpark CSV pushdown with a literal provider column), OI-57
-(exact tests with unbalanced blocks), OI-58 (external standard populations), OI-33 and OI-42 (reports to
-pprof_py; candidates now include X-005's σ = 0 crash and X-024's tails).
+- Statistics: OI-78 (the empirical null, under its own specification), OI-65 and OI-66 (Cox addenda: monotone
+  likelihood; per-stratum shift, scaling and a condition estimate), OI-58 (external standard populations), OI-03
+  (TimeRange), OI-61 (TSQR).
+- Scale and costs, for the scale kit to measure: OI-02 and OI-38 (large p, the Breslow kernel), OI-29, OI-30,
+  OI-43, OI-45, OI-46, OI-50, OI-57, OI-59 (the dense Schur complement of stage 2), OI-68, OI-70 and OI-76.
+- Interfaces: OI-86 (added providers in the job runner), OI-53 (Databricks access modes), OI-55 (a wheel), OI-56
+  (PySpark CSV pushdown with a literal provider column).
+- Process: OI-40 (a CI check of the parity matrix), OI-41 (per-release model fixtures), OI-33 and OI-42 (reports
+  to pprof_py, with X-005's σ = 0 crash and X-024's tails as candidates).
 
 ### 8. Next
 
-The maintainer approved the round 82 review's recommendations (D-49); rounds 83 to 87 delivered all of them (L5, C3,
-C1, L2 to L4, L1, C2); L6 needed no change, and the empirical null remains (OI-78). Next: the maintainer's
-re-validation on production data, on round 87's build; round 89, a refreshed session summary with OI-83; the
-scale-test plan's decisions (§12), then its kit. Round 88 regenerated the fixtures (OI-82, OI-84 and OI-85 closed),
-so a `fixtures.yml` run now only confirms them. Addenda for OI-65 and OI-66 can run alongside.
+1. The re-validation results. Diagnose each finding against the source, running pprof_py and R before stating how
+   they behave; propose fixes with files, risks and compatibility; record them in the review document and as open
+   items, as round 82 did.
+2. The scale-test plan: its §12 decisions (approval under a new decision number, cluster budget, tiers, the
+   three-stage wave, targets), then the kit: data generators, `ScaleJob` with Python access, kernel benchmarks
+   (OI-38), an extended `02_scale` notebook and a local dry run. The plan's §11 round numbers are stale.
+3. Smaller items: OI-78's specification, OI-86, the OI-65 and OI-66 addenda; the costs of OI-68, OI-70 and OI-76
+   are for the kit to measure.
 
-Phase 3 completes PROJECT_CONTEXT §4's numbered roadmap. What comes next is the maintainer's choice: the package-level
-scale test on his Databricks workspace (D-28); a phase from §4's Later list (penalized models, random and mixed
-effects, frailty and time-varying Cox, discrete-time survival, competing risks), which starts, as Phases 2 and 3 did,
-with reading pprof_py at the pin and proposing a plan; or the open items (OI-55 a wheel, OI-53 Databricks access modes,
-OI-61 TSQR, OI-62 the three-stage `glmer` regeneration, OI-40 a CI check of the matrix), and the Cox tutorial's findings (OI-65, OI-66, OI-68) and the logistic one's (OI-70).
+Beyond them, the maintainer chooses: the package-level scale test on his workspace (D-28); a phase from
+PROJECT_CONTEXT §4's Later list (penalized models, random and mixed effects, frailty and time-varying Cox,
+discrete-time survival, competing risks), which starts, as Phases 2 and 3 did, with reading pprof_py at the pin and
+proposing a plan; or open items such as OI-55 and OI-40.
 
 ## Round log
+
+## Round 89 (2026-10-19): session summary refreshed; suites clear the session cache (OI-83)
+
+The maintainer reported round 88's CI green and a green `fixtures.yml` run on its tree.
+
+- `SparkSuite.afterAll` clears the shared session's cache, so cached tables (every `CoxPH.baseline` call caches its
+  result) no longer outlive their suite in the shared test JVM (OI-83); `SparkSuiteSuite` checks it.
+- OI-62 closed: the `fixtures.yml` run regenerated every family on CI's runner, the three-stage `glmer` blocks
+  included, within T-part, as round 54's sandbox did; round 63's sandbox remains the exception.
+- The three tutorial probes (`docs/tutorials/*/probe`, outside the build) formatted, so a repository-wide
+  `scalafmt --test` passes.
+- The session summary above rewritten for 2026-10-19: the production fixes, the rebuilt sandbox tools, the lessons
+  (one added), the open items and what comes next. `STATUS.md` records rounds 88 and 89.
+
+Evidence (assistant sandbox): testkit and the testkit, engine and app tests compiled with the build's flags;
+scalafmt 3.11.5 `--test` clean on the whole repository. `SparkSuiteSuite` 1 of 1, `LocalSparkSuite` 1 of 1,
+`CoxBaselineSuite` 28 of 28. A probe suite run after `CoxBaselineSuite` found 40 persisted RDDs in the session before
+the change and none after, with the heap after a full collection at 268 MB instead of 329 MB. The probes compile
+before and after formatting to the same 17 classes, with identical bytecode apart from line numbers. Python tests
+(unchanged): 27 of 27 as CI's python job runs them (pytest 8.4.2). Not run here: sbt,
+Spark Connect.
+
+What to send back: the CI run.
 
 ## Round 88 (2026-10-16): fixtures for reference points, standardized-test options and added providers
 

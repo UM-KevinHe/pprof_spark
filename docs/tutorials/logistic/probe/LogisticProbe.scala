@@ -8,7 +8,11 @@ import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
 import scala.jdk.CollectionConverters._
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import org.apache.spark.scheduler.{SparkListener, SparkListenerJobStart, SparkListenerStageCompleted}
+import org.apache.spark.scheduler.{
+  SparkListener,
+  SparkListenerJobStart,
+  SparkListenerStageCompleted
+}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StructField, StructType}
 
@@ -23,7 +27,8 @@ class LRecorder extends SparkListener {
   val jobs = new ConcurrentLinkedQueue[LJob]()
   val stages = new ConcurrentHashMap[Int, LStage]()
   override def onJobStart(e: SparkListenerJobStart): Unit = {
-    val phase = Option(e.properties).flatMap(p => Option(p.getProperty("pprof.phase"))).getOrElse("-")
+    val phase =
+      Option(e.properties).flatMap(p => Option(p.getProperty("pprof.phase"))).getOrElse("-")
     jobs.add(LJob(e.jobId, phase, e.stageIds.toVector))
   }
   override def onStageCompleted(e: SparkListenerStageCompleted): Unit = {
@@ -83,7 +88,9 @@ object LogisticProbe {
 
   def block(): LogisticBlock = {
     val index = keys.zipWithIndex.toMap
-    val rows = records.map { case (id, prov, y, x) => LogisticRow(0, index(prov), id, y.toDouble, 1.0, x, "") }
+    val rows = records.map { case (id, prov, y, x) =>
+      LogisticRow(0, index(prov), id, y.toDouble, 1.0, x, "")
+    }
     LogisticBlockBuilder.build(0, rows.iterator, p)
   }
 
@@ -98,10 +105,14 @@ object LogisticProbe {
     val b = block()
     val rows = b.rows
     val sizes = keys.map(k => records.count(_._2 == k))
-    println(s"rows ${records.size}, providers $m (keys ${keys.head} to ${keys.last}), records per provider ${sizes.min} to ${sizes.max}, events ${records.map(_._3).sum}")
+    println(
+      s"rows ${records.size}, providers $m (keys ${keys.head} to ${keys.last}), records per provider ${sizes.min} to ${sizes.max}, events ${records.map(_._3).sum}"
+    )
     val ybar = records.map(_._3).sum.toDouble / records.size
     val start = Array.fill(m)(StrictMath.log(ybar / (1.0 - ybar)))
-    println(s"start: gamma_j = logit(${g(ybar)}) = ${g(start(0))}; matches pprof_py's start (rel ${e(rel(start, arr(at(py, "function.start.gamma"))))})")
+    println(
+      s"start: gamma_j = logit(${g(ybar)}) = ${g(start(0))}; matches pprof_py's start (rel ${e(rel(start, arr(at(py, "function.start.gamma"))))})"
+    )
     for (point <- Seq("start", "fixed")) {
       val ref = at(py, s"function.$point")
       val gamma = arr(ref.get("gamma"))
@@ -128,17 +139,32 @@ object LogisticProbe {
     }
     val default = Serbin.fit(start, new Array[Double](p), passes, SerbinOptions())
     inMemory = default
-    println(s"default fit: ${default.iterations} steps (pprof_py ${py.get("default").get("iterations").asInt}), converged ${default.converged}, criterion ${e(default.criterion)}, last v ${default.lastStep}, shortened ${default.shortened}")
-    default.trace.foreach(s => println(f"  step ${s.iteration}%2d: loglik at start ${g(s.loglik)}  v ${s.step}%.4f  ||dbeta||inf ${s.betaChange}%.3e  step lengths evaluated ${s.evaluated}"))
+    println(
+      s"default fit: ${default.iterations} steps (pprof_py ${py.get("default").get("iterations").asInt}), converged ${default.converged}, criterion ${e(default.criterion)}, last v ${default.lastStep}, shortened ${default.shortened}"
+    )
+    default.trace.foreach(s =>
+      println(
+        f"  step ${s.iteration}%2d: loglik at start ${g(s.loglik)}  v ${s.step}%.4f  ||dbeta||inf ${s.betaChange}%.3e  step lengths evaluated ${s.evaluated}"
+      )
+    )
     println(s"  beta ${default.beta.map(g).mkString(", ")}")
-    println(s"  rel diff: beta vs pprof_py default ${e(rel(default.beta, arr(at(py, "default.beta"))))}, gamma ${e(rel(default.gamma, arr(at(py, "default.gamma"))))}; vs R SerBIN default beta ${e(rel(default.beta, arr(at(rr, "serbin_default.beta"))))}")
+    println(
+      s"  rel diff: beta vs pprof_py default ${e(rel(default.beta, arr(at(py, "default.beta"))))}, gamma ${e(rel(default.gamma, arr(at(py, "default.gamma"))))}; vs R SerBIN default beta ${e(rel(default.beta, arr(at(rr, "serbin_default.beta"))))}"
+    )
     val tight = Serbin.fit(start, new Array[Double](p), passes, SerbinOptions(tol = 1e-13))
-    println(s"tight fit (tol 1e-13): ${tight.iterations} steps (pprof_py ${py.get("tight").get("iterations").asInt}); beta ${tight.beta.map(g).mkString(", ")}")
+    println(
+      s"tight fit (tol 1e-13): ${tight.iterations} steps (pprof_py ${py.get("tight").get("iterations").asInt}); beta ${tight.beta.map(g).mkString(", ")}"
+    )
     println(
       s"  rel diff beta: pprof_py ${e(rel(tight.beta, arr(at(py, "tight.beta"))))}, R SerBIN ${e(rel(tight.beta, arr(at(rr, "serbin_tight.beta"))))}, glm ${e(rel(tight.beta, arr(at(rr, "glm.beta"))))}; " +
         s"gamma: pprof_py ${e(rel(tight.gamma, arr(at(py, "tight.gamma"))))}, R SerBIN ${e(rel(tight.gamma, arr(at(rr, "serbin_tight.gamma"))))}, glm ${e(rel(tight.gamma, arr(at(rr, "glm.gamma"))))}"
     )
-    for ((label, fit, refs) <- Seq(("default", default, Seq("pprof_py" -> at(py, "default"))), ("tight", tight, Seq("pprof_py" -> at(py, "tight"), "glm" -> at(rr, "glm"))))) {
+    for (
+      (label, fit, refs) <- Seq(
+        ("default", default, Seq("pprof_py" -> at(py, "default"))),
+        ("tight", tight, Seq("pprof_py" -> at(py, "tight"), "glm" -> at(rr, "glm")))
+      )
+    ) {
       val vs = Kernel.varianceSchur(rows, fit.gamma, fit.beta)
       val cov = Cholesky.factor(vs, p).inversePacked
       val xbar = Array.tabulate(p)(j => records.map(_._4(j)).sum / records.size)
@@ -146,7 +172,9 @@ object LogisticProbe {
       val ll = Kernel.loglik(rows, fit.gamma, fit.beta)
       if (label == "default") inMemoryLoglik = ll
       val se = (0 until p).map(j => math.sqrt(cov(Seq(0, 3, 5)(j))))
-      println(f"$label variances: se(beta) ${se.map(g).mkString(", ")}; loglik ${g(ll)}; AIC ${g(2.0 * (p + m) - 2.0 * ll)}; z ${(0 until p).map(j => f"${fit.beta(j) / se(j)}%.6f").mkString(", ")}")
+      println(
+        f"$label variances: se(beta) ${se.map(g).mkString(", ")}; loglik ${g(ll)}; AIC ${g(2.0 * (p + m) - 2.0 * ll)}; z ${(0 until p).map(j => f"${fit.beta(j) / se(j)}%.6f").mkString(", ")}"
+      )
       refs.foreach { case (name, ref) =>
         println(
           s"  vs $name: var_beta ${e(rel(cov, arr(ref.get("var_beta"))))}, var_gamma ${e(rel(pv.varGamma, arr(ref.get("var_gamma"))))}, " +
@@ -155,14 +183,18 @@ object LogisticProbe {
       }
       if (label == "default") {
         val k = (0 until m).maxBy(j => pv.varGamma(j) - pv.varCaseMix(j))
-        println(f"  provider ${keys(k)}: gamma ${fit.gamma(k)}%.6f, var_gamma ${pv.varGamma(k)}%.6f, var_case_mix ${pv.varCaseMix(k)}%.6f; median gamma ${Serbin.median(fit.gamma)}%.6f")
+        println(
+          f"  provider ${keys(k)}: gamma ${fit.gamma(k)}%.6f, var_gamma ${pv.varGamma(k)}%.6f, var_case_mix ${pv.varCaseMix(k)}%.6f; median gamma ${Serbin.median(fit.gamma)}%.6f"
+        )
       }
     }
   }
 
   def partB(): Unit = {
     println("=" * 100)
-    println("PART B: the real engine in local Spark (local[4], 4 shuffle partitions, AQE and ANSI on)")
+    println(
+      "PART B: the real engine in local Spark (local[4], 4 shuffle partitions, AQE and ANSI on)"
+    )
     val spark: SparkSession = org.apache.spark.sql.classic.SparkSession
       .builder()
       .master("local[4]")
@@ -198,20 +230,29 @@ object LogisticProbe {
       )
     )
     def frame(rows: Seq[(Long, Long, Int, Array[Double])]): DataFrame =
-      spark.createDataFrame(rows.map { case (id, prov, y, x) => Row(id, prov, y, x(0), x(1), x(2)) }.asJava, schema)
+      spark.createDataFrame(
+        rows.map { case (id, prov, y, x) => Row(id, prov, y, x(0), x(1), x(2)) }.asJava,
+        schema
+      )
     val df = frame(records)
     val spec = LogisticSpec("y", Seq("x1", "x2", "x3"), "provider", rowId = Some("id"))
     val fit = phase("1: LogisticFE.fit(lfe-base, defaults)")(LogisticFE.fit(df, spec))
     def bits(a: Seq[Double]) = a.map(java.lang.Double.doubleToLongBits)
-    println(s"engine fit: ${fit.iterations} steps, converged ${fit.converged}, layout ${fit.layout}, AUC ${fit.auc.map(g)}, warnings ${fit.warnings.size}")
+    println(
+      s"engine fit: ${fit.iterations} steps, converged ${fit.converged}, layout ${fit.layout}, AUC ${fit.auc.map(g)}, warnings ${fit.warnings.size}"
+    )
     println(
       s"  bitwise equal to Part A's in-memory SerBIN: beta ${bits(fit.estimates) == bits(inMemory.beta.toSeq)}, gamma ${bits(fit.providers.gamma.toSeq) == bits(inMemory.gamma.toSeq)}, loglik ${bits(Seq(fit.loglik)) == bits(Seq(inMemoryLoglik))}"
     )
     val passes = fit.trace.map(s => 1 + (s.evaluated + 7) / 8).sum
-    println(s"  Newton passes: ${fit.trace.size} steps, ${passes} passes (pass A plus one pass B per eight step lengths)")
+    println(
+      s"  Newton passes: ${fit.trace.size} steps, ${passes} passes (pass A plus one pass B per eight step lengths)"
+    )
     val py = json("pprof_py")
     val rr = json("r_logistic")
-    val tests = phase("2: LogisticProviderTests.test(exact, two-sided, median)")(LogisticProviderTests.test(df, fit).collect())
+    val tests = phase("2: LogisticProviderTests.test(exact, two-sided, median)")(
+      LogisticProviderTests.test(df, fit).collect()
+    )
     val z = tests.map(_.getAs[Double]("z_raw"))
     val pv = tests.map(_.getAs[Double]("p_value"))
     val flag = tests.map(_.getAs[Int]("flag").toDouble)
@@ -228,16 +269,22 @@ object LogisticProbe {
       f"  largest |z|: provider ${tests(j).get(0)}, observed ${tests(j).getAs[Double]("observed")}%.0f, expected ${tests(j).getAs[Double]("expected")}%.4f, z ${z(j)}%.6f, p ${pv(j)}%.3e, interval [${lo(j)}%.4f, ${hi(j)}%.4f], gamma ${tests(j).getAs[Double]("estimate")}%.4f"
     )
     val four = LogisticOptions(blocks = BlockOptions(targetBlockBytes = 16800L))
-    val fit4 = phase("3: LogisticFE.fit(lfe-base, targetBlockBytes = 16800)")(LogisticFE.fit(df, spec, four))
-    println(s"four-block layout ${fit4.layout}: beta bitwise equal to one block ${bits(fit4.estimates) == bits(fit.estimates)}, max rel diff beta ${e(rel(fit4.estimates.toArray, fit.estimates.toArray))}, gamma ${e(rel(fit4.providers.gamma, fit.providers.gamma))}, loglik ${e(rel(Array(fit4.loglik), Array(fit.loglik)))}, steps ${fit4.iterations}")
+    val fit4 =
+      phase("3: LogisticFE.fit(lfe-base, targetBlockBytes = 16800)")(LogisticFE.fit(df, spec, four))
+    println(
+      s"four-block layout ${fit4.layout}: beta bitwise equal to one block ${bits(fit4.estimates) == bits(fit.estimates)}, max rel diff beta ${e(rel(fit4.estimates.toArray, fit.estimates.toArray))}, gamma ${e(rel(fit4.providers.gamma, fit.providers.gamma))}, loglik ${e(rel(Array(fit4.loglik), Array(fit.loglik)))}, steps ${fit4.iterations}"
+    )
     phase("4: R0 probes") {
       spark.conf.set("spark.sql.shuffle.partitions", "1")
       val a = LogisticFE.fit(df, spec, four)
       spark.conf.set("spark.sql.shuffle.partitions", "7")
       val b = LogisticFE.fit(frame(records.reverse).repartition(3), spec, four)
       spark.conf.set("spark.sql.shuffle.partitions", "4")
-      def all(f: LogisticFit) = bits(f.estimates ++ f.covariance ++ f.providers.gamma.toSeq :+ f.loglik)
-      println(s"  R0 bitwise (four blocks): shuffle.partitions 1 vs 4: ${all(a) == all(fit4)}; reversed + repartition(3) at 7: ${all(b) == all(fit4)}")
+      def all(f: LogisticFit) =
+        bits(f.estimates ++ f.covariance ++ f.providers.gamma.toSeq :+ f.loglik)
+      println(
+        s"  R0 bitwise (four blocks): shuffle.partitions 1 vs 4: ${all(a) == all(fit4)}; reversed + repartition(3) at 7: ${all(b) == all(fit4)}"
+      )
     }
     Thread.sleep(2500)
     println("=" * 100)
