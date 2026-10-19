@@ -1,7 +1,9 @@
 # Scale-test plan: the decisions of §12
 
-- Status: a memo for the maintainer's decision (round 90). Approval records D-50 (D-49 went to the
-  production-validation fixes), and the round that records it amends [the plan](plan.md).
+- Status: a memo for the maintainer's decision (round 90; updated in round 91 for D-50).
+  - D-50 recorded the roadmap and the plan's phases: S0 first, then Stage A (S2) and Stage B (S3) after inference
+    parity and the random-effect models. These recommendations apply to S2 and S3.
+  - Approving them takes the next free decision number, and that round amends [the plan](plan.md).
 - Since the plan was drafted in round 80:
   - The production validation ([review](../../reviews/production-validation-2026-10.md)) ran at about 5 million
     rows and 60 to 142 features, wider than the plan's widest point and §2.3's envelope (p = 100).
@@ -13,7 +15,7 @@
 
 | # | Decision | Recommendation |
 |---|---|---|
-| 1 | Approve the plan | Approve it as D-50, with the amendments below |
+| 1 | Approve the plan | Approve it, with the amendments below, under the next free decision number |
 | 2 | Cluster budget | One worker type throughout; you state the largest number of workers. Below 32, C3 moves to P3 and strong scaling runs on 4, 8 and 16 workers |
 | 3 | Tiers | Confirm them, with two production-shaped points in P1 (W4 at p = 150 in place of W3; X4 at C4's shape) and composite row keys at C2 |
 | 4 | Three-stage SRR | A second wave, planned from Stage A's report and sized to measure stage 2's cost (OI-59) |
@@ -22,15 +24,15 @@
 
 ## 1. Approve the plan
 
-**Recommendation: approve it as D-50, with the amendments below.** Nothing in the production findings argues
+**Recommendation: approve it, with the amendments below.** Nothing in the production findings argues
 against the plan's synthetic data and measurement-only approach. Its guards (§3) already include the budgets
-that rounds 83 to 87 introduced. The round that records D-50 makes these amendments:
+that rounds 83 to 87 introduced. The round that records the approval makes these amendments:
 
 - **§5:** add W4 and X4 (decision 3) and composite row keys at C2.
 - **§8:** add OI-76 with this rule: attribute X4's time to phases. Where pprof_spark on 16 workers is slower
   than pprof_py on the driver, propose the remedy for whichever takes the largest share: OI-68 (rebuilt working
   sets), OI-70 (job overhead) or OI-38 (kernel sums).
-- **§11 and the status line:** renumber the kit's rounds (see Next) and name D-50.
+- **§11 and the status line:** done in round 91, under D-50.
 
 ## 2. Cluster budget
 
@@ -47,10 +49,9 @@ What the plan needs from you is the largest number of workers you can use:
 | 32 to 63 | Strong scaling on 4, 16 and 32 workers; C3 stays in P2 |
 | Fewer than 32 | Strong scaling on 4, 8 and 16 workers (or the largest three doublings available); C3 moves to P3 |
 
-Your dedicated cluster serves if it can be resized to these shapes. Otherwise, use job clusters in dedicated
-(single-user) access mode, one per shape: they also give the Classic session that §6's listener needs. The
-kit's last round extrapolates node-hours per point from its local dry run, and you confirm P1 against that
-estimate before Stage A.
+Any Spark 4.1 cluster whose shape can change between runs serves, provided it gives the Classic session that
+§6's listener needs. Before Stage A, the kit's dry run extrapolates node-hours per point, and you confirm P1
+against that estimate.
 
 ## 3. Tiers
 
@@ -104,11 +105,7 @@ for a public repository.**
 
 ## Next
 
-On your decisions:
-
-1. Round 91 records D-50 and amends the plan.
-2. Rounds 92 to 94 build the kit:
-   - generators;
-   - `ScaleJob` with Python access;
-   - the kernel benchmarks, `02_scale` extended to the grid, and a local dry run with node-hour estimates.
-3. Stage A runs on your workspace.
+D-50 sets the sequence (the plan's §9 and §11):
+- S0 runs in milestone M1, on a small cluster (§12, item 7).
+- These decisions are needed before S2 and S3, in milestone M5, after inference parity and the random-effect
+  models.

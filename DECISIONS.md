@@ -103,6 +103,57 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-50: The roadmap after Phase 3, and scale testing in phases (Accepted: approved by the maintainer, 2026-10-19)
+
+A comparison of the two code bases found three things. pprof_py v0.7.0 is at `9320766`, also its `main`;
+pprof_spark was at round 90.
+- pprof_spark implements 4 of pprof_py's 29 public model classes: `CoxPH`, `LogisticFixedEffectModel`,
+  `LogisticThreeStageModel` and `LinearFixedEffectModel`. Each is parity-verified, with inference gaps.
+- Nothing has run at scale.
+- Production measured about 4.7 times pprof_py's time at 4.8 million rows and p = 57 (OI-76).
+
+Approved:
+
+1. **Priorities.** Each model starts with a specification (NN-2) and a fixture-based parity gate.
+   - P0, essential:
+     - Inference parity on the four models: `null_model` on every provider test (OI-87), the empirical null
+       (OI-78), funnel-plot limits (OI-88), the logistic fixed-effect model's confidence intervals (OI-89),
+       external standard populations (OI-58), and the provider tests' `interval` option and VIF screening
+       (OI-90).
+     - Fixes to the shared execution paths that S0 finds.
+   - P1, essential: random-effect models: linear, then logistic, then fixed effects with random clusters.
+   - P2: survival extensions: cause-specific Cox, time-varying Cox, Cox with provider effects at λ = 0, shared
+     frailty, Fine–Gray once X-003's parity target is chosen, and discrete-time survival.
+   - P3:
+     - penalized and group-lasso models with cross-validation, provider-penalized variants and `CoxPHSelector`;
+     - inter-unit reliability, after X-006;
+     - results exported in pprof_py's shapes for its presentation layer;
+     - the `Ban` algorithm;
+     - method-name aliases.
+2. **Scale testing in four phases** (`docs/spec/scale/plan.md` §9):
+   - S0, architecture checks, now.
+   - S1, a scale smoke with each new model or feature.
+   - S2, the plan's Stage A, after P0 and P1.
+   - S3, its Stage B.
+
+   Before S2, fix only problems of complexity class and costs in shared infrastructure. Complexity-class
+   problems are time growing faster than n, driver memory growing with n or m, a stage limited to one task,
+   and data expansion. Kernel tuning (OI-38) and absolute targets wait for S2.
+3. **Milestones:**
+   - M1: data generators and measurement capture, S0 on the four models, and specifications for the empirical
+     null and funnel limits.
+   - M2: P0's inference parity.
+   - M3: fixes for M1's complexity problems, alongside M2.
+   - M4: P1.
+   - M5: S2 and S3 on the essential set, and a first release with a wheel (OI-55).
+   - M6: P2, then P3.
+4. **Scope.** pprof_spark stays a standalone Spark package. The scale kit runs on any Spark 4.1 cluster, and
+   deployment work is outside this roadmap (D-14).
+
+The scale-test plan's other decisions (its §12) remain open and apply to S2 and S3; its approval takes the next
+free decision number. PROJECT_CONTEXT §4's Later row now follows this order. PROJECT_CONTEXT itself is updated
+when the next phase's plan is written.
+
 ### D-49: Production-validation fixes (Accepted: approved by the maintainer, 2026-10-12)
 
 `docs/reviews/production-validation-2026-10.md` diagnoses the ten issues the maintainer's team found validating

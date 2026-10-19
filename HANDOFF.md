@@ -22,7 +22,8 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Phase 3, linear fixed effects (3a to 3c) | Closed at parity-verified on 2026-10-11 (D-45 to D-48; `docs/gates/phase-3.md`) |
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Production validation, rounds 82 to 88 | Ten findings on round 81's build, diagnosed in round 82 (`docs/reviews/production-validation-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
-| Scale test (D-28) | Plan drafted (`docs/spec/scale/plan.md`), awaiting the maintainer's decisions (§12) |
+| Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6 |
+| Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer's team validated round 81's build against R and pprof_py on production data in five
 provider-profiling pipelines and reported ten findings. Delivered: logistic `blocks`, with blocks that grow until
@@ -50,7 +51,7 @@ round 88 as the maintainer reported (rounds 83 and 84 failed and were fixed by 8
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage and linear wrappers, ADR-0009) and its pytest suite |
 | `databricks/` | `00_build` (builds a commit on the driver into workspace files), `01_parity` (fixtures and R0 on the cluster), `02_scale` (a first look at scale); guide `docs/guide/databricks.md` |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py`; `fixtures.yml` (manual dispatch) regenerates and compares on CI's runner |
-| Documents | Specifications in `docs/spec/` (cox, logistic, linear, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the production review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-49), `DISCREPANCIES.md` (to X-036), `OPEN_ITEMS.md` (to OI-86), `STATUS.md` |
+| Documents | Specifications in `docs/spec/` (cox, logistic, linear, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the production review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-50), `DISCREPANCIES.md` (to X-036), `OPEN_ITEMS.md` (to OI-91), `STATUS.md` |
 
 ### 4. How the work runs
 
@@ -133,6 +134,8 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 
 ### 7. Open items to carry
 
+- Inference parity (D-50, P0): OI-87 (null models on provider tests), OI-88 (funnel limits), OI-89 (the logistic
+  fixed-effect model's intervals), OI-90 (`interval`, VIF), with OI-78 and OI-58; OI-91 (the Python facade's tests).
 - Statistics: OI-78 (the empirical null, under its own specification), OI-65 and OI-66 (Cox addenda: monotone
   likelihood; per-stratum shift, scaling and a condition estimate), OI-58 (external standard populations), OI-03
   (TimeRange), OI-61 (TSQR).
@@ -145,21 +148,54 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 
 ### 8. Next
 
-1. The re-validation results. Diagnose each finding against the source, running pprof_py and R before stating how
-   they behave; propose fixes with files, risks and compatibility; record them in the review document and as open
-   items, as round 82 did.
-2. The scale-test plan: its §12 decisions, each with a recommendation in round 90's memo
-   (`docs/spec/scale/plan-decisions.md`), then the kit: data generators, `ScaleJob` with Python access, kernel
-   benchmarks (OI-38), an extended `02_scale` notebook and a local dry run. The plan's §11 round numbers are stale.
-3. Smaller items: OI-78's specification, OI-86, the OI-65 and OI-66 addenda; the costs of OI-68, OI-70 and OI-76
-   are for the kit to measure.
+D-50 (round 91) sets the sequence. Findings from the maintainer's re-validation come first when they arrive, handled
+as round 82 did:
+- diagnose each against the source, running pprof_py and R before stating how they behave;
+- propose fixes with files, risks and compatibility;
+- record them in the review document and as open items.
 
-Beyond them, the maintainer chooses: the package-level scale test on his workspace (D-28); a phase from
-PROJECT_CONTEXT §4's Later list (penalized models, random and mixed effects, frailty and time-varying Cox,
-discrete-time survival, competing risks), which starts, as Phases 2 and 3 did, with reading pprof_py at the pin and
-proposing a plan; or open items such as OI-55 and OI-40.
+1. M1: the scale kit's data generators (Cox, logistic, linear, three-stage) and `ScaleJob`'s measurements, as a
+   Spark application, with S0's plan and a local dry run (`docs/spec/scale/plan.md` §9.1 and §11), for the
+   maintainer to run S0. Alongside, the specifications for the empirical null (OI-78) and funnel limits (OI-88).
+2. M2 and M3: P0's inference parity (OI-87 to OI-90, OI-78, OI-58), and fixes for S0's complexity problems.
+3. M4: the random-effect models (linear, logistic, fixed effects with random clusters), each with a
+   specification, fixtures and an S1 scale smoke.
+4. M5: S2 and S3 on the essential set, needing the plan's §12 decisions (round 90's memo recommends each), and a
+   first release with a wheel (OI-55).
+5. M6: the survival extensions, then penalized models and the P3 enhancements.
+
+Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 91 (2026-10-19): the roadmap after Phase 3 (D-50); scale testing in phases
+
+A comparison of pprof_spark with pprof_py v0.7.0 proposed a roadmap. The maintainer approved it, asked for it to be
+recorded, and asked for S0 to be added to the scale-test plan before Stage A.
+
+- `DECISIONS.md`: D-50, with:
+  - the priorities: P0, inference parity; P1, random-effect models; P2, survival extensions; P3, penalized models
+    and enhancements;
+  - four phases of scale testing (S0 to S3), with the rule for what may be fixed before parity;
+  - the milestones M1 to M6;
+  - pprof_spark's standalone scope.
+- `docs/spec/scale/plan.md`:
+  - the status line and the open items it measures;
+  - the three-stage generator moved into S0 (§4);
+  - §2, §3, §6 and §10 cluster-agnostic: a Spark application on any Spark 4.1 cluster;
+  - §9 rewritten as four phases, with S0's points and pass criteria (§9.1);
+  - §11 by milestone instead of round;
+  - §12's approval under the next free number, and a new item for S0's cluster.
+- `docs/spec/scale/plan-decisions.md`: its recommendations now apply to S2 and S3; the decision number and the
+  next steps follow D-50; the cluster advice no longer names a platform.
+- `OPEN_ITEMS.md`: OI-87 to OI-91, for the gaps that had no item: null models on provider tests, funnel limits,
+  the logistic fixed-effect model's intervals, the `interval` option and VIF screening, the Python facade's tests.
+- §2, §3, §7 and §8 above follow D-50; `STATUS.md` records rounds 89 and 90 as merged.
+
+Evidence: a documentation round, rehearsed on a fresh clone of `main` (identical tree); its links resolve; no code
+changed.
+
+What to send back: the CI runs for rounds 89 to 91, and, for S0, the cluster of the plan's §12, item 7.
 
 ## Round 90 (2026-10-19): a memo on the scale-test plan's decisions
 
