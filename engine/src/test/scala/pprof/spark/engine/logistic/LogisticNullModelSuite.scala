@@ -10,7 +10,7 @@ import pprof.spark.numerics.Normal
 import pprof.spark.testkit.SparkSuite
 
 /** Null models, intervals, bounds and null values of tests on standardized measures (standardization
-  * specification §2a; production findings L2, L3 and L4, D-49), against pprof_py's formulas.
+  * specification §2a; issues L2, L3 and L4, D-49), against pprof_py's formulas.
   */
 class LogisticNullModelSuite extends SparkSuite {
 
@@ -63,7 +63,7 @@ class LogisticNullModelSuite extends SparkSuite {
     test(
       s"a fixed null calibrates z, p-values, flags and intervals as pprof_py's: $measure, $interval"
     ) {
-      val (mu, sigma) = (0.25, 1.81)
+      val (mu, sigma) = (0.25, 1.5)
       val theoretical = rows(LogisticStandardization.test(df, fit, measure))
       val fixed = rows(
         LogisticStandardization.test(

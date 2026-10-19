@@ -1,6 +1,6 @@
 # Handoff
 
-## Session handoff: production fixes delivered (2026-10-19)
+## Session handoff: reported issues fixed, roadmap set (2026-10-19)
 
 This section stands on its own for a new session. The round log below it is the detailed history.
 
@@ -11,7 +11,7 @@ Kevin He) reimplements the validated statistical methods of pprof_py, pinned at 
 (D-05), as distributed Spark algorithms that keep their statistical definitions and validated behavior.
 Stack: Spark 4.1.0, Scala 2.13.16 (PLAT-3), Java 17 bytecode; CI on JDK 17 and 21, under Classic Spark and
 Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative context is
-`docs/PROJECT_CONTEXT.md` v2.7; recorded decisions in `DECISIONS.md` take precedence over it.
+`docs/PROJECT_CONTEXT.md` v2.8; recorded decisions in `DECISIONS.md` take precedence over it.
 
 ### 2. Where things stand
 
@@ -21,18 +21,17 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Phase 2, logistic fixed effects and the three-stage model (2a to 2f) | Closed at parity-verified on 2026-10-09 (D-32 to D-44; `docs/gates/phase-2.md`) |
 | Phase 3, linear fixed effects (3a to 3c) | Closed at parity-verified on 2026-10-11 (D-45 to D-48; `docs/gates/phase-3.md`) |
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
-| Production validation, rounds 82 to 88 | Ten findings on round 81's build, diagnosed in round 82 (`docs/reviews/production-validation-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
+| Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6 |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
-The maintainer's team validated round 81's build against R and pprof_py on production data in five
-provider-profiling pipelines and reported ten findings. Delivered: logistic `blocks`, with blocks that grow until
+The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
 their partials fit the driver budget (L5); a stratum byte budget, `maxStratumBytes` = 4 GiB (C3); baseline reference
 points `raw`, `mean_offset` and `means`, with `reference_point()` (C1, a convention difference, not an estimator
 bug); for `test_standardized`, the fixed null, `interval`, `bounds` and `null_value` = mean, median, a number or a
 callable (L2 to L4); `add_providers()` (L1); composite row keys, `row_id=[...]` hashed with `xxhash64` (C2). L6
 needed no change, as pprof_py refuses that option too; C4, performance, is left to the scale test; the empirical
-null remains (OI-78). The maintainer is re-validating the five pipelines on round 87's build: expect new findings.
+null remains (OI-78). The maintainer is testing round 87's build: expect new issue reports.
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his Databricks
 workspace (D-28). AI assistants never access his Databricks environment (D-14 as clarified). CI is green through
@@ -52,7 +51,7 @@ round 88 as the maintainer reported (rounds 83 and 84 failed and were fixed by 8
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage and linear wrappers, ADR-0009) and its pytest suite |
 | `databricks/` | `00_build` (builds a commit on the driver into workspace files), `01_parity` (fixtures and R0 on the cluster), `02_scale` (a first look at scale); guide `docs/guide/databricks.md` |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py`; `fixtures.yml` (manual dispatch) regenerates and compares on CI's runner |
-| Documents | Specifications in `docs/spec/` (cox, logistic, linear, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the production review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-50), `DISCREPANCIES.md` (to X-036), `OPEN_ITEMS.md` (to OI-91), `STATUS.md` |
+| Documents | Specifications in `docs/spec/` (cox, logistic, linear, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-50), `DISCREPANCIES.md` (to X-036), `OPEN_ITEMS.md` (to OI-91), `STATUS.md` |
 
 ### 4. How the work runs
 
@@ -150,7 +149,7 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 
 ### 8. Next
 
-D-50 (round 91) sets the sequence. Findings from the maintainer's re-validation come first when they arrive, handled
+D-50 (round 91) sets the sequence. Issues the maintainer reports come first when they arrive, handled
 as round 82 did:
 - diagnose each against the source, running pprof_py and R before stating how they behave;
 - propose fixes with files, risks and compatibility;
@@ -172,6 +171,29 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 93 (2026-10-19): production-specific details removed
+
+At the maintainer's request, the repository no longer describes production data, environments or results.
+
+- The issue review moves to `docs/reviews/issues-2026-10.md`. It describes round 82's ten issues as issues the
+  maintainer reported, with every quantity that came from outside the repository replaced by a synthetic or
+  general example. Links follow it: `DECISIONS.md`, `OPEN_ITEMS.md`, `STATUS.md`, this file and round 90's memo.
+- D-49's title and text, D-50's context, OI-72 to OI-80, the round 82 entry and the session summary say the same
+  without those details. Code comments and test docstrings name issues, not their source.
+- PROJECT_CONTEXT v2.8 names no particular source of protected data, and the Python guide's examples use general
+  sizes. The scale-test plan's A12 and the memo's X4 become a general comparison with pprof_py (n = 10⁷,
+  m = 10⁴, p = 50).
+- A fixed null's scale that came from outside the repository becomes 1.5 in `LogisticNullModelSuite`, the Python
+  logistic tests and the Python guide.
+- Generic uses of the word stay: production code and defaults, and the definition of test layer T12.
+
+Evidence (assistant sandbox): a search of the tree finds no production-specific detail. The engine, the testkit
+and the engine's tests compile with the build's flags; the fixed-null tests of `LogisticNullModelSuite` (9 of 9)
+and the Python logistic tests (9 of 9) pass with the new scale; scalafmt is clean on the whole repository. The removed text remains in earlier commits; removing it there needs a history rewrite, which
+is the maintainer's decision.
+
+What to send back: the CI run.
 
 ## Round 92 (2026-10-19): the scale kit's synthetic data (M1)
 
@@ -246,11 +268,10 @@ What to send back: the CI runs for rounds 89 to 91, and, for S0, the cluster of 
 
 ## Round 90 (2026-10-19): a memo on the scale-test plan's decisions
 
-- `docs/spec/scale/plan-decisions.md` recommends an answer to each decision of the plan's §12, in light of the
-  production validation:
+- `docs/spec/scale/plan-decisions.md` recommends an answer to each decision of the plan's §12:
   - approve the plan as D-50, with amendments;
   - one worker type, and the largest number of workers decides the shapes (C3 moves to P3 below 32);
-  - in P1, W4 (p = 150) in place of W3 and X4 (C4's shape), with composite row keys at C2;
+  - in P1, W4 (p = 150) in place of W3 and X4 (against pprof_py), with composite row keys at C2;
   - the three-stage model in a second wave;
   - the targets' form fixed now, their numbers from Stage A;
   - results exported without paths or identifiers.
@@ -272,8 +293,8 @@ The maintainer reported round 88's CI green and a green `fixtures.yml` run on it
   included, within T-part, as round 54's sandbox did; round 63's sandbox remains the exception.
 - The three tutorial probes (`docs/tutorials/*/probe`, outside the build) formatted, so a repository-wide
   `scalafmt --test` passes.
-- The session summary above rewritten for 2026-10-19: the production fixes, the rebuilt sandbox tools, the lessons
-  (one added), the open items and what comes next. `STATUS.md` records rounds 88 and 89.
+- The session summary above rewritten for 2026-10-19: the fixes for the reported issues, the rebuilt sandbox
+  tools, the lessons (one added), the open items and what comes next. `STATUS.md` records rounds 88 and 89.
 
 Evidence (assistant sandbox): testkit and the testkit, engine and app tests compiled with the build's flags;
 scalafmt 3.11.5 `--test` clean on the whole repository. `SparkSuiteSuite` 1 of 1, `LocalSparkSuite` 1 of 1,
@@ -458,11 +479,10 @@ with JARs from this code. Not run here: sbt, the full suites, Spark Connect.
 
 What to send back: the CI run.
 
-## Round 82 (2026-10-12): diagnosis of the production-validation findings
+## Round 82 (2026-10-12): diagnosis of ten reported issues
 
-The maintainer's team validated `b670dbb` (round 81) against R and pprof_py on production data in five
-pipelines (about 5 M rows, 60 to 142 features) and reported ten issues, C1 to C4 for `CoxPH` and L1 to L6 for
-`LogisticFixedEffect`. `docs/reviews/production-validation-2026-10.md` gives each a diagnosis, the code involved, a proposed
+The maintainer reported ten issues against `b670dbb` (round 81), C1 to C4 for `CoxPH` and L1 to L6 for
+`LogisticFixedEffect`. `docs/reviews/issues-2026-10.md` gives each a diagnosis, the code involved, a proposed
 fix and its risks; no code changed. Highlights:
 
 - C1 (reported High) is a reference-point convention, not an estimator error: on counting-process data with
@@ -470,12 +490,12 @@ fix and its risks; no code changed. Highlights:
   the baseline increments matched R's definitions to 5e-16 and the martingale residuals (Efron with R's tied-death
   rule) to 2e-15; pprof_spark's baseline is at offset 0 (X-014), R's and pprof_py's at the weighted mean offset.
 - L4 is pprof_py's `null_value="reference"` versus `"mean"`; pprof_spark lacks the latter.
-- L5's arithmetic: at p = 142, 4 MiB blocks give about 1,400 partials of 82 KB against a 64 MiB driver budget.
+- L5's arithmetic: at large p, 4 MiB blocks give more partials than the 64 MiB driver budget holds.
 - OI-72 partly answered; OI-73 to OI-81 opened.
 
 Evidence (assistant sandbox): the C1 probe ran pprof_spark (round 81 code, local Spark) against an independent
 NumPy implementation of R's definitions; the other diagnoses come from the source and pprof_py v0.7.0's
-(`add_providers`, `test_standardized`, its null models). Not run here: production data, R.
+(`add_providers`, `test_standardized`, its null models). Not run here: R.
 
 What to send back: decisions on the document's section 3.
 

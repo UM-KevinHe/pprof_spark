@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-19, round 92.
+Updated 2026-10-19, round 93.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -104,7 +104,7 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 79 | Distributed-correctness tests (OI-67, OI-71) | Merged (20e1e5b) |
 | 80 | Scale-test plan, a draft for approval (`docs/spec/scale/plan.md`); L-01 recorded | Merged (132eca4) |
 | 81 | Databricks build, parity and scale notebooks (`databricks/`, `docs/guide/databricks.md`) | Merged (b670dbb) |
-| 82 | Diagnosis of the production-validation findings (`docs/reviews/production-validation-2026-10.md`) | Merged (29e21ce); D-49 approved |
+| 82 | Diagnosis of ten reported issues (`docs/reviews/issues-2026-10.md`) | Merged (29e21ce); D-49 approved |
 | 83 | Block options and growth (L5); stratum byte budget (C3) | Merged (3c77562); CI failed two suites, fixed in 83.1 |
 | 83.1 | CI fixes after round 83; test JVM heap 3 GB | Merged (00c3a46) |
 | 84 | Baseline reference points (C1) | Merged (5151915); CI's Python job failed, fixed in 84.1 |
@@ -117,6 +117,7 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 90 | A memo on the scale-test plan's §12 decisions (`docs/spec/scale/plan-decisions.md`) | Merged (9f580b4) |
 | 91 | D-50: the roadmap after Phase 3; the scale-test plan revised for S0 (phases and milestones); OI-87 to OI-91 | Merged (4e63c8e) |
 | 92 | Scale kit, M1: deterministic synthetic data for the Cox, logistic and linear models (`pprof.spark.bench.synthetic`) | Delivered as a patch |
+| 93 | Production-specific details removed from code comments, documents and logs | Delivered as a patch |
 
 ## Decisions and spikes
 

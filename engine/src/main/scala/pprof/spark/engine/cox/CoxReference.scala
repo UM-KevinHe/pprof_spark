@@ -5,7 +5,7 @@ import org.apache.spark.sql.{Dataset, Encoders}
 import pprof.spark.engine.backend.OrderedReduction
 import pprof.spark.numerics.NeumaierSum
 
-/** The point a baseline hazard refers to (Phase 1b specification §2a, production finding C1, D-49). */
+/** The point a baseline hazard refers to (Phase 1b specification §2a, issue C1, D-49). */
 sealed abstract class BaselineReference(val name: String) extends Product with Serializable
 
 object BaselineReference {

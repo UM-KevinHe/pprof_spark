@@ -43,7 +43,7 @@ rates and [0, ∞) for identity-scale ratios (`bounds = auto`). On the log scale
 events cannot be tested (NaN), as in pprof_py.
 
 
-## 2a. Null values, null models, intervals and bounds (round 85; production findings L2 to L4, D-49)
+## 2a. Null values, null models, intervals and bounds (round 85; issues L2 to L4, D-49)
 
 `LogisticStandardization.test` (Python `test_standardized`) takes pprof_py v0.7.0's remaining options. Their
 defaults give the test of §2 unchanged, bit for bit.

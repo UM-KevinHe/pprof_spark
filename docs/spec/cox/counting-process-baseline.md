@@ -34,7 +34,7 @@ is x = 0 with offset 0, pprof_py's raw baseline. pprof_py's public `baseline_haz
 reports the raw baseline and documents the factor (X-014).
 
 
-## 2a. Reference points (round 84; production finding C1, D-49)
+## 2a. Reference points (round 84; issue C1, D-49)
 
 The baseline of §2 is at x = 0 and offset 0, the raw baseline that every prediction uses (X-014). Other
 tools report it at other points. `CoxPH.baseline(df, fit, reference)` reports any of three, each the raw

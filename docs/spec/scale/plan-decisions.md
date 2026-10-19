@@ -5,26 +5,24 @@
     parity and the random-effect models. These recommendations apply to S2 and S3.
   - Approving them takes the next free decision number, and that round amends [the plan](plan.md).
 - Since the plan was drafted in round 80:
-  - The production validation ([review](../../reviews/production-validation-2026-10.md)) ran at about 5 million
-    rows and 60 to 142 features, wider than the plan's widest point and §2.3's envelope (p = 100).
-  - It found pprof_spark about 4.7 times slower than pprof_py at 4.8 million rows and p = 57 (C4, OI-76), which
-    the plan does not yet target.
+  - Ten reported issues ([review](../../reviews/issues-2026-10.md)) included pprof_spark's speed against pprof_py
+    on one machine (C4, OI-76), which the plan does not yet target.
   - Rounds 83 to 87 added budgets and options that the grid should exercise: block growth (L5),
     `maxStratumBytes` (C3) and composite row keys (C2).
-  - The production fixes took the round numbers of §11.
+  - The fixes took the round numbers of §11.
 
 | # | Decision | Recommendation |
 |---|---|---|
 | 1 | Approve the plan | Approve it, with the amendments below, under the next free decision number |
 | 2 | Cluster budget | One worker type throughout; you state the largest number of workers. Below 32, C3 moves to P3 and strong scaling runs on 4, 8 and 16 workers |
-| 3 | Tiers | Confirm them, with two production-shaped points in P1 (W4 at p = 150 in place of W3; X4 at C4's shape) and composite row keys at C2 |
+| 3 | Tiers | Confirm them, with two new points in P1 (W4 at p = 150 in place of W3; X4 against pprof_py) and composite row keys at C2 |
 | 4 | Three-stage SRR | A second wave, planned from Stage A's report and sized to measure stage 2's cost (OI-59) |
 | 5 | Targets | Numbers from Stage A's report, as D-04 intended, with their form fixed now |
 | 6 | Results | Aggregate tables under `docs/parity/scale/`, exported by the kit without paths or identifiers |
 
 ## 1. Approve the plan
 
-**Recommendation: approve it, with the amendments below.** Nothing in the production findings argues
+**Recommendation: approve it, with the amendments below.** Nothing in the reported issues argues
 against the plan's synthetic data and measurement-only approach. Its guards (§3) already include the budgets
 that rounds 83 to 87 introduced. The round that records the approval makes these amendments:
 
@@ -55,13 +53,13 @@ against that estimate.
 
 ## 3. Tiers
 
-**Recommendation: confirm the tiers, with three changes that follow the production validation.**
+**Recommendation: confirm the tiers, with three changes.**
 
 - **W4 (P1): Cox and logistic at n = 10⁸, m = 10⁵, p = 150, in place of W3 (p = 100), which moves to P2.**
-  Production reached 142 features. W4 tests block growth (L5) and the driver budget (OI-02) beyond §2.3's
-  p = 100, and its result decides whether to widen §2.3.
-- **X4 (P1): Cox and logistic at n = 5 × 10⁶, m = 5 × 10³, p = 60.** It runs on 1, 4 and 16 workers against
-  pprof_py on the driver: the shape of finding C4, on synthetic data.
+  W4 tests block growth (L5) and the driver budget (OI-02) beyond §2.3's p = 100, and its result decides
+  whether to widen §2.3.
+- **X4 (P1): Cox and logistic at n = 10⁷, m = 10⁴, p = 50.** It runs on 1, 4 and 16 workers against
+  pprof_py on the driver, at a size pprof_py still fits on one machine (C4).
 - **Composite row keys at C2 (Cox):** this measures the cost of the hash and its distinct count at 10⁸ rows.
   - Not at C3: synthetic data carry a row identifier.
   - At 10⁹ rows, a 64-bit hash collides with probability about 3% (n²/2⁶⁵), and validation would report that
@@ -73,7 +71,6 @@ P1 then holds C1, C2, W4, K1, U1, L1 and X1 to X4.
 
 **Recommendation: a second wave, as proposed, planned from Stage A's report.**
 
-- The production validation found no three-stage issue.
 - The model's cost drivers differ: stage 2's dense Schur complement (OI-59) grows with the number of levels,
   not rows.
 - Its generator needs provider × cluster cells.
@@ -83,7 +80,7 @@ The second wave adds that generator and a few points sized to measure OI-59, on 
 ## 5. Targets
 
 **Recommendation: set the numbers from Stage A's report, as D-04 intended, but fix their form now.** That way
-the numbers can follow from what the pipelines need, not only from what was measured. Each target is one of:
+the numbers can follow from what users need, not only from what was measured. Each target is one of:
 
 - The wall time of a fit and of each downstream operation at C2, on a stated cluster shape.
 - The driver's peak heap, below a stated share of its memory.

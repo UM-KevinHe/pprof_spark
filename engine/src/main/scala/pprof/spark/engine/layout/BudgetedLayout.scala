@@ -3,7 +3,7 @@ package pprof.spark.engine.layout
 import pprof.spark.engine.backend.BlockOptions
 
 /** The layout plan of a blocked computation whose block partials are collected to the driver, with
-  * the block size grown until those partials fit the driver budget (production finding L5, D-49).
+  * the block size grown until those partials fit the driver budget (issue L5, D-49).
   *
   * At the requested `targetBlockBytes` the plan has `blockCount` blocks whose partials take
   * `partialBytes` each on the driver. When they would exceed `driverBudgetBytes`, the block size

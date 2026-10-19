@@ -1,10 +1,13 @@
 # pprof_spark — Project Context
 
-**Version** 2.7 · **Date** 2026-10-11 · **Supersedes** v2.6 (2026-10-11)
+**Version** 2.8 · **Date** 2026-10-19 · **Supersedes** v2.7 (2026-10-11)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
+> **v2.8 names no particular source of protected data** (round 93): the non-negotiables, the users, test
+> layer T12 and the data rules speak of protected data in general.
+>
 > **v2.7 corrects passages found stale by the Cox tutorial's review** (OI-64, round 77): the step
 > control of X-010 (§3.4, §7.3.2), and the Spark ML adapters and capability traits, which are planned
 > rather than built (§3.6, §6.9, §6.11). v2.6 closed Phase 3.
@@ -47,7 +50,7 @@ Project state lives in a small set of files updated at the end of every working 
 | NN-4 | **Deterministic, partition-invariant results.** For a fixed build, input, and configuration, results are bitwise identical regardless of cluster size or physical partitioning; changing layout parameters (such as block size) changes results only within a documented floating-point tolerance (§6.8, §8.2). |
 | NN-5 | **The statistical engine is independent of Spark ML and restricted to Spark APIs available under both Classic Spark and Spark Connect.** Spark ML is an adapter layer (§5.4, §6.1). |
 | NN-6 | **Numerical kernels are pure, Spark-free, deterministic functions** with their own unit tests (§6.4). |
-| NN-7 | **Protected data never leave the approved environment.** PHI, PII, and CMS data never appear in GitHub, CI, Codespaces, logs, exception messages, or AI-assistant conversations (§12). |
+| NN-7 | **Protected data never leave the approved environment.** PHI, PII and other protected data never appear in GitHub, CI, Codespaces, logs, exception messages, or AI-assistant conversations (§12). |
 | NN-8 | **Evidence over reasoning.** Every claim of correctness, parity, or performance cites recorded evidence: a test run, CI log, benchmark record, or validation report. |
 | NN-9 | **Tolerances are never relaxed to make a test pass.** Changing a tolerance requires written justification, a negative control showing that the tolerance still detects real defects, and maintainer approval (§8.4). |
 | NN-10 | **Degenerate outcomes are surfaced, never hidden.** Non-convergence, rank deficiency, infinite or boundary estimates, and degenerate providers or strata are reported in result status fields and warnings. |
@@ -65,7 +68,7 @@ Project state lives in a small set of files updated at the end of every working 
 
 ### 2.2 Users and workloads
 
-The primary users are statisticians and analysts who run national-scale provider profiling on Spark clusters, Databricks among them — for example the CMS dialysis-facility measures that `pprof_py` already supports (two-stage SMR and SHR from Cox models; readmission measures from logistic models with provider effects) and transplant-center or hospital profiling — in settings where data volume, governance rules that keep patient-level data inside the governed environment, or production repeatability make single-node execution impractical. Secondary users are data engineers who run fitted models inside scheduled pipelines.
+The primary users are statisticians and analysts who run national-scale provider profiling on Spark clusters, Databricks among them — for example the dialysis-facility measures that `pprof_py` already supports (two-stage SMR and SHR from Cox models; readmission measures from logistic models with provider effects) and transplant-center or hospital profiling — in settings where data volume, governance rules that keep patient-level data inside the governed environment, or production repeatability make single-node execution impractical. Secondary users are data engineers who run fitted models inside scheduled pipelines.
 
 ### 2.3 Design envelope
 
@@ -658,7 +661,7 @@ Converged-estimate comparisons run both implementations to a tighter criterion t
 | T9 Cluster integration | Multi-node cluster with separate executor JVMs, synthetic data | The maintainer's Databricks workspace, run by him once the whole package is done (D-28) | Deferred to then |
 | T10 Scale and performance | Benchmark workloads in `bench`; regression thresholds once a cluster exists | GitHub runners by hand (`bench.yml`); a cluster later | By hand; before releases |
 | T11 Statistical validation | Simulation studies of bias, coverage, and type I error for features without an external reference | CI or a cluster | When the feature is released |
-| T12 Production-data validation | Approved CMS data inside the approved environment, compared with `pprof_py` or production outputs; only aggregate results leave the environment | The approved environment | Before production use |
+| T12 Production-data validation | Approved protected data inside the approved environment, compared with `pprof_py` or existing outputs; only aggregate results leave the environment | The approved environment | Before production use |
 
 ### 9.2 Parity at three levels
 
@@ -852,9 +855,9 @@ Releases follow semantic versioning and stay at 0.x until the first parity-gated
 
 | Area | Rule |
 |---|---|
-| Protected data | PHI, PII, and CMS data stay in the approved environment. GitHub, CI runners, Codespaces, local machines, and AI assistants see only synthetic data. |
+| Protected data | PHI, PII and other protected data stay in the approved environment. GitHub, CI runners, Codespaces, local machines, and AI assistants see only synthetic data. |
 | Logs and errors | Messages identify problems by column names and counts, never by row values or patient identifiers; tests check this (T6). |
-| Shared outputs | Provider-level outputs intended for sharing follow the applicable data use agreement's cell-size suppression rules; CMS policy prohibits displaying cell counts from 1 to 10. |
+| Shared outputs | Provider-level outputs intended for sharing follow the applicable data use agreement's cell-size suppression rules, such as a ban on displaying cell counts from 1 to 10. |
 | Real-data validation | T12 runs only inside the approved environment; only aggregate comparison results leave it. |
 | Credentials | No secrets in the repository or its workflows today. When deployment returns: OIDC federation and least-privilege service principals, never personal tokens. |
 | Dependencies | Kept minimal; updated through Scala Steward or Dependabot; every new dependency gets a license review. |

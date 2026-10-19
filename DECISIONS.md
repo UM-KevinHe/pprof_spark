@@ -105,12 +105,11 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 ### D-50: The roadmap after Phase 3, and scale testing in phases (Accepted: approved by the maintainer, 2026-10-19)
 
-A comparison of the two code bases found three things. pprof_py v0.7.0 is at `9320766`, also its `main`;
+A comparison of the two code bases found two things. pprof_py v0.7.0 is at `9320766`, also its `main`;
 pprof_spark was at round 90.
 - pprof_spark implements 4 of pprof_py's 29 public model classes: `CoxPH`, `LogisticFixedEffectModel`,
   `LogisticThreeStageModel` and `LinearFixedEffectModel`. Each is parity-verified, with inference gaps.
 - Nothing has run at scale.
-- Production measured about 4.7 times pprof_py's time at 4.8 million rows and p = 57 (OI-76).
 
 Approved:
 
@@ -154,10 +153,10 @@ The scale-test plan's other decisions (its §12) remain open and apply to S2 and
 free decision number. PROJECT_CONTEXT §4's Later row now follows this order. PROJECT_CONTEXT itself is updated
 when the next phase's plan is written.
 
-### D-49: Production-validation fixes (Accepted: approved by the maintainer, 2026-10-12)
+### D-49: Fixes for the reported issues (Accepted: approved by the maintainer, 2026-10-12)
 
-`docs/reviews/production-validation-2026-10.md` diagnoses the ten issues the maintainer's team found validating
-round 81 on production data (OI-73 to OI-81). Approved: its recommendations and their order (§3): L5 and C3, C1,
+`docs/reviews/issues-2026-10.md` diagnoses ten issues the maintainer reported against round 81
+(OI-73 to OI-81). Approved: its recommendations and their order (§3): L5 and C3, C1,
 L2 to L4 and L6, L1, then C2's composite keys. New options keep today's defaults, except C3 (a stratum byte
 budget, `maxStratumBytes` = 4 GiB, replaces the 1,000,000-row default of `maxStratumRows`, which becomes
 unlimited) and L5 (blocks grow, doubling up to 256 MiB, where the block partials would exceed the driver budget;

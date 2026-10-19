@@ -126,10 +126,10 @@ slices (plan.md).
 The fit is persisted bit for bit like `CoxFit` (PERS-1), in a new kind with its own format version.
 
 
-## 8a. Providers added after fitting (round 86; production finding L1, D-49)
+## 8a. Providers added after fitting (round 86; issue L1, D-49)
 
 `LogisticFit.withProviders(keys, gamma, seGamma, groupSizes)` (Python `add_providers`) is pprof_py v0.7.0's
-`add_providers`, which R's PPPW step uses: providers left out of the fit (zero-event and all-event ones) are
+`add_providers`: providers left out of the fit (zero-event and all-event ones) are
 added back with fixed effects, conventionally −17 and +17 with standard error 0.01. A provider not in the fit is
 added with `groupSizes` records (0 by default). A fitted one is replaced, and keeps its records and data-based
 statistics. A later call replaces earlier values. The fit itself does not change: β, the likelihood, the AUC

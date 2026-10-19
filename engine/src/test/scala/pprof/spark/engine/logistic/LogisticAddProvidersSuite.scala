@@ -10,9 +10,9 @@ import pprof.spark.engine.logistic.LogisticFixtures._
 import pprof.spark.numerics.Serbin
 import pprof.spark.testkit.SparkSuite
 
-/** Providers added after fitting (pprof_py's `add_providers`; specification §8a; production finding
-  * L1), as R's PPPW step uses it: providers left out of the fit are added back with fixed effects, and
-  * every output that lists providers includes them as pprof_py v0.7.0 does.
+/** Providers added after fitting (pprof_py's `add_providers`; specification §8a; issue L1): providers
+  * left out of the fit are added back with fixed effects, and every output that lists providers includes
+  * them as pprof_py v0.7.0 does.
   */
 class LogisticAddProvidersSuite extends SparkSuite {
 

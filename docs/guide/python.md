@@ -116,12 +116,12 @@ fit.save("/path/fit"); LinearFixedEffectModel.load(spark, "/path/fit")
 
 ## Large data: strata, blocks and row identifiers
 
-These options were added after production validation on about 5 million rows (round 83, D-49).
+These options were added in round 83 (D-49).
 
 - **One stratum is one task.** A Cox stratum is never split across tasks, so an unstratified fit holds
   every row in one task. `CoxPH(..., max_stratum_bytes=...)` caps a stratum's estimated arrays, 8 (p + 4)
-  bytes a row, at 4 GiB by default: 4.8 million rows with 57 features (about 2.3 GB) pass; with 142
-  features they do not, and the error names the option. Raise it when the executors have the memory;
+  bytes a row, at 4 GiB by default: 10 million rows with 20 features (about 1.9 GB) pass; with 60
+  features (about 5.1 GB) they do not, and the error names the option. Raise it when the executors have the memory;
   `max_stratum_rows`, unlimited by default, can cap rows as well.
 - **Blocks and the driver budget.** Every pass collects one partial result per block to the driver, about
   8 (p(p+1)/2 + p + 2) bytes each, within `driverBudgetBytes` (64 MiB). When the default 4 MiB blocks would
@@ -162,7 +162,7 @@ point.
   callable given the estimates.
 - `null_model`: `None` for N(0, 1), or `FixedNull(mean, sd)` (`from pprof_spark import FixedNull`; pprof_py's
   own `FixedNull` objects work too). z is calibrated to (z − mean)/sd before p-values, flags and intervals:
-  `FixedNull(sd=1.81)` is a null whose z-scores are 1.81 times as spread.
+  `FixedNull(sd=1.5)` is a null whose z-scores are 1.5 times as spread.
 - `interval`: `"inversion"` (default) or `"scale_only"`. `bounds`: `"auto"` (default), a `(lower, upper)` pair,
   or `None` to leave intervals unclipped.
 
@@ -171,8 +171,8 @@ for them, as in pprof_py.
 
 ## Logistic models: providers added after fitting
 
-R's PPPW step fits without the providers whose outcomes are all 0 or all 1, then adds them back with fixed
-effects. `add_providers` does the same, as pprof_py's does:
+A common workflow fits without the providers whose outcomes are all 0 or all 1, then adds them back with
+fixed effects. `add_providers` does this, as pprof_py's does:
 
 ```python
 model = LogisticFixedEffect("y", features, "provider", row_id="id").fit(df_without_extremes)

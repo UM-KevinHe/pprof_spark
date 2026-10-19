@@ -213,7 +213,7 @@ Kernel tuning (OI-38), tuning parameters and absolute targets wait for S2.
 | A8 | Cox, logistic | 10⁷ | 10⁴ | 20 | dominant | One provider with 5% of rows (OI-30, OI-57) |
 | A9 | Cox, unstratified | 10⁶ | 1 | 20 | — | One stratum: tasks per pass (OI-03, OI-30) |
 | A10, A11 | Three-stage | 10⁶ | 10³, 10⁴ | 20 | equal | Stage 2's time and memory against the number of levels (OI-59) |
-| A12 | Cox, logistic | 5 × 10⁶ | 5 × 10³ | 60 | equal | Time by phase, against pprof_py on one machine (OI-76) |
+| A12 | Cox, logistic | 10⁷ | 10⁴ | 50 | equal | Time by phase, against pprof_py on one machine (OI-76) |
 
 A2 and A12 also run each model's downstream operations, as C2 does (section 5). A2 reruns with a different
 number of partitions and of executors (R0). The checks of section 3 apply to every point; sample parity runs
@@ -225,7 +225,7 @@ S0 passes when:
 - No stage runs as a single task, except A9's by design, whose cost A9 measures.
 - A2's outputs are bit-identical across partitionings.
 - A12's time is attributed to phases. The attribution names which of OI-38, OI-68 and OI-70 explains
-  production's ratio to pprof_py (OI-76).
+  pprof_spark's time relative to pprof_py (OI-76).
 
 S0's report, under `docs/parity/scale/`, lists each complexity problem found and the shared-infrastructure fix
 proposed. Fixes follow the specification first (NN-2) and leave every parity test unchanged.
@@ -259,8 +259,8 @@ D-50's milestones order the work; this plan no longer assigns round numbers.
 
 ## 12. Decisions requested
 
-1. Approve this plan, or amend it, under the next free decision number (D-49 went to the production-validation
-   fixes, D-50 to the roadmap that fixed sections 9 and 11).
+1. Approve this plan, or amend it, under the next free decision number (D-49 went to the fixes for the
+   reported issues, D-50 to the roadmap that fixed sections 9 and 11).
 2. The cluster budget: the worker type and the largest number of workers available. The grid assumes up
    to 64 workers for C2's strong scaling and enough for C3 at 10⁹ rows; with less, C3 moves to tier P3.
 3. Trim or confirm the tiers of section 5.
@@ -273,5 +273,4 @@ D-50's milestones order the work; this plan no longer assigns round numbers.
 
 Items 1 to 6 are needed before S2; item 7 before S0.
 
-Round 90's memo, [plan-decisions.md](plan-decisions.md), recommends an answer to items 1 to 6, in light of
-the production validation.
+Round 90's memo, [plan-decisions.md](plan-decisions.md), recommends an answer to items 1 to 6.

@@ -143,8 +143,8 @@ class LogisticFixedEffectModel:
         """Providers added after fitting, as pprof_py's `add_providers` (logistic specification §8a): each takes the
         effect `gamma` and the standard error `se_gamma` (a number, or one per provider). A provider not in the fit is
         added with `group_sizes` records (0 when None), which weight the mean reference; a fitted one is replaced and
-        keeps its records and data-based statistics. Like pprof_py, this changes the model and returns it. R's PPPW
-        step adds zero-event providers with gamma -17 and all-event ones with +17, se_gamma 0.01."""
+        keeps its records and data-based statistics. Like pprof_py, this changes the model and returns it.
+        Conventionally, zero-event providers take gamma -17 and all-event ones +17, with se_gamma 0.01."""
         ids = list(provider_ids)
         if not ids:
             return self

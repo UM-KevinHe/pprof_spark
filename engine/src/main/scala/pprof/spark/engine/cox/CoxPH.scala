@@ -41,7 +41,7 @@ object Ties {
 
 /** Fit options (Cox specification §5); defaults are pprof_py's and R's. One task holds a whole stratum
   * (no TimeRange layout, OI-03), so `maxStratumBytes` caps a stratum's estimated size, 8 (p + 4) bytes a
-  * row; `maxStratumRows`, unlimited by default, can cap its rows as well (production finding C3, D-49).
+  * row; `maxStratumRows`, unlimited by default, can cap its rows as well (issue C3, D-49).
   */
 final case class CoxOptions(
     ties: Ties = Ties.Breslow,

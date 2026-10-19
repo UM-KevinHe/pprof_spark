@@ -104,15 +104,15 @@ def test_blocks_option_reaches_the_engine(data, fit):
 
 def test_standardized_null_models_and_options(data, fit):
     base = {r["provider"]: r for r in fit.test_standardized(data).collect()}
-    fixed = fit.test_standardized(data, null_model=FixedNull(0.25, 1.81), interval="scale_only",
+    fixed = fit.test_standardized(data, null_model=FixedNull(0.25, 1.5), interval="scale_only",
                                   bounds=None).collect()
     tested = 0
     for r in fixed:
         b = base[r["provider"]]
         if b["z_raw"] == b["z_raw"]:
             tested += 1
-            assert abs(r["z_adjusted"] - (b["z_raw"] - 0.25) / 1.81) <= 1e-15 * max(1.0, abs(r["z_adjusted"]))
-            assert r["null_mean"] == 0.25 and r["null_sd"] == 1.81
+            assert abs(r["z_adjusted"] - (b["z_raw"] - 0.25) / 1.5) <= 1e-15 * max(1.0, abs(r["z_adjusted"]))
+            assert r["null_mean"] == 0.25 and r["null_sd"] == 1.5
     assert tested > 0
     estimates = [r["estimate"] for r in fit.standardized_measure(data).collect()]
     by_mean = fit.test_standardized(data, null_value="mean").collect()

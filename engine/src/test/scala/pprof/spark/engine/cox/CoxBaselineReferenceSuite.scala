@@ -6,7 +6,7 @@ import org.apache.spark.sql.functions.{col, signum, when}
 import pprof.spark.engine.cox.CoxFixtures._
 import pprof.spark.testkit.SparkSuite
 
-/** The baseline's reference points (Phase 1b specification §2a; production finding C1, D-49):
+/** The baseline's reference points (Phase 1b specification §2a; issue C1, D-49):
   * `raw` (x = 0, offset 0), `mean_offset` (pprof_py's `baseline_hazard_`, R's
   * `basehaz(centered = FALSE)`) and `means` (R's `survfit` default and `basehaz(centered = TRUE)`).
   */

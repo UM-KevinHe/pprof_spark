@@ -12,7 +12,7 @@ import pprof.spark.engine.cox.CoxFixtures.bits
 import pprof.spark.engine.data.InvalidInputException
 import pprof.spark.testkit.SparkSuite
 
-/** Composite row keys (Cox specification §4a; production finding C2, D-49): counting-process data
+/** Composite row keys (Cox specification §4a; issue C2, D-49): counting-process data
   * keyed by (patient, start), with no synthetic identifier and nothing materialized.
   */
 class CoxRowKeySuite extends SparkSuite {

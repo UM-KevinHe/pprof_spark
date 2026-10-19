@@ -154,7 +154,7 @@ final case class LogisticFit(
 ) {
 
   /** This fit with providers added after fitting (pprof_py's `add_providers`; specification §8a,
-    * production finding L1). Each given provider takes the effect `gamma` and, for every variance of
+    * issue L1). Each given provider takes the effect `gamma` and, for every variance of
     * its effect, `seGamma` squared; one not in the fit is added with `groupSizes` records, which weight
     * the mean reference, while a fitted one keeps its records and its data-based statistics. A later
     * call replaces earlier values. The estimation (β, the likelihood, the AUC) never involves them.

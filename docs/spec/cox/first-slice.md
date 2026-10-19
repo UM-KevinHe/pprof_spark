@@ -54,7 +54,7 @@ counts, never values (NN-7), and no row is dropped silently. This matches pprof_
 on each of these inputs (probed at v0.7.0).
 
 
-## 4a. Composite row keys (round 87; production finding C2, D-49)
+## 4a. Composite row keys (round 87; issue C2, D-49)
 
 A row identifier is one integral column (`CoxSpec.rowId`) or a composite key (`CoxSpec.rowKey`, a list of
 columns), never both. Counting-process data have natural composite keys, such as a patient and an interval's
@@ -66,7 +66,7 @@ alone. Data recomputed in any order or partitioning therefore get the same ident
 order (§6) and the same fingerprint (API-3), so later calls (`baseline`, residuals, measures, tests) accept them
 without a synthetic identifier and without writing the data out first. Validation counts the distinct hashes. If
 they fall short of the rows, a second count over the key columns themselves tells repeated keys from a 64-bit
-collision (probability about n²/2⁶⁵, about 7 × 10⁻⁷ for 5 million rows), and either is reported with the key's
+collision (probability about n²/2⁶⁵, about 3 × 10⁻⁶ for 10⁷ rows), and either is reported with the key's
 columns named. Residuals join back through the hash and return the key's columns in place of a single
 identifier. Saved models record the key (`CoxFitIO` format version 5; versions 1 to 4 load without one). A fit
 by key is bit for bit the fit by an explicit `xxhash64` column of the same values (`CoxRowKeySuite`). The other
