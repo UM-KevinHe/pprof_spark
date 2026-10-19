@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-19, round 89.
+Updated 2026-10-19, round 90.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -114,6 +114,7 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 87 | Composite row keys for Cox (C2) | Merged (07746bb); CI green as reported by the maintainer |
 | 88 | Fixtures for reference points, standardized-test options and added providers (OI-82, OI-84, OI-85) | Merged (7a9ee31); CI and `fixtures.yml` green as reported by the maintainer |
 | 89 | Session summary refreshed; suites clear the session cache (OI-83); OI-62 closed; tutorial probes formatted | Delivered as a patch |
+| 90 | A memo on the scale-test plan's §12 decisions (`docs/spec/scale/plan-decisions.md`) | Delivered as a patch |
 
 ## Decisions and spikes
 

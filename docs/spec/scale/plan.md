@@ -195,3 +195,6 @@ generated data. Results come back to the repository as aggregate tables under `d
    (proposed), or in the first.
 5. Targets set from Stage A's report, as D-04 intended (proposed).
 6. Results returned as aggregate tables under `docs/parity/scale/` (proposed).
+
+Round 90's memo, [plan-decisions.md](plan-decisions.md), recommends an answer to each, in light of the
+production validation.

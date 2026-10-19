@@ -148,9 +148,9 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 1. The re-validation results. Diagnose each finding against the source, running pprof_py and R before stating how
    they behave; propose fixes with files, risks and compatibility; record them in the review document and as open
    items, as round 82 did.
-2. The scale-test plan: its §12 decisions (approval under a new decision number, cluster budget, tiers, the
-   three-stage wave, targets), then the kit: data generators, `ScaleJob` with Python access, kernel benchmarks
-   (OI-38), an extended `02_scale` notebook and a local dry run. The plan's §11 round numbers are stale.
+2. The scale-test plan: its §12 decisions, each with a recommendation in round 90's memo
+   (`docs/spec/scale/plan-decisions.md`), then the kit: data generators, `ScaleJob` with Python access, kernel
+   benchmarks (OI-38), an extended `02_scale` notebook and a local dry run. The plan's §11 round numbers are stale.
 3. Smaller items: OI-78's specification, OI-86, the OI-65 and OI-66 addenda; the costs of OI-68, OI-70 and OI-76
    are for the kit to measure.
 
@@ -160,6 +160,24 @@ discrete-time survival, competing risks), which starts, as Phases 2 and 3 did, w
 proposing a plan; or open items such as OI-55 and OI-40.
 
 ## Round log
+
+## Round 90 (2026-10-19): a memo on the scale-test plan's decisions
+
+- `docs/spec/scale/plan-decisions.md` recommends an answer to each decision of the plan's §12, in light of the
+  production validation:
+  - approve the plan as D-50, with amendments;
+  - one worker type, and the largest number of workers decides the shapes (C3 moves to P3 below 32);
+  - in P1, W4 (p = 150) in place of W3 and X4 (C4's shape), with composite row keys at C2;
+  - the three-stage model in a second wave;
+  - the targets' form fixed now, their numbers from Stage A;
+  - results exported without paths or identifiers.
+- The plan's §12 points to the memo; §8 above names it.
+
+Evidence: a documentation round, rehearsed on a fresh clone of `main` after round 89's patch (identical tree);
+its links resolve; no code changed.
+
+What to send back: your decisions (1 to 6 as recommended, or amendments), with the worker type and the largest
+number of workers.
 
 ## Round 89 (2026-10-19): session summary refreshed; suites clear the session cache (OI-83)
 
