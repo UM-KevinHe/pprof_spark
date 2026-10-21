@@ -13,6 +13,10 @@ import pprof.spark.engine.linear.{
   LinearFitIO,
   LinearOptions,
   LinearProviderTests,
+  LinearRE,
+  LinearREFit,
+  LinearREOptions,
+  LinearRESpec,
   LinearSpec,
   LinearStandardization,
   LinearTest
@@ -1096,6 +1100,161 @@ object PythonApi {
     LinearFitIO.save(spark, fit, path)
 
   def linearLoad(spark: SparkSession, path: String): LinearFit = LinearFitIO.load(spark, path)
+
+  /** Fits the linear random-intercept model (docs/spec/linear/random-effect-estimation.md). `columns`: `outcome`,
+    * `features` (possibly empty), `provider`, and optionally `offset`, `weights` and `rowId`; `fit`: `reml` (true by
+    * default), `includeIntercept` (true), `thetaUpper` (unbounded), `maxEvaluations` (200) and `blocks`, parsed as
+    * the linear job runner's. Unknown keys fail; the job runner for this model is slice 4a-3's.
+    */
+  def linearREFit(df: DataFrame, columnsJson: String, fitJson: String): LinearREFit = {
+    val (spec, options) = linearREModel(columnsJson, fitJson)
+    LinearRE.fit(df, spec, options)
+  }
+
+  /** The column roles and options of [[linearREFit]]. */
+  def linearREModel(columnsJson: String, fitJson: String): (LinearRESpec, LinearREOptions) = {
+    val mapper = new ObjectMapper()
+    val columns = objectNode(mapper, columnsJson, "columns")
+    val fit = objectNode(mapper, fitJson, "fit")
+    def checkKeys(node: ObjectNode, allowed: Set[String], what: String): Unit = {
+      val extra = node.properties().asScala.map(_.getKey).filterNot(allowed).toSeq.sorted
+      require(extra.isEmpty, s"unknown $what: ${extra.mkString(", ")}")
+    }
+    checkKeys(
+      columns,
+      Set("outcome", "features", "provider", "offset", "weights", "rowId"),
+      "columns"
+    )
+    checkKeys(
+      fit,
+      Set("reml", "includeIntercept", "thetaUpper", "maxEvaluations", "blocks"),
+      "fit options"
+    )
+    def text(name: String): Option[String] = Option(columns.get(name)).map { node =>
+      require(node.isTextual, s"columns.$name must be a string")
+      node.asText()
+    }
+    def required(name: String): String =
+      text(name).getOrElse(throw new IllegalArgumentException(s"columns.$name is required"))
+    val features = Option(columns.get("features")).fold(Seq.empty[String]) { node =>
+      require(
+        node.isArray && node.elements().asScala.forall(_.isTextual),
+        "columns.features must be an array of strings"
+      )
+      node.elements().asScala.map(_.asText()).toSeq
+    }
+    def flag(name: String): Boolean = Option(fit.get(name)).fold(true) { node =>
+      require(node.isBoolean, s"fit.$name must be true or false")
+      node.asBoolean()
+    }
+    val blocks = Option(fit.get("blocks")).fold(BlockOptions()) { node =>
+      val wrapper = mapper.createObjectNode()
+      wrapper.set[JsonNode]("blocks", node)
+      linearModel(
+        """{"outcome": "y", "features": ["x"], "provider": "p"}""",
+        mapper.writeValueAsString(wrapper)
+      )._2.blocks
+    }
+    val options = LinearREOptions(
+      reml = flag("reml"),
+      includeIntercept = flag("includeIntercept"),
+      thetaUpper = Option(fit.get("thetaUpper")).fold(Double.PositiveInfinity) { node =>
+        require(node.isNumber, "fit.thetaUpper must be a number")
+        node.asDouble()
+      },
+      maxEvaluations = Option(fit.get("maxEvaluations")).fold(200) { node =>
+        require(node.canConvertToInt, "fit.maxEvaluations must be an integer")
+        node.asInt()
+      },
+      blocks = blocks
+    )
+    (
+      LinearRESpec(
+        required("outcome"),
+        features,
+        required("provider"),
+        text("offset"),
+        text("weights"),
+        text("rowId")
+      ),
+      options
+    )
+  }
+
+  /** The linear random-effect fit as JSON: coefficients with standard errors, Var(β̂) (packed), σ̂, θ̂, σ̂_α, the
+    * criterion, the deviance, ℓ, AIC, BIC, PWRSS, log det H, ‖u‖², counts, the search's record, warnings, column
+    * roles, options, software and fingerprint; doubles as `Double.toHexString` strings.
+    */
+  def linearRESummary(fit: LinearREFit): String = {
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    def hex(value: Double): String = java.lang.Double.toHexString(value)
+    root.put("kind", "LinearREFit")
+    root.put("status", fit.status)
+    root.put("criterion", fit.criterion)
+    val coefficients = root.putArray("coefficients")
+    fit.coefficients.foreach { c =>
+      val node = coefficients.addObject()
+      node.put("feature", c.feature)
+      node.put("estimate", hex(c.estimate))
+      node.put("standardError", hex(c.standardError))
+    }
+    val covariance = root.putArray("covariance")
+    fit.covariance.foreach(v => covariance.add(hex(v)))
+    Seq(
+      "sigma" -> fit.sigma,
+      "theta" -> fit.theta,
+      "sigmaAlpha" -> fit.sigmaAlpha,
+      "deviance" -> fit.deviance,
+      "loglik" -> fit.loglik,
+      "aic" -> fit.aic,
+      "bic" -> fit.bic,
+      "pwrss" -> fit.pwrss,
+      "logDetH" -> fit.logDetH,
+      "ussq" -> fit.ussq
+    ).foreach { case (key, value) => root.put(key, hex(value)) }
+    root.put("rows", fit.rows)
+    root.put("providers", fit.providerCount)
+    val search = root.putObject("search")
+    search.put("evaluations", fit.search.evaluations)
+    search.put("lower", hex(fit.search.lower))
+    search.put("upper", hex(fit.search.upper))
+    search.put("slope", hex(fit.search.slope))
+    fit.search.boundary.foreach(b => search.put("boundary", b))
+    val warnings = root.putArray("warnings")
+    fit.warnings.foreach(w => warnings.add(w))
+    val columns = root.putObject("columns")
+    columns.put("outcome", fit.spec.outcome)
+    val features = columns.putArray("features")
+    fit.spec.features.foreach(f => features.add(f))
+    columns.put("provider", fit.spec.provider)
+    fit.spec.offset.foreach(o => columns.put("offset", o))
+    fit.spec.weights.foreach(w => columns.put("weights", w))
+    fit.spec.rowId.foreach(r => columns.put("rowId", r))
+    val options = root.putObject("fit")
+    options.put("reml", fit.options.reml)
+    options.put("includeIntercept", fit.options.includeIntercept)
+    options.put("thetaUpper", hex(fit.options.thetaUpper))
+    options.put("maxEvaluations", fit.options.maxEvaluations)
+    val software = root.putObject("software")
+    fit.software.toFields.foreach { case (key, value) => software.put(key, value) }
+    root.put("fingerprint", fit.fingerprint)
+    mapper.writeValueAsString(root)
+  }
+
+  def linearREProviders(fit: LinearREFit): DataFrame = fit.providers
+
+  /** `df` with `prediction` (spec 4a-1 §6): with the BLUPs when `useRe`, with the offset when `withOffset`. */
+  def linearREPredict(
+      df: DataFrame,
+      fit: LinearREFit,
+      useRe: Boolean,
+      withOffset: Boolean
+  ): DataFrame =
+    LinearRE.predict(df, fit, useRe, withOffset)
+
+  /** The training rows with `xbeta`, `fitted` and `residual`. */
+  def linearREFitted(df: DataFrame, fit: LinearREFit): DataFrame = LinearRE.fitted(df, fit)
 
   private def testsJson(tests: Seq[LogisticTest]): String = {
     val mapper = new ObjectMapper()

@@ -114,6 +114,28 @@ fit.save("/path/fit"); LinearFixedEffectModel.load(spark, "/path/fit")
 (`complete` or `simplified`) and `blocks`. The method names follow pprof_py's `LinearFixedEffectModel`
 (docs/spec/linear/job-and-python.md §5).
 
+## Linear random-effect models
+
+```python
+from pprof_spark import LinearRandomEffect
+
+fit = LinearRandomEffect("length_of_stay", ["age", "comorbidity"], "facility", weights="w", row_id="id").fit(df)
+fit.coefficients, fit.covariance, fit.sigma, fit.theta, fit.sigma_alpha, fit.criterion  # REML by default
+fit.deviance, fit.loglik, fit.aic, fit.bic, fit.search      # the fit statistics and the search's record
+fit.providers()                                  # records, weight, blup, its conditional variance and se (X-037)
+fit.get_random_effects(), fit.get_sigma(), fit.get_random_effect_sd(), fit.standard_errors()
+fit.predict(df), fit.predict(df, use_re=True)    # the fixed part; with the BLUPs (0 for providers not in the fit)
+fit.fitted_values(df)                            # xbeta, fitted and residual on the training rows
+```
+
+`LinearRandomEffect` takes pprof_py's `LinearRandomEffectModel` arguments
+(docs/spec/linear/random-effect-estimation.md §10): the `fit` roles as column names (`offset`, `weights`,
+`include_intercept`), and `reml`, `theta_upper` and `max_iter_outer`, which caps the search's evaluations.
+`tol_outer`, `max_iter_inner` and `optimizer` are accepted but not used, with a warning when they differ from pprof_py's
+defaults; `cluster_vars` waits for part 4d (OI-93). As in pprof_py, `predict` adds an offset only when `offset_var`
+names it. Rows with a missing value fail with counts per column (X-038) rather than being dropped. Tests, intervals and
+measures arrive with slice 4a-2, saving and loading with 4a-3.
+
 ## Large data: strata, blocks and row identifiers
 
 These options were added in round 83 (D-49).

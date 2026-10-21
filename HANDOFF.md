@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel in round 97 and its engine in round 98 |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine and Python wrapper in rounds 97 to 99 |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -49,7 +49,7 @@ round 93 as the maintainer reported (rounds 83 and 84 failed and were fixed by 8
 | `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE`, `LinearFitIO` v1, `LinearProviderTests`, `LinearStandardization`; `LinearRE` (round 98) |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob`, `LinearJob` and their run specifications (version 1); `python.PythonApi` |
 | `bench` | `DeterminismCost` (S-05); `synthetic`, the scale tests' data generators (round 92, M1) |
-| `python/` | The `pprof_spark` package (Cox, logistic, three-stage and linear wrappers, ADR-0009) and its pytest suite |
+| `python/` | The `pprof_spark` package (Cox, logistic, three-stage, linear and linear random-effect wrappers, ADR-0009) and its pytest suite |
 | `databricks/` | `00_build` (builds a commit on the driver into workspace files), `01_parity` (fixtures and R0 on the cluster), `02_scale` (a first look at scale); guide `docs/guide/databricks.md` |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4), `fixtures/linear` (6), `fixtures/linear-re` (9), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py`; `fixtures.yml` (manual dispatch) regenerates and compares on CI's runner |
 | Documents | Specifications in `docs/spec/` (cox, logistic, linear, random-effects, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-53), `DISCREPANCIES.md` (to X-040), `OPEN_ITEMS.md` (to OI-95), `STATUS.md` |
@@ -169,9 +169,9 @@ as round 82 did:
 - record them in the review document and as open items.
 
 1. M4, Phase 4 (`docs/spec/random-effects/plan.md`, D-51):
-   - 4a, linear random effects: 4a-1's specification (D-52), fixtures (D-53), numerics kernel (round 97) and
-     engine (round 98) are in; next its Python wrapper and documents, and the distributed search (OI-95); then
-     4a-2 and 4a-3, and an S1 smoke.
+   - 4a, linear random effects: 4a-1's specification (D-52), fixtures (D-53), numerics kernel, engine and
+     Python (rounds 97 to 99) are in; next the distributed search (OI-95), then 4a-2's specification, 4a-3, and
+     an S1 smoke.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
    local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
@@ -185,6 +185,24 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 99 (2026-10-21): slice 4a-1 Python, the linear random-effect wrapper
+
+- `PythonApi` gains `linearREFit` (column roles and options as JSON, unknown keys refused, `blocks` parsed as the
+  linear job runner's), `linearRESummary`, `linearREProviders`, `linearREPredict` and `linearREFitted`.
+- `pprof_spark.LinearRandomEffect` takes the column roles and pprof_py's `LinearRandomEffectModel` arguments: `reml`,
+  `theta_upper`, `max_iter_outer` (the evaluation cap), and `tol_outer`, `max_iter_inner` and `optimizer` accepted
+  with a warning when they differ from pprof_py's defaults; `cluster_vars` refers to part 4d (OI-93).
+  `LinearRandomEffectModel` carries the summary and offers `providers()`, `get_random_effects()`, `get_sigma()`,
+  `residual_standard_error()`, `get_random_effect_sd()`, `standard_errors()`, `predict(df, use_re, offset_var)`
+  (pprof_py's offset convention) and `fitted_values(df)`.
+- `python/tests/test_linear_re.py` (4 tests); the Python guide's new section; the parity matrix's 4a-1 row; spec §17.
+
+Evidence (assistant sandbox): app compiles with the build's flags; `tools/pytest.sh` runs the new tests (4 of 4)
+and the whole Python suite as CI's python job does; the patch applies to a fresh clone of `main` with an identical
+tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI runs for rounds 97 to 99.
 
 ## Round 98 (2026-10-21): slice 4a-1 engine, the distributed linear random-effect fit
 

@@ -1,6 +1,6 @@
 # Specification: linear random effects — estimation (slice 4a-1)
 
-- Status: approved with D-52 (2026-10-21), with X-038 to X-040; fixtures and calibration in round 96 (D-53, approved); the numerics kernel in round 97 and the engine in round 98.
+- Status: approved with D-52 (2026-10-21), with X-038 to X-040; fixtures and calibration in round 96 (D-53, approved); the numerics kernel in round 97, the engine in round 98 and Python in round 99.
 - Reference: pprof_py v0.7.0 (`9320766`), `LinearRandomEffectModel` (`models/linear/random_effect.py`), and
   lme4 1.1-35.1's `lmer`. Plan: [../random-effects/plan.md](../random-effects/plan.md) (D-51).
 - Parity matrix: entries arrive with the code (`docs/parity/matrix.md`).
@@ -286,3 +286,16 @@ classes.
   the deviance, ℓ, AIC, BIC, predictions with and without the BLUPs, fitted values, and the conditional variances
   against lme4's); lre-shifted's invariance against lre-base; bitwise invariance to row order and partitioning; the
   data contract; X-039's named feature; prediction for providers not in the fit.
+
+## 17. Implementation notes (round 99, Python; no statistical change)
+
+- The facade (`PythonApi`): `linearREFit(df, columns, fit)` with the column roles and options as JSON (unknown keys
+  fail; `blocks` parsed as the linear job runner's), `linearRESummary` (doubles in hexadecimal), `linearREProviders`,
+  `linearREPredict(df, fit, useRe, withOffset)` and `linearREFitted`.
+- `pprof_spark.LinearRandomEffect` takes the column roles and pprof_py's `LinearRandomEffectModel` arguments (§10);
+  `fit(df)` returns `LinearRandomEffectModel`, with the summary's quantities as attributes, `providers()`,
+  `get_random_effects()`, `get_sigma()`, `residual_standard_error()`, `get_random_effect_sd()`, `standard_errors()`,
+  `predict(df, use_re, offset_var)` and `fitted_values(df)`. As in the fixed-effect wrapper, the fitted model is the
+  object `fit` returns, and DataFrames replace pprof_py's pandas objects.
+- `python/tests/test_linear_re.py` (4 tests): lre-offset under REML against both references' tight optima, its
+  predictions and fitted values, lre-weights under ML with lme4's conditional variances, and the argument checks.
