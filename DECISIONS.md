@@ -103,7 +103,27 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-54: Slice 4a-2 specification (Proposed: awaiting the maintainer's approval)
+### D-55: Slice 4a-2 fixtures, calibration and corrections (Proposed: awaiting the maintainer's approval)
+
+`fixtures/linear-re` gains `inference_pprof_py.json` and inference sections in `r_lme4.json` (round 102): every case
+under REML and lre-base and lre-weights under ML, at slice 4a-1's tight optima, with pprof_py's methods of spec 4a-2
+§10, base R's tails and quantiles on lme4's tight fit, R pprof's tests on its own lmer fit and the negative
+controls' z. `docs/parity/linear-re-inference-calibration.md`: every strict check passes, worst 0.0016 of T-coef,
+6.2·10⁻⁴ of T-test, 0.0084 of T-p and 1.3·10⁻⁷ of T-meas, no flag differs, and the controls miss by at least
+5.7·10⁵. Proposed:
+1. the classes of spec 4a-2 §10 for its parity tests, with pprof_py's `summary` p-values compared within their
+   rounding, 5·10⁻⁸ absolute (X-041), instead of above 10⁻⁶, where rounding alone exceeds T-p;
+2. at a boundary fit pprof_spark follows pprof_py, which leaves every provider untested whatever γ₀ (z, p-value,
+   flag and the test's limits NaN) while option `alpha` gives limits of 0; this amends spec 4a-2 §8;
+3. X-042 corrected: R pprof labels its BLUPs in text order over values in numeric key order, so with integer keys
+   `test.linear_re`, `confint.linear_re` (both options) and the direct differences pair one provider's BLUP with
+   another's size or label, while its indirect differences are right; R pprof is a reference, at T-opt on its own
+   default fit, for text keys only (lre-text: within 1.8·10⁻⁴ of T-opt);
+4. `compare_outputs.py` compares the linear-re family's default runs at T-opt and the rest at 10⁻⁸ relative: two
+   sandbox sessions regenerated the family with differences up to 1.1·10⁻⁷ in the default runs and 1.3·10⁻¹⁰ in the
+   tight optima, beyond T-part (OI-96).
+
+### D-54: Slice 4a-2 specification (Accepted: approved by the maintainer, 2026-10-21)
 
 `docs/spec/linear/random-effect-inference.md`: inference and standardized measures for the linear random-intercept
 model, as pprof_py defines them. Covariates: `summary` (t with n − p − m degrees of freedom), `fixed_effects_table`
@@ -112,6 +132,8 @@ slice 2c's table, γ₀ = 0 by default. Intervals: option `alpha`, and option `S
 differences, whose observed values are sums of fitted values. The measures use the training data (API-3), and the
 fixtures extend `fixtures/linear-re`. Proposed with it: X-041 (class B: unrounded upper-tail p-values in `summary`) and
 X-042 (R pprof's `linear_re` inference: a reference for `test` and option `alpha` on unweighted fits only).
+
+Approved as proposed, with X-041 and X-042, on 2026-10-21.
 
 ### D-53: Slice 4a-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-10-21)
 

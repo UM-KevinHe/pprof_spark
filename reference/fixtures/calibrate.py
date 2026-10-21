@@ -8,7 +8,8 @@ ratio of observed difference to allowed difference:
   - pprof_py against R survival::coxph (two validated implementations): must be at most 1;
   - each negative control against pprof_py: must be at least MARGIN, so a real defect fails.
 Writes docs/parity/cox-calibration.md, logistic-calibration.md, three-stage-calibration.md, linear-calibration.md,
-linear-inference-calibration.md and linear-re-calibration.md. Usage: python reference/fixtures/calibrate.py
+linear-inference-calibration.md, linear-re-calibration.md and
+linear-re-inference-calibration.md. Usage: python reference/fixtures/calibrate.py
 """
 
 import json
@@ -620,6 +621,105 @@ def linear_re(tol, manifest, fixtures):
     return failures
 
 
+
+def linear_re_inference(tol, manifest, fixtures):
+    """Slice 4a-2 (D-54): pprof_py's inference at the tight optima against base R on lme4's tight fit, pprof_py's
+    measures against their algebraic forms, and the negative controls; writes linear-re-inference-calibration.md."""
+    rows, failures = [], []
+
+    def nan_ratio(cls, actual, expected):
+        a = np.array([float.fromhex(v) for v in actual]); e = np.array([float.fromhex(v) for v in expected])
+        both = np.isnan(a) & np.isnan(e)
+        if (np.isnan(a) ^ np.isnan(e)).any():
+            return float("inf")
+        if both.all():
+            return 0.0
+        return ratio(tol, cls, [v for v, b in zip(actual, both) if not b], [v for v, b in zip(expected, both) if not b])
+
+    def add(case, label, cls, value, strict):
+        ok = (value <= 1.0) if strict else None
+        rows.append((case, label, cls, f"{value:.3g}", "yes" if ok else "**no**" if ok is False else "informational"))
+        if ok is False:
+            failures.append((case, label))
+
+    def hexes(values):
+        return [float(v).hex() for v in values]
+
+    for case in manifest["cases"].get("linear-re", []):
+        folder = os.path.join(fixtures, "linear-re", case)
+        inf = json.load(open(os.path.join(folder, "inference_pprof_py.json"), encoding="utf-8"))
+        r = json.load(open(os.path.join(folder, "r_lme4.json"), encoding="utf-8"))
+        py = json.load(open(os.path.join(folder, "pprof_py.json"), encoding="utf-8"))
+        weighted = json.load(open(os.path.join(folder, "case.json"), encoding="utf-8")).get("weights", False)
+        sizes = np.array(py["summaries"]["n_j"], dtype=float)
+        conditioned = case not in LINEAR_RE_CONDITIONED  # lre-shifted's references lose precision (D-53)
+        boundary = float.fromhex(py["reml"]["tight"]["theta"][0]) == 0.0  # tests undefined: se = 0
+        for crit in [c for c in ("reml", "ml") if c in inf]:
+            q, e = inf[crit], r[crit]["inference"]
+            for alt, lower, upper in (("two_sided", "summary_lower_two_sided", "summary_upper_two_sided"),
+                                      ("greater", "summary_lower_greater", None), ("less", None, "summary_upper_less")):
+                s = q[f"summary_{alt}"]
+                add(case, f"{crit} summary {alt} t vs base R", "T-test", nan_ratio("T-test", s["stat"], e["summary_stat"]), conditioned)
+                # X-041: pprof_py rounds these p-values to seven decimals, so they are compared within its rounding
+                rounded = max(abs(float.fromhex(a) - float.fromhex(b)) for a, b in zip(s["p_value"], e[f"summary_p_{alt}"]))
+                add(case, f"{crit} summary {alt} p-values within pprof_py's rounding (5e-8) of base R's", "5e-8 abs",
+                    rounded / 5e-8, conditioned)
+                if lower:
+                    add(case, f"{crit} summary {alt} lower limits vs base R", "T-coef", nan_ratio("T-coef", s["ci_lower"], e[lower]), conditioned)
+                if upper:
+                    add(case, f"{crit} summary {alt} upper limits vs base R", "T-coef", nan_ratio("T-coef", s["ci_upper"], e[upper]), conditioned)
+            add(case, f"{crit} fixed_effects_table p-values vs base R", "T-p", p_check(tol, q["fixed_effects_table"]["p"], e["fet_p"]), conditioned)
+            add(case, f"{crit} conf_int vs base R", "T-coef", max(nan_ratio("T-coef", q["conf_int"]["lower"], e["conf_lower"]),
+                                                                   nan_ratio("T-coef", q["conf_int"]["upper"], e["conf_upper"])), conditioned)
+            for name in ("zero", "median"):
+                t = q["test"][name]
+                strict = conditioned and not boundary and not weighted  # X-037: weighted se differ
+                add(case, f"{crit} test at {name}: z vs lme4's conditional SD", "T-test", nan_ratio("T-test", t["z_raw"], e[f"test_{name}_z"]), strict)
+                add(case, f"{crit} test at {name}: p-values", "T-p", p_check(tol, t["p_value"], e[f"test_{name}_p"]), strict)
+                outside, _ = flag_check(tol, t["flag"], e[f"test_{name}_flag"], e[f"test_{name}_z"], 1.959963984540054)
+                add(case, f"{crit} test at {name}: flags differing away from the critical value", "T-flag", float(outside), strict)
+                add(case, f"{crit} test at {name}: limits", "T-coef", max(nan_ratio("T-coef", t["ci_lower"], e[f"test_{name}_lower"]),
+                                                                          nan_ratio("T-coef", t["ci_upper"], e[f"test_{name}_upper"])), strict)
+            blups = np.array([float.fromhex(v) for v in py[crit]["tight"]["blups"]])
+            mean = float(np.sum(sizes * blups) / np.sum(sizes))
+            for name, g0 in (("median", float(np.median(blups))), ("mean", mean), ("zero", 0.0)):
+                m = q[f"measures_{name}"]
+                add(case, f"{crit} indirect difference at {name} vs b - g0", "T-meas",
+                    nan_ratio("T-meas", m["indirect"]["indirect_difference"], hexes(blups - g0)), True)
+                add(case, f"{crit} direct difference at {name} vs b - sum(n b)/n", "T-meas",
+                    nan_ratio("T-meas", m["direct"]["direct_difference"], hexes(blups - mean)), True)
+        if "rpprof" in r["reml"]:
+            rp = r["reml"]["rpprof"]
+            order = [int(float.fromhex(v)) - 1 for v in rp["providers"]]
+            z = [inf["reml"]["test"]["zero"]["z_raw"][i] for i in order]
+            add(case, "reml R pprof's test z (its own lmer fit) vs pprof_py's", "T-opt", nan_ratio("T-opt", rp["stat"], z), False)
+        if not boundary:
+            for name, control in inf["negative_controls"].items():
+                miss = nan_ratio("T-test", control["test_z"], inf["reml"]["test"]["zero"]["z_raw"])
+                rows.append((case, f"negative control {name}: test z", "T-test", f"{miss:.3g}", "yes" if miss >= MARGIN else "**no**"))
+                if miss < MARGIN:
+                    failures.append((case, f"negative control {name}"))
+    lines = ["# Linear random-effect inference calibration (D-09, D-54)", "",
+             "Generated by `reference/fixtures/calibrate.py` from the fixtures of pprof_py "
+             f"{manifest['reference']['pprof_py']['version']} and R {manifest['reference']['r']['version']} with lme4 "
+             f"{manifest['reference']['r']['lme4']}. Ratios are observed difference over allowed difference under "
+             "testkit's `Tolerance` rule, with matching NaNs (untested providers) counted as equal. pprof_py's inference at "
+             "the tight optima is compared with base R's tails and quantiles on lme4's tight fit; p-values from pprof_py's "
+             "`summary` within its rounding to seven decimals (X-041); tests on weighted fits (X-037), on the boundary fit "
+             "(se = 0) and every comparison on lre-shifted (D-53) are informational, as are R pprof's tests on its own "
+             "default lmer fit (X-042). pprof_py's measures are checked against their algebraic forms "
+             f"(spec 4a-2 §5). Negative controls must miss by at least {MARGIN:g}.", "",
+             "| Case | Quantity | Class | Ratio | OK |", "|---|---|---|---|---|"]
+    lines += [f"| {case} | {label} | {cls} | {value} | {ok} |" for case, label, cls, value, ok in rows]
+    lines += ["", f"Result: {'all checks pass' if not failures else f'{len(failures)} checks fail'}."]
+    with open(os.path.join(ROOT, "docs", "parity", "linear-re-inference-calibration.md"), "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+    print(f"linear random-effect inference: {lines[-1]}")
+    for failure in failures:
+        print("FAIL linear-re-inference", *failure)
+    return failures
+
+
 def main():
     tol = tolerances()
     fixtures = os.path.join(ROOT, "fixtures")
@@ -668,6 +768,7 @@ def main():
     failures += linear(tol, manifest, fixtures)
     failures += linear_inference(tol, manifest, fixtures)
     failures += linear_re(tol, manifest, fixtures)
+    failures += linear_re_inference(tol, manifest, fixtures)
     return 1 if failures else 0
 
 

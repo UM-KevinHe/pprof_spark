@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-21, round 101. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-21, round 102. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -101,3 +101,4 @@ decision is approved.
 | OI-93 | Cluster terms: pprof_py's random-effect models take `cluster_vars`, further crossed random intercepts; the linear model gives only estimates with them (its profiling methods refuse such a fit), and the logistic `exact` test needs one; Phase 4's parts 4a and 4b fit the provider intercept alone | Part 4d (D-51, approved 2026-10-21): provider × cluster sums and stage 2's elimination for the linear model, the same inside the logistic model's row-level PIRLS, and a general logistic fit as 4c's stage 2 |
 | OI-94 | Stage 3's `he2013` estimator (He et al. 2013; pprof_py's other `estimator`): the three-stage spike (D-38) planned it for slice 2f-4, whose specification (D-43) left it out without a decision | Slice 4c-2 (D-51, approved 2026-10-21) |
 | OI-95 | The linear random-effect search reads the providers' summaries on the driver: a fit whose summaries exceed `BlockOptions.driverBudgetBytes` (about 155,000 providers at p = 50 under the default 64 MiB) stops with `DriverLimitExceededException`; spec 4a-1 §7 step 5's distributed evaluation is not built | Closed in round 100: the search sums over the persisted block partials when the summaries exceed the budget, with the driver's bits (spec 4a-1 §18) |
+| OI-96 | The linear random-effect fixtures regenerate with platform differences beyond T-part: optimizer-limited default runs move by up to 1.1·10⁻⁷ and the tight optima, roots of central differences, by 1.3·10⁻¹⁰ between two sandbox sessions; `compare_outputs.py` now compares them at T-opt and 10⁻⁸ (D-55) | The maintainer's dispatch of `fixtures.yml` confirms the family regenerates on CI's runner within those classes |

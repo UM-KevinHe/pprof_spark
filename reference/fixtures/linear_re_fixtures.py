@@ -9,9 +9,12 @@ Richardson-extrapolated central differences of the reference's own deviance func
 rises from 0. generate.py calls `generate(out, inputs, lock, write_json)`; the output is deterministic.
 """
 
+import hashlib
 import os
 import shutil
 import subprocess
+import tempfile
+import urllib.request
 import warnings
 from types import SimpleNamespace
 
@@ -35,6 +38,9 @@ CASES = (
 )
 CRITERIA = (("reml", True), ("ml", False))
 THETAS = (0.0, 0.1, 0.3, 1.0, 3.0)
+INFERENCE_ML = {"lre-base", "lre-weights"}  # slice 4a-2: every case under REML, these also under ML
+TEST_COLUMNS = ("estimate", "se", "null_value", "z_raw", "p_value", "flag", "ci_lower", "ci_upper")
+R_PPROF_RE_FILES = ("linear_re.R", "test.linear_re.R", "confint.linear_re.R")
 TAU_SCALED = (0.01, 0.1, 1.0, 10.0)  # tau times the median provider weight total
 
 OPTIONS = {
@@ -51,6 +57,15 @@ OPTIONS = {
             "ldL2 and ussq, fitted values and predictions (re.form = NA and with the random effects) of the first 100 rows",
     "negative_controls": "pprof_py's tight REML fit with y + 1 in the first row of the largest provider (nudged_outcome) "
                          "and with that provider's last row removed (dropped_row)",
+    "inference": "slice 4a-2 (D-54) at the tight optima, every case under REML and lre-base and lre-weights under ML: "
+                 "pprof_py's summary (level 0.9; two_sided, greater, less), fixed_effects_table, conf_int(0.95), test "
+                 "(reference 0, median, mean, 0.1; greater and less at the median; critical 2.5; the first five "
+                 "providers), calculate_confidence_intervals (alpha; SM indirect and direct at the median, two_sided "
+                 "and greater) and calculate_standardized_measures (median, mean, 0); base R's t and normal tails and "
+                 "quantiles on lme4's tight fit (summary with n - p - m degrees of freedom, fixed_effects_table and "
+                 "conf_int with n - p, tests at 0 and the median from ranef(condVar = TRUE)); R pprof 1.0.3's "
+                 "test.linear_re and confint.linear_re(option = 'alpha') on its own lmer fit for unweighted cases "
+                 "for the cases without weights, offsets or a removed intercept (X-042); the negative controls' z at reference 0",
 }
 
 
@@ -204,7 +219,63 @@ def pprof_criterion(df, case, reml, w_tilde, taus):
     tau = tight_tau(dev, float(model.theta_[0]) ** 2, w_tilde)
     tight_model, caught = fit(df, case, reml, theta=np.sqrt(tau))
     tight = dict(record(tight_model, df, case, caught), tau=hexes([tau]))
-    return {"default": default, "tight": tight, "function": function}, tau
+    return {"default": default, "tight": tight, "function": function}, tau, tight_model
+
+
+def floats(values):
+    return hexes(pd.to_numeric(pd.Series(values), errors="coerce").astype(float))
+
+
+def inference(model):
+    """Slice 4a-2's outputs of pprof_py at a fitted model (spec 4a-2 §10)."""
+    out = {}
+    for alternative in ("two_sided", "greater", "less"):
+        s = model.summary(level=0.9, alternative=alternative)
+        out[f"summary_{alternative}"] = {k: floats(s[k]) for k in ("estimate", "std_error", "stat", "p_value",
+                                                                     "ci_lower", "ci_upper")}
+    table = model.fixed_effects_table()
+    out["fixed_effects_table"] = {"t": floats(table["t value"]), "df": floats(table["df"]), "p": floats(table["Pr(>|t|)"])}
+    bounds = model.conf_int(0.95)
+    out["conf_int"] = {"lower": floats(bounds["lower"]), "upper": floats(bounds["upper"])}
+    subset = [label(v) for v in model.provider_ids_[:5]]
+    tests = {}
+    for name, kwargs in (("zero", {}), ("median", {"reference": "median"}), ("mean", {"reference": "mean"}),
+                         ("given", {"reference": 0.1}), ("greater", {"reference": "median", "alternative": "greater"}),
+                         ("less", {"reference": "median", "alternative": "less"}), ("critical", {"critical": 2.5}),
+                         ("subset", {"providers": subset})):
+        t = model.test(**kwargs)
+        tests[name] = {"providers": [label(v) for v in t.index], **{k: floats(t[k]) for k in TEST_COLUMNS}}
+    out["test"] = tests
+    alpha = model.calculate_confidence_intervals(option="alpha")["alpha_ci"]
+    out["alpha_ci"] = {k: floats(alpha[k]) for k in ("alpha", "alpha_lower", "alpha_upper")}
+    for alternative in ("two_sided", "greater"):
+        ci = model.calculate_confidence_intervals(option="SM", stdz=["indirect", "direct"], reference="median",
+                                                  alternative=alternative)
+        out[f"sm_ci_{alternative}"] = {kind: {k: floats(ci[f"{kind}_ci"][k]) for k in
+                                              (f"{kind}_difference", "observed", "expected", "lower", "upper")}
+                                       for kind in ("indirect", "direct")}
+    for name, reference in (("median", "median"), ("mean", "mean"), ("zero", 0.0)):
+        sm = model.calculate_standardized_measures(stdz=["indirect", "direct"], reference=reference)
+        out[f"measures_{name}"] = {kind: {k: floats(sm[kind][k]) for k in (f"{kind}_difference", "observed", "expected")}
+                                   for kind in ("indirect", "direct")}
+    return out
+
+
+def r_pprof_re_sources(lock, directory):
+    """R pprof's linear random-effect functions at the pinned commit, checked against REFERENCE.lock."""
+    pin = lock["r_pprof"]
+    os.makedirs(directory, exist_ok=True)
+    for name in R_PPROF_RE_FILES:
+        path = os.path.join(directory, name)
+        if not os.path.exists(path):
+            url = f"https://raw.githubusercontent.com/cran/pprof/{pin['commit']}/R/{name}"
+            with urllib.request.urlopen(url, timeout=60) as response, open(path, "wb") as handle:
+                handle.write(response.read())
+        with open(path, "rb") as handle:
+            digest = hashlib.sha256(handle.read()).hexdigest()
+        if digest != pin["sha256"][name]:
+            raise SystemExit(f"{name}: sha256 {digest} differs from REFERENCE.lock")
+    return directory
 
 
 def negative_controls(df, case, w_tilde):
@@ -216,13 +287,17 @@ def negative_controls(df, case, w_tilde):
     dropped = df.drop(index=rows[-1]).reset_index(drop=True)
     out = {}
     for name, data in (("nudged_outcome", nudged), ("dropped_row", dropped)):
-        tight = pprof_criterion(data, case, True, w_tilde, ())[0]["tight"]
+        result, _, model = pprof_criterion(data, case, True, w_tilde, ())
+        tight = result["tight"]
         out[name] = {q: tight[q] for q in ("theta", "sigma", "beta", "blups", "deviance")}
+        out[name]["test_z"] = floats(model.test()["z_raw"])
     return out
 
 
-def r_outputs(case_dir, case, w_tilde, taus):
-    args = {"features": ",".join(features(case)), "intercept": "1" if case.get("intercept", True) else "0",
+def r_outputs(case_dir, case, w_tilde, taus, rpprof):
+    # R pprof's linear_re parses its formula into columns and has no weights or offsets (X-042).
+    plain = not (case.get("weights") or case.get("offset")) and case.get("intercept", True)
+    args = {"rpprof": rpprof if plain else "", "features": ",".join(features(case)), "intercept": "1" if case.get("intercept", True) else "0",
             "weights": "1" if case.get("weights") else "0", "offset": "1" if case.get("offset") else "0",
             "thetas": ",".join(float(t).hex() for t in THETAS), "taus": ",".join(float(t).hex() for t in taus),
             "wtilde": float(w_tilde).hex()}
@@ -243,9 +318,10 @@ def r_outputs(case_dir, case, w_tilde, taus):
 
 
 def generate(out, inputs, lock, write_json):
-    """Writes out/linear-re/<case>/{case.json, input.csv, pprof_py.json, r_lme4.json}."""
+    """Writes out/linear-re/<case>/{case.json, input.csv, pprof_py.json, inference_pprof_py.json, r_lme4.json}."""
     root = os.path.join(out, "linear-re")
     shutil.rmtree(root, ignore_errors=True)
+    rpprof = r_pprof_re_sources(lock, tempfile.mkdtemp(prefix="r_pprof_linear_re_"))
     names = []
     for case in CASES:
         case_dir = os.path.join(root, case["id"])
@@ -260,12 +336,18 @@ def generate(out, inputs, lock, write_json):
         w_tilde = float.fromhex(sums["w_tilde"][0])
         taus = [s / w_tilde for s in TAU_SCALED]
         reference = {"summaries": sums}
+        inferred = {}
         for name, reml in CRITERIA:
-            reference[name] = pprof_criterion(df, case, reml, w_tilde, taus)[0]
-        reference["negative_controls"] = negative_controls(df, case, w_tilde)
+            reference[name], _, model = pprof_criterion(df, case, reml, w_tilde, taus)
+            if name == "reml" or case["id"] in INFERENCE_ML:
+                inferred[name] = inference(model)
+        controls = negative_controls(df, case, w_tilde)
+        inferred["negative_controls"] = {k: {"test_z": v.pop("test_z")} for k, v in controls.items()}
+        reference["negative_controls"] = controls
         write_json(os.path.join(case_dir, "case.json"), dict(case, features=features(case), rows=len(df),
                                                             providers=len(sums["providers"]), text=bool(case.get("text"))))
         write_json(os.path.join(case_dir, "pprof_py.json"), reference)
-        write_json(os.path.join(case_dir, "r_lme4.json"), r_outputs(case_dir, case, w_tilde, taus))
+        write_json(os.path.join(case_dir, "inference_pprof_py.json"), inferred)
+        write_json(os.path.join(case_dir, "r_lme4.json"), r_outputs(case_dir, case, w_tilde, taus, rpprof))
         names.append(case["id"])
     return names

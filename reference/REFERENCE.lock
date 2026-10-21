@@ -41,6 +41,8 @@ lme4 = "1.1-35.1"
 # src/Fixed_effect.cpp's SerBIN (logis_BIN_fe_prov) is used: compiled with Rcpp::sourceCpp for the
 # logistic fixed-effect fixtures (D-30), with Ubuntu 24.04's r-cran-rcpp 1.0.12,
 # r-cran-rcpparmadillo 0.12.8.1.0 and r-cran-rcppparallel 5.1.7.
+# The linear random-effect inference fixtures (D-54) source R/linear_re.R, R/test.linear_re.R and
+# R/confint.linear_re.R.
 repository = "https://github.com/cran/pprof"
 version = "1.0.3"
 commit = "1efc4040de386900a7eeed222e478b18b77a6ff2"
@@ -55,6 +57,9 @@ license = "MIT"
 "linear_fe.R" = "285b035b4469ad074ce14d233cb16ceba464886d29b93500d4c8f850434643ad"
 "test.linear_fe.R" = "9d5f16a2b625d7e7238ba21542f9b28dca33d059e7c06b3f4c5511eed7f9cbdb"
 "SM_output.linear_fe.R" = "c049ce547a824d222b13d72dfdde1cbf609bc4c66646bc82c84a6c991f7ecda4"
+"linear_re.R" = "e3d1616c2e420189e33588966470c43626e587eea131c4a5bc52951f42a09d32"
+"test.linear_re.R" = "c4d47c3c3fdbdaa01e5c06938721e2f9e70393cbaa49a4b474e78a42f5fd7885"
+"confint.linear_re.R" = "dfe94d9054c9f5bb00c1dc115a35ffd49041b9501a0b179f9e08c566ea8d6fa4"
 
 [r_poibin]
 # poibin (GPL-2; run only, never ported), needed by R pprof's exact test for the slice 2c fixtures (D-35).

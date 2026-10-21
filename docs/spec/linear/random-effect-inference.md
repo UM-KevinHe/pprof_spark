@@ -1,6 +1,7 @@
 # Specification: linear random effects — inference and standardized measures (slice 4a-2)
 
-- Status: proposed with D-54 (round 101, 2026-10-21), awaiting the maintainer's approval.
+- Status: approved with D-54 (2026-10-21), with X-041 and X-042; fixtures and calibration in round 102 (D-55,
+  proposed).
 - Reference: pprof_py v0.7.0's `LinearRandomEffectModel.summary`, `fixed_effects_table`, `conf_int`, `test`,
   `calculate_confidence_intervals` and `calculate_standardized_measures`, with the shared `reference_effect` and
   `effect_test`; R pprof 1.0.3's `test.linear_re` and `confint.linear_re` (option `alpha`) where they follow
@@ -94,7 +95,7 @@ The Python wrapper's `LinearRandomEffectModel` gains `summary`, `fixed_effects_t
 
 | Case | pprof_spark |
 |---|---|
-| A boundary fit (τ̂ = 0) | seⱼ = 0 and b̂ⱼ = 0: zⱼ = 0/0 is NaN when γ₀ = 0, so the provider is untested (NaN p-value and flag, limits 0) with the fit's warning (NN-10); a nonzero γ₀ gives zⱼ = ∓∞, p-value 0 and a flag. The fixture round checks pprof_py's behavior here |
+| A boundary fit (τ̂ = 0) | seⱼ = 0 and b̂ⱼ = 0. As pprof_py (round 102), every provider is untested whatever γ₀: zⱼ, the p-value, the flag and the test's limits are NaN, with the fit's warning (NN-10); option `alpha` gives limits of 0 (D-55, proposed) |
 | Large \|zⱼ\| | Normal tails from the complementary functions, so no provider loses its p-value |
 | Even m | The median is the mean of the two middle values |
 | Providers with one record | seⱼ from vⱼ, as any other |
@@ -126,7 +127,7 @@ lre-weights under ML, all at the tight optima of slice 4a-1:
 
 Layers: in lockstep, pprof_spark's inference computed from each reference's own estimates against that reference's
 outputs; end to end, from pprof_spark's fit, at the estimates' classes. Classes: T-test (t and z), T-p (p-values
-against base R everywhere, against pprof_py where its rounded p-values exceed 10⁻⁶, X-041), T-flag (flags), T-coef
+against base R everywhere; pprof_py's `summary` p-values within their rounding, 5·10⁻⁸ absolute, X-041 and D-55), T-flag (flags), T-coef
 (limits), T-meas (measures and their intervals). Negative controls as D-09 requires.
 
 ## 11. Known discrepancies
@@ -135,4 +136,25 @@ against base R everywhere, against pprof_py where its rounded p-values exceed 10
 |---|---|---|---|
 | X-037 | B | The tests' and intervals' seⱼ use the weight totals Wⱼ under prior weights | Approved (D-51) |
 | X-041 | B | pprof_py's `summary` computes p-values as 1 − F and rounds them to seven decimals; pprof_spark computes the upper tail directly and does not round | Proposed (D-54) |
-| X-042 | — | R pprof 1.0.3's linear random-effect inference departs from pprof_py's definitions in places (`summary`'s degrees of freedom and Wald intervals; providers misaligned in `SM_output` and `confint`'s option `SM`) | Proposed (D-54) |
+| X-042 | — | R pprof 1.0.3's linear random-effect inference departs from pprof_py's definitions in places (`summary`'s degrees of freedom and Wald intervals; BLUPs labelled in text order, which misaligns its tests, intervals and direct differences under integer keys) | Approved (D-54); correction proposed (D-55) |
+
+## 12. Fixture findings (round 102)
+
+- `fixtures/linear-re` gains `inference_pprof_py.json`: every case under REML, lre-base and lre-weights also under
+  ML, at slice 4a-1's tight optima, with the outputs of §10 and the negative controls' z at γ₀ = 0. `r_lme4.json`
+  gains base R's references on lme4's tight fit (`inference`) and R pprof's tests and option `alpha` on its own default
+  lmer fit (`rpprof`) for the cases without weights, offsets or a removed intercept, since R pprof's `linear_re`
+  builds its data from the formula's columns. REFERENCE.lock pins R pprof's three files by SHA-256.
+- Calibration (`docs/parity/linear-re-inference-calibration.md`): every strict check passes; worst 0.0016 of T-coef,
+  6.2·10⁻⁴ of T-test, 0.0084 of T-p and 1.3·10⁻⁷ of T-meas; no flag differs; the controls miss by at least 5.7·10⁵.
+  The measures equal their algebraic forms of §5. Weighted tests differ by X-037, as expected, and lre-shifted's
+  comparisons are informational (D-53).
+- pprof_py's `summary` p-values are rounded to seven decimals, so even p near 0.01 differs from base R's by more
+  than T-p; they are compared within their rounding, 5·10⁻⁸ absolute (D-55).
+- At the boundary fit (lre-boundary), pprof_py's `test` returns NaN for z, the p-value, the flag and the limits of
+  every provider, whatever γ₀, and option `alpha` returns limits of 0; §8 now follows it (D-55).
+- R pprof's BLUPs are labelled in text order over values in numeric key order: with integer keys its tests pair one
+  provider's BLUP with another's size (provider 10: z 0.589 against pprof_py's 1.704, same se), and its direct
+  differences and intervals inherit the labels; its indirect differences are right. X-042 is corrected accordingly.
+- Regenerating the family in a new sandbox session moved the optimizer-limited default runs by up to 1.1·10⁻⁷ and the
+  tight optima by 1.3·10⁻¹⁰, beyond T-part: `compare_outputs.py` takes T-opt and 10⁻⁸ for the family (D-55, OI-96).
