@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-21, round 99.
+Updated 2026-10-21, round 99.1.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -125,9 +125,10 @@ through round 93 as the maintainer reported.
 | 94 | Phase 4 plan, the random-effect models (`docs/spec/random-effects/plan.md`, D-51 proposed); D-50 amended (M4 before M2); X-037 proposed; OI-93 and OI-94; PROJECT_CONTEXT v2.9; lessons in `HANDOFF.md` §6 | Merged (bb8d05d) |
 | 95 | D-51 approved with X-037; slice 4a-1's specification (`docs/spec/linear/random-effect-estimation.md`, D-52 proposed); X-038 to X-040 proposed | Merged (2592ed1) |
 | 96 | D-52 approved with X-038 to X-040; slice 4a-1's fixtures (`fixtures/linear-re`, nine cases) and calibration (`docs/parity/linear-re-calibration.md`); D-53 proposed | Merged (09dbc44) |
-| 97 | D-53 approved; slice 4a-1 numerics: the `LinearRE` kernel, `Cholesky.solveUnaliased`, `LinearREKernelSuite`; `FixturesSuite` mirrors the linear random-effect calibration | Merged (182ab44) |
-| 98 | Slice 4a-1 engine: `LinearRE.fit`, `predict` and `fitted`, the provider table, X-040's input problems; `LinearRESuite` (21 tests); OI-95 | Merged (30addca) |
-| 99 | Slice 4a-1 Python: the facade's linear random-effect methods, `pprof_spark.LinearRandomEffect` and `LinearRandomEffectModel`, `test_linear_re.py`; the Python guide and the parity matrix | Delivered as a patch |
+| 97 | D-53 approved; slice 4a-1 numerics: the `LinearRE` kernel, `Cholesky.solveUnaliased`, `LinearREKernelSuite`; `FixturesSuite` mirrors the linear random-effect calibration | Merged (182ab44); its kernel broke CI's engine API rules, fixed by 99.1 |
+| 98 | Slice 4a-1 engine: `LinearRE.fit`, `predict` and `fitted`, the provider table, X-040's input problems; `LinearRESuite` (21 tests); OI-95 | Merged (30addca); CI failed at the engine API rules, as reported; fixed by 99.1 |
+| 99 | Slice 4a-1 Python: the facade's linear random-effect methods, `pprof_spark.LinearRandomEffect` and `LinearRandomEffectModel`, `test_linear_re.py`; the Python guide and the parity matrix | Merged (5502f40) |
+| 99.1 | CI fix: `StrictMath` for the transcendental functions of the linear random-effect kernel (CI's engine API rules, §8.1 and §13); rehearsals now run `scripts/check-engine-api.sh` | Delivered as a patch |
 
 ## Decisions and spikes
 

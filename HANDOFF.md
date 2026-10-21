@@ -88,7 +88,7 @@ and 89, `bench` added in round 92; `SETUP.md` inside) emulates the build:
   retained heap, and `FIXTURES=` points at a perturbed copy for negative controls.
 - `pytest.sh`: the Python tests as CI's python job runs them, with JARs packaged from the compiled classes.
 - `regen_check.sh` regenerates the Cox and logistic fixtures, then compares and calibrates; `probe_check.sh`
-  compiles the tutorial probes.
+  compiles the tutorial probes. Rehearsals also run `scripts/check-engine-api.sh`, CI's first check (round 99.1).
 - Not rebuilt: the harness that runs the Databricks notebooks with stand-ins for `dbutils` and `display`.
 
 Limits: a tool call ends after about five minutes and a turn allows about twenty calls; about 3 GB of memory, so one
@@ -139,6 +139,9 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 - Grid-point names: S0 to S3 name the test phases; the grid's skew points are K1 and K2 (round 92).
 - `cut -c` counts bytes and can split a UTF-8 character, and the tool then returns nothing for the whole call: write
   long output to a file and print it decoded with replacement (round 94).
+- Run `scripts/check-engine-api.sh` (and its `--self-test`) in every rehearsal: CI's first job enforces `StrictMath`
+  for transcendental functions in numerics and engine main code (§8.1, §13) and the Spark Connect API rules, and
+  stops the job before scalafmt and linkage run. Round 97's kernel used `scala.math.log` (round 99.1).
 - grep given an empty file list reads standard input and holds the call until its time limit: guard the variable
   or close standard input (`< /dev/null`) in lookups (round 95).
 
@@ -185,6 +188,23 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 99.1 (2026-10-21): CI fix, `StrictMath` in the linear random-effect kernel
+
+- CI's first job, "API rules, format, linkage", failed on round 98 (as the maintainer reported; the cause arrived in
+  round 97): `scripts/check-engine-api.sh` requires `StrictMath` for transcendental functions in numerics and
+  engine main code (§8.1, §13), and `numerics.kernels.LinearRE` called `scala.math.log`, `log1p` and `pow`. They
+  now go through `StrictMath`, as `f.pivots.map(StrictMath.log)` does for the one call the script's pattern cannot
+  see. Results move at most in the last bits, far inside D-53's classes.
+- The job stopped at that step, so its scalafmt and linkage steps did not run on rounds 97 to 99; scalafmt passes
+  in the sandbox, and the linkage check needs sbt.
+- Rehearsals now run `scripts/check-engine-api.sh` and its self-test (§5, §6). Spec 4a-1 §15 records the rule.
+
+Evidence (assistant sandbox): `check-engine-api.sh` passes, with its self-test; numerics and numerics-test compile
+with the build's flags; `LinearREKernelSuite` (7) and `LinearRESuite` (21) pass, 28 of 28; the patch applies to a
+fresh clone of `main` with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI run.
 
 ## Round 99 (2026-10-21): slice 4a-1 Python, the linear random-effect wrapper
 

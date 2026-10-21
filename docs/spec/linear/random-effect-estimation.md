@@ -260,7 +260,8 @@ classes.
 - PWRSS uses the within gradient g = W_xy − W_xx·β_w: PWRSS = RSS_w − 2vᵀg + vᵀW_xx·v + Σⱼ cⱼr̄ⱼ² with v = β̂ − β_w.
   It is exact for any β_w, and g vanishes for an exact within solution, so a feature that Cholesky treats as
   within-aliased costs nothing.
-- log(1 + τWⱼ) by `log1p`; Brent's root to machine precision (`xtol` 0); 18 to 33 evaluations on the fixtures.
+- Every transcendental function through `StrictMath` (the kernel rule of §8.1 and §13; round 99.1), log(1 + τWⱼ)
+  by `StrictMath.log1p`; Brent's root to machine precision (`xtol` 0); 18 to 33 evaluations on the fixtures.
 - `LinearREKernelSuite`: the summaries against exact sums; the deviance, PWRSS, β̂ and the BLUPs against a dense
   solve of the mixed-model equations within 10⁻¹²; the slope against central differences; the minimum, the
   boundary fits, the shift and weight invariances, aliasing and the refused designs.

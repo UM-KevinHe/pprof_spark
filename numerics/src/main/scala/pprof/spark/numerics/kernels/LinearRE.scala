@@ -47,7 +47,7 @@ object LinearRE {
       while (r < until) {
         val w = rows.values(r * q + p + 1)
         weight.add(w)
-        logWeights.add(math.log(w))
+        logWeights.add(StrictMath.log(w))
         var k = 0
         while (k <= p) {
           sums.addAt(k, w * rows.values(r * q + k))
@@ -243,7 +243,7 @@ object LinearRE {
       while (j < m) {
         val w = data.weights(j)
         val c = w / (1.0 + tau * w)
-        logH.add(math.log1p(tau * w))
+        logH.add(StrictMath.log1p(tau * w))
         sumC.add(c)
         var i = 0
         while (i < p) {
@@ -306,10 +306,10 @@ object LinearRE {
         data.withinResidual - 2.0 * cross.value + math.max(quadratic.value, 0.0) + between.value
       require(pwrss > 0.0, "the penalized residual sum of squares is 0: the data fit exactly")
       var deviance =
-        nu * (1.0 + math.log(2.0 * math.Pi * pwrss / nu)) + logH.value - data.logWeights
+        nu * (1.0 + StrictMath.log(2.0 * math.Pi * pwrss / nu)) + logH.value - data.logWeights
       var slope = -nu * betweenSlope.value / pwrss + sumC.value
       if (reml) factor.foreach { f =>
-        deviance += f.pivots.map(math.log).sum
+        deviance += f.pivots.map(StrictMath.log).sum
         val inverse = f.inversePacked
         val trace = new NeumaierSum
         var r = 0
@@ -444,7 +444,7 @@ object LinearRE {
     }
     val grid = scala.collection.mutable.ArrayBuffer(evaluate(0.0))
     for (k <- -8 to 8) {
-      val tau = math.min(math.pow(10.0, k.toDouble) / scale, tauMax)
+      val tau = math.min(StrictMath.pow(10.0, k.toDouble) / scale, tauMax)
       if (tau > grid.last.tau) grid += evaluate(tau)
     }
     var extensions = 0
@@ -477,7 +477,7 @@ object LinearRE {
         val bracket = candidates.find { case (l, u) => l.slope < 0.0 && u.slope > 0.0 }.orElse {
           val (l, u) = (candidates.head._1, candidates.last._2)
           val points = (1 to 9).map { s =>
-            if (l.tau == 0.0) u.tau * s / 10.0 else l.tau * math.pow(u.tau / l.tau, s / 10.0)
+            if (l.tau == 0.0) u.tau * s / 10.0 else l.tau * StrictMath.pow(u.tau / l.tau, s / 10.0)
           }
           val fine = (l +: points.map(evaluate)) :+ u
           fine.sliding(2).map(pair => (pair(0), pair(1))).find { case (a, b) =>
@@ -522,7 +522,7 @@ object LinearRE {
       deviance = chosen.deviance,
       logLikelihood = -0.5 * chosen.deviance,
       aic = chosen.deviance + 2.0 * k,
-      bic = chosen.deviance + k * math.log(data.rows.toDouble),
+      bic = chosen.deviance + k * StrictMath.log(data.rows.toDouble),
       pwrss = chosen.pwrss,
       logDetH = chosen.logDetH,
       ussq = ussq,
