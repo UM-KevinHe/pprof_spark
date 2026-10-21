@@ -475,6 +475,70 @@ class FixturesSuite extends munit.FunSuite {
   }
 
   test(
+    "linear random-effect inputs are exact: features, weights and offsets on a 1/64 grid, outcomes on 1/1024"
+  ) {
+    Fixtures.cases("linear-re").foreach { name =>
+      val lines = Files
+        .readAllLines(Fixtures.root.resolve(s"linear-re/$name/input.csv"), StandardCharsets.UTF_8)
+        .asScala
+        .toVector
+        .filter(_.nonEmpty)
+      val header = lines.head.split(",").toVector
+      val rows = lines.tail.map(_.split(",", -1))
+      def onGrid(c: String, scale: Double): Boolean =
+        rows.forall { r =>
+          val v = r(header.indexOf(c)).toDouble
+          v * scale == math.rint(v * scale)
+        }
+      val grids = Seq("y" -> 1024.0, "x1" -> 64.0, "x2" -> 64.0, "x3" -> 1024.0) ++
+        Seq("z", "w", "o").filter(header.contains).map(_ -> 64.0)
+      grids.foreach { case (c, scale) => assert(onGrid(c, scale), s"$name $c") }
+      assert(rows.forall(r => r(header.indexOf("provider")).nonEmpty), name)
+    }
+  }
+
+  test(
+    "linear slice 4a-1: pprof_py and lme4 agree at their tight optima within D-53's classes; controls fall outside"
+  ) {
+    def ratio(cls: String, actual: JsonNode, expected: JsonNode): Double =
+      Tolerances(cls).worstRatio(Fixtures.doubles(actual), Fixtures.doubles(expected))
+    val classes = Seq("beta", "blups", "predict_fixed", "predict_re", "fitted").map(
+      _ -> "T-coef"
+    ) ++
+      Seq("theta", "sigma", "sigma_alpha", "var_beta", "pwrss", "ldL2", "ussq").map(_ -> "T-var") ++
+      Seq("deviance", "loglik", "aic", "bic").map(_ -> "T-fn")
+    Fixtures.cases("linear-re").foreach { name =>
+      val py = Fixtures.json(s"linear-re/$name/pprof_py.json")
+      val r = Fixtures.json(s"linear-re/$name/r_lme4.json")
+      // lre-shifted's references lose precision to its conditioning (spec 4a-1 §13, D-53): informational there.
+      if (name != "lre-shifted") Seq("reml", "ml").foreach { crit =>
+        classes.foreach { case (q, cls) =>
+          val agreement =
+            ratio(cls, py.get(crit).get("tight").get(q), r.get(crit).get("tight").get(q))
+          assert(agreement <= 1.0, s"$name $crit $q: pprof_py vs lme4 is $agreement of $cls")
+        }
+        val atTheta =
+          ratio(
+            "T-fn",
+            py.get(crit).get("function").get("deviance"),
+            r.get(crit).get("function").get("deviance")
+          )
+        assert(atTheta <= 1.0, s"$name $crit deviance at fixed theta: $atTheta of T-fn")
+      }
+      val tight = py.get("reml").get("tight")
+      val boundary = Fixtures.doubles(tight.get("theta")).head == 0.0
+      val moved = Seq("beta" -> "T-coef", "deviance" -> "T-fn") ++
+        (if (boundary) Nil else Seq("theta" -> "T-var", "blups" -> "T-coef"))
+      py.get("negative_controls").properties().asScala.foreach { control =>
+        moved.foreach { case (q, cls) =>
+          val miss = ratio(cls, control.getValue.get(q), tight.get(q))
+          assert(miss >= Margin, s"$name $q: ${control.getKey} is $miss of $cls")
+        }
+      }
+    }
+  }
+
+  test(
     "linear slice 3a: pprof_py and R's lm agree within the tolerance classes; controls fall far outside"
   ) {
     def ratio(cls: String, actual: JsonNode, expected: JsonNode): Double =

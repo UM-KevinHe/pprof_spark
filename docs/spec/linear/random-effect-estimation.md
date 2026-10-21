@@ -1,6 +1,6 @@
 # Specification: linear random effects — estimation (slice 4a-1)
 
-- Status: approved with D-52 (2026-10-21), with X-038 to X-040; fixtures and calibration in round 96 (D-53).
+- Status: approved with D-52 (2026-10-21), with X-038 to X-040; fixtures and calibration in round 96 (D-53, approved); the numerics kernel in round 97.
 - Reference: pprof_py v0.7.0 (`9320766`), `LinearRandomEffectModel` (`models/linear/random_effect.py`), and
   lme4 1.1-35.1's `lmer`. Plan: [../random-effects/plan.md](../random-effects/plan.md) (D-51).
 - Parity matrix: entries arrive with the code (`docs/parity/matrix.md`).
@@ -249,3 +249,22 @@ With an intercept, the features enter the between part centred at their weighted
 of variables leaves θ̂, σ̂, the BLUPs and the slopes unchanged and moves only the intercept, which is transformed
 back; A(τ) stays as well conditioned as the data allow, so lre-shifted's invariance holds within the ordinary
 classes.
+
+## 15. Implementation notes (round 97, numerics; no statistical change)
+
+- `numerics.kernels.LinearRE`: pass 1 `summaries` (two passes over each provider's rows, weighted means and then
+  centred sums), `withinSolution` (through Cholesky's new `solveUnaliased`, which solves on the columns that are
+  not aliased and leaves the others at 0), pass 2 `withinResiduals`; `Problem.evaluate(τ)` for d(τ), d′(τ) and β̂
+  in the centred coordinates of §14; `fit` for the search of §3 and the estimates of §4; `aliased` for X-039's
+  check on X′WX in centred coordinates.
+- PWRSS uses the within gradient g = W_xy − W_xx·β_w: PWRSS = RSS_w − 2vᵀg + vᵀW_xx·v + Σⱼ cⱼr̄ⱼ² with v = β̂ − β_w.
+  It is exact for any β_w, and g vanishes for an exact within solution, so a feature that Cholesky treats as
+  within-aliased costs nothing.
+- log(1 + τWⱼ) by `log1p`; Brent's root to machine precision (`xtol` 0); 18 to 33 evaluations on the fixtures.
+- `LinearREKernelSuite`: the summaries against exact sums; the deviance, PWRSS, β̂ and the BLUPs against a dense
+  solve of the mixed-model equations within 10⁻¹²; the slope against central differences; the minimum, the
+  boundary fits, the shift and weight invariances, aliasing and the refused designs.
+- Against `fixtures/linear-re`, by a harness outside the repository (the round's evidence log), the kernel agrees
+  with both references within 0.0053 of T-coef, 0.0019 of T-var and 0.0024 of T-fn on the eight well-conditioned
+  cases, its conditional variances with lme4's within 0.0019 of T-var, and lre-shifted's invariance against
+  lre-base holds within 0.0025 of its classes. The committed parity suite comes with the engine.

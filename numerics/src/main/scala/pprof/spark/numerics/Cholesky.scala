@@ -126,6 +126,45 @@ final class CholeskyFactor private[numerics] (
     x
   }
 
+  /** Solves the system restricted to the columns that are not aliased, with the aliased coordinates at 0: a
+    * solution of A·x = b whenever b lies in the range of A.
+    */
+  def solveUnaliased(b: Array[Double]): Array[Double] = {
+    val p = dimension
+    require(b.length == p, s"expected $p values, got ${b.length}")
+    val skip = new Array[Boolean](p)
+    aliased.foreach(j => skip(j) = true)
+    val y = new Array[Double](p)
+    var i = 0
+    while (i < p) {
+      if (!skip(i)) {
+        var s = b(i)
+        var k = 0
+        while (k < i) {
+          if (!skip(k)) s -= lower(i * p + k) * y(k)
+          k += 1
+        }
+        y(i) = s / lower(i * p + i)
+      }
+      i += 1
+    }
+    val x = new Array[Double](p)
+    i = p - 1
+    while (i >= 0) {
+      if (!skip(i)) {
+        var s = y(i)
+        var k = i + 1
+        while (k < p) {
+          if (!skip(k)) s -= lower(k * p + i) * x(k)
+          k += 1
+        }
+        x(i) = s / lower(i * p + i)
+      }
+      i -= 1
+    }
+    x
+  }
+
   /** A⁻¹ as a packed upper triangle, computed as (L⁻¹)ᵀ·L⁻¹ so that it is exactly symmetric. */
   def inversePacked: Array[Double] = {
     requireFullRank()

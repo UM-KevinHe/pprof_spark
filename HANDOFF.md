@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53 proposed) |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel in round 97 |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -43,7 +43,7 @@ round 93 as the maintainer reported (rounds 83 and 84 failed and were fixed by 8
 
 | Area | Content |
 |---|---|
-| `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile); `StudentT` and kernels `LinearFE` |
+| `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile); `StudentT` and kernels `LinearFE` and `LinearRE` (round 97) |
 | `engine.cox` | `CoxPH` (fit under a stratum byte budget, baseline at a reference point, `referencePoint`, residuals, robust), composite row keys (`CoxSpec.rowKey`), `CoxFitIO` v5, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
 | `engine.logistic` | `LogisticSpec` (`withProviders`), `LogisticFE`, `LogisticBlocks` (block options and growth), `LogisticFitIO` v4, `LogisticProviderView`, `LogisticProviderTests`, `LogisticStandardization` (null values, the fixed null, intervals, bounds); `ThreeStage`, `ThreeStagePipeline`, `ThreeStageFitIO` v1 |
 | `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE`, `LinearFitIO` v1, `LinearProviderTests`, `LinearStandardization` |
@@ -153,7 +153,7 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
   OI-43, OI-45, OI-46, OI-50, OI-57, OI-59 (the dense Schur complement of stage 2), OI-68, OI-70 and OI-76;
   OI-92 (the plan's Zipf exponent).
 - Random-effect models (Phase 4, D-51): OI-93 (cluster terms, part 4d), OI-94 (stage 3's `he2013`, slice 4c-2);
-  X-037 to X-040 approved; D-53 (slice 4a-1's tolerance classes) proposed.
+  X-037 to X-040 approved; D-53 (slice 4a-1's tolerance classes) approved.
 - Interfaces: OI-86 (added providers in the job runner), OI-53 (Databricks access modes), OI-55 (a wheel), OI-56
   (PySpark CSV pushdown with a literal provider column).
 - Process: OI-40 (a CI check of the parity matrix), OI-41 (per-release model fixtures), OI-33 and OI-42 (reports
@@ -169,9 +169,10 @@ as round 82 did:
 - record them in the review document and as open items.
 
 1. M4, Phase 4 (`docs/spec/random-effects/plan.md`, D-51):
-   - 4a, linear random effects: 4a-1's specification approved (D-52), its fixtures and calibration in round 96
-     (D-53 proposed); next its code with parity tests and `FixturesSuite`'s mirror of the new calibration,
-     then Python and documents; then 4a-2 and 4a-3, and an S1 smoke.
+   - 4a, linear random effects: 4a-1's specification (D-52), fixtures (D-53) and numerics kernel (round 97)
+     are in; next the engine (validation, the two passes, the provider table, prediction, fitted values) with
+     its parity suite against `fixtures/linear-re`, then Python and documents; then 4a-2 and 4a-3, and an S1
+     smoke.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
    local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
@@ -185,6 +186,28 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 97 (2026-10-21): slice 4a-1 numerics, the linear random-effect kernel
+
+- The maintainer approved D-53 as proposed (2026-10-21).
+- `numerics.kernels.LinearRE` implements spec 4a-1 §2 to §4 and §14 on provider summaries: pass 1 (weight totals,
+  weighted means, pooled within co-moments), the within solution and pass 2 (its residual sum of squares), the
+  profiled REML and ML deviance with its slope in τ, the grid and Brent's root, boundary fits, and the estimates in
+  the original coordinates after the between part's centring. `Cholesky` gains `solveUnaliased`.
+- `LinearREKernelSuite` (numerics) checks the kernel against exact sums and a dense solve of the mixed-model
+  equations (within 10⁻¹²), the slope against central differences, the minimum, the boundaries, the shift and
+  weight invariances, aliasing and the refused designs. `FixturesSuite` now mirrors `calibrate.py`'s linear
+  random-effect checks, with the classes of D-53.
+- An out-of-repository harness runs the kernel on every case of `fixtures/linear-re`: within 0.0053 of T-coef,
+  0.0019 of T-var and 0.0024 of T-fn against both references on the eight well-conditioned cases, and lre-shifted's
+  invariance against lre-base within 0.0025 of its classes. The committed parity suite comes with the engine
+  (spec §15).
+
+Evidence (assistant sandbox): numerics, numerics-test, testkit and testkit-test compile with the build's flags;
+`LinearREKernelSuite` (7 of 7), `FixturesSuite`, `LinearKernelSuite` and `CholeskySuite` pass, 33 tests in all;
+the patch applies to a fresh clone of `main` with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI run.
 
 ## Round 96 (2026-10-21): slice 4a-1 fixtures and calibration (`fixtures/linear-re`)
 

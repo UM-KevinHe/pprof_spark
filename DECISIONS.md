@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-53: Slice 4a-1 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+### D-53: Slice 4a-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-10-21)
 
 `fixtures/linear-re` (round 96; `reference/fixtures/linear_re_fixtures.py` and `linear_re_r.R`): the nine cases of
 spec 4a-1 §11 under REML and ML, with pprof_py and lme4 at their defaults and at their tight optima (the root in τ
@@ -115,6 +115,8 @@ control misses by at least 83 times its class. Proposed: these classes for 4a-1'
 variances against lme4's at T-var, and the default runs informational under T-opt. For lre-shifted, where both
 references lose up to 4.2·10⁻⁷ in τ* and 6.2·10⁻⁸ in β̂ to conditioning, invariance against lre-base replaces the
 references' agreement, and pprof_spark centres the features of the between part (spec 4a-1 §13 and §14).
+
+Approved as proposed on 2026-10-21.
 
 ### D-52: Slice 4a-1 specification (Accepted: approved by the maintainer, 2026-10-21)
 
