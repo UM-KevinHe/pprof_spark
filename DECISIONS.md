@@ -103,6 +103,16 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-54: Slice 4a-2 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/linear/random-effect-inference.md`: inference and standardized measures for the linear random-intercept
+model, as pprof_py defines them. Covariates: `summary` (t with n − p − m degrees of freedom), `fixed_effects_table`
+and `conf_int` (n − p). Provider tests: z = (b̂ⱼ − γ₀)/seⱼ with the conditional SD of X-037, the theoretical null and
+slice 2c's table, γ₀ = 0 by default. Intervals: option `alpha`, and option `SM` with the indirect and direct
+differences, whose observed values are sums of fitted values. The measures use the training data (API-3), and the
+fixtures extend `fixtures/linear-re`. Proposed with it: X-041 (class B: unrounded upper-tail p-values in `summary`) and
+X-042 (R pprof's `linear_re` inference: a reference for `test` and option `alpha` on unweighted fits only).
+
 ### D-53: Slice 4a-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-10-21)
 
 `fixtures/linear-re` (round 96; `reference/fixtures/linear_re_fixtures.py` and `linear_re_r.R`): the nine cases of

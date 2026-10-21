@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100 |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification proposed in round 101 (D-54) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -36,7 +36,7 @@ null remains (OI-78). The maintainer is testing round 87's build: expect new iss
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his Databricks
 workspace (D-28). AI assistants never access his Databricks environment (D-14 as clarified). CI is green through
-round 93 as the maintainer reported (rounds 83 and 84 failed and were fixed by 83.1 and 84.1), and his
+round 100 as the maintainer reported (rounds 83 and 84 failed and were fixed by 83.1 and 84.1), and his
 `fixtures.yml` run on round 88's tree regenerated every family on CI's runner within T-part (OI-62 closed).
 
 ### 3. What exists
@@ -52,7 +52,7 @@ round 93 as the maintainer reported (rounds 83 and 84 failed and were fixed by 8
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage, linear and linear random-effect wrappers, ADR-0009) and its pytest suite |
 | `databricks/` | `00_build` (builds a commit on the driver into workspace files), `01_parity` (fixtures and R0 on the cluster), `02_scale` (a first look at scale); guide `docs/guide/databricks.md` |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4), `fixtures/linear` (6), `fixtures/linear-re` (9), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py`; `fixtures.yml` (manual dispatch) regenerates and compares on CI's runner |
-| Documents | Specifications in `docs/spec/` (cox, logistic, linear, random-effects, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-53), `DISCREPANCIES.md` (to X-040), `OPEN_ITEMS.md` (to OI-95), `STATUS.md` |
+| Documents | Specifications in `docs/spec/` (cox, logistic, linear, random-effects, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-54), `DISCREPANCIES.md` (to X-042), `OPEN_ITEMS.md` (to OI-95), `STATUS.md` |
 
 ### 4. How the work runs
 
@@ -156,7 +156,7 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
   OI-43, OI-45, OI-46, OI-50, OI-57, OI-59 (the dense Schur complement of stage 2), OI-68, OI-70 and OI-76;
   OI-92 (the plan's Zipf exponent).
 - Random-effect models (Phase 4, D-51): OI-93 (cluster terms, part 4d), OI-94 (stage 3's `he2013`, slice 4c-2);
-  X-037 to X-040 approved; D-53 (slice 4a-1's tolerance classes) approved.
+  X-037 to X-040 approved; D-53 (slice 4a-1's tolerance classes) approved; X-041 and X-042 proposed with D-54.
 - Interfaces: OI-86 (added providers in the job runner), OI-53 (Databricks access modes), OI-55 (a wheel), OI-56
   (PySpark CSV pushdown with a literal provider column).
 - Process: OI-40 (a CI check of the parity matrix), OI-41 (per-release model fixtures), OI-33 and OI-42 (reports
@@ -173,7 +173,8 @@ as round 82 did:
 
 1. M4, Phase 4 (`docs/spec/random-effects/plan.md`, D-51):
    - 4a, linear random effects: 4a-1 is complete (D-52, D-53; rounds 97 to 100, the distributed search
-     included); next 4a-2's specification (inference and measures), then 4a-3, and an S1 smoke.
+     included); 4a-2's specification is proposed (round 101, D-54); once approved, its fixtures, code, parity
+     tests and Python; then 4a-3 and an S1 smoke.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
    local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
@@ -187,6 +188,28 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 101 (2026-10-21): slice 4a-2 specification (linear random-effect inference and measures)
+
+- CI is green through round 100, as the maintainer reported; `STATUS.md` records rounds 99.1 and 100 as merged.
+- `docs/spec/linear/random-effect-inference.md` specifies slice 4a-2 (D-54, awaiting approval), as pprof_py defines
+  it. `summary` uses t with n − p − m degrees of freedom, and `fixed_effects_table` and `conf_int` n − p. Provider
+  tests take z = (b̂ⱼ − γ₀)/seⱼ with X-037's conditional SD, the theoretical null and slice 2c's table, with γ₀ = 0 by
+  default. Intervals come with option `alpha` and with option `SM`. The indirect and direct differences follow
+  pprof_py, whose observed values sum fitted values rather than outcomes, and they read the training data (API-3).
+- Probes (sandbox, not fixtures) on lre-base, pprof_py against R pprof 1.0.3 (sourced at `1efc404`) with lme4:
+  - pprof_py's `summary` rounds p-values to seven decimals after computing them as 1 − F, so t = 13.5 gives 0 (X-041).
+  - R pprof's `summary.linear_re` uses n − p − m + 1 degrees of freedom and normal intervals.
+  - Its `SM_output.linear_re` and option `SM` misalign providers: provider 10's indirect difference is 0.545
+    against a BLUP of 0.188, outside its own interval (X-042).
+  - Its `test.linear_re` and option `alpha` agree with pprof_py on provider 1.
+- Proposed with D-54: X-041 (class B) and X-042 (R pprof a reference for `test` and option `alpha` on unweighted fits
+  only). Documents only; no code changed.
+
+Evidence (assistant sandbox): the patch applies to a fresh clone of `main` with an identical tree, scalafmt is clean
+on the build's modules, and `check-engine-api.sh` passes; the probes' scripts and outputs are in the evidence log.
+
+What to send back: the decision on D-54, with X-041 and X-042.
 
 ## Round 100 (2026-10-21): the distributed search for linear random effects (OI-95)
 

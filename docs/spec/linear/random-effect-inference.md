@@ -1,0 +1,138 @@
+# Specification: linear random effects — inference and standardized measures (slice 4a-2)
+
+- Status: proposed with D-54 (round 101, 2026-10-21), awaiting the maintainer's approval.
+- Reference: pprof_py v0.7.0's `LinearRandomEffectModel.summary`, `fixed_effects_table`, `conf_int`, `test`,
+  `calculate_confidence_intervals` and `calculate_standardized_measures`, with the shared `reference_effect` and
+  `effect_test`; R pprof 1.0.3's `test.linear_re` and `confint.linear_re` (option `alpha`) where they follow
+  pprof_py's definitions (X-042); lme4 1.1-35.1's conditional variances for weighted fits (X-037); base R for t and
+  normal tails and quantiles. The fit: [random-effect-estimation.md](random-effect-estimation.md) (slice 4a-1).
+- Plan: [../random-effects/plan.md](../random-effects/plan.md) (D-51). Persistence and the job runner are 4a-3's.
+
+Every quantity below comes from the fit of slice 4a-1: β̂, Var(β̂), σ̂, θ̂ and σ̂_α, and the provider table's BLUPs b̂ⱼ,
+row counts nⱼ, weight totals Wⱼ and conditional variances vⱼ = σ̂²τ̂/(1 + τ̂Wⱼ) (X-037). n is the number of rows, p the
+number of fixed effects (the intercept included) and m the number of providers. As in pprof_py, every method here
+needs a fit with the provider factor alone (`cluster_vars` comes with part 4d).
+
+## 1. Reference effect
+
+γ₀ is 0 (the random effects' mean), the median of the BLUPs over all providers (unweighted; for even m the mean of
+the two middle values, as NumPy's `median`), their size-weighted mean Σⱼ nⱼb̂ⱼ/n (pprof_py's `reference_effect`
+with the row counts, also under prior weights), or a given number. The defaults are pprof_py's: 0 for `test`, the
+median for `calculate_confidence_intervals` and `calculate_standardized_measures`. One γ₀ serves a call.
+
+## 2. Covariate inference
+
+| Method | Definition (pprof_py) |
+|---|---|
+| `summary(covariates, level, null, alternative)` | tₖ = (β̂ₖ − null)/seₖ with seₖ from Var(β̂) and ν = n − p − m, as the fixed-effect model's; p-values two-sided 2F̄ν(\|tₖ\|), `greater` F̄ν(tₖ), `less` Fν(tₖ), computed from the upper tail directly and not rounded (X-041); limits β̂ₖ ∓ t₁₋α/₂,ν·seₖ, one-sided limits t₁₋α,ν and open on the other side; columns estimate, std_error, stat, p_value, ci_lower, ci_upper; `covariates` selects rows by name |
+| `fixed_effects_table()` | Estimate, Std. Error, t value = β̂ₖ/seₖ (NaN when seₖ = 0), df = max(n − p, 1), Pr(>\|t\|) = 2F̄df(\|t\|) |
+| `conf_int(level)` | β̂ₖ ∓ t at (1 + level)/2 with max(n − p, 1) degrees of freedom; columns lower, upper |
+
+The two degrees of freedom are pprof_py's, method by method: n − p − m in `summary`, n − p in the other two.
+
+## 3. Provider tests (`test`)
+
+For provider j, zⱼ = (b̂ⱼ − γ₀)/seⱼ with seⱼ = √vⱼ, the BLUP's conditional SD. Without prior weights seⱼ equals
+pprof_py's and R pprof's √(sⱼσ̂²/nⱼ), sⱼ = σ̂²_α/(σ̂²_α + σ̂²/nⱼ); with them it is lme4's (X-037).
+
+| Item | Definition |
+|---|---|
+| p-value | Two-sided 2Φ̄(\|zⱼ\|), `greater` Φ̄(zⱼ), `less` Φ(zⱼ), from the normal tails directly |
+| Flags | Slice 2c §2: +1, −1 or 0 by zⱼ against c = Φ⁻¹(1 − α/2) (two-sided) or Φ⁻¹(1 − α) (one-sided), or a given `critical` c; one-sided flags are 0 or +1 (`greater`) and 0 or −1 (`less`) |
+| Limits | b̂ⱼ ∓ c·seⱼ, one-sided limits open on the other side (±∞); `interval` `inversion` and `scale_only` coincide under the theoretical null |
+| Null model | The theoretical null only (D-51 item 5): null_mean 0, null_sd 1, z_adjusted = z_raw |
+| Providers | All, or the subset given (keys compared as text) |
+
+Output: one row per provider, keyed by provider with `records`, and slice 2c's columns: estimate (b̂ⱼ), se,
+null_value (γ₀), transformed (b̂ⱼ), se_transformed (seⱼ), null_transformed (γ₀), z_raw, null_mean, null_sd,
+null_group, z_adjusted, p_value, flag, ci_lower, ci_upper.
+
+## 4. Intervals (`calculate_confidence_intervals`)
+
+| Option | Definition (pprof_py) |
+|---|---|
+| `alpha` | b̂ⱼ ∓ Φ⁻¹(1 − α/2)·seⱼ, two-sided only (pprof_py and R pprof refuse one-sided ones); columns key, alpha, alpha_lower, alpha_upper |
+| `SM`, indirect | (Σᵢ∈ⱼ(Lⱼ + ηᵢ) − Eⱼ)/nⱼ and (Σᵢ∈ⱼ(Uⱼ + ηᵢ) − Eⱼ)/nⱼ, with ηᵢ = oᵢ + xᵢᵀβ̂, Eⱼ as in §5, and Lⱼ and Uⱼ the effect's limits at c = Φ⁻¹(1 − α/2), or Φ⁻¹(1 − α) and ±∞ for one-sided alternatives; columns: §5's indirect table with lower and upper |
+| `SM`, direct | (Σᵢ ηᵢ + nLⱼ − O)/n and (Σᵢ ηᵢ + nUⱼ − O)/n, with O as in §5; columns: §5's direct table with lower and upper |
+
+`level` (0.95), `alternative` (two_sided, greater, less), `reference` (the median) and `providers` as in §1 and §3.
+
+## 5. Standardized differences (`calculate_standardized_measures`)
+
+| Measure | Definition (pprof_py) |
+|---|---|
+| Indirect | Oⱼ = Σᵢ∈ⱼ ŷᵢ with the fitted values ŷᵢ = ηᵢ + b̂ⱼ, and Eⱼ = Σᵢ∈ⱼ(ηᵢ + γ₀); difference (Oⱼ − Eⱼ)/nⱼ; columns key, indirect_difference, observed, expected |
+| Direct | O = Σᵢ ŷᵢ over all rows (one value) and expectedⱼ = Σᵢ ηᵢ + n·b̂ⱼ; difference (expectedⱼ − O)/n; columns key, direct_difference, observed, expected |
+
+Algebraically the indirect difference is b̂ⱼ − γ₀ and the direct one b̂ⱼ − Σₖ nₖb̂ₖ/n, which does not depend on γ₀;
+the sums are computed as defined, as in the fixed-effect model. Unlike the fixed-effect model's, the observed values
+are sums of fitted values, not of outcomes: with an intercept and no weights the two totals agree, since the fixed
+effects' equations make Σᵢ(yᵢ − ŷᵢ) = 0.
+
+## 6. Data and API
+
+| Function | Needs |
+|---|---|
+| `LinearREInference.summary`, `fixedEffectsTable`, `confInt` | The fit alone: β̂, Var(β̂), n, p and m |
+| `LinearREProviderTests.test`, intervals with option `alpha` | The fit alone: its provider table (b̂ⱼ, nⱼ, seⱼ) |
+| `LinearREStandardization.measures`, intervals with option `SM` | The fit and its training data, checked against the fit's fingerprint (API-3), for Σᵢ∈ⱼ ηᵢ and Σᵢ ηᵢ |
+
+The Python wrapper's `LinearRandomEffectModel` gains `summary`, `fixed_effects_table`, `conf_int`, `test`,
+`confidence_intervals` and `standardized_measures`, as the fixed-effect wrapper names them.
+
+## 7. Distributed plan
+
+1. γ₀: the provider table's `records` and `blup` collected to the driver in key order under `DriverGuards` (m values
+   of each); the median by sorting, the size-weighted mean by a compensated sum in key order.
+2. Tests and `alpha` intervals: a projection of the distributed provider table, with γ₀ and the critical values as
+   literals.
+3. Measures and `SM` intervals: one pass over ProviderLocal blocks of the training data, fingerprint checked: per
+   provider Σᵢ∈ⱼ ηᵢ by Neumaier sums in canonical order, and Σᵢ ηᵢ reduced in block order (§6.8); the result is a
+   distributed table joined to the provider table by key.
+
+## 8. Edge cases
+
+| Case | pprof_spark |
+|---|---|
+| A boundary fit (τ̂ = 0) | seⱼ = 0 and b̂ⱼ = 0: zⱼ = 0/0 is NaN when γ₀ = 0, so the provider is untested (NaN p-value and flag, limits 0) with the fit's warning (NN-10); a nonzero γ₀ gives zⱼ = ∓∞, p-value 0 and a flag. The fixture round checks pprof_py's behavior here |
+| Large \|zⱼ\| | Normal tails from the complementary functions, so no provider loses its p-value |
+| Even m | The median is the mean of the two middle values |
+| Providers with one record | seⱼ from vⱼ, as any other |
+| Prior weights | seⱼ and the limits follow X-037; the measures' sums are unweighted, as pprof_py's |
+
+## 9. Reference mapping
+
+| pprof_py | pprof_spark |
+|---|---|
+| `summary(covariates, level, null, alternative)` | `LinearREInference.summary(fit, level, null, alternative, covariates)` |
+| `fixed_effects_table()`, `conf_int(level)` | `LinearREInference.fixedEffectsTable(fit)`, `confInt(fit, level)` |
+| `test(providers, reference, null_model=None, alternative, level, critical, interval)` | `LinearREProviderTests.test(fit, reference, alternative, level, critical, providers)` |
+| `calculate_confidence_intervals(providers, level, option, stdz, reference, alternative)` | `LinearREStandardization.intervals(fit, …)` for `alpha`; `intervals(df, fit, …)` for `SM` |
+| `calculate_standardized_measures(providers, stdz, reference)` | `LinearREStandardization.measures(df, fit, kinds, reference, providers)` |
+| `funnel_limits`, the plots, `null_model` other than the theoretical one | P0 (D-51 item 5) |
+
+## 10. Validation plan
+
+The fixtures of `fixtures/linear-re` gain an inference section for every case under REML, and for lre-base and
+lre-weights under ML, all at the tight optima of slice 4a-1:
+
+- pprof_py: `summary` (two-sided, `greater` and `less`; level 0.90), `fixed_effects_table`, `conf_int`; `test` at
+  γ₀ = 0, the median, the size-weighted mean and 0.1, two-sided, `greater` and `less`, with `critical` 2.5 and a
+  providers subset; `calculate_confidence_intervals` (`alpha`; `SM` indirect and direct, two-sided and one-sided);
+  `calculate_standardized_measures` at the median, the mean and 0.
+- R pprof: `test.linear_re` (z, p-values, flags) and `confint.linear_re` with option `alpha`, on the unweighted cases.
+- Base R: t tails and quantiles for `summary` with ν = n − p − m, from lme4's estimates; for the weighted cases, the
+  tests and `alpha` intervals from lme4's conditional variances (X-037).
+
+Layers: in lockstep, pprof_spark's inference computed from each reference's own estimates against that reference's
+outputs; end to end, from pprof_spark's fit, at the estimates' classes. Classes: T-test (t and z), T-p (p-values
+against base R everywhere, against pprof_py where its rounded p-values exceed 10⁻⁶, X-041), T-flag (flags), T-coef
+(limits), T-meas (measures and their intervals). Negative controls as D-09 requires.
+
+## 11. Known discrepancies
+
+| ID | Class | Summary | Status |
+|---|---|---|---|
+| X-037 | B | The tests' and intervals' seⱼ use the weight totals Wⱼ under prior weights | Approved (D-51) |
+| X-041 | B | pprof_py's `summary` computes p-values as 1 − F and rounds them to seven decimals; pprof_spark computes the upper tail directly and does not round | Proposed (D-54) |
+| X-042 | — | R pprof 1.0.3's linear random-effect inference departs from pprof_py's definitions in places (`summary`'s degrees of freedom and Wald intervals; providers misaligned in `SM_output` and `confint`'s option `SM`) | Proposed (D-54) |
