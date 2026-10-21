@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan proposed in round 94 (D-51, awaiting approval; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms) |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification proposed in round 95 (D-52) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -52,7 +52,7 @@ round 93 as the maintainer reported (rounds 83 and 84 failed and were fixed by 8
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage and linear wrappers, ADR-0009) and its pytest suite |
 | `databricks/` | `00_build` (builds a commit on the driver into workspace files), `01_parity` (fixtures and R0 on the cluster), `02_scale` (a first look at scale); guide `docs/guide/databricks.md` |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py`; `fixtures.yml` (manual dispatch) regenerates and compares on CI's runner |
-| Documents | Specifications in `docs/spec/` (cox, logistic, linear, random-effects, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-51), `DISCREPANCIES.md` (to X-037), `OPEN_ITEMS.md` (to OI-94), `STATUS.md` |
+| Documents | Specifications in `docs/spec/` (cox, logistic, linear, random-effects, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-52), `DISCREPANCIES.md` (to X-040), `OPEN_ITEMS.md` (to OI-94), `STATUS.md` |
 
 ### 4. How the work runs
 
@@ -139,6 +139,8 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 - Grid-point names: S0 to S3 name the test phases; the grid's skew points are K1 and K2 (round 92).
 - `cut -c` counts bytes and can split a UTF-8 character, and the tool then returns nothing for the whole call: write
   long output to a file and print it decoded with replacement (round 94).
+- grep given an empty file list reads standard input and holds the call until its time limit: guard the variable
+  or close standard input (`< /dev/null`) in lookups (round 95).
 
 ### 7. Open items to carry
 
@@ -150,8 +152,8 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 - Scale and costs, for the scale kit to measure: OI-02 and OI-38 (large p, the Breslow kernel), OI-29, OI-30,
   OI-43, OI-45, OI-46, OI-50, OI-57, OI-59 (the dense Schur complement of stage 2), OI-68, OI-70 and OI-76;
   OI-92 (the plan's Zipf exponent).
-- Random-effect models (Phase 4, D-51 proposed): OI-93 (cluster terms, part 4d), OI-94 (stage 3's `he2013`),
-  X-037 (proposed).
+- Random-effect models (Phase 4, D-51): OI-93 (cluster terms, part 4d), OI-94 (stage 3's `he2013`, slice 4c-2);
+  X-037 approved; X-038 to X-040 proposed with D-52.
 - Interfaces: OI-86 (added providers in the job runner), OI-53 (Databricks access modes), OI-55 (a wheel), OI-56
   (PySpark CSV pushdown with a literal provider column).
 - Process: OI-40 (a CI check of the parity matrix), OI-41 (per-release model fixtures), OI-33 and OI-42 (reports
@@ -166,9 +168,10 @@ as round 82 did:
 - propose fixes with files, risks and compatibility;
 - record them in the review document and as open items.
 
-1. M4, Phase 4 (`docs/spec/random-effects/plan.md`), once D-51 is approved:
-   - 4a, linear random effects: 4a-1's specification first (`docs/spec/linear/`), then its fixtures and
-     calibration, code, parity tests, Python and documents; then 4a-2 and 4a-3, and an S1 smoke.
+1. M4, Phase 4 (`docs/spec/random-effects/plan.md`, D-51):
+   - 4a, linear random effects: 4a-1's specification is proposed (round 95, D-52); once it is approved, its
+     fixtures and calibration (`fixtures/linear-re`), code, parity tests, Python and documents; then 4a-2 and
+     4a-3, and an S1 smoke.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
    local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
@@ -182,6 +185,34 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 95 (2026-10-21): D-51 approved; the slice 4a-1 specification (linear random-effect estimation)
+
+- The maintainer approved D-51 as proposed, with X-037 (2026-10-21). The plan, `DISCREPANCIES.md`, OI-93 and OI-94
+  record it.
+- `docs/spec/linear/random-effect-estimation.md` specifies slice 4a-1 (D-52, awaiting approval). After one pass
+  for per-provider weight totals and weighted means with pooled within co-moments, and a second for the within
+  residual sum of squares, lme4's profiled deviance and its derivative in τ = θ² are evaluated from the provider
+  table alone. The penalized residual sum of squares is formed from non-negative terms, never from co-moments that
+  cancel. A grid brackets the minimum and Brent's root of the derivative refines it, with boundary fits at 0 and
+  θ_upper. Aliasing is checked on the full weighted cross-product, so features constant within providers stay
+  identified, unlike in the fixed-effect model.
+- Proposed with it: X-038 (class C: incomplete rows fail with counts, where pprof_py and `lmer` drop them),
+  X-039 (class C: aliased features fail and are named) and X-040 (class C: one provider, one row per provider, or
+  n ≤ p fail at validation).
+- Probes (sandbox, not fixtures), pprof_py against `lmer` on nine designs: with one provider pprof_py returns
+  θ̂ = 2.03 under REML from a deviance exactly flat in θ, and with one row per provider θ̂ = 0.65, where `lmer`
+  refuses both; with x₃ = 2x₁ it splits x₁'s effect arbitrarily under ML and raises under REML, where `lmer`
+  drops the column; both drop incomplete rows; a zero weight fails in pprof_py and gives `lmer` an infinite
+  deviance. A feature constant within providers, no provider variance, no intercept and an offset agree within
+  7·10⁻⁸ in θ̂.
+- §6 gains a lesson: grep given an empty file list holds the call until its time limit.
+- Documents only; no code changed.
+
+Evidence (assistant sandbox): the patch applies to a fresh clone of `main` with an identical tree, and scalafmt is
+clean on the build's modules; the probes' scripts and outputs are in the round's evidence log.
+
+What to send back: the decision on D-52, with X-038 to X-040.
 
 ## Round 94 (2026-10-21): Phase 4 plan, the random-effect models (M4); D-50 amended
 

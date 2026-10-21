@@ -1,6 +1,6 @@
 # Phase 4 plan: random-effect models (milestone M4)
 
-Status: proposed as D-51 (round 94, 2026-10-21), awaiting the maintainer's approval.
+Status: approved as D-51 by the maintainer on 2026-10-21, with X-037 (proposed in round 94).
 
 D-50, as amended in round 94, puts M4 (priority P1) before M2 (P0's inference parity). This plan covers the three
 random-effect models of pprof_py v0.7.0 in the maintainer's order: linear random effects, logistic random effects,
@@ -203,10 +203,10 @@ variances.
 
 ## 5. Discrepancies and points to verify
 
-Proposed with this plan:
+Approved with this plan (D-51):
 
 - X-037 (class B): the linear model's BLUP standard errors use the row counts n_j also when the fit has prior
-  weights, where the fitted model's conditional variance, lme4's, uses the weight totals W_j. Proposed: the
+  weights, where the fitted model's conditional variance, lme4's, uses the weight totals W_j. Approved: the
   corrected behavior, σ̂²θ̂²/(1 + θ̂²W_j), which equals pprof_py's without weights, documented as a divergence.
 
 For the slice specifications to settle, after running both references:
@@ -244,7 +244,7 @@ Parity at the function level (the profiled deviance, PIRLS, gradients), in locks
 R0 to R2; layer T8 (Spark Connect); σ̂ recovery on `bench.synthetic` data at large m. Each part's S1 smoke is one
 point near 10⁷ rows with S0's checks (`docs/spec/scale/plan.md` §9), prepared here and run by the maintainer.
 
-## 8. Decisions proposed (D-51)
+## 8. Decisions (D-51, approved 2026-10-21)
 
 1. Parts and order: 4a, 4b and 4c in the maintainer's order, then 4d. Each closes at parity-verified with its own
    gate and an S1 smoke, and stays `Experimental` until it is scale-verified.

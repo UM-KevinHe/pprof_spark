@@ -103,7 +103,19 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-51: Phase 4 plan, the random-effect models (Proposed: awaiting the maintainer's approval)
+### D-52: Slice 4a-1 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/linear/random-effect-estimation.md`: estimation for the linear random-intercept model (one provider
+intercept, offsets, prior weights; REML by default, ML on request). lme4's profiled deviance and its derivative on
+provider summaries and pooled within co-moments (§2); the root of the derivative in τ = θ² by Brent's method,
+bracketed by a grid, with boundary fits at 0 and θ_upper (§3); the estimates, BLUPs and conditional variances
+(X-037); the data contract; the distributed plan (two passes, then the search on the driver or by aggregations over
+the provider table); outputs; edge cases from round 95's probes; the Python wrapper's estimation methods; and the
+validation plan with `fixtures/linear-re`. Proposed with it: X-038 (class C: incomplete rows fail with counts),
+X-039 (class C: aliased features fail and are named) and X-040 (class C: designs whose provider variance is not
+identified, and n ≤ p, fail at validation).
+
+### D-51: Phase 4 plan, the random-effect models (Accepted: approved by the maintainer, 2026-10-21)
 
 `docs/spec/random-effects/plan.md` reads pprof_py v0.7.0's `LinearRandomEffectModel`, `LogisticRandomEffectModel`
 and `LogisticFERandomClusterModel` with their inference and measures modules, lme4 1.1-35.1 and R pprof 1.0.3's
@@ -123,6 +135,8 @@ random-effect functions, maps them onto pprof_spark's code, and proposes (its §
 9. REML by default for the linear model, ML as an option;
 10. X-037 (class B): the linear model's BLUP standard errors under prior weights, corrected to the fitted model's
     conditional variance, as lme4's.
+
+Approved as proposed, with X-037, on 2026-10-21.
 
 ### D-50: The roadmap after Phase 3, and scale testing in phases (Accepted: approved by the maintainer, 2026-10-19; amended at his request, 2026-10-21)
 
