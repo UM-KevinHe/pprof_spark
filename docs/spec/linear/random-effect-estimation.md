@@ -1,6 +1,6 @@
 # Specification: linear random effects — estimation (slice 4a-1)
 
-- Status: approved with D-52 (2026-10-21), with X-038 to X-040; fixtures and calibration in round 96 (D-53, approved); the numerics kernel in round 97, the engine in round 98 and Python in round 99.
+- Status: approved with D-52 (2026-10-21), with X-038 to X-040; fixtures and calibration in round 96 (D-53, approved); the numerics kernel in round 97, the engine in round 98, Python in round 99 and the distributed search in round 100.
 - Reference: pprof_py v0.7.0 (`9320766`), `LinearRandomEffectModel` (`models/linear/random_effect.py`), and
   lme4 1.1-35.1's `lmer`. Plan: [../random-effects/plan.md](../random-effects/plan.md) (D-51).
 - Parity matrix: entries arrive with the code (`docs/parity/matrix.md`).
@@ -58,7 +58,7 @@ the derivative at 0 is informative; in θ it is always 0 there.
 ## 3. Search (D-51 item 7)
 
 - τ ∈ [0, τ_max] with τ_max = θ_upper² (∞ by default).
-- Grid: τ = 0 and τ_k = 10ᵏ/W̃ for k = −8, …, 8, with W̃ the median of the Wⱼ; points above τ_max become τ_max.
+- Grid: τ = 0 and τ_k = 10ᵏ/W̃ for k = −8, …, 8, with W̃ the mean of the Wⱼ (the median until round 100, §18); points above τ_max become τ_max.
   While d′ < 0 at the last point and it is below τ_max, the grid extends by decades.
 - At the grid point with the smallest d (the smaller τ on ties):
   - τ = 0 with d′(0) ≥ 0: τ̂ = 0, a boundary fit;
@@ -300,3 +300,18 @@ classes.
   object `fit` returns, and DataFrames replace pprof_py's pandas objects.
 - `python/tests/test_linear_re.py` (4 tests): lre-offset under REML against both references' tight optima, its
   predictions and fitted values, lre-weights under ML with lme4's conditional variances, and the argument checks.
+
+## 18. Implementation notes (round 100, the distributed search; no statistical change)
+
+- Pass 1's block partials stay persisted. Each carries its totals (with Σw, Σwx and Σwỹ for §14's centring) and its
+  providers' summaries; the driver collects the totals only.
+- The search's sums run block by block on both paths, and the blocks' sums are combined pairwise in block order. A
+  search on the driver (when m(p + 4) doubles fit `driverBudgetBytes`) collects the providers' summaries and sums
+  each block locally; otherwise each evaluation maps the persisted partials to their blocks' sums and collects
+  them (§7 step 5, OI-95). The two paths give the same bits; `LinearRESearch.path` records which ran.
+- The grid's scale W̃ is the mean weight total ΣW/m, from pass 1's totals, instead of the median, which a
+  distributed table would need a sort to find. The grid only brackets the root, so the optimum is the same.
+- ‖u‖² = τ̂·Σⱼ cⱼ²r̄ⱼ², from the second sums at τ̂, and the provider table's BLUPs and conditional variances are
+  computed from the persisted partials, so neither needs the provider table on the driver.
+- `LinearRESuite` adds a check on lre-many in about ten blocks: a search over the distributed table gives the driver's
+  bits, and both match lme4's tight optimum.

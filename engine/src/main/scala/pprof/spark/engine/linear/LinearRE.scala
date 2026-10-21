@@ -1,6 +1,6 @@
 package pprof.spark.engine.linear
 
-import org.apache.spark.sql.{Column, DataFrame, Encoders}
+import org.apache.spark.sql.{Column, DataFrame, Dataset, Encoders}
 import org.apache.spark.sql.functions.{
   array,
   coalesce,
@@ -18,7 +18,7 @@ import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.layout.{BudgetedLayout, GroupSizes, LayoutPlan}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
-import pprof.spark.numerics.Summation
+import pprof.spark.numerics.{NeumaierSum, NeumaierVector, Summation}
 import pprof.spark.numerics.kernels.{Moments, LinearRE => Kernel}
 
 /** Column roles of the linear random-intercept model (docs/spec/linear/random-effect-estimation.md §5). */
@@ -46,13 +46,16 @@ final case class LinearREOptions(
   )
 }
 
-/** The search's record (§3): evaluations, the root's bracket, |d′(τ̂)| and the boundary, if any. */
+/** The search's record (§3): evaluations, the root's bracket, |d′(τ̂)|, the boundary, if any, and where the
+  * providers were summed: `driver`, or `distributed` when their summaries exceed the driver budget (§7 step 5).
+  */
 final case class LinearRESearch(
     evaluations: Int,
     lower: Double,
     upper: Double,
     slope: Double,
-    boundary: Option[String]
+    boundary: Option[String],
+    path: String
 )
 
 /** The fitted model (§4, §8). `covariance` is Var(β̂), packed. `providers` is the distributed provider table: the
@@ -95,7 +98,9 @@ final class LinearREAliasingException(val features: Seq[String])
         "(X-039)"
     )
 
-/** Pass 1's partial of one block: its totals and its providers' summaries, in the block's provider order. */
+/** Pass 1's partial of one block: its totals (with Σw, Σwx and Σwỹ for §14's centring) and its providers'
+  * summaries, in the block's provider order. The partials stay persisted for the search and the provider table.
+  */
 final case class LinearREMomentPartial(
     blockId: Int,
     rows: Long,
@@ -103,12 +108,41 @@ final case class LinearREMomentPartial(
     xx: Array[Double],
     xy: Array[Double],
     fingerprint: Long,
+    weightTotal: Double,
+    weightedX: Array[Double],
+    weightedY: Double,
     groupIndex: Array[Int],
     records: Array[Long],
     weights: Array[Double],
     xMeans: Array[Double],
     yMeans: Array[Double]
 )
+
+/** A block's totals alone, as the driver collects them. */
+final case class LinearRETotalPartial(
+    blockId: Int,
+    rows: Long,
+    logWeights: Double,
+    xx: Array[Double],
+    xy: Array[Double],
+    fingerprint: Long,
+    weightTotal: Double,
+    weightedX: Array[Double],
+    weightedY: Double,
+    providers: Int
+)
+
+/** A block's providers, as the driver collects them for a search on the driver. */
+final case class LinearREProviderArrays(
+    blockId: Int,
+    weights: Array[Double],
+    xMeans: Array[Double],
+    yMeans: Array[Double]
+)
+
+/** A block's sums for one evaluation of a distributed search. */
+final case class LinearREFirstPartial(blockId: Int, sums: Kernel.FirstSums)
+final case class LinearRESecondPartial(blockId: Int, sums: Kernel.SecondSums)
 
 /** One provider of the table: its BLUP and the BLUP's conditional variance. */
 final case class LinearREProviderRow(
@@ -260,36 +294,55 @@ object LinearRE {
       plan.blockCount.toLong * partialBytes,
       options.blocks
     )
-    DriverGuards.requireWithinBudget(
-      s"the summaries of $m providers, which the search reads on the driver (OI-95),",
-      8L * m.toLong * (p + 4L),
-      options.blocks
-    )
     val workingSet = LinearWorkingSet.build(input, plan, options.blocks.resolvedStorageLevel)
     try {
       val partials = workingSet.blocks
         .map((block: LinearBlock) => moments(block))(Encoders.product[LinearREMomentPartial])
+        .persist(options.blocks.resolvedStorageLevel)
+      try fitOn(df, spec, options, input, plan, workingSet, partials, p, m)
+      finally partials.unpersist(blocking = false)
+    } finally workingSet.release()
+  }
+
+  private def fitOn(
+      df: DataFrame,
+      spec: LinearRESpec,
+      options: LinearREOptions,
+      input: LinearInput,
+      plan: LayoutPlan,
+      workingSet: LinearWorkingSet,
+      partials: Dataset[LinearREMomentPartial],
+      p: Int,
+      m: Int
+  ): LinearREFit = {
+    {
+      val totals = partials
+        .map((t: LinearREMomentPartial) =>
+          LinearRETotalPartial(
+            t.blockId,
+            t.rows,
+            t.logWeights,
+            t.xx,
+            t.xy,
+            t.fingerprint,
+            t.weightTotal,
+            t.weightedX,
+            t.weightedY,
+            t.groupIndex.length
+          )
+        )(Encoders.product[LinearRETotalPartial])
         .collect()
         .sortBy(_.blockId)
-      val rows = partials.iterator.map(_.rows).sum
+      val rows = totals.iterator.map(_.rows).sum
       if (rows != plan.rowCount)
         throw new IllegalStateException(
           s"the blocks hold $rows rows; the plan has ${plan.rowCount}"
         )
-      val xx =
-        Array.tabulate(Moments.packedLength(p))(k => Summation.pairwise(partials.map(_.xx(k))))
-      val xy = Array.tabulate(p)(k => Summation.pairwise(partials.map(_.xy(k))))
-      val providers = partials
-        .flatMap(partial =>
-          partial.groupIndex.indices.map(g => (partial.groupIndex(g), partial, g))
-        )
-        .sortBy(_._1)
-      val records = providers.map { case (_, partial, g) => partial.records(g) }
-      val weights = providers.map { case (_, partial, g) => partial.weights(g) }
-      val xMeans = providers.flatMap { case (_, partial, g) =>
-        partial.xMeans.slice(g * p, (g + 1) * p)
-      }
-      val yMeans = providers.map { case (_, partial, g) => partial.yMeans(g) }
+      if (totals.iterator.map(_.providers).sum != m)
+        throw new IllegalStateException(s"the blocks hold other than the plan's $m providers")
+      def pairwise(f: LinearRETotalPartial => Double): Double = Summation.pairwise(totals.map(f))
+      val xx = Array.tabulate(Moments.packedLength(p))(k => pairwise(_.xx(k)))
+      val xy = Array.tabulate(p)(k => pairwise(_.xy(k)))
       val betaWithin = Kernel.withinSolution(xx, xy, p)
       val within = workingSet.blocks
         .map((block: LinearBlock) =>
@@ -299,64 +352,88 @@ object LinearRE {
         )
         .collect()
         .sortBy(_.blockId)
-      val data = Kernel.Data(
-        records,
-        weights,
-        xMeans,
-        yMeans,
+      val kernelTotals = Kernel.Totals(
+        rows,
         p,
         options.includeIntercept,
-        rows,
-        Summation.pairwise(partials.map(_.logWeights)),
+        pairwise(_.logWeights),
         xx,
         xy,
         betaWithin,
-        Summation.pairwise(within.map(_.rss))
+        Summation.pairwise(within.map(_.rss)),
+        pairwise(_.weightTotal),
+        Array.tabulate(p)(k => pairwise(_.weightedX(k))),
+        pairwise(_.weightedY),
+        m
       )
+      val onDriver = 8L * m.toLong * (p + 4L) <= options.blocks.driverBudgetBytes
+      val providers: Kernel.Providers =
+        if (onDriver) {
+          val blocks = partials
+            .map((t: LinearREMomentPartial) =>
+              LinearREProviderArrays(t.blockId, t.weights, t.xMeans, t.yMeans)
+            )(
+              Encoders.product[LinearREProviderArrays]
+            )
+            .collect()
+            .sortBy(_.blockId)
+          new Kernel.LocalProviders(
+            blocks.map(b => Kernel.ProviderBlock(b.weights, b.xMeans, b.yMeans)).toSeq,
+            p
+          )
+        } else new DistributedProviders(partials, p)
+      val problem = new Kernel.Problem(kernelTotals, providers, options.reml)
       val names = input.spec.features.take(p)
-      val aliased = Kernel.aliased(data)
+      val aliased = problem.aliased
       if (aliased.nonEmpty) throw new LinearREAliasingException(aliased.map(names))
-      val result = Kernel.fit(data, options.reml, options.thetaUpper, options.maxEvaluations)
+      val solution =
+        Kernel.solve(
+          problem,
+          kernelTotals.weightTotal / m,
+          options.thetaUpper,
+          options.maxEvaluations
+        )
       val coefficients = names.indices.map { i =>
         LinearCoefficient(
           names(i),
-          result.beta(i),
-          math.sqrt(result.covariance(Moments.packedIndex(i, i, p)))
+          solution.beta(i),
+          math.sqrt(solution.covariance(Moments.packedIndex(i, i, p)))
         )
       }.toVector
-      val search = result.search
+      val search = solution.search
       LinearREFit(
         coefficients,
-        result.covariance.toVector,
-        providerTable(input, plan, options, providers.map(_._1), records, weights, result),
-        result.sigma,
-        result.theta,
-        result.sigmaAlpha,
+        solution.covariance.toVector,
+        providerTable(partials, input, plan, options, problem, solution),
+        solution.sigma,
+        solution.theta,
+        solution.sigmaAlpha,
         if (options.reml) "REML" else "ML",
         rows,
         m,
-        result.deviance,
-        result.logLikelihood,
-        result.aic,
-        result.bic,
-        result.pwrss,
-        result.logDetH,
-        result.ussq,
+        solution.deviance,
+        solution.logLikelihood,
+        solution.aic,
+        solution.bic,
+        solution.pwrss,
+        solution.logDetH,
+        solution.ussq,
         LinearRESearch(
           search.evaluations,
           search.lower,
           search.upper,
           search.slope,
-          search.boundary
+          search.boundary,
+          if (onDriver) "driver" else "distributed"
         ),
         search.warnings,
         spec,
         options,
         SoftwareInfo.capture(df.sparkSession),
         LayoutSummary.of(plan),
-        partials.iterator.map(_.fingerprint).sum
+        totals.iterator.map(_.fingerprint).sum
       )
-    } finally workingSet.release()
+    }
   }
 
   /** `df` with `prediction`: the fixed part xᵀβ̂, plus the offset column when the fit has one and `withOffset`
@@ -480,6 +557,19 @@ object LinearRE {
 
   private def moments(block: LinearBlock): LinearREMomentPartial = {
     val (providers, within) = Kernel.summaries(kernelRows(block))
+    val p = block.p - 1
+    val weightTotal = new NeumaierSum
+    val weightedX = new NeumaierVector(p)
+    val weightedY = new NeumaierSum
+    providers.foreach { provider =>
+      weightTotal.add(provider.weight)
+      var k = 0
+      while (k < p) {
+        weightedX.addAt(k, provider.weight * provider.xMean(k))
+        k += 1
+      }
+      weightedY.add(provider.weight * provider.yMean)
+    }
     LinearREMomentPartial(
       block.blockId,
       within.rows,
@@ -487,6 +577,9 @@ object LinearRE {
       within.xx,
       within.xy,
       LinearFE.fingerprintOf(block),
+      weightTotal.value,
+      weightedX.values,
+      weightedY.value,
       block.groupIndex,
       providers.map(_.rows),
       providers.map(_.weight),
@@ -500,34 +593,46 @@ object LinearRE {
     Kernel.withinResiduals(rows, Kernel.summaries(rows)._1, betaWithin)
   }
 
-  /** The provider table: BLUPs and conditional variances from the driver, keyed through the plan, persisted. */
+  /** The provider table: each block's BLUPs and conditional variances at the solution (§4), computed where the
+    * block's providers are, keyed through the plan, persisted.
+    */
   private def providerTable(
+      partials: Dataset[LinearREMomentPartial],
       input: LinearInput,
       plan: LayoutPlan,
       options: LinearREOptions,
-      groups: Array[Int],
-      records: Array[Long],
-      weights: Array[Double],
-      result: Kernel.Fit
+      problem: Kernel.Problem,
+      solution: Kernel.Solution
   ): DataFrame = {
     val spark = input.frame.sparkSession
-    val rows = groups.indices.map { j =>
-      LinearREProviderRow(
-        groups(j),
-        records(j),
-        weights(j),
-        result.blups(j),
-        result.conditionalVariances(j)
-      )
-    }
+    val p = problem.totals.p
+    val (centreX, centreY, beta) = (problem.centreX, problem.centreY, solution.betaCentred)
+    val (tau, sigma2) = (solution.tau, solution.sigma2)
+    val rows = partials.flatMap { (t: LinearREMomentPartial) =>
+      t.groupIndex.indices.iterator.map { g =>
+        val (blup, variance) =
+          Kernel.providerEstimate(
+            t.weights(g),
+            t.xMeans,
+            g * p,
+            t.yMeans(g),
+            p,
+            centreX,
+            centreY,
+            beta,
+            tau,
+            sigma2
+          )
+        LinearREProviderRow(t.groupIndex(g), t.records(g), t.weights(g), blup, variance)
+      }
+    }(Encoders.product[LinearREProviderRow])
     val keys = PlanFrames
       .placements(spark, plan, input.providerKeyIsText)
       .select(
         col(PlanFrames.GroupIndexColumn).as("groupIndex"),
         col(Validation.GroupColumn).as(input.spec.provider)
       )
-    val table = spark
-      .createDataset(rows)(Encoders.product[LinearREProviderRow])
+    val table = rows
       .toDF()
       .join(keys, Seq("groupIndex"))
       .orderBy("groupIndex")
@@ -542,5 +647,58 @@ object LinearRE {
       .persist(options.blocks.resolvedStorageLevel)
     table.count()
     table
+  }
+}
+
+/** The search's sums over a distributed provider table (§7 step 5): each evaluation maps the persisted block partials
+  * to their sums and combines them on the driver in block order, as `Kernel.LocalProviders` does on the driver.
+  */
+private final class DistributedProviders(partials: Dataset[LinearREMomentPartial], p: Int)
+    extends Kernel.Providers {
+
+  def first(tau: Double, centreX: Array[Double], centreY: Double): Kernel.FirstSums = {
+    val q = p
+    val parts = partials
+      .map((t: LinearREMomentPartial) =>
+        LinearREFirstPartial(
+          t.blockId,
+          Kernel.firstSums(
+            Kernel.ProviderBlock(t.weights, t.xMeans, t.yMeans),
+            q,
+            tau,
+            centreX,
+            centreY
+          )
+        )
+      )(Encoders.product[LinearREFirstPartial])
+      .collect()
+      .sortBy(_.blockId)
+    Kernel.combineFirst(parts.map(_.sums).toSeq)
+  }
+
+  def second(
+      tau: Double,
+      beta: Array[Double],
+      centreX: Array[Double],
+      centreY: Double
+  ): Kernel.SecondSums = {
+    val q = p
+    val parts = partials
+      .map((t: LinearREMomentPartial) =>
+        LinearRESecondPartial(
+          t.blockId,
+          Kernel.secondSums(
+            Kernel.ProviderBlock(t.weights, t.xMeans, t.yMeans),
+            q,
+            tau,
+            beta,
+            centreX,
+            centreY
+          )
+        )
+      )(Encoders.product[LinearRESecondPartial])
+      .collect()
+      .sortBy(_.blockId)
+    Kernel.combineSecond(parts.map(_.sums).toSeq)
   }
 }

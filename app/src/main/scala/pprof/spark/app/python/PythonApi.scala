@@ -1221,6 +1221,7 @@ object PythonApi {
     search.put("upper", hex(fit.search.upper))
     search.put("slope", hex(fit.search.slope))
     fit.search.boundary.foreach(b => search.put("boundary", b))
+    search.put("path", fit.search.path)
     val warnings = root.putArray("warnings")
     fit.warnings.foreach(w => warnings.add(w))
     val columns = root.putObject("columns")

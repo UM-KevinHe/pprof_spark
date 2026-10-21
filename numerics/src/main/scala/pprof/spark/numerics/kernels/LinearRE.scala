@@ -1,6 +1,13 @@
 package pprof.spark.numerics.kernels
 
-import pprof.spark.numerics.{Brent, Cholesky, CholeskyFactor, NeumaierSum, NeumaierVector}
+import pprof.spark.numerics.{
+  Brent,
+  Cholesky,
+  CholeskyFactor,
+  NeumaierSum,
+  NeumaierVector,
+  Summation
+}
 
 /** Kernels of the linear random-intercept model (docs/spec/linear/random-effect-estimation.md §2 to §4, §7 and
   * §14). A block's rows are grouped by provider in canonical order; `groupStart` gives each provider's first row,
@@ -134,6 +141,196 @@ object LinearRE {
     def m: Int = weights.length
   }
 
+  /** One block's providers in key order: weight totals Wⱼ, weighted means x̄ⱼ (row-major, p each) and ȳⱼ. */
+  final case class ProviderBlock(
+      weights: Array[Double],
+      xMeans: Array[Double],
+      yMeans: Array[Double]
+  )
+
+  /** A fit's pooled totals (§2.1): rows, p, the intercept, Σ log w, W_xx, W_xy, the within solution and its residual
+    * sum of squares, Σw, Σwx and Σwỹ for the centring of §14, and the number of providers.
+    */
+  final case class Totals(
+      rows: Long,
+      p: Int,
+      intercept: Boolean,
+      logWeights: Double,
+      xx: Array[Double],
+      xy: Array[Double],
+      betaWithin: Array[Double],
+      withinResidual: Double,
+      weightTotal: Double,
+      weightedX: Array[Double],
+      weightedY: Double,
+      providers: Int
+  )
+
+  object Totals {
+    def of(data: Data): Totals = {
+      val p = data.p
+      val total = new NeumaierSum
+      val xs = new NeumaierVector(p)
+      val ys = new NeumaierSum
+      var j = 0
+      while (j < data.m) {
+        val w = data.weights(j)
+        total.add(w)
+        var k = 0
+        while (k < p) {
+          xs.addAt(k, w * data.xMeans(j * p + k))
+          k += 1
+        }
+        ys.add(w * data.yMeans(j))
+        j += 1
+      }
+      Totals(
+        data.rows,
+        p,
+        data.intercept,
+        data.logWeights,
+        data.xx,
+        data.xy,
+        data.betaWithin,
+        data.withinResidual,
+        total.value,
+        xs.values,
+        ys.value,
+        data.m
+      )
+    }
+  }
+
+  /** A block's shares of A(τ) − W_xx, G(τ), the right-hand side less W_xy, Σ log hⱼ and Σ cⱼ (§2.2, §2.3). */
+  final case class FirstSums(
+      a: Array[Double],
+      g: Array[Double],
+      rhs: Array[Double],
+      logH: Double,
+      sumC: Double
+  )
+
+  /** A block's Σ cⱼr̄ⱼ² and Σ cⱼ²r̄ⱼ² at β̂(τ). */
+  final case class SecondSums(between: Double, betweenSlope: Double)
+
+  def firstSums(
+      block: ProviderBlock,
+      p: Int,
+      tau: Double,
+      centreX: Array[Double],
+      centreY: Double
+  ): FirstSums = {
+    val length = Moments.packedLength(p)
+    val a = new NeumaierVector(length)
+    val g = new NeumaierVector(length)
+    val rhs = new NeumaierVector(p)
+    val logH = new NeumaierSum
+    val sumC = new NeumaierSum
+    val z = new Array[Double](p)
+    var j = 0
+    while (j < block.weights.length) {
+      val w = block.weights(j)
+      val c = w / (1.0 + tau * w)
+      logH.add(StrictMath.log1p(tau * w))
+      sumC.add(c)
+      var k = 0
+      while (k < p) {
+        z(k) = block.xMeans(j * p + k) - centreX(k)
+        k += 1
+      }
+      val y = block.yMeans(j) - centreY
+      var i = 0
+      while (i < p) {
+        k = i
+        while (k < p) {
+          val index = Moments.packedIndex(i, k, p)
+          val product = z(i) * z(k)
+          a.addAt(index, c * product)
+          g.addAt(index, c * c * product)
+          k += 1
+        }
+        rhs.addAt(i, c * z(i) * y)
+        i += 1
+      }
+      j += 1
+    }
+    FirstSums(a.values, g.values, rhs.values, logH.value, sumC.value)
+  }
+
+  def secondSums(
+      block: ProviderBlock,
+      p: Int,
+      tau: Double,
+      beta: Array[Double],
+      centreX: Array[Double],
+      centreY: Double
+  ): SecondSums = {
+    val between = new NeumaierSum
+    val slope = new NeumaierSum
+    var j = 0
+    while (j < block.weights.length) {
+      var r = block.yMeans(j) - centreY
+      var k = 0
+      while (k < p) {
+        r -= (block.xMeans(j * p + k) - centreX(k)) * beta(k)
+        k += 1
+      }
+      val w = block.weights(j)
+      val c = w / (1.0 + tau * w)
+      between.add(c * r * r)
+      slope.add(c * c * r * r)
+      j += 1
+    }
+    SecondSums(between.value, slope.value)
+  }
+
+  /** The blocks' sums added element by element, pairwise in block order (§6.8). */
+  def combineFirst(parts: Seq[FirstSums]): FirstSums =
+    if (parts.length == 1) parts.head
+    else {
+      def pairwise(f: FirstSums => Double): Double = Summation.pairwise(parts.map(f).toArray)
+      FirstSums(
+        Array.tabulate(parts.head.a.length)(i => pairwise(_.a(i))),
+        Array.tabulate(parts.head.g.length)(i => pairwise(_.g(i))),
+        Array.tabulate(parts.head.rhs.length)(i => pairwise(_.rhs(i))),
+        pairwise(_.logH),
+        pairwise(_.sumC)
+      )
+    }
+
+  def combineSecond(parts: Seq[SecondSums]): SecondSums =
+    if (parts.length == 1) parts.head
+    else
+      SecondSums(
+        Summation.pairwise(parts.map(_.between).toArray),
+        Summation.pairwise(parts.map(_.betweenSlope).toArray)
+      )
+
+  /** A fit's providers in blocks: each block's sums computed where its providers are, then combined in block order,
+    * so a search on the driver and one over a distributed provider table give the same bits (§7 step 5).
+    */
+  trait Providers {
+    def first(tau: Double, centreX: Array[Double], centreY: Double): FirstSums
+    def second(
+        tau: Double,
+        beta: Array[Double],
+        centreX: Array[Double],
+        centreY: Double
+    ): SecondSums
+  }
+
+  final class LocalProviders(blocks: Seq[ProviderBlock], p: Int) extends Providers {
+    def first(tau: Double, centreX: Array[Double], centreY: Double): FirstSums =
+      combineFirst(blocks.map(b => firstSums(b, p, tau, centreX, centreY)))
+    def second(
+        tau: Double,
+        beta: Array[Double],
+        centreX: Array[Double],
+        centreY: Double
+    ): SecondSums =
+      combineSecond(blocks.map(b => secondSums(b, p, tau, beta, centreX, centreY)))
+  }
+
   /** The deviance and its slope in τ (§2.2, §2.3), with β̂ in the centred coordinates of §14. */
   final case class Evaluation(
       tau: Double,
@@ -143,151 +340,61 @@ object LinearRE {
       factor: Option[CholeskyFactor],
       pwrss: Double,
       logDetH: Double,
-      residualMeans: Array[Double]
+      betweenSlope: Double
   )
 
-  /** With an intercept, the weighted grand means of the features (0 for the intercept) and of ỹ (§14); zeros
-    * otherwise.
-    */
-  private def centres(data: Data): (Array[Double], Double) = {
-    val p = data.p
-    if (!data.intercept) (new Array[Double](p), 0.0)
-    else {
-      val total = new NeumaierSum
-      val xs = new NeumaierVector(p)
-      val ys = new NeumaierSum
-      var j = 0
-      while (j < data.m) {
-        val w = data.weights(j)
-        total.add(w)
-        var k = 1
-        while (k < p) {
-          xs.addAt(k, w * data.xMeans(j * p + k))
-          k += 1
-        }
-        ys.add(w * data.yMeans(j))
-        j += 1
-      }
-      (
-        Array.tabulate(p)(k => if (k == 0) 0.0 else xs.valueAt(k) / total.value),
-        ys.value / total.value
+  /** The profiled criterion of one fit, REML or ML, on its totals and providers. */
+  final class Problem(val totals: Totals, val providers: Providers, val reml: Boolean) {
+
+    def this(data: Data, reml: Boolean) =
+      this(
+        Totals.of(data),
+        new LocalProviders(Seq(ProviderBlock(data.weights, data.xMeans, data.yMeans)), data.p),
+        reml
       )
-    }
-  }
 
-  /** X′WX in the centred coordinates of §14: W_xx + Σⱼ Wⱼ(x̄ⱼ − x̄)(x̄ⱼ − x̄)ᵀ, packed. */
-  private def crossProducts(data: Data, centreX: Array[Double]): Array[Double] = {
-    val p = data.p
-    val out = new NeumaierVector(Moments.packedLength(p))
-    var index = 0
-    while (index < data.xx.length) {
-      out.addAt(index, data.xx(index))
-      index += 1
-    }
-    var j = 0
-    while (j < data.m) {
-      var i = 0
-      while (i < p) {
-        val zi = data.xMeans(j * p + i) - centreX(i)
-        var k = i
-        while (k < p) {
-          out.addAt(
-            Moments.packedIndex(i, k, p),
-            data.weights(j) * zi * (data.xMeans(j * p + k) - centreX(k))
-          )
-          k += 1
-        }
-        i += 1
-      }
-      j += 1
-    }
-    out.values
-  }
+    private val p = totals.p
+    val nu: Double = (if (reml) totals.rows - p else totals.rows).toDouble
+    require(nu > 0.0, s"the criterion needs n > p, got n = ${totals.rows} and p = $p")
 
-  /** The columns of X′WX, in the centred coordinates of §14, that Cholesky finds aliased (X-039). */
-  def aliased(data: Data): Vector[Int] =
-    if (data.p == 0) Vector.empty
-    else Cholesky.factor(crossProducts(data, centres(data)._1), data.p).aliased
+    /** With an intercept, the weighted grand means of the features (0 for the intercept) and of ỹ (§14). */
+    val centreX: Array[Double] =
+      if (!totals.intercept) new Array[Double](p)
+      else Array.tabulate(p)(k => if (k == 0) 0.0 else totals.weightedX(k) / totals.weightTotal)
+    val centreY: Double = if (totals.intercept) totals.weightedY / totals.weightTotal else 0.0
 
-  /** The profiled criterion of one fit: REML or ML on the data's summaries. */
-  final class Problem(val data: Data, val reml: Boolean) {
-    private val p = data.p
-    private val m = data.m
-    val nu: Double = (if (reml) data.rows - p else data.rows).toDouble
-    require(nu > 0.0, s"the criterion needs n > p, got n = ${data.rows} and p = $p")
-
-    private val centred = centres(data)
-    val centreX: Array[Double] = centred._1
-    val centreY: Double = centred._2
-    private val z: Array[Double] = Array.tabulate(m * p)(i => data.xMeans(i) - centreX(i % p))
-    private val y: Array[Double] = Array.tabulate(m)(j => data.yMeans(j) - centreY)
     private val gradient: Array[Double] = Array.tabulate(p) { i =>
-      var s = data.xy(i)
+      var s = totals.xy(i)
       var k = 0
       while (k < p) {
-        s -= data.xx(Moments.packedIndex(math.min(i, k), math.max(i, k), p)) * data.betaWithin(k)
+        s -= totals.xx(Moments.packedIndex(math.min(i, k), math.max(i, k), p)) * totals.betaWithin(
+          k
+        )
         k += 1
       }
       s
     }
 
+    private def a(first: FirstSums): Array[Double] =
+      Array.tabulate(Moments.packedLength(p))(i => totals.xx(i) + first.a(i))
+
+    /** The columns of X′WX = A(0), in the centred coordinates of §14, that Cholesky finds aliased (X-039). */
+    def aliased: Vector[Int] =
+      if (p == 0) Vector.empty
+      else Cholesky.factor(a(providers.first(0.0, centreX, centreY)), p).aliased
+
     def evaluate(tau: Double): Evaluation = {
       require(tau >= 0.0, s"tau must be non-negative, got $tau")
-      val length = Moments.packedLength(p)
-      val a = new NeumaierVector(length)
-      val g = new NeumaierVector(length)
-      val rhs = new NeumaierVector(p)
-      val logH = new NeumaierSum
-      val sumC = new NeumaierSum
-      var j = 0
-      while (j < m) {
-        val w = data.weights(j)
-        val c = w / (1.0 + tau * w)
-        logH.add(StrictMath.log1p(tau * w))
-        sumC.add(c)
-        var i = 0
-        while (i < p) {
-          val zi = z(j * p + i)
-          var k = i
-          while (k < p) {
-            val index = Moments.packedIndex(i, k, p)
-            val product = zi * z(j * p + k)
-            a.addAt(index, c * product)
-            g.addAt(index, c * c * product)
-            k += 1
-          }
-          rhs.addAt(i, c * zi * y(j))
-          i += 1
-        }
-        j += 1
-      }
-      val factor =
-        if (p == 0) None
-        else Some(Cholesky.factor(Array.tabulate(length)(i => data.xx(i) + a.valueAt(i)), p))
+      val first = providers.first(tau, centreX, centreY)
+      val factor = if (p == 0) None else Some(Cholesky.factor(a(first), p))
       factor.foreach(f =>
         require(f.isFullRank, s"A(tau) is aliased in columns ${f.aliased.mkString(", ")}")
       )
       val beta = factor.fold(new Array[Double](0))(
-        _.solve(Array.tabulate(p)(i => data.xy(i) + rhs.valueAt(i)))
+        _.solve(Array.tabulate(p)(i => totals.xy(i) + first.rhs(i)))
       )
-      val residualMeans = new Array[Double](m)
-      val between = new NeumaierSum
-      val betweenSlope = new NeumaierSum
-      j = 0
-      while (j < m) {
-        var r = y(j)
-        var k = 0
-        while (k < p) {
-          r -= z(j * p + k) * beta(k)
-          k += 1
-        }
-        residualMeans(j) = r
-        val c = data.weights(j) / (1.0 + tau * data.weights(j))
-        between.add(c * r * r)
-        betweenSlope.add(c * c * r * r)
-        j += 1
-      }
-      val v = Array.tabulate(p)(k => beta(k) - data.betaWithin(k))
+      val second = providers.second(tau, beta, centreX, centreY)
+      val v = Array.tabulate(p)(k => beta(k) - totals.betaWithin(k))
       val quadratic = new NeumaierSum
       val cross = new NeumaierSum
       var i = 0
@@ -296,18 +403,18 @@ object LinearRE {
         var k = 0
         while (k < p) {
           quadratic.add(
-            v(i) * data.xx(Moments.packedIndex(math.min(i, k), math.max(i, k), p)) * v(k)
+            v(i) * totals.xx(Moments.packedIndex(math.min(i, k), math.max(i, k), p)) * v(k)
           )
           k += 1
         }
         i += 1
       }
       val pwrss =
-        data.withinResidual - 2.0 * cross.value + math.max(quadratic.value, 0.0) + between.value
+        totals.withinResidual - 2.0 * cross.value + math.max(quadratic.value, 0.0) + second.between
       require(pwrss > 0.0, "the penalized residual sum of squares is 0: the data fit exactly")
       var deviance =
-        nu * (1.0 + StrictMath.log(2.0 * math.Pi * pwrss / nu)) + logH.value - data.logWeights
-      var slope = -nu * betweenSlope.value / pwrss + sumC.value
+        nu * (1.0 + StrictMath.log(2.0 * math.Pi * pwrss / nu)) + first.logH - totals.logWeights
+      var slope = -nu * second.betweenSlope / pwrss + first.sumC
       if (reml) factor.foreach { f =>
         deviance += f.pivots.map(StrictMath.log).sum
         val inverse = f.inversePacked
@@ -317,20 +424,20 @@ object LinearRE {
           var c = 0
           while (c < p) {
             val index = Moments.packedIndex(math.min(r, c), math.max(r, c), p)
-            trace.add(inverse(index) * g.valueAt(index))
+            trace.add(inverse(index) * first.g(index))
             c += 1
           }
           r += 1
         }
         slope -= trace.value
       }
-      Evaluation(tau, deviance, slope, beta, factor, pwrss, logH.value, residualMeans)
+      Evaluation(tau, deviance, slope, beta, factor, pwrss, first.logH, second.betweenSlope)
     }
 
     /** β̂ in the original coordinates: the intercept moved back from the centred coordinates (§14). */
     def originalBeta(beta: Array[Double]): Array[Double] = {
       val out = beta.clone()
-      if (data.intercept) {
+      if (totals.intercept) {
         var shift = centreY
         var k = 1
         while (k < p) {
@@ -344,7 +451,7 @@ object LinearRE {
 
     /** T·V·Tᵀ for a packed V in the centred coordinates, with T the identity but T(0, k) = −x̄ₖ (§14). */
     def originalCovariance(packed: Array[Double]): Array[Double] = {
-      if (!data.intercept) packed
+      if (!totals.intercept) packed
       else {
         def at(i: Int, k: Int): Double = packed(
           Moments.packedIndex(math.min(i, k), math.max(i, k), p)
@@ -406,35 +513,46 @@ object LinearRE {
       search: Search
   )
 
-  private def median(values: Array[Double]): Double = {
-    val sorted = values.sorted
-    val n = sorted.length
-    if (n % 2 == 1) sorted(n / 2) else 0.5 * (sorted(n / 2 - 1) + sorted(n / 2))
-  }
+  /** The columns of X′WX that Cholesky finds aliased, in the centred coordinates of §14 (X-039). */
+  def aliased(data: Data): Vector[Int] = new Problem(data, reml = false).aliased
 
-  /** Fits the model (§3, §4): the grid, the boundary rules, Brent's root of d′, the estimates at τ̂. */
-  def fit(
-      data: Data,
-      reml: Boolean,
+  /** The solution at τ̂ (§4) in the original coordinates, with β̂ also in the centred ones for the providers. */
+  final case class Solution(
+      tau: Double,
+      theta: Double,
+      sigma: Double,
+      sigmaAlpha: Double,
+      sigma2: Double,
+      betaCentred: Array[Double],
+      beta: Array[Double],
+      covariance: Array[Double],
+      deviance: Double,
+      logLikelihood: Double,
+      aic: Double,
+      bic: Double,
+      pwrss: Double,
+      logDetH: Double,
+      ussq: Double,
+      search: Search
+  )
+
+  /** The search of §3 (the grid at 10ᵏ/W̃ with W̃ = `scale`, the boundary rules, Brent's root of d′) and the
+    * estimates at τ̂; ‖u‖² = Σⱼ b̂ⱼ²/τ̂ = τ̂·Σⱼ cⱼ²r̄ⱼ².
+    */
+  def solve(
+      problem: Problem,
+      scale: Double,
       thetaUpper: Double = Double.PositiveInfinity,
       maxEvaluations: Int = 200
-  ): Fit = {
+  ): Solution = {
+    val totals = problem.totals
     require(
-      data.m >= 2,
-      s"the provider variance needs at least two providers, got ${data.m} (X-040)"
-    )
-    require(
-      data.m < data.rows,
-      s"the providers (${data.m}) must be fewer than the rows (${data.rows}) (X-040)"
-    )
-    require(
-      data.rows > data.p,
-      s"the rows (${data.rows}) must outnumber the fixed effects (${data.p}) (X-040)"
+      totals.providers >= 2 && totals.providers < totals.rows,
+      "the design breaks X-040's rules"
     )
     require(thetaUpper > 0.0, s"thetaUpper must be positive, got $thetaUpper")
-    val problem = new Problem(data, reml)
+    require(scale > 0.0, s"the grid's scale must be positive, got $scale")
     val tauMax = thetaUpper * thetaUpper
-    val scale = median(data.weights)
     var count = 0
     def evaluate(tau: Double): Evaluation = {
       count += 1
@@ -503,31 +621,107 @@ object LinearRE {
     val covariance = chosen.factor.fold(new Array[Double](0)) { f =>
       problem.originalCovariance(f.inversePacked.map(_ * sigma2))
     }
-    val blups = Array.tabulate(data.m) { j =>
-      val w = data.weights(j)
-      tau * w * chosen.residualMeans(j) / (1.0 + tau * w)
-    }
-    val conditional = Array.tabulate(data.m)(j => sigma2 * tau / (1.0 + tau * data.weights(j)))
-    val ussq = if (tau > 0.0) blups.map(b => b * b).sum / tau else 0.0
-    val k = (data.p + 2).toDouble
-    Fit(
+    val k = (totals.p + 2).toDouble
+    Solution(
       tau = tau,
       theta = theta,
       sigma = sigma,
       sigmaAlpha = theta * sigma,
+      sigma2 = sigma2,
+      betaCentred = chosen.beta,
       beta = problem.originalBeta(chosen.beta),
       covariance = covariance,
-      blups = blups,
-      conditionalVariances = conditional,
       deviance = chosen.deviance,
       logLikelihood = -0.5 * chosen.deviance,
       aic = chosen.deviance + 2.0 * k,
-      bic = chosen.deviance + k * StrictMath.log(data.rows.toDouble),
+      bic = chosen.deviance + k * StrictMath.log(totals.rows.toDouble),
       pwrss = chosen.pwrss,
       logDetH = chosen.logDetH,
-      ussq = ussq,
-      reml = reml,
+      ussq = tau * chosen.betweenSlope,
       search = Search(count, lower, upper, math.abs(chosen.slope), boundary, warnings.result())
+    )
+  }
+
+  /** A provider's BLUP b̂ⱼ = τ̂Wⱼr̄ⱼ/(1 + τ̂Wⱼ) and its conditional variance σ̂²τ̂/(1 + τ̂Wⱼ) (§4, X-037), from its
+    * summary, whose means start at `offset` in `xMeans`.
+    */
+  def providerEstimate(
+      weight: Double,
+      xMeans: Array[Double],
+      offset: Int,
+      yMean: Double,
+      p: Int,
+      centreX: Array[Double],
+      centreY: Double,
+      betaCentred: Array[Double],
+      tau: Double,
+      sigma2: Double
+  ): (Double, Double) = {
+    var r = yMean - centreY
+    var k = 0
+    while (k < p) {
+      r -= (xMeans(offset + k) - centreX(k)) * betaCentred(k)
+      k += 1
+    }
+    val h = 1.0 + tau * weight
+    (tau * weight * r / h, sigma2 * tau / h)
+  }
+
+  /** Fits the model on one block of providers (§3, §4): the search with W̃ the mean weight total, then each
+    * provider's estimates.
+    */
+  def fit(
+      data: Data,
+      reml: Boolean,
+      thetaUpper: Double = Double.PositiveInfinity,
+      maxEvaluations: Int = 200
+  ): Fit = {
+    require(
+      data.m >= 2,
+      s"the provider variance needs at least two providers, got ${data.m} (X-040)"
+    )
+    require(
+      data.m < data.rows,
+      s"the providers (${data.m}) must be fewer than the rows (${data.rows}) (X-040)"
+    )
+    require(
+      data.rows > data.p,
+      s"the rows (${data.rows}) must outnumber the fixed effects (${data.p}) (X-040)"
+    )
+    val problem = new Problem(data, reml)
+    val s = solve(problem, problem.totals.weightTotal / data.m, thetaUpper, maxEvaluations)
+    val estimates = Array.tabulate(data.m) { j =>
+      providerEstimate(
+        data.weights(j),
+        data.xMeans,
+        j * data.p,
+        data.yMeans(j),
+        data.p,
+        problem.centreX,
+        problem.centreY,
+        s.betaCentred,
+        s.tau,
+        s.sigma2
+      )
+    }
+    Fit(
+      tau = s.tau,
+      theta = s.theta,
+      sigma = s.sigma,
+      sigmaAlpha = s.sigmaAlpha,
+      beta = s.beta,
+      covariance = s.covariance,
+      blups = estimates.map(_._1),
+      conditionalVariances = estimates.map(_._2),
+      deviance = s.deviance,
+      logLikelihood = s.logLikelihood,
+      aic = s.aic,
+      bic = s.bic,
+      pwrss = s.pwrss,
+      logDetH = s.logDetH,
+      ussq = s.ussq,
+      reml = reml,
+      search = s.search
     )
   }
 }

@@ -5,6 +5,7 @@ import scala.jdk.CollectionConverters._
 import com.fasterxml.jackson.databind.JsonNode
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.{col, lit, rand, when}
+import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.data.InvalidInputException
 import pprof.spark.testkit.{Fixtures, SparkSuite, Tolerances}
 
@@ -135,6 +136,30 @@ class LinearRESuite extends SparkSuite {
       val shift = if (criterion == "reml") -2.0 * math.log(1024.0) else 0.0
       check("T-fn", "deviance", Seq(shifted.deviance - shift), Array(base.deviance))
     }
+  }
+
+  test(
+    "lre-many: a search over the distributed provider table gives the driver's bits (spec 4a-1 section 7, OI-95)"
+  ) {
+    val (spec, _) = setup("lre-many")
+    val df = input("lre-many")
+    val small = BlockOptions(targetBlockBytes = 65536L)
+    val driver = LinearRE.fit(df, spec, LinearREOptions(blocks = small))
+    val distributed =
+      LinearRE.fit(df, spec, LinearREOptions(blocks = small.copy(driverBudgetBytes = 50000L)))
+    assertEquals((driver.search.path, distributed.search.path), ("driver", "distributed"))
+    assert(driver.layout.blockCount > 1, s"${driver.layout.blockCount} blocks")
+    assertEquals(distributed.estimates, driver.estimates)
+    assertEquals(distributed.covariance, driver.covariance)
+    assertEquals(providerColumn(distributed, "blup"), providerColumn(driver, "blup"))
+    assertEquals(providerColumn(distributed, "variance"), providerColumn(driver, "variance"))
+    assertEquals(
+      (distributed.deviance, distributed.theta, distributed.ussq),
+      (driver.deviance, driver.theta, driver.ussq)
+    )
+    val t = Fixtures.json("linear-re/lre-many/r_lme4.json").get("reml").get("tight")
+    check("T-coef", "beta vs lme4", distributed.estimates, d(t.get("beta")))
+    check("T-coef", "BLUPs vs lme4", providerColumn(distributed, "blup"), d(t.get("blups")))
   }
 
   test("lre-base: the fit is bitwise invariant to row order and partitioning (NN-4)") {

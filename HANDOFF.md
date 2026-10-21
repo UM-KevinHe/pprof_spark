@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine and Python wrapper in rounds 97 to 99 |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100 |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -155,7 +155,7 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 - Scale and costs, for the scale kit to measure: OI-02 and OI-38 (large p, the Breslow kernel), OI-29, OI-30,
   OI-43, OI-45, OI-46, OI-50, OI-57, OI-59 (the dense Schur complement of stage 2), OI-68, OI-70 and OI-76;
   OI-92 (the plan's Zipf exponent).
-- Random-effect models (Phase 4, D-51): OI-93 (cluster terms, part 4d), OI-94 (stage 3's `he2013`, slice 4c-2), OI-95 (the distributed search);
+- Random-effect models (Phase 4, D-51): OI-93 (cluster terms, part 4d), OI-94 (stage 3's `he2013`, slice 4c-2);
   X-037 to X-040 approved; D-53 (slice 4a-1's tolerance classes) approved.
 - Interfaces: OI-86 (added providers in the job runner), OI-53 (Databricks access modes), OI-55 (a wheel), OI-56
   (PySpark CSV pushdown with a literal provider column).
@@ -172,9 +172,8 @@ as round 82 did:
 - record them in the review document and as open items.
 
 1. M4, Phase 4 (`docs/spec/random-effects/plan.md`, D-51):
-   - 4a, linear random effects: 4a-1's specification (D-52), fixtures (D-53), numerics kernel, engine and
-     Python (rounds 97 to 99) are in; next the distributed search (OI-95), then 4a-2's specification, 4a-3, and
-     an S1 smoke.
+   - 4a, linear random effects: 4a-1 is complete (D-52, D-53; rounds 97 to 100, the distributed search
+     included); next 4a-2's specification (inference and measures), then 4a-3, and an S1 smoke.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
    local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
@@ -188,6 +187,28 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 100 (2026-10-21): the distributed search for linear random effects (OI-95)
+
+- The engine keeps pass 1's block partials persisted, each with its totals and its providers' summaries. The search
+  sums the providers block by block on both paths and combines the blocks' sums pairwise in block order: on the
+  driver when the summaries fit `driverBudgetBytes`, otherwise by mapping the persisted partials at each evaluation
+  (spec 4a-1 §7 step 5). The two paths give the same bits, and `LinearRESearch.path` records which ran.
+- The kernel gains `ProviderBlock`, `Totals`, `FirstSums` and `SecondSums` with their combinations, the `Providers`
+  abstraction (`LocalProviders` in numerics, `DistributedProviders` in the engine), `solve` and
+  `providerEstimate`; `fit` and `Problem(data, reml)` keep their signatures. The provider table is computed from the
+  partials, and ‖u‖² from the second sums at τ̂.
+- The grid's scale W̃ is now the mean weight total ΣW/m, available from the totals, instead of the median (spec §3,
+  §18); the grid only brackets the root.
+- `LinearRESuite` gains a check on lre-many in about ten blocks: the distributed search gives the driver's bits, and
+  both match lme4. OI-95 is closed; the Python summary's `search` gains `path`.
+
+Evidence (assistant sandbox), on round 99.1: `check-engine-api.sh` passes; numerics, numerics-test, engine,
+engine-test and app compile with the build's flags after scalafmt; `LinearREKernelSuite` and `LinearRESuite` pass,
+29 of 29; the Python linear random-effect tests pass, 4 of 4; the patch applies after 99.1's to a fresh clone of
+`main` with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI runs for rounds 99.1 and 100.
 
 ## Round 99.1 (2026-10-21): CI fix, `StrictMath` in the linear random-effect kernel
 
