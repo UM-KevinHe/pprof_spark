@@ -1,6 +1,6 @@
 # Specification: linear random effects — estimation (slice 4a-1)
 
-- Status: proposed with D-52 (round 95, 2026-10-21), awaiting the maintainer's approval.
+- Status: approved with D-52 (2026-10-21), with X-038 to X-040; fixtures and calibration in round 96 (D-53).
 - Reference: pprof_py v0.7.0 (`9320766`), `LinearRandomEffectModel` (`models/linear/random_effect.py`), and
   lme4 1.1-35.1's `lmer`. Plan: [../random-effects/plan.md](../random-effects/plan.md) (D-51).
 - Parity matrix: entries arrive with the code (`docs/parity/matrix.md`).
@@ -197,8 +197,8 @@ Fixtures in `fixtures/linear-re`, each fitted under REML and ML:
 | lre-many | About 2,000 providers, to exercise several blocks |
 
 References: pprof_py at the pin, at its defaults and with `tol_outer` tightened; lme4's `lmer` at its defaults,
-and lme4's deviance function (`devFunOnly = TRUE`) minimized by a one-dimensional search to 10⁻¹², with the fit
-evaluated at that θ: the tight reference.
+and each reference at its tight optimum: the root in τ of central differences of its own deviance function
+(lme4's through `devFunOnly = TRUE`), with the fit evaluated there (§13).
 
 - Function level: the summaries of §2.1 against NumPy at fixed data (T-fn); d(τ) at fixed τ against lme4's
   deviance function and pprof_py's `_objective_from_state` (T-fn); d′(τ) against central differences of the
@@ -218,6 +218,34 @@ evaluated at that θ: the tight reference.
 | ID | Class | Summary | Status |
 |---|---|---|---|
 | X-037 | B | The BLUPs' conditional variances use the weight totals Wⱼ, where pprof_py's standard errors use the row counts nⱼ | Approved (D-51) |
-| X-038 | C | Incomplete rows fail with counts per column instead of being dropped | Proposed (D-52) |
-| X-039 | C | Aliased features fail and are named, instead of an arbitrary split (ML), a linear-algebra error (REML) or lme4's dropped column | Proposed (D-52) |
-| X-040 | C | Designs whose provider variance is not identified (m < 2, m ≥ n), and n ≤ p, fail at validation, as lme4 refuses the first two; pprof_py fits them | Proposed (D-52) |
+| X-038 | C | Incomplete rows fail with counts per column instead of being dropped | Approved (D-52) |
+| X-039 | C | Aliased features fail and are named, instead of an arbitrary split (ML), a linear-algebra error (REML) or lme4's dropped column | Approved (D-52) |
+| X-040 | C | Designs whose provider variance is not identified (m < 2, m ≥ n), and n ≤ p, fail at validation, as lme4 refuses the first two; pprof_py fits them | Approved (D-52) |
+
+## 13. Fixture findings (round 96)
+
+- `fixtures/linear-re` (`reference/fixtures/linear_re_fixtures.py`, `linear_re_r.R`) holds the nine cases of §11
+  under REML and ML: pprof_py and `lmer` at their defaults and at their tight optima, the deviance at θ = 0, 0.1,
+  0.3, 1 and 3 and its central-difference slope in τ, NumPy's summaries of §2.1, and pprof_py's negative controls.
+  Regenerating from the committed inputs reproduces every file byte for byte.
+- A tight optimum is the root in τ of the Richardson-extrapolated central differences (h = 3·10⁻³τ) of the
+  reference's own deviance function, or 0 where that deviance rises from 0; pprof_py is then evaluated by its `fit`
+  at that θ, and lme4 by `mkMerMod`.
+- An exact evaluation of §2's formulas (NumPy in double precision, outside the repository; the round's evidence
+  log) reproduces both references' deviance at fixed θ within 2.6·10⁻¹⁵ relative on the eight well-conditioned
+  cases. Its root of d′ lies within 2.3·10⁻¹⁰ of both references' tight τ*, which the difference scheme biases low
+  by about 2·10⁻¹⁰, and its β̂ within 4·10⁻¹² of theirs.
+- lre-shifted is lre-base's draws with x₁ + 10⁴, x₂ − 10⁴ and x₃/1024. There both references lose precision to the
+  conditioning of the uncentred between part: up to 1.2·10⁻¹¹ in the REML deviance at fixed θ, 4.2·10⁻⁷ in τ* and
+  6.2·10⁻⁸ in β̂. Its parity is invariance against lre-base, with the references' agreement informational (D-53):
+  θ̂, σ̂, σ̂_α, b̂ and the fitted values unchanged; the slopes of x₁ and x₂ unchanged, x₃'s multiplied by 1024 and the
+  intercept moved by 10⁴(β̂₂ − β̂₁); the ML deviance unchanged and the REML criterion lower by 2 log 1024.
+- Calibration (`docs/parity/linear-re-calibration.md`): T-coef, T-var and T-fn as D-53 proposes. PWRSS, log det H
+  and ‖u‖² move to first order with θ̂, unlike the deviance, so they take T-var.
+
+## 14. Implementation note (round 96; no statistical change)
+
+With an intercept, the features enter the between part centred at their weighted grand means, x̄ⱼ − x̄. The change
+of variables leaves θ̂, σ̂, the BLUPs and the slopes unchanged and moves only the intercept, which is transformed
+back; A(τ) stays as well conditioned as the data allow, so lre-shifted's invariance holds within the ordinary
+classes.

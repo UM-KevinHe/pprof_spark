@@ -30,6 +30,7 @@ from importlib import metadata
 import numpy as np
 import pandas as pd
 import linear_fixtures
+import linear_re_fixtures
 import logistic_fixtures
 import three_stage_fixtures
 from pprof_py.algorithms.survival.cox_likelihood import cox_partial_likelihood
@@ -331,7 +332,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", default=os.path.join(ROOT, "fixtures"))
     parser.add_argument("--inputs", help="copy input.csv files from this fixture tree")
-    parser.add_argument("--family", choices=("all", "cox", "logistic", "three-stage", "linear"), default="all",
+    parser.add_argument("--family", choices=("all", "cox", "logistic", "three-stage", "linear", "linear-re"), default="all",
                         help="regenerate one family only; the manifest still covers every file")
     options = parser.parse_args()
     out = options.out
@@ -391,6 +392,8 @@ def main():
                          else three_stage_fixtures.generate(out, options.inputs, lock, write_json))
     linear_cases = ([case["id"] for case in linear_fixtures.CASES] if options.family not in ("all", "linear")
                     else linear_fixtures.generate(out, options.inputs, lock, write_json))
+    linear_re_cases = ([case["id"] for case in linear_re_fixtures.CASES] if options.family not in ("all", "linear-re")
+                       else linear_re_fixtures.generate(out, options.inputs, lock, write_json))
 
     files = {}
     for directory, _, names in os.walk(out):
@@ -403,7 +406,8 @@ def main():
     write_json(os.path.join(out, "manifest.json"), {
         "formatVersion": FORMAT_VERSION,
         "generator": "reference/fixtures/generate.py",
-        "cases": {"cox": cases, "logistic": logistic_cases, "three-stage": three_stage_cases, "linear": linear_cases},
+        "cases": {"cox": cases, "logistic": logistic_cases, "three-stage": three_stage_cases, "linear": linear_cases,
+                  "linear-re": linear_re_cases},
         "reference": {"pprof_py": {"version": installed, "commit": lock["pprof_py"]["commit"]},
                       "python": sys.version.split()[0],
                       "packages": {name: metadata.version(name) for name in packages},
@@ -416,11 +420,13 @@ def main():
                     "r_variance": "model-based: coxph(robust = FALSE)",
                     "logistic": logistic_fixtures.OPTIONS,
                     "three-stage": three_stage_fixtures.OPTIONS,
-                    "linear": linear_fixtures.OPTIONS},
+                    "linear": linear_fixtures.OPTIONS,
+                    "linear-re": linear_re_fixtures.OPTIONS},
         "files": dict(sorted(files.items())),
     })
     print(f"wrote {len(files)} fixture files for {len(cases)} Cox, {len(logistic_cases)} logistic and "
-          f"{len(three_stage_cases)} three-stage and {len(linear_cases)} linear cases to {out}")
+          f"{len(three_stage_cases)} three-stage, {len(linear_cases)} linear and {len(linear_re_cases)} linear random-effect "
+          f"cases to {out}")
 
 
 if __name__ == "__main__":

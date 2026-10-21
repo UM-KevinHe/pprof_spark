@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-21, round 95.
+Updated 2026-10-21, round 96.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -9,7 +9,7 @@ round 26; the 2a estimator in round 27; persistence and the slice review in roun
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 **Phase 4, random-effect models (milestone M4): plan approved** (D-51, 2026-10-21, with X-037;
-`docs/spec/random-effects/plan.md`); slice 4a-1's specification proposed in round 95 (D-52). D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
+`docs/spec/random-effects/plan.md`); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53 proposed). D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
 through round 93 as the maintainer reported.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -123,7 +123,8 @@ through round 93 as the maintainer reported.
 | 92 | Scale kit, M1: deterministic synthetic data for the Cox, logistic and linear models (`pprof.spark.bench.synthetic`) | Merged (ae65236) |
 | 93 | Production-specific details removed from code comments, documents and logs | Merged (0147dfa) |
 | 94 | Phase 4 plan, the random-effect models (`docs/spec/random-effects/plan.md`, D-51 proposed); D-50 amended (M4 before M2); X-037 proposed; OI-93 and OI-94; PROJECT_CONTEXT v2.9; lessons in `HANDOFF.md` §6 | Merged (bb8d05d) |
-| 95 | D-51 approved with X-037; slice 4a-1's specification (`docs/spec/linear/random-effect-estimation.md`, D-52 proposed); X-038 to X-040 proposed | Delivered as a patch |
+| 95 | D-51 approved with X-037; slice 4a-1's specification (`docs/spec/linear/random-effect-estimation.md`, D-52 proposed); X-038 to X-040 proposed | Merged (2592ed1) |
+| 96 | D-52 approved with X-038 to X-040; slice 4a-1's fixtures (`fixtures/linear-re`, nine cases) and calibration (`docs/parity/linear-re-calibration.md`); D-53 proposed | Delivered as a patch |
 
 ## Decisions and spikes
 

@@ -103,7 +103,20 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-52: Slice 4a-1 specification (Proposed: awaiting the maintainer's approval)
+### D-53: Slice 4a-1 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+
+`fixtures/linear-re` (round 96; `reference/fixtures/linear_re_fixtures.py` and `linear_re_r.R`): the nine cases of
+spec 4a-1 §11 under REML and ML, with pprof_py and lme4 at their defaults and at their tight optima (the root in τ
+of central differences of each reference's own deviance), the deviance at fixed θ, NumPy's summaries and negative
+controls. `docs/parity/linear-re-calibration.md`: on the eight well-conditioned cases the two tight optima agree
+within 7.4·10⁻⁴ of T-coef (β̂, BLUPs, fitted values, predictions), 3.7·10⁻⁴ of T-var (θ̂, σ̂, σ̂_α, Var(β̂), PWRSS,
+log det H, ‖u‖²) and 1.3·10⁻³ of T-fn (the deviance, ℓ, AIC and BIC, and the deviance at fixed θ); every negative
+control misses by at least 83 times its class. Proposed: these classes for 4a-1's parity tests, the conditional
+variances against lme4's at T-var, and the default runs informational under T-opt. For lre-shifted, where both
+references lose up to 4.2·10⁻⁷ in τ* and 6.2·10⁻⁸ in β̂ to conditioning, invariance against lre-base replaces the
+references' agreement, and pprof_spark centres the features of the between part (spec 4a-1 §13 and §14).
+
+### D-52: Slice 4a-1 specification (Accepted: approved by the maintainer, 2026-10-21)
 
 `docs/spec/linear/random-effect-estimation.md`: estimation for the linear random-intercept model (one provider
 intercept, offsets, prior weights; REML by default, ML on request). lme4's profiled deviance and its derivative on
@@ -114,6 +127,8 @@ the provider table); outputs; edge cases from round 95's probes; the Python wrap
 validation plan with `fixtures/linear-re`. Proposed with it: X-038 (class C: incomplete rows fail with counts),
 X-039 (class C: aliased features fail and are named) and X-040 (class C: designs whose provider variance is not
 identified, and n ≤ p, fail at validation).
+
+Approved as proposed, with X-038 to X-040, on 2026-10-21.
 
 ### D-51: Phase 4 plan, the random-effect models (Accepted: approved by the maintainer, 2026-10-21)
 

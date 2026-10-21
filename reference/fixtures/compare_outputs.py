@@ -33,7 +33,9 @@ def values(node, path=()):
 def main(regenerated, committed):
     manifest = json.load(open(os.path.join(committed, "manifest.json"), encoding="utf-8"))
     worst, failures = 0.0, []
-    families = (("cox", ("pprof_py.json", "r_survival.json")), ("logistic", ("pprof_py.json", "r_logistic.json")), ("three-stage", ("pprof_py.json", "r_threestage.json")))
+    families = (("cox", ("pprof_py.json", "r_survival.json")), ("logistic", ("pprof_py.json", "r_logistic.json")), ("three-stage", ("pprof_py.json", "r_threestage.json")),
+                ("linear", ("pprof_py.json", "r_linear.json", "inference_pprof_py.json", "inference_r.json")),
+                ("linear-re", ("pprof_py.json", "r_lme4.json")))
     cases = [(f, c, n) for f, n in families for c in manifest["cases"].get(f, [])]
     # Family-level reference files (logistic/poibin-tails.json, slice 2c) have no input.csv.
     shared = [(f, None, tuple(sorted(n for n in os.listdir(os.path.join(committed, f)) if n.endswith(".json"))))
@@ -56,7 +58,8 @@ def main(regenerated, committed):
                     continue
                 scale = float(np.max(np.abs(expected[np.isfinite(expected)]), initial=0.0))
                 allowed = RTOL * np.maximum(np.abs(expected), scale)
-                diff = np.where(actual == expected, 0.0, np.abs(actual - expected))  # equal infinities
+                with np.errstate(invalid="ignore"):  # equal infinities
+                    diff = np.where(actual == expected, 0.0, np.abs(actual - expected))
                 ratio = float(np.max(np.where(diff == 0.0, 0.0, diff / np.where(allowed == 0.0, 1e-300, allowed))))
                 worst = max(worst, ratio)
                 if ratio > 1.0:
