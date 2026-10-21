@@ -103,7 +103,28 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-50: The roadmap after Phase 3, and scale testing in phases (Accepted: approved by the maintainer, 2026-10-19)
+### D-51: Phase 4 plan, the random-effect models (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/random-effects/plan.md` reads pprof_py v0.7.0's `LinearRandomEffectModel`, `LogisticRandomEffectModel`
+and `LogisticFERandomClusterModel` with their inference and measures modules, lme4 1.1-35.1 and R pprof 1.0.3's
+random-effect functions, maps them onto pprof_spark's code, and proposes (its §8):
+1. parts 4a (linear), 4b (logistic) and 4c (fixed effects with random clusters) in the maintainer's order, then 4d
+   (cluster terms, OI-93), each closing at parity-verified with its own gate and an S1 smoke;
+2. 4a: one provider random intercept with offsets and prior weights;
+3. 4b: one provider random intercept with covariates and offsets; the Laplace fit by default and nAGQ = 0 as an
+   option; tests `wald`, `poibin_exact` and `resampling`; `profile_sigma`;
+4. 4c: stage 3 as a model of its own on the three-stage code; `he2013` as slice 4c-2 (OI-94);
+5. the theoretical null only, until P0 adds null models, the empirical null and funnel limits to every model;
+6. references: pprof_py at default and tight settings, lme4 with tightened control, R pprof's `linear_re` and
+   `logis_re` families for inference where they follow pprof_py;
+7. estimation to the references' optima rather than their optimizer paths (class D, as X-030);
+8. tolerance classes: the ordinary classes for the linear estimates against tight references, T-opt for the
+   logistic ones, the lockstep classes for inference;
+9. REML by default for the linear model, ML as an option;
+10. X-037 (class B): the linear model's BLUP standard errors under prior weights, corrected to the fitted model's
+    conditional variance, as lme4's.
+
+### D-50: The roadmap after Phase 3, and scale testing in phases (Accepted: approved by the maintainer, 2026-10-19; amended at his request, 2026-10-21)
 
 A comparison of the two code bases found two things. pprof_py v0.7.0 is at `9320766`, also its `main`;
 pprof_spark was at round 90.
@@ -152,6 +173,13 @@ Approved:
 The scale-test plan's other decisions (its §12) remain open and apply to S2 and S3; its approval takes the next
 free decision number. PROJECT_CONTEXT §4's Later row now follows this order. PROJECT_CONTEXT itself is updated
 when the next phase's plan is written.
+
+Amendment (round 94, 2026-10-21, at the maintainer's request): M4 comes before M2. The random-effect models
+(P1: linear, then logistic, then fixed effects with random clusters) are developed now, while the maintainer runs
+his own scale tests; M1's remaining items (`ScaleJob`'s measurements, the three-stage generator, S0's plan file and
+its dry run) continue alongside, and M2 follows M4. The new models' provider tests take the theoretical null, as
+the existing models' do; P0 then adds null models, the empirical null and funnel limits to every model (OI-87,
+OI-78, OI-88). Phase 4's plan: D-51.
 
 ### D-49: Fixes for the reported issues (Accepted: approved by the maintainer, 2026-10-12)
 

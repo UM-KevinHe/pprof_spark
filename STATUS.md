@@ -1,12 +1,16 @@
 # Status
 
-Updated 2026-10-19, round 93.
+Updated 2026-10-21, round 94.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
 models: closed** (D-44, 2026-10-09, after CI green as reported by the maintainer; docs/gates/phase-2.md): plan and slice 2a specification approved (D-30); 2a fixtures and calibration in
 round 26; the 2a estimator in round 27; persistence and the slice review in round 28 (D-32, approved); the correlation warning and ADR-0009 (D-33, approved) in round 29; the Cox py4j wrappers in round 30; the slice 2b specification in round 31 (D-34, approved); its fixtures in round 32; its code and the logistic Python wrappers in round 33; the slice 2c specification in round 34 (D-35, approved); its fixtures in round 35; its code in round 36; the slice 2d specification in round 37 (D-36, approved); its fixtures in round 38; its code in round 39; the slice 2e specification in round 40 (D-37, approved); `LogisticJob` in round 41; the three-stage spike and 2f direction in round 42 (D-38, approved); the 2f-1 specification in round 43 (D-39, approved); its fixtures in round 44; `ThreeStage.prepare` in round 45; the 2f-2 specification in round 46 (D-40, approved); its fixtures in round 47; its driver path in round 48 and its executor path in round 49; the 2f-3 specification in round 50 (D-41, approved); its fixtures and T-opt in round 51 (D-42, approved); its code in round 52; the 2f-4 specification in round 53 (D-43, approved); 2f-4a's fixtures in round 54; the pipeline, stage 3's tests, measures and intervals in round 55; `sigma_sensitivity` in round 56; persistence and the job runner in round 57; the Python three-stage wrapper in round 59; the Phase 2 gate review in round 60 (D-44, approved); PROJECT_CONTEXT v2.5 in round 61. **Phase 3, linear fixed effects: closed** (D-48, 2026-10-11, after CI green as reported by the maintainer; docs/gates/phase-3.md): the plan and slice 3a's specification approved (D-45, round 62); slice 3a's fixtures and calibration in round 63; its numerics in round 64; its engine (`LinearFE`) in round 65; persistence, `score` and the metamorphic tests in round 66, completing slice 3a; the slice 3b specification in round 67 (D-46, approved); its fixtures and calibration in round 68; provider tests in round 69; standardized differences in round 70, completing slice 3b; the slice 3c specification in round 71 (D-47, approved); the linear job runner in round 72; Python access in round 73, completing slice 3c; the Phase 3 gate review in round 74 (D-48, approved); PROJECT_CONTEXT v2.6 in round 75. Python access: py4j wrappers (D-31). The maintainer runs the
 scale test on his Databricks workspace once the whole package is done (D-28).
+
+**Phase 4, random-effect models (milestone M4): plan proposed** (round 94; D-51 awaiting approval;
+`docs/spec/random-effects/plan.md`). D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
+through round 93 as the maintainer reported.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
 
@@ -116,8 +120,9 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 | 89 | Session summary refreshed; suites clear the session cache (OI-83); OI-62 closed; tutorial probes formatted | Merged (3f81802) |
 | 90 | A memo on the scale-test plan's §12 decisions (`docs/spec/scale/plan-decisions.md`) | Merged (9f580b4) |
 | 91 | D-50: the roadmap after Phase 3; the scale-test plan revised for S0 (phases and milestones); OI-87 to OI-91 | Merged (4e63c8e) |
-| 92 | Scale kit, M1: deterministic synthetic data for the Cox, logistic and linear models (`pprof.spark.bench.synthetic`) | Delivered as a patch |
-| 93 | Production-specific details removed from code comments, documents and logs | Delivered as a patch |
+| 92 | Scale kit, M1: deterministic synthetic data for the Cox, logistic and linear models (`pprof.spark.bench.synthetic`) | Merged (ae65236) |
+| 93 | Production-specific details removed from code comments, documents and logs | Merged (0147dfa) |
+| 94 | Phase 4 plan, the random-effect models (`docs/spec/random-effects/plan.md`, D-51 proposed); D-50 amended (M4 before M2); X-037 proposed; OI-93 and OI-94; PROJECT_CONTEXT v2.9; lessons in `HANDOFF.md` §6 | Delivered as a patch |
 
 ## Decisions and spikes
 

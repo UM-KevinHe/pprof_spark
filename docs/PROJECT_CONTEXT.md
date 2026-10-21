@@ -1,10 +1,13 @@
 # pprof_spark — Project Context
 
-**Version** 2.8 · **Date** 2026-10-19 · **Supersedes** v2.7 (2026-10-11)
+**Version** 2.9 · **Date** 2026-10-21 · **Supersedes** v2.8 (2026-10-19)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
+> **v2.9 adds Phase 4, the random-effect models** (round 94): §4 follows D-50's roadmap as amended (M4 before
+> M2); the plan, `docs/spec/random-effects/plan.md`, awaits approval as D-51.
+>
 > **v2.8 names no particular source of protected data** (round 93): the non-negotiables, the users, test
 > layer T12 and the data rules speak of protected data in general.
 >
@@ -192,13 +195,14 @@ When a problem's sufficient statistics are small — the covariate-free stage-2 
 | 1d — Provider workflows | Two-stage SMR and SHR; expected counts; O/E ratios; exact Poisson intervals and tests; flags; provider result tables; job-runner entry point. | Parity gate passed; end-to-end Spark application at design-envelope scale (run by the maintainer on his Databricks workspace once the whole package is done; D-28). |
 | 2 — Logistic provider models | Large-m fixed effects (SerBIN-type blocked Newton); provider tests (Wald, score, exact Poisson-binomial, bootstrap); direct and indirect standardization; then the three-stage SRR pipeline, including the stage-2 random-intercept variance estimation it needs. | Parity gate passed. |
 | 3 — Linear fixed effects | Profile (within) estimation, standardization, inference. | Parity gate passed. |
-| Later | Penalized models (elastic net, group lasso, provider-penalized), random and mixed effects, shared-frailty Cox, time-varying coefficients, discrete-time survival, competing risks (cause-specific, Fine-Gray), variable selection, inter-unit reliability, empirical-null calibration, funnel limits. | Each family enters through Phase-0-style spikes and its own gate. |
+| 4 — Random-effect models (M4) | Linear random intercepts (REML and ML, offsets, prior weights); logistic random intercepts by the Laplace approximation; fixed provider effects with random clusters as a model of its own; then crossed cluster terms. Plan: `docs/spec/random-effects/plan.md` (D-51, proposed). | Parity gate passed for each part (4a to 4d); an S1 scale smoke for each (D-50). |
+| Later | D-50's other priorities: P0, inference parity on every model (null models, the empirical null, funnel limits, intervals, external standard populations; M2); P2, survival extensions (cause-specific, time-varying and frailty Cox, Fine–Gray, discrete-time survival); P3, penalized models, variable selection, inter-unit reliability and the other enhancements. | Each family enters through its specification and its own gate. |
 
 ROAD-1 (walking skeleton, as amended by D-11): Phase 0 ends with a statistics-free platform skeleton (data contract, logical blocks, a toy kernel, block-ordered reduction, result tables and persistence) that is green in CI under Classic Spark and Spark Connect (ADR-0004). The first Cox slice opens Phase 1a: stratified (StratumLocal), right-censored, Breslow, with model-based variance, passing through every layer and all three parity levels. Statistical breadth is then added behind the same skeleton.
 
 ROAD-2: Each phase ends with a gate review recorded in `STATUS.md`. A phase cannot close with open class A or B discrepancies affecting its features.
 
-Status (2026-10-11): Phases 0 to 3 are closed at parity-verified (Phase 3 by D-48, after the gate review in `docs/gates/phase-3.md`), completing the numbered roadmap; what follows is the maintainer's choice among the package-level scale test (D-28), the features listed under Later, and the open items. Scale verification for every phase happens once, at package level (D-28).
+Status (2026-10-21): Phases 0 to 3 are closed at parity-verified (Phase 3 by D-48, after the gate review in `docs/gates/phase-3.md`). D-50 (round 91) orders the work after them; its amendment (round 94) puts Phase 4, the random-effect models (M4), before P0's inference parity (M2), alongside the scale kit (M1). Every feature stays `Experimental` until it is scale-verified, in the phases S0 to S3 of `docs/spec/scale/plan.md` (D-28, D-50).
 
 The mapping below covers `pprof_py`'s public model classes *(re-verify)*.
 
@@ -208,7 +212,8 @@ The mapping below covers `pprof_py`'s public model classes *(re-verify)*.
 | `LogisticFixedEffectModel`, `LogisticThreeStageModel` | 2 |
 | `LinearFixedEffectModel` | 3 |
 | `PenalizedLogistic(CV)`, `PenalizedLinear(CV)`, `PenalizedCoxPH(CV)`, `GroupLasso*`, `ProviderPenalized*` | Later |
-| `LogisticRandomEffectModel`, `LogisticFERandomClusterModel`, `LinearRandomEffectModel`, `FrailtyCoxPH` | Later |
+| `LinearRandomEffectModel`, `LogisticRandomEffectModel`, `LogisticFERandomClusterModel` | 4 (planned) |
+| `FrailtyCoxPH` | Later |
 | `TimeVaryingCoxPH`, `DiscreteSurvival(CV)`, `ProviderPenalizedDiscreteSurvival(CV)` | Later |
 | `CauseSpecificCoxPH`, `FineGrayPH`, `CoxPHSelector` | Later |
 

@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-07, round 23. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-21, round 94. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -92,9 +92,11 @@ decision is approved.
 | OI-84 | The standardized-test options of round 85 (fixed null, `scale_only`, bounds, mean and median null values) were checked against pprof_py in the sandbox, not by fixtures | Closed in round 88: `standardized_test_options` in `lfe-base` and `lfe-clustered` (33 sets of options, each recorded with its outputs); `LogisticNullModelSuite` compares them |
 | OI-85 | Providers added after fitting (round 86) were checked against pprof_py in the sandbox, not by fixtures | Closed in round 88: `added_providers` in `lfe-base`, set up as `LogisticAddProvidersSuite`, which compares every output with it |
 | OI-86 | The logistic job runner cannot add providers after fitting; only the Scala and Python APIs can | A run-specification entry for added providers, if job users need it |
-| OI-87 | Provider tests take no null model: Cox `provider_tests`, logistic `provider_tests`, linear `test` and three-stage `test` use the theoretical null only, where pprof_py's accept `null_model` (theoretical, fixed or empirical); only logistic `test_standardized` has the fixed null (round 85) | D-50, P0: a `null_model` on every provider test, specified with the empirical null (OI-78) |
+| OI-87 | Provider tests take no null model: Cox `provider_tests`, logistic `provider_tests`, linear `test` and three-stage `test` use the theoretical null only, where pprof_py's accept `null_model` (theoretical, fixed or empirical); only logistic `test_standardized` has the fixed null (round 85) | D-50, P0: a `null_model` on every provider test, Phase 4's included (D-51), specified with the empirical null (OI-78) |
 | OI-88 | No funnel-plot limits: pprof_py's `funnel_limits` (every model; `inference/funnel.py`) has no counterpart | D-50, P0: specify after the null models, whose calibration groups it uses |
 | OI-89 | The logistic fixed-effect model has no confidence-interval method: pprof_py's `calculate_confidence_intervals` gives intervals for γ or for standardized measures by exact, score or Wald methods; pprof_spark gives them only through its tests | D-50, P0: specify, reusing the three-stage model's interval code |
 | OI-90 | Two pprof_py options are missing: the provider tests' `interval` and the logistic fit's VIF screening (`threshold_vif`) | D-50, P0 |
 | OI-91 | The Python facade has 27 tests for about 45 public methods and their options | Extend with each P0 and P1 feature (D-50) |
 | OI-92 | The scale-test plan's Zipf sizes: rank^−1.1 gives the largest provider about 13% of the rows at m = 10⁵ (12% at 10⁶), while its §4 says about 1%, which an exponent of 0.7 gives | The maintainer chooses before S2 (points K1 and L2); the generator takes the exponent explicitly (round 92) |
+| OI-93 | Cluster terms: pprof_py's random-effect models take `cluster_vars`, further crossed random intercepts; the linear model gives only estimates with them (its profiling methods refuse such a fit), and the logistic `exact` test needs one; Phase 4's parts 4a and 4b fit the provider intercept alone | D-51 proposes part 4d: provider × cluster sums and stage 2's elimination for the linear model, the same inside the logistic model's row-level PIRLS, and a general logistic fit as 4c's stage 2 |
+| OI-94 | Stage 3's `he2013` estimator (He et al. 2013; pprof_py's other `estimator`): the three-stage spike (D-38) planned it for slice 2f-4, whose specification (D-43) left it out without a decision | D-51 proposes it as slice 4c-2 |

@@ -11,7 +11,7 @@ Kevin He) reimplements the validated statistical methods of pprof_py, pinned at 
 (D-05), as distributed Spark algorithms that keep their statistical definitions and validated behavior.
 Stack: Spark 4.1.0, Scala 2.13.16 (PLAT-3), Java 17 bytecode; CI on JDK 17 and 21, under Classic Spark and
 Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative context is
-`docs/PROJECT_CONTEXT.md` v2.8; recorded decisions in `DECISIONS.md` take precedence over it.
+`docs/PROJECT_CONTEXT.md` v2.9; recorded decisions in `DECISIONS.md` take precedence over it.
 
 ### 2. Where things stand
 
@@ -22,7 +22,8 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Phase 3, linear fixed effects (3a to 3c) | Closed at parity-verified on 2026-10-11 (D-45 to D-48; `docs/gates/phase-3.md`) |
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
-| Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6 |
+| Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
+| Phase 4, random-effect models (M4) | Plan proposed in round 94 (D-51, awaiting approval; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -35,7 +36,7 @@ null remains (OI-78). The maintainer is testing round 87's build: expect new iss
 
 Every feature stays `Experimental` until the package-level scale test, which the maintainer runs on his Databricks
 workspace (D-28). AI assistants never access his Databricks environment (D-14 as clarified). CI is green through
-round 88 as the maintainer reported (rounds 83 and 84 failed and were fixed by 83.1 and 84.1), and his
+round 93 as the maintainer reported (rounds 83 and 84 failed and were fixed by 83.1 and 84.1), and his
 `fixtures.yml` run on round 88's tree regenerated every family on CI's runner within T-part (OI-62 closed).
 
 ### 3. What exists
@@ -51,7 +52,7 @@ round 88 as the maintainer reported (rounds 83 and 84 failed and were fixed by 8
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage and linear wrappers, ADR-0009) and its pytest suite |
 | `databricks/` | `00_build` (builds a commit on the driver into workspace files), `01_parity` (fixtures and R0 on the cluster), `02_scale` (a first look at scale); guide `docs/guide/databricks.md` |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4), `fixtures/linear` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py`; `fixtures.yml` (manual dispatch) regenerates and compares on CI's runner |
-| Documents | Specifications in `docs/spec/` (cox, logistic, linear, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-50), `DISCREPANCIES.md` (to X-036), `OPEN_ITEMS.md` (to OI-91), `STATUS.md` |
+| Documents | Specifications in `docs/spec/` (cox, logistic, linear, random-effects, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-51), `DISCREPANCIES.md` (to X-037), `OPEN_ITEMS.md` (to OI-94), `STATUS.md` |
 
 ### 4. How the work runs
 
@@ -131,6 +132,13 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 - The sandbox has about 3 GB of memory: run one test JVM at a time, with nothing heavy beside it (round 88).
 - Negative controls: the tolerance classes scale a vector by its largest element (D-09), so perturb a value that is
   large against the vector's maximum, or by an absolute amount; a relative change to a tiny element passes (round 88).
+- Negative controls must break the link between generation and the truth: flipping β in a design flips the truth
+  the test checks too (round 92).
+- The scale-test plan's Zipf exponent contradicts its "about 1%" (OI-92); the exponent is the maintainer's decision
+  before S2.
+- Grid-point names: S0 to S3 name the test phases; the grid's skew points are K1 and K2 (round 92).
+- `cut -c` counts bytes and can split a UTF-8 character, and the tool then returns nothing for the whole call: write
+  long output to a file and print it decoded with replacement (round 94).
 
 ### 7. Open items to carry
 
@@ -142,28 +150,31 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 - Scale and costs, for the scale kit to measure: OI-02 and OI-38 (large p, the Breslow kernel), OI-29, OI-30,
   OI-43, OI-45, OI-46, OI-50, OI-57, OI-59 (the dense Schur complement of stage 2), OI-68, OI-70 and OI-76;
   OI-92 (the plan's Zipf exponent).
+- Random-effect models (Phase 4, D-51 proposed): OI-93 (cluster terms, part 4d), OI-94 (stage 3's `he2013`),
+  X-037 (proposed).
 - Interfaces: OI-86 (added providers in the job runner), OI-53 (Databricks access modes), OI-55 (a wheel), OI-56
   (PySpark CSV pushdown with a literal provider column).
 - Process: OI-40 (a CI check of the parity matrix), OI-41 (per-release model fixtures), OI-33 and OI-42 (reports
-  to pprof_py, with X-005's σ = 0 crash and X-024's tails as candidates).
+  to pprof_py, with X-005's σ = 0 crash and X-024's tails as candidates); whether to rewrite
+  the history that still holds round 93's removed text (the maintainer's decision).
 
 ### 8. Next
 
-D-50 (round 91) sets the sequence. Issues the maintainer reports come first when they arrive, handled
+D-50, as amended in round 94, sets the sequence. Issues the maintainer reports come first when they arrive, handled
 as round 82 did:
 - diagnose each against the source, running pprof_py and R before stating how they behave;
 - propose fixes with files, risks and compatibility;
 - record them in the review document and as open items.
 
-1. M1, in progress:
-   - Done in round 92: the data generators for the Cox, logistic and linear models.
-   - Next: `ScaleJob`'s measurements as a Spark application, with Python access to them and to the generators.
-   - Then: the three-stage generator, S0's plan file and a local dry run (`docs/spec/scale/plan.md` §9.1 and
-     §11), for the maintainer to run S0.
-   - Alongside: the specifications for the empirical null (OI-78) and funnel limits (OI-88).
-2. M2 and M3: P0's inference parity (OI-87 to OI-90, OI-78, OI-58), and fixes for S0's complexity problems.
-3. M4: the random-effect models (linear, logistic, fixed effects with random clusters), each with a
-   specification, fixtures and an S1 scale smoke.
+1. M4, Phase 4 (`docs/spec/random-effects/plan.md`), once D-51 is approved:
+   - 4a, linear random effects: 4a-1's specification first (`docs/spec/linear/`), then its fixtures and
+     calibration, code, parity tests, Python and documents; then 4a-2 and 4a-3, and an S1 smoke.
+   - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
+2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
+   local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
+   funnel limits (OI-88). The maintainer runs his own scale tests meanwhile.
+3. M2 and M3: P0's inference parity (OI-87 to OI-90, OI-78, OI-58) on every model, Phase 4's included, and fixes
+   for S0's complexity problems.
 4. M5: S2 and S3 on the essential set, needing the plan's §12 decisions (round 90's memo recommends each), and a
    first release with a wheel (OI-55).
 5. M6: the survival extensions, then penalized models and the P3 enhancements.
@@ -171,6 +182,34 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 94 (2026-10-21): Phase 4 plan, the random-effect models (M4); D-50 amended
+
+- D-50 amended at the maintainer's request: M4, the random-effect models, comes before M2's inference parity, while
+  he runs his own scale tests; M1's remaining items continue alongside.
+- `docs/spec/random-effects/plan.md` reads pprof_py v0.7.0's three random-effect models with their inference and
+  measures modules, lme4 1.1-35.1 and R pprof 1.0.3's `linear_re` and `logis_re` families, and maps them onto the
+  existing code. `LogisticFERandomClusterModel` is the three-stage model's stage 3 as a model of its own. The
+  logistic model generalizes stage 2 (`ThreeStageGlmm`) to covariates, which rules out stage 2's compressed cells.
+  The linear model with one provider intercept, offsets and weights reduces to provider summaries and pooled
+  within co-moments. Proposed as D-51: parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters)
+  and 4d (cluster terms), their slices, designs, references and tolerance classes, and REML by default; with
+  X-037 (class B: BLUP standard errors under prior weights). New open items OI-93 (cluster terms) and OI-94
+  (`he2013`, which the spike planned for 2f-4 and its specification left out).
+- Probes (sandbox, not fixtures). Linear: pprof_py against `lmer` within 8·10⁻⁸ in θ̂, σ̂, β̂ and the BLUPs and
+  within 10⁻⁸ in the deviance, REML and ML, with and without weights; with weights pprof_py's BLUP standard errors
+  are 18% larger than lme4's conditional SDs (X-037). Logistic: pprof_py's default fit against `glmer`'s within
+  4.2·10⁻⁵ in σ̂, β̂ and a BLUP, with pprof_py's Laplace deviance 1.9·10⁻⁴ lower; nAGQ = 0 runs agree within
+  2.6·10⁻⁶; the two stages' intercepts differ by 1.5%.
+- PROJECT_CONTEXT v2.9: §4 adds Phase 4 and follows D-50's order. §6 of this file gains round 92's three lessons
+  and one from this round. CI is green through round 93 as the maintainer reported; `STATUS.md` records rounds 92
+  and 93 as merged.
+- Documents only; no code changed.
+
+Evidence (assistant sandbox): the patch applies to a fresh clone of `main` with an identical tree, and scalafmt is
+clean on the build's modules; the probes' scripts and outputs are in the round's evidence log.
+
+What to send back: the decision on D-51, with X-037.
 
 ## Round 93 (2026-10-19): production-specific details removed
 
