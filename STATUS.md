@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-21, round 97.
+Updated 2026-10-21, round 98.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -9,7 +9,7 @@ round 26; the 2a estimator in round 27; persistence and the slice review in roun
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 **Phase 4, random-effect models (milestone M4): plan approved** (D-51, 2026-10-21, with X-037;
-`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel in round 97. D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
+`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel in round 97 and its engine in round 98. D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
 through round 93 as the maintainer reported.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -125,7 +125,8 @@ through round 93 as the maintainer reported.
 | 94 | Phase 4 plan, the random-effect models (`docs/spec/random-effects/plan.md`, D-51 proposed); D-50 amended (M4 before M2); X-037 proposed; OI-93 and OI-94; PROJECT_CONTEXT v2.9; lessons in `HANDOFF.md` §6 | Merged (bb8d05d) |
 | 95 | D-51 approved with X-037; slice 4a-1's specification (`docs/spec/linear/random-effect-estimation.md`, D-52 proposed); X-038 to X-040 proposed | Merged (2592ed1) |
 | 96 | D-52 approved with X-038 to X-040; slice 4a-1's fixtures (`fixtures/linear-re`, nine cases) and calibration (`docs/parity/linear-re-calibration.md`); D-53 proposed | Merged (09dbc44) |
-| 97 | D-53 approved; slice 4a-1 numerics: the `LinearRE` kernel, `Cholesky.solveUnaliased`, `LinearREKernelSuite`; `FixturesSuite` mirrors the linear random-effect calibration | Delivered as a patch |
+| 97 | D-53 approved; slice 4a-1 numerics: the `LinearRE` kernel, `Cholesky.solveUnaliased`, `LinearREKernelSuite`; `FixturesSuite` mirrors the linear random-effect calibration | Merged (182ab44) |
+| 98 | Slice 4a-1 engine: `LinearRE.fit`, `predict` and `fitted`, the provider table, X-040's input problems; `LinearRESuite` (21 tests); OI-95 | Delivered as a patch |
 
 ## Decisions and spikes
 

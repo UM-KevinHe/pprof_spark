@@ -1,6 +1,6 @@
 # Specification: linear random effects — estimation (slice 4a-1)
 
-- Status: approved with D-52 (2026-10-21), with X-038 to X-040; fixtures and calibration in round 96 (D-53, approved); the numerics kernel in round 97.
+- Status: approved with D-52 (2026-10-21), with X-038 to X-040; fixtures and calibration in round 96 (D-53, approved); the numerics kernel in round 97 and the engine in round 98.
 - Reference: pprof_py v0.7.0 (`9320766`), `LinearRandomEffectModel` (`models/linear/random_effect.py`), and
   lme4 1.1-35.1's `lmer`. Plan: [../random-effects/plan.md](../random-effects/plan.md) (D-51).
 - Parity matrix: entries arrive with the code (`docs/parity/matrix.md`).
@@ -268,3 +268,21 @@ classes.
   with both references within 0.0053 of T-coef, 0.0019 of T-var and 0.0024 of T-fn on the eight well-conditioned
   cases, its conditional variances with lme4's within 0.0019 of T-var, and lre-shifted's invariance against
   lre-base holds within 0.0025 of its classes. The committed parity suite comes with the engine.
+
+## 16. Implementation notes (round 98, engine; no statistical change)
+
+- `engine.linear.LinearRE.fit`: the validation of §5 (`LinearREValidation`, with X-038's counts, non-positive
+  weights, and X-040's new input problems for the design), the budgeted plan, pass 1 over `LinearWorkingSet`'s
+  blocks with the prior weight carried as one more feature column, the block partials reduced in block order and
+  the providers' summaries gathered on the driver in key order, the within solution, pass 2, X-039's check, the
+  kernel's fit, and the provider table (key, `records`, `weight`, `blup`, `variance`, `se`), persisted.
+- The search runs on the driver. A fit whose providers' summaries exceed `BlockOptions.driverBudgetBytes` stops with
+  `DriverLimitExceededException`; §7 step 5's distributed evaluation is OI-95.
+- `predict(df, fit, useRe, withOffset)` and `fitted(df, fit)`. pprof_py adds the offset to a prediction only when
+  `offset_var` is passed; the Scala `predict` adds the fit's offset column unless `withOffset = false`, and the
+  Python wrapper keeps pprof_py's default.
+- `LinearRESuite` (engine, 21 tests): every case of `fixtures/linear-re` but lre-shifted under REML and ML against
+  both references' tight optima under D-53's classes (β̂, the BLUPs, θ̂, σ̂, σ̂_α, Var(β̂), PWRSS, log det H, ‖u‖²,
+  the deviance, ℓ, AIC, BIC, predictions with and without the BLUPs, fitted values, and the conditional variances
+  against lme4's); lre-shifted's invariance against lre-base; bitwise invariance to row order and partitioning; the
+  data contract; X-039's named feature; prediction for providers not in the fit.

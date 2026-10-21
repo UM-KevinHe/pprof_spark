@@ -92,6 +92,22 @@ object InputProblem {
       )
   final case class NoProvidersFitted(name: String, minRecords: Long)
       extends InputProblem(name, s"has no provider with more than $minRecords records")
+  final case class TooFewProviders(name: String, providers: Long)
+      extends InputProblem(
+        name,
+        s"has $providers providers; the provider variance needs at least two (X-040)"
+      )
+  final case class ProvidersNotFewerThanRows(name: String, providers: Long, rows: Long)
+      extends InputProblem(
+        name,
+        s"has $providers providers in $rows rows; with as many providers as rows the provider variance is not " +
+          "identified (X-040)"
+      )
+  final case class TooFewRows(rows: Long, fixedEffects: Int)
+      extends InputProblem(
+        "",
+        s"$rows rows for $fixedEffects fixed effects; the rows must outnumber them (X-040)"
+      )
 }
 
 /** The input violates its data contract; `problems` lists every violation found. */
