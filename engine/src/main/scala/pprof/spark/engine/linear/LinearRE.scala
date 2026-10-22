@@ -15,7 +15,7 @@ import org.apache.spark.sql.functions.{
 import org.apache.spark.sql.types.{DataType, DoubleType, LongType, NumericType, StringType}
 import pprof.spark.engine.backend.{BlockOptions, DriverGuards, PlanFrames}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
-import pprof.spark.engine.layout.{BudgetedLayout, GroupSizes, LayoutPlan}
+import pprof.spark.engine.layout.{BudgetedLayout, GroupKey, GroupSizes, LayoutPlan}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
 import pprof.spark.numerics.{NeumaierSum, NeumaierVector, Summation}
@@ -158,6 +158,7 @@ object LinearREValidation {
 
   val InterceptName: String = "(Intercept)"
   private val WeightName = "__pprof_weight"
+  private val OffsetName = "__pprof_offset"
 
   def validate(df: DataFrame, spec: LinearRESpec, options: LinearREOptions): LinearInput = {
     val types = df.schema.fields.map(f => f.name -> f.dataType).toMap
@@ -204,7 +205,8 @@ object LinearREValidation {
     }
     val x = (if (options.includeIntercept) Seq(lit(1.0)) else Seq.empty[Column]) ++
       spec.features.map(name => Validation.column(name).cast(DoubleType)) :+
-      spec.weights.fold(lit(1.0))(name => Validation.column(name).cast(DoubleType))
+      spec.weights.fold(lit(1.0))(name => Validation.column(name).cast(DoubleType)) :+
+      spec.offset.fold(lit(0.0))(name => Validation.column(name).cast(DoubleType))
     val frame = df.select(
       (if (text) provider else provider.cast(LongType)).as(Validation.GroupColumn),
       outcome.as(LinearValidation.OutcomeColumn),
@@ -215,7 +217,7 @@ object LinearREValidation {
     )
     val names =
       (if (options.includeIntercept) Seq(InterceptName) else Seq.empty[String]) ++ spec.features :+
-        WeightName
+        WeightName :+ OffsetName
     LinearInput(frame, LinearSpec(spec.outcome, names, spec.provider, spec.rowId), rows, text)
   }
 
@@ -275,10 +277,9 @@ object LinearRE {
       spec: LinearRESpec,
       options: LinearREOptions = LinearREOptions()
   ): LinearREFit = {
-    val input = LinearREValidation.validate(df, spec, options)
+    val (input, sizes, plan) = layout(df, spec, options)
     val p =
-      input.spec.features.size - 1 // the kernel's features: the intercept, then the spec's features
-    val sizes = GroupSizes.collectGroupSizes(input.frame, options.blocks).sortBy(_._1)
+      input.spec.features.size - 2 // the kernel's features: the intercept, then the spec's features
     val m = sizes.size
     val design = Vector.newBuilder[InputProblem]
     if (m < 2) design += InputProblem.TooFewProviders(spec.provider, m.toLong)
@@ -287,13 +288,6 @@ object LinearRE {
     if (input.rowCount <= p.toLong) design += InputProblem.TooFewRows(input.rowCount, p)
     val problems = design.result()
     if (problems.nonEmpty) throw new InvalidInputException(problems)
-    val partialBytes = 8L * (Moments.packedLength(p) + p + 6L)
-    val plan = BudgetedLayout.plan(sizes, options.blocks, p + 2, partialBytes)
-    DriverGuards.requireWithinBudget(
-      s"${plan.blockCount} block partials",
-      plan.blockCount.toLong * partialBytes,
-      options.blocks
-    )
     val workingSet = LinearWorkingSet.build(input, plan, options.blocks.resolvedStorageLevel)
     try {
       val partials = workingSet.blocks
@@ -436,6 +430,36 @@ object LinearRE {
     }
   }
 
+  /** Validation, group sizes and the budgeted plan of a fit; the training data give the fit's plan again. */
+  private def layout(
+      df: DataFrame,
+      spec: LinearRESpec,
+      options: LinearREOptions
+  ): (LinearInput, Vector[(GroupKey, Long)], LayoutPlan) = {
+    val input = LinearREValidation.validate(df, spec, options)
+    val p = input.spec.features.size - 2
+    val sizes = GroupSizes.collectGroupSizes(input.frame, options.blocks).sortBy(_._1)
+    val partialBytes = 8L * (Moments.packedLength(p) + p + 6L)
+    val plan = BudgetedLayout.plan(sizes, options.blocks, p + 3, partialBytes)
+    DriverGuards.requireWithinBudget(
+      s"${plan.blockCount} block partials",
+      plan.blockCount.toLong * partialBytes,
+      options.blocks
+    )
+    (input, sizes, plan)
+  }
+
+  /** The training data's working set, for the standardized measures (spec 4a-2 §7); the caller checks the
+    * fingerprint against the fit's (API-3) and releases it.
+    */
+  private[linear] def trainingWorkingSet(
+      df: DataFrame,
+      fit: LinearREFit
+  ): (LinearWorkingSet, LayoutPlan, LinearInput) = {
+    val (input, _, plan) = layout(df, fit.spec, fit.options)
+    (LinearWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel), plan, input)
+  }
+
   /** `df` with `prediction`: the fixed part xᵀβ̂, plus the offset column when the fit has one and `withOffset`
     * (pprof_py adds it only when `offset_var` is passed), plus with `useRe` the BLUP of providers in the fit and 0
     * for others, as both references (§6).
@@ -539,16 +563,18 @@ object LinearRE {
     (joined, coalesce(col(Effect), lit(0.0)))
   }
 
-  /** A block's rows in the kernel's layout: the features, ỹ, then w (the working set holds w among the features). */
+  /** A block's rows in the kernel's layout: the features, ỹ, then w. The working set holds w and the offset after
+    * the features, and ỹ = y − offset as its outcome.
+    */
   private def kernelRows(block: LinearBlock): Kernel.Rows = {
-    val p = block.p - 1
+    val p = block.p - 2
     val q = block.p + 1
     val count = block.rowId.length
     val values = new Array[Double](count * (p + 2))
     var r = 0
     while (r < count) {
       System.arraycopy(block.values, r * q, values, r * (p + 2), p)
-      values(r * (p + 2) + p) = block.values(r * q + p + 1)
+      values(r * (p + 2) + p) = block.values(r * q + block.p)
       values(r * (p + 2) + p + 1) = block.values(r * q + p)
       r += 1
     }
@@ -557,7 +583,7 @@ object LinearRE {
 
   private def moments(block: LinearBlock): LinearREMomentPartial = {
     val (providers, within) = Kernel.summaries(kernelRows(block))
-    val p = block.p - 1
+    val p = block.p - 2
     val weightTotal = new NeumaierSum
     val weightedX = new NeumaierVector(p)
     val weightedY = new NeumaierSum

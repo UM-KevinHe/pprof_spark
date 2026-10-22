@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-21, round 102.
+Updated 2026-10-21, round 103.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -9,7 +9,7 @@ round 26; the 2a estimator in round 27; persistence and the slice review in roun
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 **Phase 4, random-effect models (milestone M4): plan approved** (D-51, 2026-10-21, with X-037;
-`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification approved (D-54), its fixtures and calibration in round 102 (D-55 proposed). D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
+`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103. D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
 through round 100 as the maintainer reported.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -131,7 +131,8 @@ through round 100 as the maintainer reported.
 | 99.1 | CI fix: `StrictMath` for the transcendental functions of the linear random-effect kernel (CI's engine API rules, §8.1 and §13); rehearsals now run `scripts/check-engine-api.sh` | Merged (56d6fb9); CI green |
 | 100 | The distributed search for linear random effects (OI-95): persisted pass-1 partials, block sums combined in block order on both paths, the driver's bits from the distributed table; the grid's scale ΣW/m | Merged (86b2c65); CI green |
 | 101 | Slice 4a-2's specification (`docs/spec/linear/random-effect-inference.md`, D-54 proposed); X-041 and X-042 proposed; CI green through round 100 | Merged (e2d9950) |
-| 102 | D-54 approved; slice 4a-2's fixtures (`inference_pprof_py.json`, R references) and calibration (`docs/parity/linear-re-inference-calibration.md`); X-042 corrected; `compare_outputs.py`'s classes for linear-re; D-55 proposed; OI-96 | Delivered as a patch |
+| 102 | D-54 approved; slice 4a-2's fixtures (`inference_pprof_py.json`, R references) and calibration (`docs/parity/linear-re-inference-calibration.md`); X-042 corrected; `compare_outputs.py`'s classes for linear-re; D-55 proposed; OI-96 | Merged (568ba2c) |
+| 103 | D-55 approved; slice 4a-2 engine: `LinearREInference` (covariate tables, tests, intervals, measures), the offset in the fit's working set, `LinearREInferenceSuite`, `FixturesSuite`'s 4a-2 mirror | Delivered as a patch |
 
 ## Decisions and spikes
 

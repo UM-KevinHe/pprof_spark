@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-55: Slice 4a-2 fixtures, calibration and corrections (Proposed: awaiting the maintainer's approval)
+### D-55: Slice 4a-2 fixtures, calibration and corrections (Accepted: approved by the maintainer, 2026-10-21)
 
 `fixtures/linear-re` gains `inference_pprof_py.json` and inference sections in `r_lme4.json` (round 102): every case
 under REML and lre-base and lre-weights under ML, at slice 4a-1's tight optima, with pprof_py's methods of spec 4a-2
@@ -122,6 +122,8 @@ controls' z. `docs/parity/linear-re-inference-calibration.md`: every strict chec
 4. `compare_outputs.py` compares the linear-re family's default runs at T-opt and the rest at 10⁻⁸ relative: two
    sandbox sessions regenerated the family with differences up to 1.1·10⁻⁷ in the default runs and 1.3·10⁻¹⁰ in the
    tight optima, beyond T-part (OI-96).
+
+Approved as proposed on 2026-10-21.
 
 ### D-54: Slice 4a-2 specification (Accepted: approved by the maintainer, 2026-10-21)
 

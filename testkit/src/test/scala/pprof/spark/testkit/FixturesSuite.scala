@@ -539,6 +539,120 @@ class FixturesSuite extends munit.FunSuite {
   }
 
   test(
+    "linear slice 4a-2: pprof_py's inference agrees with base R on lme4's tight fit; measures and controls (D-55)"
+  ) {
+    def h(node: JsonNode): Array[Double] = Fixtures.doubles(node)
+    def ratio(cls: String, actual: Array[Double], expected: Array[Double]): Double =
+      Tolerances(cls).worstRatio(actual, expected)
+    val threshold = Tolerances.number("T-p.log10.threshold")
+    val atol = Tolerances.number("T-p.log10.atol")
+    val rtol = Tolerances.number("T-test.rtol")
+    val band = Tolerances.number("T-flag.boundary.rtol") * 1.959963984540054
+    def pOk(x: Double, y: Double): Boolean =
+      if (y >= threshold) math.abs(x - y) <= rtol * math.abs(y)
+      else if (y == 0.0) x < 1e-300
+      else x > 0.0 && math.abs(math.log10(x) - math.log10(y)) <= atol
+    Fixtures.cases("linear-re").foreach { name =>
+      val inf = Fixtures.json(s"linear-re/$name/inference_pprof_py.json")
+      val r = Fixtures.json(s"linear-re/$name/r_lme4.json")
+      val py = Fixtures.json(s"linear-re/$name/pprof_py.json")
+      val weighted = Fixtures.json(s"linear-re/$name/case.json").has("weights")
+      val conditioned = name != "lre-shifted" // its references lose precision (D-53)
+      val boundary = h(py.get("reml").get("tight").get("theta")).head == 0.0
+      val sizes = h(py.get("summaries").get("W_j")).indices
+        .map(i => py.get("summaries").get("n_j").get(i).asDouble)
+      Seq("reml", "ml").filter(inf.has).foreach { crit =>
+        val q = inf.get(crit)
+        val e = r.get(crit).get("inference")
+        if (conditioned) {
+          Seq("two_sided", "greater", "less").foreach { alt =>
+            val s = q.get(s"summary_$alt")
+            assert(
+              ratio("T-test", h(s.get("stat")), h(e.get("summary_stat"))) <= 1.0,
+              s"$name $crit $alt t"
+            )
+            h(s.get("p_value")).zip(h(e.get(s"summary_p_$alt"))).foreach { case (x, y) =>
+              assert(
+                math.abs(x - y) <= 5e-8,
+                s"$name $crit $alt p: $x vs $y beyond pprof_py's rounding (X-041)"
+              )
+            }
+          }
+          Seq(
+            ("two_sided", "ci_lower", "summary_lower_two_sided"),
+            ("two_sided", "ci_upper", "summary_upper_two_sided"),
+            ("greater", "ci_lower", "summary_lower_greater"),
+            ("less", "ci_upper", "summary_upper_less")
+          ).foreach { case (alt, k, ek) =>
+            assert(
+              ratio("T-coef", h(q.get(s"summary_$alt").get(k)), h(e.get(ek))) <= 1.0,
+              s"$name $crit $alt $k"
+            )
+          }
+          h(q.get("fixed_effects_table").get("p")).zip(h(e.get("fet_p"))).foreach { case (x, y) =>
+            assert(pOk(x, y), s"$name $crit fixed_effects_table p: $x vs $y")
+          }
+          assert(
+            ratio("T-coef", h(q.get("conf_int").get("lower")), h(e.get("conf_lower"))) <= 1.0,
+            s"$name conf_int"
+          )
+          assert(
+            ratio("T-coef", h(q.get("conf_int").get("upper")), h(e.get("conf_upper"))) <= 1.0,
+            s"$name conf_int"
+          )
+          if (!weighted && !boundary) Seq("zero", "median").foreach { label =>
+            val t = q.get("test").get(label)
+            val z = h(e.get(s"test_${label}_z"))
+            assert(ratio("T-test", h(t.get("z_raw")), z) <= 1.0, s"$name $crit test $label z")
+            h(t.get("p_value")).zip(h(e.get(s"test_${label}_p"))).foreach { case (x, y) =>
+              assert(pOk(x, y), s"$name $crit test $label p: $x vs $y")
+            }
+            h(t.get("flag")).zip(h(e.get(s"test_${label}_flag"))).zip(z).foreach {
+              case ((x, y), zz) =>
+                assert(
+                  x == y || math.abs(math.abs(zz) - 1.959963984540054) <= band,
+                  s"$name $crit test $label flag"
+                )
+            }
+            assert(
+              ratio("T-coef", h(t.get("ci_lower")), h(e.get(s"test_${label}_lower"))) <= 1.0,
+              s"$name $label lower"
+            )
+            assert(
+              ratio("T-coef", h(t.get("ci_upper")), h(e.get(s"test_${label}_upper"))) <= 1.0,
+              s"$name $label upper"
+            )
+          }
+        }
+        val b = h(py.get(crit).get("tight").get("blups"))
+        val mean = b.indices.map(i => sizes(i) * b(i)).sum / sizes.sum
+        val sorted = b.sorted
+        val median =
+          if (sorted.length % 2 == 1) sorted(sorted.length / 2)
+          else 0.5 * (sorted(sorted.length / 2 - 1) + sorted(sorted.length / 2))
+        Seq("median" -> median, "mean" -> mean, "zero" -> 0.0).foreach { case (label, g0) =>
+          val m = q.get(s"measures_$label")
+          val indirect =
+            ratio("T-meas", h(m.get("indirect").get("indirect_difference")), b.map(_ - g0))
+          val direct = ratio("T-meas", h(m.get("direct").get("direct_difference")), b.map(_ - mean))
+          assert(
+            indirect <= 1.0 && direct <= 1.0,
+            s"$name $crit measures at $label: $indirect, $direct of T-meas"
+          )
+        }
+      }
+      if (!boundary) inf.get("negative_controls").properties().asScala.foreach { control =>
+        val miss = ratio(
+          "T-test",
+          h(control.getValue.get("test_z")),
+          h(inf.get("reml").get("test").get("zero").get("z_raw"))
+        )
+        assert(miss >= Margin, s"$name test z: ${control.getKey} is $miss of T-test")
+      }
+    }
+  }
+
+  test(
     "linear slice 3a: pprof_py and R's lm agree within the tolerance classes; controls fall far outside"
   ) {
     def ratio(cls: String, actual: JsonNode, expected: JsonNode): Double =

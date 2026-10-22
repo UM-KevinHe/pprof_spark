@@ -1,7 +1,7 @@
 # Specification: linear random effects — inference and standardized measures (slice 4a-2)
 
 - Status: approved with D-54 (2026-10-21), with X-041 and X-042; fixtures and calibration in round 102 (D-55,
-  proposed).
+  approved); the engine in round 103.
 - Reference: pprof_py v0.7.0's `LinearRandomEffectModel.summary`, `fixed_effects_table`, `conf_int`, `test`,
   `calculate_confidence_intervals` and `calculate_standardized_measures`, with the shared `reference_effect` and
   `effect_test`; R pprof 1.0.3's `test.linear_re` and `confint.linear_re` (option `alpha`) where they follow
@@ -95,7 +95,7 @@ The Python wrapper's `LinearRandomEffectModel` gains `summary`, `fixed_effects_t
 
 | Case | pprof_spark |
 |---|---|
-| A boundary fit (τ̂ = 0) | seⱼ = 0 and b̂ⱼ = 0. As pprof_py (round 102), every provider is untested whatever γ₀: zⱼ, the p-value, the flag and the test's limits are NaN, with the fit's warning (NN-10); option `alpha` gives limits of 0 (D-55, proposed) |
+| A boundary fit (τ̂ = 0) | seⱼ = 0 and b̂ⱼ = 0. As pprof_py (round 102), every provider is untested whatever γ₀: zⱼ, the p-value, the flag and the test's limits are NaN, with the fit's warning (NN-10); option `alpha` gives limits of 0 (D-55) |
 | Large \|zⱼ\| | Normal tails from the complementary functions, so no provider loses its p-value |
 | Even m | The median is the mean of the two middle values |
 | Providers with one record | seⱼ from vⱼ, as any other |
@@ -136,7 +136,7 @@ against base R everywhere; pprof_py's `summary` p-values within their rounding, 
 |---|---|---|---|
 | X-037 | B | The tests' and intervals' seⱼ use the weight totals Wⱼ under prior weights | Approved (D-51) |
 | X-041 | B | pprof_py's `summary` computes p-values as 1 − F and rounds them to seven decimals; pprof_spark computes the upper tail directly and does not round | Proposed (D-54) |
-| X-042 | — | R pprof 1.0.3's linear random-effect inference departs from pprof_py's definitions in places (`summary`'s degrees of freedom and Wald intervals; BLUPs labelled in text order, which misaligns its tests, intervals and direct differences under integer keys) | Approved (D-54); correction proposed (D-55) |
+| X-042 | — | R pprof 1.0.3's linear random-effect inference departs from pprof_py's definitions in places (`summary`'s degrees of freedom and Wald intervals; BLUPs labelled in text order, which misaligns its tests, intervals and direct differences under integer keys) | Approved (D-54), as corrected (D-55) |
 
 ## 12. Fixture findings (round 102)
 
@@ -158,3 +158,20 @@ against base R everywhere; pprof_py's `summary` p-values within their rounding, 
   differences and intervals inherit the labels; its indirect differences are right. X-042 is corrected accordingly.
 - Regenerating the family in a new sandbox session moved the optimizer-limited default runs by up to 1.1·10⁻⁷ and the
   tight optima by 1.3·10⁻¹⁰, beyond T-part: `compare_outputs.py` takes T-opt and 10⁻⁸ for the family (D-55, OI-96).
+
+## 13. Implementation notes (round 103, engine; no statistical change)
+
+- `engine.linear.LinearREInference`: `summary`, `fixedEffectsTable` and `confInt` from the fit's coefficients;
+  `reference` and `test` (slice 2c's table, normal tails from `Normal`, every provider untested when its se is 0);
+  `alphaIntervals` from the provider table; `measures` and `smIntervals` from one pass over the training data, whose
+  fingerprint and row count must match the fit's (API-3), with Σᵢ∈ⱼ ηᵢ by Neumaier sums in canonical order and Σᵢ ηᵢ
+  reduced in block order; Σᵢ ŷᵢ is Σᵢ ηᵢ + Σⱼ nⱼb̂ⱼ, added in key order.
+- The fit's working set now carries the offset as one more column after the weight, so the measures read ηᵢ = oᵢ +
+  xᵢᵀβ̂ from the same blocks as the fit and check the same fingerprint; the fit's estimates are unchanged, and its
+  fingerprint now covers the offset.
+- `LinearREInferenceSuite` (engine, 11 tests): every case but lre-shifted, under REML, and lre-base and lre-weights
+  under ML, end to end against base R on lme4's tight fit (covariate tables, the tests at γ₀ = 0 and the median,
+  weighted fits included through lme4's conditional variances) and pprof_py (its rounded `summary` p-values within
+  5·10⁻⁸; the other test variants, option `alpha` and the SM bounds on unweighted fits; the SM differences and the
+  measures everywhere); the boundary fit untested; the measures' refusal of other data. `FixturesSuite` mirrors the
+  calibration's checks.

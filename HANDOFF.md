@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification approved (D-54), its fixtures and calibration in round 102 (D-55 proposed) |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -46,7 +46,7 @@ round 100 as the maintainer reported (rounds 83 and 84 failed and were fixed by 
 | `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile); `StudentT` and kernels `LinearFE` and `LinearRE` (round 97) |
 | `engine.cox` | `CoxPH` (fit under a stratum byte budget, baseline at a reference point, `referencePoint`, residuals, robust), composite row keys (`CoxSpec.rowKey`), `CoxFitIO` v5, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
 | `engine.logistic` | `LogisticSpec` (`withProviders`), `LogisticFE`, `LogisticBlocks` (block options and growth), `LogisticFitIO` v4, `LogisticProviderView`, `LogisticProviderTests`, `LogisticStandardization` (null values, the fixed null, intervals, bounds); `ThreeStage`, `ThreeStagePipeline`, `ThreeStageFitIO` v1 |
-| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE`, `LinearFitIO` v1, `LinearProviderTests`, `LinearStandardization`; `LinearRE` (round 98) |
+| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE`, `LinearFitIO` v1, `LinearProviderTests`, `LinearStandardization`; `LinearRE` (round 98), `LinearREInference` (round 103) |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob`, `LinearJob` and their run specifications (version 1); `python.PythonApi` |
 | `bench` | `DeterminismCost` (S-05); `synthetic`, the scale tests' data generators (round 92, M1) |
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage, linear and linear random-effect wrappers, ADR-0009) and its pytest suite |
@@ -156,7 +156,7 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
   OI-43, OI-45, OI-46, OI-50, OI-57, OI-59 (the dense Schur complement of stage 2), OI-68, OI-70 and OI-76;
   OI-92 (the plan's Zipf exponent).
 - Random-effect models (Phase 4, D-51): OI-93 (cluster terms, part 4d), OI-94 (stage 3's `he2013`, slice 4c-2);
-  X-037 to X-040 approved; D-53 (slice 4a-1's tolerance classes) approved; X-041 and X-042 approved (D-54), X-042's correction proposed with D-55; OI-96.
+  X-037 to X-040 approved; D-53 (slice 4a-1's tolerance classes) approved; X-041 and X-042 approved (D-54), X-042 as corrected (D-55); OI-96.
 - Interfaces: OI-86 (added providers in the job runner), OI-53 (Databricks access modes), OI-55 (a wheel), OI-56
   (PySpark CSV pushdown with a literal provider column).
 - Process: OI-40 (a CI check of the parity matrix), OI-41 (per-release model fixtures), OI-33 and OI-42 (reports
@@ -173,9 +173,8 @@ as round 82 did:
 
 1. M4, Phase 4 (`docs/spec/random-effects/plan.md`, D-51):
    - 4a, linear random effects: 4a-1 is complete (D-52, D-53; rounds 97 to 100, the distributed search
-     included); 4a-2's specification is approved (D-54) and its fixtures are in (round 102, D-55 proposed); next
-     its code with parity tests and `FixturesSuite`'s mirror of the new calibration, then Python; then 4a-3 and
-     an S1 smoke.
+     included); 4a-2's specification (D-54), fixtures (D-55) and engine (round 103) are in; next its Python
+     wrapper (round 104); then 4a-3 and an S1 smoke.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
    local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
@@ -189,6 +188,26 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 103 (2026-10-21): slice 4a-2 engine, linear random-effect inference and measures
+
+- The maintainer approved D-55 as proposed (2026-10-21).
+- `engine.linear.LinearREInference`: `summary`, `fixedEffectsTable` and `confInt`; `reference` and `test`
+  (normal tails, slice 2c's table, every provider untested at a boundary fit); `alphaIntervals`; `measures` and
+  `smIntervals`, from one pass over the training data checked against the fit's fingerprint (API-3).
+- The fit's working set carries the offset after the weight, so the measures read ηᵢ = oᵢ + xᵢᵀβ̂ from the fit's own
+  blocks; the estimates are unchanged and `LinearRESuite` passes as before.
+- `LinearREInferenceSuite` (11 tests) checks every case but lre-shifted end to end. Covariate tables and tests at
+  γ₀ = 0 and the median are compared with base R on lme4's tight fit, weighted fits included. The other test
+  variants, option `alpha`, the SM intervals and the measures are compared with pprof_py. `FixturesSuite` mirrors
+  `calibrate.py`'s 4a-2 checks. Spec §13 records the implementation.
+
+Evidence (assistant sandbox): engine, engine-test, testkit and testkit-test compile with the build's flags after
+scalafmt; `LinearREInferenceSuite` (11) and `LinearRESuite` (22) pass, 33 of 33; `FixturesSuite` passes, 19 of 19;
+`check-engine-api.sh` passes; the patch applies to a fresh clone of `main` with an identical tree, and scalafmt is
+clean on the build's modules.
+
+What to send back: the CI run.
 
 ## Round 102 (2026-10-21): slice 4a-2 fixtures and calibration
 
