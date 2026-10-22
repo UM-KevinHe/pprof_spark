@@ -103,6 +103,18 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-57: Slice 4b-1 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/logistic/random-effect-estimation.md`: estimation for the logistic random-intercept model (one provider
+intercept, covariates, an offset; fractional outcomes as pprof_py). The Laplace (nAGQ = 1) optimum over (σ, β) by
+`BoundedQuasiNewton` with the analytic gradient of §2.1, each evaluation one pass in which every provider's mode is
+found by Newton's method on its own rows from 0. `stage2 = false` gives the nAGQ = 0 optimum: Newton over (β, u)
+through the Schur complement at each σ, and Brent's minimization over σ, which also starts nAGQ = 1. The estimates
+follow pprof_py's definitions, Var(β̂) as the information conditional on the modes. The section also covers the data
+contract (X-038's and X-040's rules), the distributed plan, edge cases, the Python mapping and the validation plan with
+`fixtures/logistic-re` at T-opt. Proposed with it: X-043 (the covariance's definition against `glmer`'s default
+`vcov`).
+
 ### D-56: Slice 4a-3 specification (Accepted: approved by the maintainer, 2026-10-22)
 
 `docs/spec/linear/random-effect-job.md`: persistence, the job runner and Python save and load for the linear

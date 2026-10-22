@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-22, round 108.
+Updated 2026-10-22, round 109.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -9,7 +9,7 @@ round 26; the 2a estimator in round 27; persistence and the slice review in roun
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 **Phase 4, random-effect models (milestone M4): plan approved** (D-51, 2026-10-21, with X-037;
-`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2 complete in rounds 101 to 104; slice 4a-3 complete in rounds 105 to 107; part 4a's S1 smoke prepared in round 108 for the maintainer's cluster, the gate review after it. D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
+`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2 complete in rounds 101 to 104; slice 4a-3 complete in rounds 105 to 107; part 4a's S1 smoke prepared in round 108 and not yet run, its gate review waiting with it (OI-97); part 4b's first specification proposed in round 109 (D-57). D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
 through round 100 as the maintainer reported.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -137,7 +137,8 @@ through round 100 as the maintainer reported.
 | 105 | Slice 4a-3's specification (`docs/spec/linear/random-effect-job.md`, D-56 proposed): `LinearREFitIO`, `LinearREJob`, Python save and load | Merged (aa6e9f3) |
 | 106 | D-56 approved; slice 4a-3: `LinearREFitIO` (format version 1), `LinearRERunSpec` and `LinearREJob`, the other jobs refusing `linear-re`; `LinearREFitIOSuite`, `LinearREJobSuite`; the job guide | Merged (ee511b6) |
 | 107 | Slice 4a-3 Python: the facade on `LinearRERunSpec.model`, `linearRESave` and `linearRELoad`, `LinearRandomEffectModel.save` and `load`; `PythonApiLinearRESuite`; the guide | Merged (96a852c) |
-| 108 | Part 4a's S1 scale smoke prepared: `pprof.spark.bench.S1LinearRE` (three fits, downstream operations, bitwise and recovery checks, one JSON report), `S1LinearRESuite`, `docs/parity/scale/s1-linear-re.md` | Delivered as a patch |
+| 108 | Part 4a's S1 scale smoke prepared: `pprof.spark.bench.S1LinearRE` (three fits, downstream operations, bitwise and recovery checks, one JSON report), `S1LinearRESuite`, `docs/parity/scale/s1-linear-re.md` | Merged (d057404) |
+| 109 | Part 4b begins: slice 4b-1's specification (`docs/spec/logistic/random-effect-estimation.md`, D-57 proposed); X-043 proposed; OI-97 (part 4a's S1 smoke and gate pending) | Delivered as a patch |
 
 ## Decisions and spikes
 
