@@ -5,7 +5,7 @@ import scala.jdk.CollectionConverters._
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import pprof.spark.app.{LinearRunSpec, RunSpec, ThreeStageJob, ThreeStageRunSpec}
+import pprof.spark.app.{LinearRERunSpec, LinearRunSpec, RunSpec, ThreeStageJob, ThreeStageRunSpec}
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.linear.{
   LinearFE,
@@ -15,6 +15,7 @@ import pprof.spark.engine.linear.{
   LinearProviderTests,
   LinearRE,
   LinearREFit,
+  LinearREFitIO,
   LinearREInference,
   LinearREOptions,
   LinearRESpec,
@@ -1107,85 +1108,23 @@ object PythonApi {
 
   def linearLoad(spark: SparkSession, path: String): LinearFit = LinearFitIO.load(spark, path)
 
-  /** Fits the linear random-intercept model (docs/spec/linear/random-effect-estimation.md). `columns`: `outcome`,
-    * `features` (possibly empty), `provider`, and optionally `offset`, `weights` and `rowId`; `fit`: `reml` (true by
-    * default), `includeIntercept` (true), `thetaUpper` (unbounded), `maxEvaluations` (200) and `blocks`, parsed as
-    * the linear job runner's. Unknown keys fail; the job runner for this model is slice 4a-3's.
+  /** Fits the linear random-intercept model (docs/spec/linear/random-effect-estimation.md): `columns` and `fit` as the
+    * job runner's (docs/spec/linear/random-effect-job.md §3, §6), parsed by `LinearRERunSpec.model`, every problem at
+    * once.
     */
   def linearREFit(df: DataFrame, columnsJson: String, fitJson: String): LinearREFit = {
     val (spec, options) = linearREModel(columnsJson, fitJson)
     LinearRE.fit(df, spec, options)
   }
 
-  /** The column roles and options of [[linearREFit]]. */
-  def linearREModel(columnsJson: String, fitJson: String): (LinearRESpec, LinearREOptions) = {
-    val mapper = new ObjectMapper()
-    val columns = objectNode(mapper, columnsJson, "columns")
-    val fit = objectNode(mapper, fitJson, "fit")
-    def checkKeys(node: ObjectNode, allowed: Set[String], what: String): Unit = {
-      val extra = node.properties().asScala.map(_.getKey).filterNot(allowed).toSeq.sorted
-      require(extra.isEmpty, s"unknown $what: ${extra.mkString(", ")}")
-    }
-    checkKeys(
-      columns,
-      Set("outcome", "features", "provider", "offset", "weights", "rowId"),
-      "columns"
-    )
-    checkKeys(
-      fit,
-      Set("reml", "includeIntercept", "thetaUpper", "maxEvaluations", "blocks"),
-      "fit options"
-    )
-    def text(name: String): Option[String] = Option(columns.get(name)).map { node =>
-      require(node.isTextual, s"columns.$name must be a string")
-      node.asText()
-    }
-    def required(name: String): String =
-      text(name).getOrElse(throw new IllegalArgumentException(s"columns.$name is required"))
-    val features = Option(columns.get("features")).fold(Seq.empty[String]) { node =>
-      require(
-        node.isArray && node.elements().asScala.forall(_.isTextual),
-        "columns.features must be an array of strings"
-      )
-      node.elements().asScala.map(_.asText()).toSeq
-    }
-    def flag(name: String): Boolean = Option(fit.get(name)).fold(true) { node =>
-      require(node.isBoolean, s"fit.$name must be true or false")
-      node.asBoolean()
-    }
-    val blocks = Option(fit.get("blocks")).fold(BlockOptions()) { node =>
-      val wrapper = mapper.createObjectNode()
-      wrapper.set[JsonNode]("blocks", node)
-      linearModel(
-        """{"outcome": "y", "features": ["x"], "provider": "p"}""",
-        mapper.writeValueAsString(wrapper)
-      )._2.blocks
-    }
-    val options = LinearREOptions(
-      reml = flag("reml"),
-      includeIntercept = flag("includeIntercept"),
-      thetaUpper = Option(fit.get("thetaUpper")).fold(Double.PositiveInfinity) { node =>
-        require(node.isNumber, "fit.thetaUpper must be a number")
-        node.asDouble()
-      },
-      maxEvaluations = Option(fit.get("maxEvaluations")).fold(200) { node =>
-        require(node.canConvertToInt, "fit.maxEvaluations must be an integer")
-        node.asInt()
-      },
-      blocks = blocks
-    )
-    (
-      LinearRESpec(
-        required("outcome"),
-        features,
-        required("provider"),
-        text("offset"),
-        text("weights"),
-        text("rowId")
-      ),
-      options
-    )
-  }
+  /** The column roles and options of [[linearREFit]], through the job runner's parser. */
+  def linearREModel(columnsJson: String, fitJson: String): (LinearRESpec, LinearREOptions) =
+    LinearRERunSpec.model(columnsJson, fitJson)
+
+  def linearRESave(spark: SparkSession, fit: LinearREFit, path: String): Unit =
+    LinearREFitIO.save(spark, fit, path)
+
+  def linearRELoad(spark: SparkSession, path: String): LinearREFit = LinearREFitIO.load(spark, path)
 
   /** The linear random-effect fit as JSON: coefficients with standard errors, Var(β̂) (packed), σ̂, θ̂, σ̂_α, the
     * criterion, the deviance, ℓ, AIC, BIC, PWRSS, log det H, ‖u‖², counts, the search's record, warnings, column

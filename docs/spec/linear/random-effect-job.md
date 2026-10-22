@@ -1,6 +1,6 @@
 # Specification: linear random effects — persistence, job runner and Python (slice 4a-3)
 
-- Status: approved with D-56 (2026-10-22); persistence and the job runner in round 106.
+- Status: approved with D-56 (2026-10-22); persistence and the job runner in round 106, Python in round 107.
 - References: the linear fixed-effect job runner and Python access ([job-and-python.md](job-and-python.md), D-47)
   and `LinearFitIO`, applied to slices 4a-1 and 4a-2 ([random-effect-estimation.md](random-effect-estimation.md),
   [random-effect-inference.md](random-effect-inference.md)). Plan: [../random-effects/plan.md](../random-effects/plan.md).
@@ -139,3 +139,12 @@ None new: persistence, the job and the wrappers add no statistics.
    `LinearJob.summaryTable`'s, and `fixedEffectsFrame` and `confIntFrame` build the two covariate tables. The run
    record writes infinite or undefined doubles (an unbounded θ_upper) as null.
 4. `LinearREFitIOSuite` (3 tests) and `LinearREJobSuite` (4 tests), as §7; the guide is `docs/guide/linear-re-job.md`.
+
+## 10. Implementation notes (round 107; no statistical change)
+
+1. `PythonApi.linearREModel` delegates to `LinearRERunSpec.model`, so the facade and the job report the same problems
+   in the same words; round 99's parser and its detour through the fixed-effect parser for `blocks` are gone.
+   `linearRESave` and `linearRELoad` wrap `LinearREFitIO`.
+2. `LinearRandomEffectModel.save(path)` and `LinearRandomEffectModel.load(spark, path)`.
+3. `PythonApiLinearRESuite` (2 tests: the parser's problems at once; the facade's fit bit for bit with the library's,
+   and a save and load whose summaries match), and a Python test of save, load, overwriting and a parser problem.

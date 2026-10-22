@@ -146,3 +146,17 @@ def test_provider_tests_intervals_and_measures(offset_model, offset_data):
         offset_model.confidence_intervals(option="alpha", alternative="greater")
     with pytest.raises(ValueError, match="training data"):
         offset_model.confidence_intervals(option="SM")
+
+
+def test_save_and_load_and_the_facade_parser(offset_model, offset_data, tmp_path):
+    from pprof_spark import LinearRandomEffectModel
+    path = str(tmp_path / "fit")
+    offset_model.save(path)
+    loaded = LinearRandomEffectModel.load(offset_data.sparkSession, path)
+    assert [c.estimate for c in loaded.coefficients] == [c.estimate for c in offset_model.coefficients]
+    assert (loaded.theta, loaded.sigma, loaded.deviance) == (offset_model.theta, offset_model.sigma, offset_model.deviance)
+    assert column(loaded.providers(), "blup") == column(offset_model.providers(), "blup")
+    with pytest.raises(Exception, match="path|exist"):
+        offset_model.save(path)
+    with pytest.raises(Exception, match="fit.blocks.bogus does not belong"):
+        LinearRandomEffect("y", FEATURES, "provider", blocks={"bogus": 1}).fit(offset_data)

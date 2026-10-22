@@ -64,7 +64,7 @@ class LinearRandomEffect:
 class LinearRandomEffectModel:
     """A fitted linear random-intercept model: a handle to the JVM's `LinearREFit` and its summary. The method names
     follow pprof_py's `LinearRandomEffectModel` (docs/spec/linear/random-effect-inference.md for the inference);
-    saving and loading arrive with slice 4a-3."""
+    `save` and `load` keep a fit (docs/spec/linear/random-effect-job.md)."""
 
     def __init__(self, spark, handle):
         self._spark = spark
@@ -174,6 +174,15 @@ class LinearRandomEffectModel:
         """pprof_py's `calculate_standardized_measures` on the fit's training data `df` (API-3)."""
         return self._frames(api(self._spark).linearREMeasures(df._jdf, self._handle, json.dumps(list(kinds)),
                                                               str(reference), self._names(providers)))
+
+    def save(self, path: str) -> None:
+        """Saves the fit (`LinearREFitIO`, format version 1); the path must not exist."""
+        api(self._spark).linearRESave(self._spark._jsparkSession, self._handle, path)
+
+    @classmethod
+    def load(cls, spark, path: str) -> "LinearRandomEffectModel":
+        """Loads a fit saved by `save` or by `LinearREJob`, bit for bit."""
+        return cls(spark, api(spark).linearRELoad(spark._jsparkSession, path))
 
     def fitted_values(self, df: DataFrame) -> DataFrame:
         """The training rows `df` with `xbeta`, `fitted` (with the BLUPs) and `residual`."""

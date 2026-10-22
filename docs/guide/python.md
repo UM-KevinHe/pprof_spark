@@ -130,6 +130,7 @@ fit.summary(), fit.fixed_effects_table(), fit.conf_int()   # the covariates (spe
 fit.test(), fit.test(reference="median")           # z tests on the BLUPs; reference 0 by default
 fit.confidence_intervals(option="alpha")           # BLUP intervals, two-sided
 fit.confidence_intervals(df), fit.standardized_measures(df)  # SM intervals and measures: the training data
+fit.save("/fits/los-2026-10"); LinearRandomEffectModel.load(spark, "/fits/los-2026-10")  # bit for bit
 ```
 
 `LinearRandomEffect` takes pprof_py's `LinearRandomEffectModel` arguments
@@ -138,7 +139,8 @@ fit.confidence_intervals(df), fit.standardized_measures(df)  # SM intervals and 
 `tol_outer`, `max_iter_inner` and `optimizer` are accepted but not used, with a warning when they differ from pprof_py's
 defaults; `cluster_vars` waits for part 4d (OI-93). As in pprof_py, `predict` adds an offset only when `offset_var`
 names it. Rows with a missing value fail with counts per column (X-038) rather than being dropped. The measures and SM intervals read
-the training data and check it against the fit (API-3). Saving and loading arrive with slice 4a-3.
+the training data and check it against the fit (API-3). A saved fit also loads in Scala (`LinearREFitIO.load`), and
+`LinearREJob` (docs/guide/linear-re-job.md) writes one with its other outputs.
 
 ## Large data: strata, blocks and row identifiers
 
