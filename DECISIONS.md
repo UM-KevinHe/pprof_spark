@@ -103,7 +103,27 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-57: Slice 4b-1 specification (Proposed: awaiting the maintainer's approval)
+### D-58: Slice 4b-1 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+
+`fixtures/logistic-re` (round 110; `reference/fixtures/logistic_re_fixtures.py` and `logistic_re_r.R`): the ten cases
+of spec 4b-1 §10 with nAGQ = 1 and nAGQ = 0, pprof_py and `glmer` at their defaults and with their tolerances
+tightened. The fixtures also hold the Laplace deviance at four fixed points within two standard errors of the optimum
+(with pprof_py's central differences there), the nAGQ = 0 criterion at three values of σ, and negative controls.
+
+`docs/parity/logistic-re-calibration.md` passes every strict check: the tightened optima agree within 0.017 of T-opt,
+the deviances at fixed parameters within 0.32 of T-coef, and the weakest control misses by 12.7. Proposed:
+1. T-opt (D-42) for 4b-1's estimates, fitted values, predictions and residuals; T-coef for the deviance and the
+   nAGQ = 0 criterion at fixed parameters, since both references stop their inner iterations at a relative
+   tolerance.
+2. lgre-fractional compared with pprof_py only: `glmer` fits another model to fractional outcomes (σ̂ = 0, β̂ about
+   twice pprof_py's).
+3. lgre-shifted compared by invariance against lgre-base, as D-53 did for lre-shifted.
+4. Negative controls at the provider level: the largest provider's outcomes flipped, and the first row of every
+   provider flipped. One row moves an optimizer-limited fit too little for T-opt.
+5. X-044 (class B): pprof_py's predictions with the BLUPs ignore them under integer keys; pprof_spark adds them, as
+   lme4 and pprof_py with text keys do.
+
+### D-57: Slice 4b-1 specification (Accepted: approved by the maintainer, 2026-10-22)
 
 `docs/spec/logistic/random-effect-estimation.md`: estimation for the logistic random-intercept model (one provider
 intercept, covariates, an offset; fractional outcomes as pprof_py). The Laplace (nAGQ = 1) optimum over (σ, β) by
@@ -114,6 +134,8 @@ follow pprof_py's definitions, Var(β̂) as the information conditional on the m
 contract (X-038's and X-040's rules), the distributed plan, edge cases, the Python mapping and the validation plan with
 `fixtures/logistic-re` at T-opt. Proposed with it: X-043 (the covariance's definition against `glmer`'s default
 `vcov`).
+
+Approved as proposed, with X-043, on 2026-10-22.
 
 ### D-56: Slice 4a-3 specification (Accepted: approved by the maintainer, 2026-10-22)
 

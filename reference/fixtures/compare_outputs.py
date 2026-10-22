@@ -27,6 +27,8 @@ def tolerance(family, key):
     1e-10, so the rest of the family is compared at 1e-8 relative. Every other family keeps T-part."""
     if family == "linear-re":
         return (2e-4, 1e-6) if ("default" in key or "rpprof" in key) else (1e-8, 0.0)
+    if family == "logistic-re":  # every fit is optimizer-limited (D-57); values at fixed parameters are not
+        return (1e-8, 0.0) if "function" in key else (2e-4, 1e-6)
     return RTOL, 0.0
 
 
@@ -46,7 +48,8 @@ def main(regenerated, committed):
     worst, failures = 0.0, []
     families = (("cox", ("pprof_py.json", "r_survival.json")), ("logistic", ("pprof_py.json", "r_logistic.json")), ("three-stage", ("pprof_py.json", "r_threestage.json")),
                 ("linear", ("pprof_py.json", "r_linear.json", "inference_pprof_py.json", "inference_r.json")),
-                ("linear-re", ("pprof_py.json", "r_lme4.json", "inference_pprof_py.json")))
+                ("linear-re", ("pprof_py.json", "r_lme4.json", "inference_pprof_py.json")),
+                ("logistic-re", ("pprof_py.json", "r_lme4.json")))
     cases = [(f, c, n) for f, n in families for c in manifest["cases"].get(f, [])]
     # Family-level reference files (logistic/poibin-tails.json, slice 2c) have no input.csv.
     shared = [(f, None, tuple(sorted(n for n in os.listdir(os.path.join(committed, f)) if n.endswith(".json"))))

@@ -1,6 +1,6 @@
 # Specification: logistic random effects — estimation (slice 4b-1)
 
-- Status: proposed with D-57 (round 109, 2026-10-22), awaiting the maintainer's approval.
+- Status: approved with D-57 (2026-10-22), with X-043; fixtures and calibration in round 110 (D-58, proposed).
 - Reference: pprof_py v0.7.0 (`9320766`), `LogisticRandomEffectModel` (`models/logistic/random_effect.py`), and
   lme4 1.1-35.1's `glmer` (family binomial, nAGQ 1 and 0). Plan: [../random-effects/plan.md](../random-effects/plan.md)
   (D-51, part 4b). Reused: the three-stage model's stage 2 (`ThreeStageGlmm`, D-41) and `BoundedQuasiNewton`, the
@@ -177,4 +177,29 @@ BOBYQA's tolerances tightened.
 |---|---|---|---|
 | X-030 (precedent) | D | The optimum by a gradient method instead of the references' derivative-free paths | As D-41 |
 | X-038, X-040 (precedents) | C | Incomplete rows fail; fewer than two providers fail | As D-52 |
-| X-043 | — | Var(β̂) is pprof_py's information conditional on the modes, lme4's `vcov(use.hessian = FALSE)`; `glmer`'s default `vcov` uses the Hessian of the deviance in (θ, β) and differs by about 0.25% in standard errors on round 109's probe | Proposed (D-57) |
+| X-043 | — | Var(β̂) is pprof_py's information conditional on the modes, lme4's `vcov(use.hessian = FALSE)`; `glmer`'s default `vcov` uses the Hessian of the deviance in (θ, β) and differs by about 0.25% in standard errors on round 109's probe | Approved (D-57) |
+| X-044 | B | Predictions with the BLUPs carry them under any key type; pprof_py's carry none under integer keys | Proposed (D-58) |
+
+## 12. Fixture findings (round 110)
+
+- `fixtures/logistic-re` (`reference/fixtures/logistic_re_fixtures.py`, `logistic_re_r.R`) holds the ten cases of
+  §10, each with nAGQ = 1 and nAGQ = 0: pprof_py and `glmer` at their defaults and with their tolerances tightened
+  (pprof_py's `tol_outer` 10⁻¹⁰ and `tol_pirls` 10⁻¹³; BOBYQA's `rhoend` 10⁻¹² and `tolPwrss` 10⁻¹³). It also
+  holds the Laplace deviance at four fixed points within two standard errors of the optimum, with pprof_py's
+  Richardson central differences at two of them, the nAGQ = 0 criterion at three values of σ, and negative controls.
+- Calibration (`docs/parity/logistic-re-calibration.md`): every strict check passes.
+  - The tightened optima agree within 0.017 of T-opt: σ̂, β̂, the BLUPs and their variances, Var(β̂), the deviance,
+    the fitted values, the predictions without the BLUPs and the residuals.
+  - The deviance and the nAGQ = 0 criterion at fixed parameters agree within 0.32 of T-coef. T-fn is too strict for
+    them, because both references stop their inner PIRLS at a relative change of the penalized deviance.
+  - The weakest negative control misses by 12.7.
+- `glmer` fits another model to fractional outcomes: on lgre-fractional it returns σ̂ = 0 and β̂ = (−2.31, 1.28,
+  −0.75), where pprof_py's quasi-likelihood gives σ̂ = 0.562 and (−0.958, 0.687, −0.381). The case is compared with
+  pprof_py alone (D-58).
+- lgre-shifted is lgre-base's draws with x₁ + 1000; there both references lose precision. pprof_spark is checked by
+  invariance against lgre-base, as lre-shifted (D-53, D-58).
+- pprof_py's `predict(use_re=True)` adds no BLUP under integer keys (X-044). Its predictions with the BLUPs are
+  compared on lgre-text only, and `glmer`'s everywhere.
+- A single flipped row moves an optimizer-limited fit by less than T-opt allows. The negative controls therefore
+  flip a whole provider, which must move σ̂, β̂, the BLUPs and the deviance, and the first row of every provider,
+  which must move β̂ and the deviance.
