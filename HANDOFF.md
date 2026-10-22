@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke and gate review next |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108), the maintainer's run and the gate review next |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -173,9 +173,9 @@ as round 82 did:
 
 1. M4, Phase 4 (`docs/spec/random-effects/plan.md`, D-51):
    - 4a, linear random effects: 4a-1 is complete (D-52, D-53; rounds 97 to 100, the distributed search
-     included); 4a-2 is complete (D-54, D-55; rounds 103 and 104); 4a-3 is complete (D-56; rounds 106 and 107). Next the
-     S1 smoke (a plan for the maintainer's cluster, `docs/spec/scale/plan.md` §9) and the gate review
-     (`docs/gates/phase-4a.md`).
+     included); 4a-2 is complete (D-54, D-55; rounds 103 and 104); 4a-3 is complete (D-56; rounds 106 and 107). The S1
+     smoke is prepared (round 108, `docs/parity/scale/s1-linear-re.md`): the maintainer runs it with
+     `spark-submit`; its report goes into that document, then the gate review (`docs/gates/phase-4a.md`).
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
    local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
@@ -189,6 +189,28 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 108 (2026-10-22): part 4a's S1 scale smoke, prepared
+
+- `pprof.spark.bench.S1LinearRE` (bench module) runs the S1 smoke of part 4a as a `spark-submit` application (the
+  maintainer's choice). It generates `bench.synthetic`'s linear point under `--path` (n = 10⁷, m = 10⁴, p = 20 by
+  default) unless its manifest is there, and verifies it. It then fits three times:
+  - on the driver;
+  - with the driver budget at three quarters of the providers' summaries, so the search runs across the cluster;
+  - on input repartitioned under another `spark.sql.shuffle.partitions` (R0).
+  The provider tests, option `alpha` and the measures follow the first fit. One JSON report records the stage
+  timings and the driver's peak heap, the single-task stages, and every check with its verdict: bitwise identity of
+  the three fits, the search paths, the recovery of β, σ_α and σ (|z| ≤ 4.5), and the coverage of the `alpha`
+  intervals.
+- `S1LinearRESuite` runs a small point (n = 2·10⁴, m = 100, p = 4): every check passes, and a second run reuses the
+  data. `docs/parity/scale/s1-linear-re.md` describes the point, the checks, the commands and what to send back, and
+  its results section waits for the maintainer's run; the parity matrix's 4a rows point to it.
+
+Evidence (assistant sandbox): testkit, bench and bench-test compile with the build's flags after scalafmt;
+`S1LinearRESuite` passes, 2 of 2, and its report is in the evidence log; `check-engine-api.sh` passes; the patch
+applies to a fresh clone of `main` with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the S1 report from the cluster, and the CI runs for rounds 107 and 108.
 
 ## Round 107 (2026-10-22): slice 4a-3 Python, save and load
 
