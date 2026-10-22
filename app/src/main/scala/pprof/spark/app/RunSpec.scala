@@ -109,8 +109,10 @@ object RunSpec {
             problems += "model three-stage: run this specification with pprof.spark.app.ThreeStageJob"
           case "linear" =>
             problems += "model linear: run this specification with pprof.spark.app.LinearJob"
+          case "linear-re" =>
+            problems += "model linear-re: run this specification with pprof.spark.app.LinearREJob"
           case other =>
-            problems += s"model must be cox, logistic, three-stage or linear, got $other"
+            problems += s"model must be cox, logistic, three-stage, linear or linear-re, got $other"
         }
     }
 

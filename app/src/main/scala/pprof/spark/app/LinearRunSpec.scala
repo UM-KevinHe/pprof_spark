@@ -165,7 +165,9 @@ object LinearRunSpec {
       case None => problems += "version is required"
     }
     node(root, "model") match {
-      case Some(v) if v.isTextual && v.asText() == "linear"   => ()
+      case Some(v) if v.isTextual && v.asText() == "linear"    => ()
+      case Some(v) if v.isTextual && v.asText() == "linear-re" =>
+        problems += "model linear-re: run this specification with pprof.spark.app.LinearREJob"
       case Some(v) if v.isTextual && v.asText() == "logistic" =>
         problems += "model logistic: run this specification with pprof.spark.app.LogisticJob"
       case Some(v) if v.isTextual && v.asText() == "three-stage" =>

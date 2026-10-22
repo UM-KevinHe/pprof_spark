@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3's specification proposed in round 105 (D-56) |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3's specification approved (D-56), its persistence and job runner in round 106 |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -46,7 +46,7 @@ round 100 as the maintainer reported (rounds 83 and 84 failed and were fixed by 
 | `numerics` | Summation, `Normal`, `Cholesky`, `Newton`, `Gamma`, `Poisson`, `Brent`, `PoissonTests`; `Serbin`, `PoissonBinomial` (smaller-tail recursion, X-024), `TaylorBins` (X-026), `GaussHermite`, `SparseSymmetric`, `BoundedQuasiNewton`, `ClusteredPoissonBinomial`; kernels `CoxStratum`, `CoxResiduals`, `CoxMeasures`, `ThreeStageKernel` (stage 3), `ThreeStageGlmm` (stage 2, profile); `StudentT` and kernels `LinearFE` and `LinearRE` (round 97) |
 | `engine.cox` | `CoxPH` (fit under a stratum byte budget, baseline at a reference point, `referencePoint`, residuals, robust), composite row keys (`CoxSpec.rowKey`), `CoxFitIO` v5, `CoxPrediction`, `CoxMeasures`, `CoxProviderTests` |
 | `engine.logistic` | `LogisticSpec` (`withProviders`), `LogisticFE`, `LogisticBlocks` (block options and growth), `LogisticFitIO` v4, `LogisticProviderView`, `LogisticProviderTests`, `LogisticStandardization` (null values, the fixed null, intervals, bounds); `ThreeStage`, `ThreeStagePipeline`, `ThreeStageFitIO` v1 |
-| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE`, `LinearFitIO` v1, `LinearProviderTests`, `LinearStandardization`; `LinearRE` (round 98), `LinearREInference` (round 103) |
+| `engine.linear` | `LinearSpec`, `LinearValidation`, `LinearBlocks`, `LinearFE`, `LinearFitIO` v1, `LinearProviderTests`, `LinearStandardization`; `LinearRE` (round 98), `LinearREInference` (round 103), `LinearREFitIO` v1 (round 106) |
 | `app` | `CoxJob`, `LogisticJob`, `ThreeStageJob`, `LinearJob` and their run specifications (version 1); `python.PythonApi` |
 | `bench` | `DeterminismCost` (S-05); `synthetic`, the scale tests' data generators (round 92, M1) |
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage, linear and linear random-effect wrappers, ADR-0009) and its pytest suite |
@@ -173,8 +173,9 @@ as round 82 did:
 
 1. M4, Phase 4 (`docs/spec/random-effects/plan.md`, D-51):
    - 4a, linear random effects: 4a-1 is complete (D-52, D-53; rounds 97 to 100, the distributed search
-     included); 4a-2 is complete (D-54, D-55; rounds 103 and 104); 4a-3's specification is proposed (round 105,
-     D-56); once approved, `LinearREFitIO` and `LinearREJob`, then Python save and load; then the S1 smoke.
+     included); 4a-2 is complete (D-54, D-55; rounds 103 and 104); 4a-3's specification is approved (D-56) and its
+     persistence and job runner are in (round 106); next Python save and load with the facade's parser
+     (round 107), then the S1 smoke.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
    local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
@@ -188,6 +189,24 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 106 (2026-10-22): slice 4a-3 persistence and job runner
+
+- The maintainer approved D-56 as proposed (2026-10-22).
+- `engine.linear.LinearREFitIO` (format version 1): a `metadata` record with every double as its bit pattern
+  (θ_upper and the search's record included) and the provider table in Parquet; never overwriting; other kinds,
+  unknown versions and a provider table of the wrong length refused.
+- `app.LinearRERunSpec` and `app.LinearREJob` run `model` `linear-re` specifications with every output of slices
+  4a-1 and 4a-2 and a run record written last; `RunSpec`, `LogisticRunSpec`, `ThreeStageRunSpec` and `LinearRunSpec`
+  refuse `linear-re`, naming `LinearREJob`, and `LinearRERunSpec` refuses theirs. `LinearRERunSpec.model` parses
+  `columns` and `fit` alone for the Python facade (round 107).
+- `LinearREFitIOSuite` (3 tests) and `LinearREJobSuite` (4 tests); `docs/guide/linear-re-job.md`; spec §9.
+
+Evidence (assistant sandbox): engine, engine-test, app and app-test compile with the build's flags after scalafmt;
+`LinearREFitIOSuite`, `LinearREJobSuite` and `LinearJobSuite` pass, 9 of 9; `check-engine-api.sh` passes; the patch
+applies to a fresh clone of `main` with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI run.
 
 ## Round 105 (2026-10-22): slice 4a-3 specification (persistence, job runner, Python)
 

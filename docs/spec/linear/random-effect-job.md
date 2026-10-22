@@ -1,6 +1,6 @@
 # Specification: linear random effects — persistence, job runner and Python (slice 4a-3)
 
-- Status: proposed with D-56 (round 105, 2026-10-22), awaiting the maintainer's approval.
+- Status: approved with D-56 (2026-10-22); persistence and the job runner in round 106.
 - References: the linear fixed-effect job runner and Python access ([job-and-python.md](job-and-python.md), D-47)
   and `LinearFitIO`, applied to slices 4a-1 and 4a-2 ([random-effect-estimation.md](random-effect-estimation.md),
   [random-effect-inference.md](random-effect-inference.md)). Plan: [../random-effects/plan.md](../random-effects/plan.md).
@@ -125,3 +125,17 @@ the same problems; the round-99 parser and its detour through the fixed-effect p
 ## 8. Known discrepancies
 
 None new: persistence, the job and the wrappers add no statistics.
+
+## 9. Implementation notes (round 106; no statistical change)
+
+1. `engine.linear.LinearREFitIO`, format version 1, as §2: the metadata's fixed schema stores the coefficient names
+   (the intercept included), every double as its bit pattern (θ_upper included, so an unbounded search round-trips),
+   the search's record with its path, and the layout; `load` restores the provider table persisted and checks its
+   length.
+2. `app.LinearRERunSpec` parses as `LinearRunSpec` does, every problem at once, with its own field readers; `model`
+   (`columns` and `fit` alone) is the form the Python facade will use (round 107). `RunSpec`, `LogisticRunSpec`,
+   `ThreeStageRunSpec` and `LinearRunSpec` refuse `model` `linear-re`, naming `LinearREJob`.
+3. `app.LinearREJob` reads the input once and calls the library for each requested output; the summary table is
+   `LinearJob.summaryTable`'s, and `fixedEffectsFrame` and `confIntFrame` build the two covariate tables. The run
+   record writes infinite or undefined doubles (an unbounded θ_upper) as null.
+4. `LinearREFitIOSuite` (3 tests) and `LinearREJobSuite` (4 tests), as §7; the guide is `docs/guide/linear-re-job.md`.
