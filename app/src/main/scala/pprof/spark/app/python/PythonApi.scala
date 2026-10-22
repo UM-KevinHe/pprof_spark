@@ -15,6 +15,7 @@ import pprof.spark.engine.linear.{
   LinearProviderTests,
   LinearRE,
   LinearREFit,
+  LinearREInference,
   LinearREOptions,
   LinearRESpec,
   LinearSpec,
@@ -1013,9 +1014,14 @@ object PythonApi {
       nullValue: Double,
       alternative: String
   ): String = {
+    testsJson(LinearFE.summary(fit, level, nullValue, alternative))
+  }
+
+  /** Covariate tests as JSON, doubles as `Double.toHexString` strings. */
+  private def testsJson(tests: Vector[LinearTest]): String = {
     val mapper = new ObjectMapper()
     val array = mapper.createArrayNode()
-    LinearFE.summary(fit, level, nullValue, alternative).foreach { (t: LinearTest) =>
+    tests.foreach { (t: LinearTest) =>
       val node = array.addObject()
       node.put("feature", t.feature)
       node.put("estimate", java.lang.Double.toHexString(t.estimate))
@@ -1256,6 +1262,106 @@ object PythonApi {
 
   /** The training rows with `xbeta`, `fitted` and `residual`. */
   def linearREFitted(df: DataFrame, fit: LinearREFit): DataFrame = LinearRE.fitted(df, fit)
+
+  /** `LinearREInference.summary` as JSON (spec 4a-2 §2): n − p − m degrees of freedom, unrounded p-values (X-041). */
+  def linearRECovariateTests(
+      fit: LinearREFit,
+      level: Double,
+      nullValue: Double,
+      alternative: String
+  ): String =
+    testsJson(LinearREInference.summary(fit, level, nullValue, alternative))
+
+  /** pprof_py's `fixed_effects_table` as JSON (spec 4a-2 §2), doubles as `Double.toHexString` strings. */
+  def linearREFixedEffectsTable(fit: LinearREFit): String = {
+    val mapper = new ObjectMapper()
+    val array = mapper.createArrayNode()
+    LinearREInference.fixedEffectsTable(fit).foreach { e =>
+      val node = array.addObject()
+      node.put("feature", e.feature)
+      node.put("estimate", java.lang.Double.toHexString(e.estimate))
+      node.put("standardError", java.lang.Double.toHexString(e.standardError))
+      node.put("statistic", java.lang.Double.toHexString(e.statistic))
+      node.put("degreesOfFreedom", java.lang.Double.toHexString(e.degreesOfFreedom))
+      node.put("pValue", java.lang.Double.toHexString(e.pValue))
+    }
+    mapper.writeValueAsString(array)
+  }
+
+  /** pprof_py's `conf_int` as JSON (spec 4a-2 §2): feature, lower, upper. */
+  def linearREConfInt(fit: LinearREFit, level: Double): String = {
+    val mapper = new ObjectMapper()
+    val array = mapper.createArrayNode()
+    LinearREInference.confInt(fit, level).foreach { case (feature, lower, upper) =>
+      val node = array.addObject()
+      node.put("feature", feature)
+      node.put("lower", java.lang.Double.toHexString(lower))
+      node.put("upper", java.lang.Double.toHexString(upper))
+    }
+    mapper.writeValueAsString(array)
+  }
+
+  /** Provider tests (spec 4a-2 §3); `reference` is median, mean or a number, `critical` NaN for none. */
+  def linearRETest(
+      fit: LinearREFit,
+      reference: String,
+      alternative: String,
+      level: Double,
+      critical: Double,
+      providersJson: String
+  ): DataFrame =
+    LinearREInference.test(
+      fit,
+      effectReference(reference),
+      alternative,
+      level,
+      if (critical.isNaN) None else Some(critical),
+      stringList(providersJson, "providers")
+    )
+
+  /** Option `alpha` (spec 4a-2 §4), two-sided. */
+  def linearREAlphaIntervals(fit: LinearREFit, level: Double, providersJson: String): DataFrame =
+    LinearREInference.alphaIntervals(fit, level, stringList(providersJson, "providers"))
+
+  /** Standardized differences (spec 4a-2 §5); `df` must be the fit's training data (API-3). */
+  def linearREMeasures(
+      df: DataFrame,
+      fit: LinearREFit,
+      kindsJson: String,
+      reference: String,
+      providersJson: String
+  ): java.util.Map[String, DataFrame] =
+    LinearREInference
+      .measures(
+        df,
+        fit,
+        stringList(kindsJson, "kinds").getOrElse(LinearREInference.Kinds),
+        effectReference(reference),
+        stringList(providersJson, "providers")
+      )
+      .asJava
+
+  /** Option `SM` (spec 4a-2 §4); `df` must be the fit's training data (API-3). */
+  def linearREIntervals(
+      df: DataFrame,
+      fit: LinearREFit,
+      kindsJson: String,
+      reference: String,
+      alternative: String,
+      level: Double,
+      providersJson: String
+  ): java.util.Map[String, DataFrame] =
+    LinearREInference
+      .smIntervals(
+        df,
+        fit,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect")),
+        effectReference(reference),
+        alternative,
+        level,
+        stringList(providersJson, "providers")
+      )
+      .asJava
 
   private def testsJson(tests: Seq[LogisticTest]): String = {
     val mapper = new ObjectMapper()

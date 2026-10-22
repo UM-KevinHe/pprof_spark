@@ -1,7 +1,7 @@
 # Specification: linear random effects — inference and standardized measures (slice 4a-2)
 
 - Status: approved with D-54 (2026-10-21), with X-041 and X-042; fixtures and calibration in round 102 (D-55,
-  approved); the engine in round 103.
+  approved); the engine in round 103 and Python in round 104.
 - Reference: pprof_py v0.7.0's `LinearRandomEffectModel.summary`, `fixed_effects_table`, `conf_int`, `test`,
   `calculate_confidence_intervals` and `calculate_standardized_measures`, with the shared `reference_effect` and
   `effect_test`; R pprof 1.0.3's `test.linear_re` and `confint.linear_re` (option `alpha`) where they follow
@@ -175,3 +175,15 @@ against base R everywhere; pprof_py's `summary` p-values within their rounding, 
   5·10⁻⁸; the other test variants, option `alpha` and the SM bounds on unweighted fits; the SM differences and the
   measures everywhere); the boundary fit untested; the measures' refusal of other data. `FixturesSuite` mirrors the
   calibration's checks.
+
+## 14. Implementation notes (round 104, Python; no statistical change)
+
+- The facade (`PythonApi`): `linearRECovariateTests`, `linearREFixedEffectsTable` and `linearREConfInt` (JSON,
+  doubles in hexadecimal), `linearRETest`, `linearREAlphaIntervals`, `linearREMeasures` and `linearREIntervals`
+  (DataFrames), with γ₀ given as "median", "mean" or a number, as for the fixed-effect model.
+- `LinearRandomEffectModel` gains `summary(level, null, alternative, covariates)`, `fixed_effects_table()` (entries
+  of `LinearREFixedEffect`), `conf_int(level)` (feature to its limits), `test(reference=0.0, …)`,
+  `confidence_intervals(df, option, …)` (`alpha_ci`; `indirect_ci` and `direct_ci` for option `SM`, which needs the
+  training data) and `standardized_measures(df, …)`, with the fixed-effect wrapper's names.
+- `python/tests/test_linear_re.py` gains 2 tests on lre-offset: the covariate tables against base R, and the
+  tests, both interval options and the measures against base R and pprof_py.

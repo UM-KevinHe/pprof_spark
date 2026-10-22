@@ -92,3 +92,57 @@ def test_unused_optimizer_settings_warn_and_cluster_terms_wait():
         LinearRandomEffect("y", FEATURES, "provider", cluster_vars=["hospital"])
     with pytest.raises(ValueError, match="optimizer"):
         LinearRandomEffect("y", FEATURES, "provider", optimizer="bfgs")
+
+
+T_TEST, T_MEAS = (1e-8, 0.0), (1e-8, 0.0)
+
+
+def p_close(actual, expected):
+    """T-p: relative 1e-8 at or above 1e-10, log10 within 1e-6 below it."""
+    import math
+    for a, e in zip(actual, [float.fromhex(v) for v in expected]):
+        ok = abs(a - e) <= 1e-8 * abs(e) if e >= 1e-10 else (a < 1e-300 if e == 0.0 else
+                                                             a > 0 and abs(math.log10(a) - math.log10(e)) <= 1e-6)
+        if not ok:
+            return False
+    return True
+
+
+def test_covariate_tables_match_base_r(offset_model):
+    r = fixture("lre-offset", "r_lme4.json")["reml"]["inference"]
+    py = fixture("lre-offset", "inference_pprof_py.json")["reml"]
+    s = offset_model.summary(level=0.9)
+    assert within([t.statistic for t in s], r["summary_stat"], T_TEST)
+    assert p_close([t.p_value for t in s], r["summary_p_two_sided"])
+    assert within([t.lower for t in s], r["summary_lower_two_sided"], T_COEF)
+    assert [t.feature for t in offset_model.summary(covariates=["x2"])] == ["x2"]
+    table = offset_model.fixed_effects_table()
+    assert within([e.statistic for e in table], py["fixed_effects_table"]["t"], T_TEST)
+    assert p_close([e.p_value for e in table], r["fet_p"])
+    bounds = offset_model.conf_int(0.95)
+    assert within([bounds[f][0] for f in ["(Intercept)"] + FEATURES], r["conf_lower"], T_COEF)
+
+
+def test_provider_tests_intervals_and_measures(offset_model, offset_data):
+    r = fixture("lre-offset", "r_lme4.json")["reml"]["inference"]
+    py = fixture("lre-offset", "inference_pprof_py.json")["reml"]
+    tests = offset_model.test()
+    assert within(column(tests, "z_raw"), r["test_zero_z"], T_TEST)
+    assert p_close(column(tests, "p_value"), r["test_zero_p"])
+    assert within(column(tests, "ci_lower"), r["test_zero_lower"], T_COEF)
+    median = offset_model.test(reference="median", alternative="greater")
+    assert within(column(median, "z_raw"), py["test"]["greater"]["z_raw"], T_TEST)
+    alpha = offset_model.confidence_intervals(option="alpha")["alpha_ci"]
+    assert within(column(alpha, "alpha_lower"), py["alpha_ci"]["alpha_lower"], T_COEF)
+    sm = offset_model.confidence_intervals(offset_data, kinds=("indirect", "direct"))
+    for kind in ("indirect", "direct"):
+        for q in (f"{kind}_difference", "lower", "upper"):
+            assert within(column(sm[f"{kind}_ci"], q), py["sm_ci_two_sided"][kind][q], T_MEAS), (kind, q)
+    measures = offset_model.standardized_measures(offset_data, reference="mean")
+    for kind in ("indirect", "direct"):
+        for q in (f"{kind}_difference", "observed", "expected"):
+            assert within(column(measures[kind], q), py["measures_mean"][kind][q], T_MEAS), (kind, q)
+    with pytest.raises(ValueError, match="two-sided"):
+        offset_model.confidence_intervals(option="alpha", alternative="greater")
+    with pytest.raises(ValueError, match="training data"):
+        offset_model.confidence_intervals(option="SM")

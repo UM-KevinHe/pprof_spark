@@ -3,13 +3,25 @@ slice 4a-1)."""
 import json
 import math
 import warnings
-from typing import Dict, List, Optional, Sequence
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from pyspark.sql import DataFrame
 
 from ._jvm import api
 from .cox import _float
-from .linear import LinearCoefficient
+from .linear import LinearCoefficient, LinearTest
+
+@dataclass(frozen=True)
+class LinearREFixedEffect:
+    """One row of pprof_py's `fixed_effects_table`: t = β̂/se with max(n − p, 1) degrees of freedom."""
+    feature: str
+    estimate: float
+    standard_error: float
+    statistic: float
+    degrees_of_freedom: float
+    p_value: float
+
 
 # pprof_py's optimizer settings, which pprof_spark's search does not use (spec 4a-1 §10), at pprof_py's defaults.
 _UNUSED = {"tol_outer": 1e-8, "max_iter_inner": 100, "optimizer": "powell"}
@@ -51,8 +63,8 @@ class LinearRandomEffect:
 
 class LinearRandomEffectModel:
     """A fitted linear random-intercept model: a handle to the JVM's `LinearREFit` and its summary. The method names
-    follow pprof_py's `LinearRandomEffectModel`; tests, intervals and measures arrive with slice 4a-2, saving and
-    loading with 4a-3."""
+    follow pprof_py's `LinearRandomEffectModel` (docs/spec/linear/random-effect-inference.md for the inference);
+    saving and loading arrive with slice 4a-3."""
 
     def __init__(self, spark, handle):
         self._spark = spark
@@ -103,6 +115,65 @@ class LinearRandomEffectModel:
             raise ValueError(f"offset_var must name the fit's offset column ({self._offset!r}), got {offset_var!r}")
         return self._frame(api(self._spark).linearREPredict(df._jdf, self._handle, bool(use_re),
                                                             offset_var is not None))
+
+    @staticmethod
+    def _names(providers) -> str:
+        return json.dumps([str(p) for p in providers]) if providers else ""
+
+    def _frames(self, tables) -> Dict[str, DataFrame]:
+        return {key: self._frame(tables.get(key)) for key in sorted(tables.keySet())}
+
+    def summary(self, level: float = 0.95, null: float = 0.0, alternative: str = "two_sided",
+                covariates: Optional[Sequence[str]] = None) -> List[LinearTest]:
+        """pprof_py's `summary`: t tests and intervals for the covariates on n − p − m degrees of freedom, with
+        p-values computed from the tails directly and not rounded (X-041)."""
+        text = api(self._spark).linearRECovariateTests(self._handle, float(level), float(null), alternative)
+        tests = [LinearTest(t["feature"], _float(t["estimate"]), _float(t["standardError"]), _float(t["statistic"]),
+                            _float(t["pValue"]), _float(t["lower"]), _float(t["upper"])) for t in json.loads(text)]
+        return [t for t in tests if covariates is None or t.feature in covariates]
+
+    def fixed_effects_table(self) -> List[LinearREFixedEffect]:
+        """pprof_py's `fixed_effects_table`, one entry per fixed effect."""
+        return [LinearREFixedEffect(e["feature"], _float(e["estimate"]), _float(e["standardError"]),
+                                    _float(e["statistic"]), _float(e["degreesOfFreedom"]), _float(e["pValue"]))
+                for e in json.loads(api(self._spark).linearREFixedEffectsTable(self._handle))]
+
+    def conf_int(self, level: float = 0.95) -> Dict[str, Tuple[float, float]]:
+        """pprof_py's `conf_int`: each fixed effect's (lower, upper) with max(n − p, 1) degrees of freedom."""
+        return {e["feature"]: (_float(e["lower"]), _float(e["upper"]))
+                for e in json.loads(api(self._spark).linearREConfInt(self._handle, float(level)))}
+
+    def test(self, reference=0.0, alternative: str = "two_sided", level: float = 0.95,
+             critical: Optional[float] = None, providers: Optional[Sequence] = None) -> DataFrame:
+        """pprof_py's `test`: z = (b̂ⱼ − γ₀)/seⱼ against the normal, one row per provider with the provider-test
+        columns; γ₀ is 0 by default, or "median", "mean" or a number."""
+        return self._frame(api(self._spark).linearRETest(
+            self._handle, str(reference), alternative, float(level),
+            float("nan") if critical is None else float(critical), self._names(providers)))
+
+    def confidence_intervals(self, df: Optional[DataFrame] = None, option: str = "SM",
+                             kinds: Sequence[str] = ("indirect",), reference="median", alternative: str = "two_sided",
+                             level: float = 0.95, providers: Optional[Sequence] = None) -> Dict[str, DataFrame]:
+        """pprof_py's `calculate_confidence_intervals`, keyed as it is (`alpha_ci`, `indirect_ci`, `direct_ci`):
+        option `alpha` needs only the fit and is two-sided; option `SM` needs the fit's training data `df` (API-3)."""
+        names = self._names(providers)
+        if option == "alpha":
+            if alternative != "two_sided":
+                raise ValueError("option 'alpha' supports only two-sided intervals")
+            return {"alpha_ci": self._frame(api(self._spark).linearREAlphaIntervals(self._handle, float(level), names))}
+        if option != "SM":
+            raise ValueError("option must be 'alpha' or 'SM'")
+        if df is None:
+            raise ValueError("option 'SM' needs the fit's training data (API-3)")
+        tables = api(self._spark).linearREIntervals(df._jdf, self._handle, json.dumps(list(kinds)), str(reference),
+                                                     alternative, float(level), names)
+        return {f"{kind}_ci": table for kind, table in self._frames(tables).items()}
+
+    def standardized_measures(self, df: DataFrame, kinds: Sequence[str] = ("indirect", "direct"),
+                              reference="median", providers: Optional[Sequence] = None) -> Dict[str, DataFrame]:
+        """pprof_py's `calculate_standardized_measures` on the fit's training data `df` (API-3)."""
+        return self._frames(api(self._spark).linearREMeasures(df._jdf, self._handle, json.dumps(list(kinds)),
+                                                              str(reference), self._names(providers)))
 
     def fitted_values(self, df: DataFrame) -> DataFrame:
         """The training rows `df` with `xbeta`, `fitted` (with the BLUPs) and `residual`."""

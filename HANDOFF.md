@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104 |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -173,8 +173,8 @@ as round 82 did:
 
 1. M4, Phase 4 (`docs/spec/random-effects/plan.md`, D-51):
    - 4a, linear random effects: 4a-1 is complete (D-52, D-53; rounds 97 to 100, the distributed search
-     included); 4a-2's specification (D-54), fixtures (D-55) and engine (round 103) are in; next its Python
-     wrapper (round 104); then 4a-3 and an S1 smoke.
+     included); 4a-2 is complete (D-54, D-55; rounds 103 and 104); next 4a-3 (persistence and the job runner),
+     then the S1 smoke.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
    local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
@@ -188,6 +188,26 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 104 (2026-10-22): slice 4a-2 Python, the linear random-effect inference wrapper
+
+- Round 103 is on `main` as `d3b233e`, with exactly the rehearsed tree, but it was committed with round 102's message
+  ("Round 102: slice 4a-2 fixtures and calibration (linear-re inference)"). The maintainer kept the history; the
+  round log and `STATUS.md` record the mapping. Re-applying an applied patch fails at every file it touches, and
+  `git apply -R --check <patch>` says whether a patch is already in.
+- `PythonApi` gains the linear random-effect inference methods: covariate tests, `fixed_effects_table` and
+  `conf_int` as JSON; provider tests, option `alpha`, the measures and option `SM` as DataFrames.
+- `LinearRandomEffectModel` gains `summary`, `fixed_effects_table`, `conf_int`, `test` (γ₀ = 0 by default),
+  `confidence_intervals` and `standardized_measures`, with the fixed-effect wrapper's names; `LinearREFixedEffect`
+  holds a table row.
+- `python/tests/test_linear_re.py` gains 2 tests on lre-offset, against base R and pprof_py; the guide shows the
+  methods; spec 4a-2 §14.
+
+Evidence (assistant sandbox): app compiles with the build's flags after scalafmt; the linear random-effect Python
+tests pass, 6 of 6, and the whole Python suite as CI's python job runs it; `check-engine-api.sh` passes; the patch
+applies to a fresh clone of `main` with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI runs for rounds 103 and 104.
 
 ## Round 103 (2026-10-21): slice 4a-2 engine, linear random-effect inference and measures
 

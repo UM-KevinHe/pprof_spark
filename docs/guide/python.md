@@ -126,6 +126,10 @@ fit.providers()                                  # records, weight, blup, its co
 fit.get_random_effects(), fit.get_sigma(), fit.get_random_effect_sd(), fit.standard_errors()
 fit.predict(df), fit.predict(df, use_re=True)    # the fixed part; with the BLUPs (0 for providers not in the fit)
 fit.fitted_values(df)                            # xbeta, fitted and residual on the training rows
+fit.summary(), fit.fixed_effects_table(), fit.conf_int()   # the covariates (spec 4a-2 §2)
+fit.test(), fit.test(reference="median")           # z tests on the BLUPs; reference 0 by default
+fit.confidence_intervals(option="alpha")           # BLUP intervals, two-sided
+fit.confidence_intervals(df), fit.standardized_measures(df)  # SM intervals and measures: the training data
 ```
 
 `LinearRandomEffect` takes pprof_py's `LinearRandomEffectModel` arguments
@@ -133,8 +137,8 @@ fit.fitted_values(df)                            # xbeta, fitted and residual on
 `include_intercept`), and `reml`, `theta_upper` and `max_iter_outer`, which caps the search's evaluations.
 `tol_outer`, `max_iter_inner` and `optimizer` are accepted but not used, with a warning when they differ from pprof_py's
 defaults; `cluster_vars` waits for part 4d (OI-93). As in pprof_py, `predict` adds an offset only when `offset_var`
-names it. Rows with a missing value fail with counts per column (X-038) rather than being dropped. Tests, intervals and
-measures arrive with slice 4a-2, saving and loading with 4a-3.
+names it. Rows with a missing value fail with counts per column (X-038) rather than being dropped. The measures and SM intervals read
+the training data and check it against the fit (API-3). Saving and loading arrive with slice 4a-3.
 
 ## Large data: strata, blocks and row identifiers
 
