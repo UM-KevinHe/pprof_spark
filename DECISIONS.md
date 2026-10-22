@@ -103,6 +103,16 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-56: Slice 4a-3 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/linear/random-effect-job.md`: persistence, the job runner and Python save and load for the linear
+random-intercept model, with no new statistics. `LinearREFitIO` format version 1 (a `metadata` line with every double
+as its bit pattern, and the provider table in Parquet), saved and loaded bit for bit. `pprof.spark.app.LinearREJob`
+runs a `linear-re` specification (`columns` with offset and weights; `fit` with `reml`, `includeIntercept`,
+`thetaUpper`, `maxEvaluations` and `blocks`; every output of slices 4a-1 and 4a-2), and the five jobs refuse each
+other's specifications by name. Python gains `save` and `load`. The facade's `linearREModel` moves to
+`LinearRERunSpec`'s parser.
+
 ### D-55: Slice 4a-2 fixtures, calibration and corrections (Accepted: approved by the maintainer, 2026-10-21)
 
 `fixtures/linear-re` gains `inference_pprof_py.json` and inference sections in `r_lme4.json` (round 102): every case
