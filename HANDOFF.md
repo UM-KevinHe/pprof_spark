@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1's specification approved (D-57), its fixtures and calibration in round 110 (D-58 proposed) |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1's specification (D-57) and fixtures (D-58) approved, its numerics kernel in round 111 |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -156,7 +156,7 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
   OI-43, OI-45, OI-46, OI-50, OI-57, OI-59 (the dense Schur complement of stage 2), OI-68, OI-70 and OI-76;
   OI-92 (the plan's Zipf exponent).
 - Random-effect models (Phase 4, D-51): OI-93 (cluster terms, part 4d), OI-94 (stage 3's `he2013`, slice 4c-2);
-  X-037 to X-040 approved; D-53 (slice 4a-1's tolerance classes) approved; X-041 and X-042 approved (D-54), X-042 as corrected (D-55); OI-96; OI-97 (part 4a's S1 smoke and gate); X-043 approved (D-57); X-044 proposed with D-58.
+  X-037 to X-040 approved; D-53 (slice 4a-1's tolerance classes) approved; X-041 and X-042 approved (D-54), X-042 as corrected (D-55); OI-96; OI-97 (part 4a's S1 smoke and gate); X-043 approved (D-57); X-044 approved (D-58).
 - Interfaces: OI-86 (added providers in the job runner), OI-53 (Databricks access modes), OI-55 (a wheel), OI-56
   (PySpark CSV pushdown with a literal provider column).
 - Process: OI-40 (a CI check of the parity matrix), OI-41 (per-release model fixtures), OI-33 and OI-42 (reports
@@ -176,9 +176,9 @@ as round 82 did:
      included); 4a-2 is complete (D-54, D-55; rounds 103 and 104); 4a-3 is complete (D-56; rounds 106 and 107). The S1
      smoke is prepared (round 108, `docs/parity/scale/s1-linear-re.md`) and waits for the maintainer's
      `spark-submit` run; the gate review (`docs/gates/phase-4a.md`) follows it (OI-97).
-   - 4b, logistic random effects: 4b-1's specification is approved (D-57) and its fixtures are in (round 110,
-     D-58 proposed); next its code (numerics, then the engine) with parity tests and `FixturesSuite`'s mirror,
-     then Python; then 4b-2 and 4b-3.
+   - 4b, logistic random effects: 4b-1's specification (D-57) and fixtures (D-58) are approved, and its
+     numerics kernel is in (round 111); next the engine (`LogisticRE.fit` over provider-local blocks, the
+     distributed nAGQ = 0 sums) with parity tests, then Python; then 4b-2 and 4b-3.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
    local dry run (`docs/spec/scale/plan.md` §9.1 and §11); the specifications for the empirical null (OI-78) and
@@ -192,6 +192,30 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 111 (2026-10-22): slice 4b-1 numerics kernel `LogisticRE`
+
+- The maintainer approved D-58 as proposed, with X-044 (2026-10-22). Round 110 was not yet on `main` when this round
+  began, so this patch applies after round 110's.
+- `numerics.kernels.LogisticRE`:
+  - per block: the Laplace deviance and its analytic gradient, with every provider's mode by a bracketed Newton
+    from 0; the nAGQ = 0 Newton sums; the modes;
+  - `stage1Solve`, the nAGQ = 0 Newton through the Schur complement;
+  - `fit`: nAGQ = 0 by a grid and Brent's minimization, then nAGQ = 1 by the new
+    `BoundedQuasiNewton.minimizeWithGradient`; the estimates of spec §4, centred features transformed back.
+- Two bugs were found and fixed while checking against the fixtures before delivery:
+  - the nAGQ = 0 cross-products used features not yet centred for the row;
+  - the mode's bracket moved an exact root to the bracket's midpoint, which Neumaier's sums make common.
+- `LogisticREKernelSuite` (5 tests); `FixturesSuite` mirrors the 4b-1 calibration; spec §13.
+- An out-of-repository harness checks the kernel against `fixtures/logistic-re`: D, its gradient and D₀ at fixed
+  parameters, both fits against pprof_py and lme4, and lgre-shifted's invariance. Every check passes (the evidence
+  log has the output).
+
+Evidence (assistant sandbox): numerics, numerics-test, testkit and testkit-test compile with the build's flags after
+scalafmt; `LogisticREKernelSuite` (5) and `FixturesSuite` (20) pass, 25 of 25; `check-engine-api.sh` passes; the patch
+applies after round 110's to a fresh clone of `main` with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI runs for rounds 110 and 111 (apply round 110's patch first).
 
 ## Round 110 (2026-10-22): slice 4b-1 fixtures and calibration (`fixtures/logistic-re`)
 

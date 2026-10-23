@@ -539,6 +539,71 @@ class FixturesSuite extends munit.FunSuite {
   }
 
   test(
+    "logistic slice 4b-1: pprof_py and lme4 agree at their tightened optima and at fixed parameters; controls (D-58)"
+  ) {
+    def h(node: JsonNode): Array[Double] = Fixtures.doubles(node)
+    def ratio(cls: String, actual: Array[Double], expected: Array[Double]): Double =
+      Tolerances(cls).worstRatio(actual, expected)
+    val quantities = Seq(
+      "sigma",
+      "beta",
+      "blups",
+      "condvar",
+      "var_beta",
+      "deviance",
+      "loglik",
+      "aic",
+      "bic",
+      "pwrss"
+    ) ++
+      Seq(
+        "ldL2",
+        "ussq",
+        "fitted",
+        "predict_fixed",
+        "predict_re",
+        "predict_link_re",
+        "pearson",
+        "deviance_residuals"
+      )
+    Fixtures.cases("logistic-re").foreach { name =>
+      val py = Fixtures.json(s"logistic-re/$name/pprof_py.json")
+      val r = Fixtures.json(s"logistic-re/$name/r_lme4.json")
+      val text = Fixtures.json(s"logistic-re/$name/case.json").get("text").asBoolean()
+      val conditioned =
+        name != "lgre-fractional" && name != "lgre-shifted" // another model; conditioning (D-58)
+      if (conditioned) {
+        Seq("nagq1", "nagq0").foreach { stage =>
+          quantities
+            .filter(q => text || !q.startsWith("predict_re") && !q.startsWith("predict_link"))
+            .foreach { q =>
+              val value = ratio(
+                "T-opt",
+                h(py.get(stage).get("tight").get(q)),
+                h(r.get(stage).get("tight").get(q))
+              )
+              assert(value <= 1.0, s"$name $stage $q: $value of T-opt")
+            }
+        }
+        Seq("deviance", "deviance0").foreach { q =>
+          val value =
+            ratio("T-coef", h(py.get("function").get(q)), h(r.get("function").get("lme4").get(q)))
+          assert(value <= 1.0, s"$name $q at fixed parameters: $value of T-coef")
+        }
+      }
+      py.get("negative_controls").properties().asScala.foreach { control =>
+        Seq("sigma", "beta", "blups", "deviance")
+          .filter(q => control.getKey == "flipped_provider" || q == "beta" || q == "deviance")
+          .foreach { q =>
+            val miss =
+              ratio("T-opt", h(control.getValue.get(q)), h(py.get("nagq1").get("tight").get(q)))
+            assert(miss >= Margin, s"$name ${control.getKey} $q: $miss of T-opt")
+          }
+      }
+    }
+  }
+
+  test(
     "linear slice 4a-2: pprof_py's inference agrees with base R on lme4's tight fit; measures and controls (D-55)"
   ) {
     def h(node: JsonNode): Array[Double] = Fixtures.doubles(node)

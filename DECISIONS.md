@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-58: Slice 4b-1 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+### D-58: Slice 4b-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-10-22)
 
 `fixtures/logistic-re` (round 110; `reference/fixtures/logistic_re_fixtures.py` and `logistic_re_r.R`): the ten cases
 of spec 4b-1 §10 with nAGQ = 1 and nAGQ = 0, pprof_py and `glmer` at their defaults and with their tolerances
@@ -122,6 +122,8 @@ the deviances at fixed parameters within 0.32 of T-coef, and the weakest control
    provider flipped. One row moves an optimizer-limited fit too little for T-opt.
 5. X-044 (class B): pprof_py's predictions with the BLUPs ignore them under integer keys; pprof_spark adds them, as
    lme4 and pprof_py with text keys do.
+
+Approved as proposed, with X-044, on 2026-10-22.
 
 ### D-57: Slice 4b-1 specification (Accepted: approved by the maintainer, 2026-10-22)
 

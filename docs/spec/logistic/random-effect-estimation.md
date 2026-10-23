@@ -1,6 +1,6 @@
 # Specification: logistic random effects — estimation (slice 4b-1)
 
-- Status: approved with D-57 (2026-10-22), with X-043; fixtures and calibration in round 110 (D-58, proposed).
+- Status: approved with D-57 (2026-10-22), with X-043; fixtures and calibration in round 110 (D-58, approved with X-044); the numerics kernel in round 111.
 - Reference: pprof_py v0.7.0 (`9320766`), `LogisticRandomEffectModel` (`models/logistic/random_effect.py`), and
   lme4 1.1-35.1's `glmer` (family binomial, nAGQ 1 and 0). Plan: [../random-effects/plan.md](../random-effects/plan.md)
   (D-51, part 4b). Reused: the three-stage model's stage 2 (`ThreeStageGlmm`, D-41) and `BoundedQuasiNewton`, the
@@ -178,7 +178,7 @@ BOBYQA's tolerances tightened.
 | X-030 (precedent) | D | The optimum by a gradient method instead of the references' derivative-free paths | As D-41 |
 | X-038, X-040 (precedents) | C | Incomplete rows fail; fewer than two providers fail | As D-52 |
 | X-043 | — | Var(β̂) is pprof_py's information conditional on the modes, lme4's `vcov(use.hessian = FALSE)`; `glmer`'s default `vcov` uses the Hessian of the deviance in (θ, β) and differs by about 0.25% in standard errors on round 109's probe | Approved (D-57) |
-| X-044 | B | Predictions with the BLUPs carry them under any key type; pprof_py's carry none under integer keys | Proposed (D-58) |
+| X-044 | B | Predictions with the BLUPs carry them under any key type; pprof_py's carry none under integer keys | Approved (D-58) |
 
 ## 12. Fixture findings (round 110)
 
@@ -203,3 +203,31 @@ BOBYQA's tolerances tightened.
 - A single flipped row moves an optimizer-limited fit by less than T-opt allows. The negative controls therefore
   flip a whole provider, which must move σ̂, β̂, the BLUPs and the deviance, and the first row of every provider,
   which must move β̂ and the deviance.
+
+## 13. Implementation notes (round 111, numerics; no statistical change)
+
+- `numerics.kernels.LogisticRE`: `Rows` (a block's providers in key order, each row its features, offset and
+  outcome). `laplace` gives a block's shares of D and ∇D (§2.1), with each provider's mode by Newton's method from 0
+  in its bracket; it stops at an exact root, where the bracket would otherwise move it. `stage1` gives the nAGQ = 0
+  sums: per provider Wⱼ, Σ wx and Σ r, and per block X′WX, Σ rx, the penalized deviance and Σ log hⱼ. `modes` gives
+  the modes and Wⱼ. The `Blocks` trait has `LocalBlocks` on the driver; the engine's distributed blocks follow.
+- `stage1Solve` is the nAGQ = 0 Newton through the Schur complement, with step halving. `fit` runs nAGQ = 0 by the
+  grid of §3 and Brent's minimization, warm-starting each σ from the last solution, and then, for nAGQ = 1,
+  `BoundedQuasiNewton.minimizeWithGradient`, a new variant that takes the analytic gradient with the value, one
+  evaluation per point. Var(β̂) is the inverse of the same Schur complement at the estimate. The features are centred
+  only with an intercept, and the estimates are transformed back as slice 4a-1's §14.
+- An upper bound on σ clips the search and reports a boundary fit; `BoundedQuasiNewton` has only lower bounds.
+- `LogisticREKernelSuite` (5 tests) checks:
+  - that D equals the nAGQ = 0 sums at the modes, and that every mode solves its equation;
+  - the gradient against fourth-order central differences at three points, within 10⁻⁶;
+  - the nAGQ = 0 Newton's scores;
+  - that both fits are optimal along σ and invariant to shifting a feature by 1,000;
+  - the upper bound and the refusals.
+- An out-of-repository harness (round 111's evidence log) checks the kernel against `fixtures/logistic-re` on every
+  case:
+  - D at the fixed points against pprof_py within 2.1·10⁻⁷ of T-coef, and against lme4 within 0.21;
+  - the gradient against pprof_py's central differences within 0.22 of 10⁻⁶ relative;
+  - D₀ against pprof_py within 1.5·10⁻⁶ of T-coef, and against lme4 within 0.32;
+  - both fits against pprof_py's and lme4's tightened optima within 0.075 of T-opt;
+  - lgre-shifted against lgre-base within 10⁻¹² relative for nAGQ = 1.
+- `FixturesSuite` mirrors the calibration's strict checks.
