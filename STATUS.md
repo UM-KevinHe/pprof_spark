@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-23, round 113.
+Updated 2026-10-23, round 114.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -141,8 +141,9 @@ through round 100 as the maintainer reported.
 | 109 | Part 4b begins: slice 4b-1's specification (`docs/spec/logistic/random-effect-estimation.md`, D-57 proposed); X-043 proposed; OI-97 (part 4a's S1 smoke and gate pending) | Merged (14afaf0) |
 | 110 | D-57 approved with X-043; slice 4b-1's fixtures (`fixtures/logistic-re`, ten cases) and calibration (`docs/parity/logistic-re-calibration.md`); D-58 proposed with X-044 | Merged (6359c70) |
 | 111 | D-58 approved with X-044; slice 4b-1's numerics kernel `LogisticRE` (Laplace deviance and gradient, the nAGQ = 0 Newton, both fits), `BoundedQuasiNewton.minimizeWithGradient`, `LogisticREKernelSuite`, `FixturesSuite`'s 4b-1 mirror | Merged (9fe2f50) |
-| 112 | Slice 4b-1 engine `LogisticRE` (validation, provider-local blocks, distributed sums, provider table, `predict`, `fitted`, `laplaceDeviance`); the fixtures' fixed points moved one coordinate at a time and regenerated; class T-est; `LogisticRESuite` (6 tests); D-59 proposed; OI-98, OI-99 | Merged (d8b1391) |
-| 113 | D-59 approved; slice 4b-1 Python: `LogisticRERunSpec.model`, the facade's logistic random-effect methods, `LogisticRandomEffect` and `LogisticRandomEffectModel`; `PythonApiLogisticRESuite`, `test_logistic_re.py`; the guide | Delivered as a patch |
+| 112 | Slice 4b-1 engine `LogisticRE` (validation, provider-local blocks, distributed sums, provider table, `predict`, `fitted`, `laplaceDeviance`); the fixtures' fixed points moved one coordinate at a time and regenerated; class T-est; `LogisticRESuite` (6 tests); D-59 proposed; OI-98, OI-99 | Merged (d8b1391); CI failed in `TolerancesSuite`, fixed by round 114 |
+| 113 | D-59 approved; slice 4b-1 Python: `LogisticRERunSpec.model`, the facade's logistic random-effect methods, `LogisticRandomEffect` and `LogisticRandomEffectModel`; `PythonApiLogisticRESuite`, `test_logistic_re.py`; the guide | Merged (5c42a64); CI failed in `TolerancesSuite`, fixed by round 114 |
+| 114 | CI fix: T-est registered in `Tolerances.Classes` and PROJECT_CONTEXT §8.4 (v2.10) | Delivered as a patch |
 
 ## Decisions and spikes
 

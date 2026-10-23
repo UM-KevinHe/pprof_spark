@@ -144,6 +144,10 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
   stops the job before scalafmt and linkage run. Round 97's kernel used `scala.math.log` (round 99.1).
 - grep given an empty file list reads standard input and holds the call until its time limit: guard the variable
   or close standard input (`< /dev/null`) in lookups (round 95).
+- A new tolerance class needs three entries: `tolerances.conf`, `Tolerances.Classes` (`TolerancesSuite` checks the
+  file against it) and PROJECT_CONTEXT §8.4. When a round changes a module's main code or resources, the rehearsal
+  runs all of that module's suites, not only the ones the change targets. Round 112 added T-est to the file alone
+  and ran only `FixturesSuite`, and CI failed rounds 112 and 113 (round 114).
 
 ### 7. Open items to carry
 
@@ -192,6 +196,21 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 114 (2026-10-23): CI fix, T-est registered as a tolerance class
+
+- CI failed rounds 112 and 113 in `TolerancesSuite` ("the file defines nothing beyond the known classes and
+  parameters"): round 112 added T-est's two entries to `tolerances.conf` but not to `Tolerances.Classes`, and its
+  rehearsal ran only `FixturesSuite` of testkit's tests.
+- `Tolerances.Classes` gains T-est; PROJECT_CONTEXT §8.4 gains its row (v2.10); §6 of this file gains the lesson.
+  Nothing else changes.
+
+Evidence (assistant sandbox): testkit and testkit-test compile with the build's flags after scalafmt; all four of
+testkit's suites pass (`TolerancesSuite`, `FixturesSuite`, `SparkSuiteSuite`, `LocalSparkSuite`), and so do
+`LogisticREKernelSuite` and the kernel sweep of `LogisticRESuite`, which use T-est; `check-engine-api.sh` passes; the
+patch applies to a fresh clone of `main` with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI run.
 
 ## Round 113 (2026-10-23): slice 4b-1 Python, the logistic random-effect wrapper
 

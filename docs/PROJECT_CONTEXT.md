@@ -1,10 +1,12 @@
 # pprof_spark — Project Context
 
-**Version** 2.9 · **Date** 2026-10-21 · **Supersedes** v2.8 (2026-10-19)
+**Version** 2.10 · **Date** 2026-10-23 · **Supersedes** v2.9 (2026-10-21)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
+> **v2.10 adds the tolerance class T-est to §8.4** (D-59, round 114).
+>
 > **v2.9 adds Phase 4, the random-effect models** (round 94): §4 follows D-50's roadmap as amended (M4 before
 > M2); the plan, `docs/spec/random-effects/plan.md`, awaits approval as D-51.
 >
@@ -641,6 +643,7 @@ Tolerances live in one versioned file (`testkit/src/main/resources/tolerances.co
 | T-meas | Expected counts, ratios, and rates (relative); observed counts exact | 1e-8 |
 | T-test | Test statistics (relative) | 1e-8 |
 | T-opt | Optimizer-limited estimates: the three-stage stage 2 SDs, intercept and BLUPs, σ's profile limits, and anything computed through them when both implementations run end to end (element-wise rule) | rtol 2e-4, atol 1e-6 (D-42) |
+| T-est | pprof_spark's logistic random-effect estimates against pprof_py's tightened optimum, nearer the optimum than T-opt assumes; T-opt where σ̂ < 0.1 and against lme4 | rtol 1e-6, atol 1e-9 (D-59) |
 | T-p | p-values: compare the statistics; when p < 1e-10, compare log₁₀ p (absolute 1e-6) or document the reference algorithm's accuracy limit | — |
 | T-flag | Flags match exactly, except cases within 1e-8 (relative) of a threshold, which are reported rather than failed | — |
 | T-part | Layout and platform invariance, R1 and R2 (relative) | 1e-12 objective; 1e-10 parameters |
