@@ -103,6 +103,24 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-59: Slice 4b-1, tighter agreement checks and the fixtures' fixed points (Proposed: awaiting the maintainer's approval)
+
+The end-to-end tolerance for the fitted estimates, T-opt, allows about a hundred times more than the agreement
+observed in round 111 (the maintainer's question, 2026-10-22). Proposed for slice 4b-1, in round 112:
+1. An optimality check. pprof_spark's Laplace deviance at its optimum must not exceed the deviance at pprof_py's or
+   lme4's tightened optimum by more than 10⁻¹⁰ relative, both evaluated by pprof_spark's objective. That objective
+   matches pprof_py's to about 10⁻¹⁵ and lme4's to about 10⁻⁹ at fixed parameters. For nAGQ = 0, the criterion must
+   not exceed pprof_py's at its optimum by more than 10⁻¹⁰ relative.
+2. A class T-est (rtol 10⁻⁶, atol 10⁻⁹) for pprof_spark's estimates against pprof_py's tightened optimum. T-opt stays
+   where σ̂ < 0.1, where the likelihood is flat in σ, and for every comparison with lme4.
+3. The fixtures' fixed points move σ and at most one centred coefficient, by at most two standard errors. On
+   lgre-shifted the deviance at fixed parameters then agrees with lme4 within 0.006 of T-coef, where it differed by
+   3.3·10⁸ of T-coef when every coefficient moved at once, so that comparison becomes strict.
+4. The fixture sweep runs the kernel on the driver: every case, both nAGQ, in seconds. The engine's distributed fit is
+   checked against the kernel at T-part on three cases, with its fitted values, predictions and residuals against
+   the references.
+5. The fractional-outcome findings go into spec 4b-1 §12, and OI-98 and OI-99 are opened.
+
 ### D-58: Slice 4b-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-10-22)
 
 `fixtures/logistic-re` (round 110; `reference/fixtures/logistic_re_fixtures.py` and `logistic_re_r.R`): the ten cases

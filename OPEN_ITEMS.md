@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-10-22, round 111. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-10-23, round 112. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -103,3 +103,5 @@ decision is approved.
 | OI-95 | The linear random-effect search reads the providers' summaries on the driver: a fit whose summaries exceed `BlockOptions.driverBudgetBytes` (about 155,000 providers at p = 50 under the default 64 MiB) stops with `DriverLimitExceededException`; spec 4a-1 §7 step 5's distributed evaluation is not built | Closed in round 100: the search sums over the persisted block partials when the summaries exceed the budget, with the driver's bits (spec 4a-1 §18) |
 | OI-96 | The linear random-effect fixtures regenerate with platform differences beyond T-part: optimizer-limited default runs move by up to 1.1·10⁻⁷ and the tight optima, roots of central differences, by 1.3·10⁻¹⁰ between two sandbox sessions; `compare_outputs.py` now compares them at T-opt and 10⁻⁸ (D-55) | The maintainer's dispatch of `fixtures.yml` confirms the family regenerates on CI's runner within those classes |
 | OI-97 | Part 4a (linear random effects) is complete in code and parity-checked in the sandbox, but its S1 smoke (`docs/parity/scale/s1-linear-re.md`, round 108) has not run, and its gate review (`docs/gates/phase-4a.md`) waits for that run and for CI's reports on rounds 101 to 108; work moved on to part 4b at the maintainer's request | The maintainer's `spark-submit` run of `S1LinearRE` and CI's reports, then the gate review |
+| OI-98 | The logistic random-effect fit's nAGQ = 0 step gathers m providers' sums (p + 3 values each) on the driver, so a fit beyond the driver budget fails at its start; a distributed step, as OI-95 gave the linear model, is needed before m reaches the budget | A distributed nAGQ = 0 step, or evidence at scale that the budget suffices |
+| OI-99 | A logistic random-effect fit runs about 200 Spark jobs, one per evaluation (round 112: about 35 seconds on 3,000 rows locally); the per-job overhead on a cluster is unmeasured | S1's timings; then, if needed, a cheaper start for nAGQ = 1 or stage 1's grid in fewer passes |

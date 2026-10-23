@@ -539,7 +539,7 @@ class FixturesSuite extends munit.FunSuite {
   }
 
   test(
-    "logistic slice 4b-1: pprof_py and lme4 agree at their tightened optima and at fixed parameters; controls (D-58)"
+    "logistic slice 4b-1: pprof_py and lme4 agree at their tightened optima and at fixed parameters; controls (D-59)"
   ) {
     def h(node: JsonNode): Array[Double] = Fixtures.doubles(node)
     def ratio(cls: String, actual: Array[Double], expected: Array[Double]): Double =
@@ -585,11 +585,12 @@ class FixturesSuite extends munit.FunSuite {
               assert(value <= 1.0, s"$name $stage $q: $value of T-opt")
             }
         }
-        Seq("deviance", "deviance0").foreach { q =>
+      }
+      if (name != "lgre-fractional") Seq("deviance", "deviance0").foreach {
+        q => // round 112's points (D-59)
           val value =
             ratio("T-coef", h(py.get("function").get(q)), h(r.get("function").get("lme4").get(q)))
           assert(value <= 1.0, s"$name $q at fixed parameters: $value of T-coef")
-        }
       }
       py.get("negative_controls").properties().asScala.foreach { control =>
         Seq("sigma", "beta", "blups", "deviance")

@@ -762,7 +762,8 @@ def logistic_re(tol, manifest, fixtures):
         f, g = py["function"], r["function"]["lme4"]
         for name, q in (("Laplace deviance at fixed (sigma, beta)", "deviance"), ("nAGQ = 0 criterion at fixed sigma", "deviance0")):
             value = ratio(tol, "T-coef", f[q], g[q])  # both references stop their inner PIRLS at a relative tolerance
-            add(case, f"{name}, pprof_py vs lme4", "T-coef", value, value <= 1.0 if conditioned else None)
+            same_model = case != "lgre-fractional"  # lgre-shifted's points are moderate since round 112 (D-59)
+            add(case, f"{name}, pprof_py vs lme4", "T-coef", value, value <= 1.0 if same_model else None)
         for name, control in py["negative_controls"].items():
             # Scattered rows need not move sigma or the BLUPs of a fit near sigma = 0; a whole provider must.
             for q in ("sigma", "beta", "blups", "deviance"):
@@ -777,8 +778,8 @@ def logistic_re(tol, manifest, fixtures):
              "tightened optima are compared at T-opt (D-42) and must agree within 1; the deviance at fixed parameters "
              "is compared at T-coef, as both references stop their inner iterations at a relative tolerance; every negative "
              f"control must miss by at least {MARGIN:g}. The default runs, glmer's default covariance (X-043), the "
-             "predictions with the BLUPs under integer keys (X-044), and every comparison with lme4 on lgre-fractional "
-             "(another model) and lgre-shifted (conditioning) are informational.", "",
+             "predictions with the BLUPs under integer keys (X-044), every comparison with lme4 on lgre-fractional "
+             "(another model), and lgre-shifted's optima (conditioning) are informational.", "",
              "| Case | Quantity | Class | Ratio | OK |", "|---|---|---|---|---|"]
     lines += [f"| {case} | {label} | {cls} | {value} | {ok} |" for case, label, cls, value, ok in rows]
     lines += ["", "Worst agreement of the tightened optima: "

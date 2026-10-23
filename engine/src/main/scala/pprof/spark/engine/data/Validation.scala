@@ -73,6 +73,8 @@ object InputProblem {
       )
   final case class NonBinaryValues(name: String, count: Long)
       extends InputProblem(name, s"has $count values other than 0 and 1")
+  final case class OutsideUnitInterval(name: String, count: Long)
+      extends InputProblem(name, s"has $count values outside [0, 1]")
   case object NoEvents
       extends InputProblem("", "the input has no events, so the partial likelihood is constant")
   final case class EventsExceedTrials(name: String, trials: String, count: Long)

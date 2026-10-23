@@ -46,7 +46,7 @@ OPTIONS = {
              "1e-12, maxfun = 1e6), tolPwrss = 1e-13); vcov with use.hessian = FALSE (X-043) and its default, ranef "
              "(condVar = TRUE), logLik, AIC, BIC, devcomp's drsum, ldL2 and ussq, fitted values, predictions and "
              "residuals of the first 100 rows",
-    "function_level": "the Laplace deviance at four (sigma, beta) points within two standard errors of pprof_py's tight nAGQ = 1 optimum "
+    "function_level": "the Laplace deviance at four (sigma, beta) points around pprof_py's tight nAGQ = 1 optimum, each moving sigma and at most one centred coefficient by at most two standard errors "
                       "(pprof_py: PIRLS over u from 0, then _laplace_deviance; lme4: the nAGQ = 1 deviance function of "
                       "c(theta, beta)), with pprof_py's Richardson central differences there; the nAGQ = 0 criterion at "
                       "three sigma values",
@@ -149,9 +149,12 @@ def richardson(f, x, k, h):
     return (4 * d1 - d2) / 3
 
 
-def function_level(model, sigma_star, beta_star, sigma0_star):
-    """The Laplace deviance at four points around the tight optimum, two standard errors away at most, its Richardson
-    slopes at two of them, and the nAGQ = 0 criterion at three sigma values (§10)."""
+def function_level(model, sigma_star, beta_star, sigma0_star, centre, intercept):
+    """The Laplace deviance at four points around the tight optimum, its Richardson slopes at two of them, and the
+    nAGQ = 0 criterion at three sigma values (§10). Each point moves sigma and at most one coefficient, by at most two
+    standard errors, in the centred coordinates: a slope's move is offset in the intercept so that the linear
+    predictor's mean stays put (round 112; before, every coefficient moved at once, which on lgre-shifted pushed the
+    linear predictor to extremes)."""
     p = len(beta_star)
     zeros = np.zeros(model._u.size if hasattr(model, "_u") else 0)
 
@@ -165,10 +168,19 @@ def function_level(model, sigma_star, beta_star, sigma0_star):
         state = model._pirls(sigma=sigma, beta0=np.asarray(beta_star, dtype=float), u0=zeros, update_beta=True)
         return model._laplace_deviance(sigma, state.beta, state.u)
 
-    star = np.concatenate([[sigma_star], beta_star])
     se = np.sqrt(np.diag(model.variances_["beta"].to_numpy()))
-    points = [star, star * np.r_[1.5, np.ones(p)], np.r_[0.5 * sigma_star, beta_star + 2.0 * se],
-              np.r_[sigma_star, beta_star - se]]
+
+    def move(k, delta):
+        beta = np.array(beta_star, dtype=float)
+        beta[k] += delta
+        if intercept and k > 0:
+            beta[0] -= centre[k] * delta
+        return beta
+
+    first_slope = 1 if intercept and p > 1 else 0
+    points = [np.r_[sigma_star, beta_star], np.r_[1.5 * sigma_star, beta_star],
+              np.r_[0.5 * sigma_star, move(first_slope, 2.0 * se[first_slope])],
+              np.r_[sigma_star, move(p - 1, -se[p - 1])]]
     slopes = []
     for point in points[1:3]:
         slopes.extend(richardson(laplace, point, k, 1e-4 * max(abs(point[k]), 1e-2)) for k in range(p + 1))
@@ -240,8 +252,10 @@ def generate(out, inputs, lock, write_json):
             tight_models[name] = tight
             reference[name] = {"default": record(default, df, case, caught), "tight": record(tight, df, case, caught_tight)}
         t1 = tight_models["nagq1"]
+        intercept = case.get("intercept", True)
+        centre = ([0.0] if intercept else []) + [float(df[f].mean()) for f in features(case)]
         function = function_level(t1, t1.sigma_["provider"], t1.coefficients_["beta"].to_numpy(),
-                                  tight_models["nagq0"].sigma_["provider"])
+                                  tight_models["nagq0"].sigma_["provider"], centre, intercept)
         reference["function"] = function
         reference["negative_controls"] = negative_controls(df, case)
         write_json(os.path.join(case_dir, "case.json"), dict(case, features=features(case), rows=len(df),

@@ -3,8 +3,8 @@
   "deviance": [
    "0x1.b3a925b51eca0p+11",
    "0x1.b486a375cf577p+11",
-   "0x1.bb0392d3d7e2fp+11",
-   "0x1.b44d8265ffac6p+11"
+   "0x1.b6f6c2cc74147p+11",
+   "0x1.b3c94d500af1ep+11"
   ],
   "deviance0": [
    "0x1.b6368c14d8001p+11",
@@ -23,14 +23,14 @@
    "-0x1.11365baebd8a9p-1",
    "0x1.bbf73bb403d0fp-2",
    "0x1.1b3e6f2760b36p-2",
-   "-0x1.7f87645cefaaep-1",
+   "-0x1.e97f5d688cd1dp-1",
    "0x1.7578ccf9eb107p-1",
-   "-0x1.5e40f9da685f0p-2",
-   "0x1.3747d0bef506ep-1",
+   "-0x1.11365baebd8a9p-1",
+   "0x1.bbf73bb403d0fp-2",
    "0x1.1b3e6f2760b36p-1",
-   "-0x1.0f092553d3073p+0",
-   "0x1.2ff7cd0da6c59p-1",
-   "-0x1.42414b0f82382p-1",
+   "-0x1.eabe468821f66p-1",
+   "0x1.4722cd0712de8p-1",
+   "-0x1.11365baebd8a9p-1",
    "0x1.62ab08cf10b28p-2"
   ],
   "sigma0": [
@@ -44,11 +44,11 @@
    "-0x1.e06d20e826b0dp+2",
    "0x1.0dfa1a0f63588p+1",
    "-0x1.2bece047aa8dfp+0",
-   "-0x1.2c8b0290da368p+8",
-   "0x1.0e8db3101fdc9p+7",
-   "0x1.0ed53a04e2636p+7",
-   "0x1.3d84807f5fbc0p+6",
-   "0x1.07875185c1641p+7"
+   "-0x1.a0c1f9b61487bp+7",
+   "-0x1.1b59d43873fafp+2",
+   "0x1.a90731bfdf2ffp+6",
+   "-0x1.356d05f0d0633p+1",
+   "0x1.f6d2f6faef20bp+0"
   ],
   "slope_points": [
    "0x1.a8dda6bb110d1p-1",
@@ -57,10 +57,10 @@
    "-0x1.11365baebd8a9p-1",
    "0x1.bbf73bb403d0fp-2",
    "0x1.1b3e6f2760b36p-2",
-   "-0x1.7f87645cefaaep-1",
+   "-0x1.e97f5d688cd1dp-1",
    "0x1.7578ccf9eb107p-1",
-   "-0x1.5e40f9da685f0p-2",
-   "0x1.3747d0bef506ep-1"
+   "-0x1.11365baebd8a9p-1",
+   "0x1.bbf73bb403d0fp-2"
   ]
  },
  "nagq0": {

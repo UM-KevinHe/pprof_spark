@@ -288,7 +288,7 @@ object LinearFE {
   }
 
   /** The block's share of the data fingerprint: each row's provider, identifier and values (NN-11, API-3). */
-  private[linear] def fingerprintOf(block: LinearBlock): Long = {
+  private[engine] def fingerprintOf(block: LinearBlock): Long = {
     val q = block.p + 1
     val values = new Array[Double](q)
     var fingerprint = 0L

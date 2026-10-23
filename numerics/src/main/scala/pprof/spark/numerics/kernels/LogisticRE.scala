@@ -551,8 +551,10 @@ object LogisticRE {
     val best = values.indices.minBy(values)
     val lowerBound = if (best == 0) 0.0 else grid(best - 1)
     val upperBound = if (best == grid.length - 1) grid(best) else grid(best + 1)
+    // nAGQ = 0's σ̂ to 10⁻¹⁰ when it is the estimate; as nAGQ = 1's start 10⁻⁴ is enough, the quasi-Newton refining it
+    val tolerance = if (nagq1) 1e-4 else 1e-10
     val (sigma0, _) =
-      if (upperBound > lowerBound) minimizeScalar(d0, lowerBound, upperBound, 1e-10)
+      if (upperBound > lowerBound) minimizeScalar(d0, lowerBound, upperBound, tolerance)
       else (grid(best), values(best))
     val (beta0, u0, value0, _) = stage1Solve(blocks, p, sigma0, beta, u)
     stage1Evaluations += 1

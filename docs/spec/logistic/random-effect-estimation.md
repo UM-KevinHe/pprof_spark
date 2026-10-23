@@ -1,6 +1,7 @@
 # Specification: logistic random effects — estimation (slice 4b-1)
 
-- Status: approved with D-57 (2026-10-22), with X-043; fixtures and calibration in round 110 (D-58, approved with X-044); the numerics kernel in round 111.
+- Status: approved with D-57 (2026-10-22), with X-043; fixtures and calibration in round 110 (D-58, approved with X-044); the numerics kernel in round 111; the engine in
+  round 112, with D-59 proposed.
 - Reference: pprof_py v0.7.0 (`9320766`), `LogisticRandomEffectModel` (`models/logistic/random_effect.py`), and
   lme4 1.1-35.1's `glmer` (family binomial, nAGQ 1 and 0). Plan: [../random-effects/plan.md](../random-effects/plan.md)
   (D-51, part 4b). Reused: the three-stage model's stage 2 (`ThreeStageGlmm`, D-41) and `BoundedQuasiNewton`, the
@@ -231,3 +232,52 @@ BOBYQA's tolerances tightened.
   - both fits against pprof_py's and lme4's tightened optima within 0.075 of T-opt;
   - lgre-shifted against lgre-base within 10⁻¹² relative for nAGQ = 1.
 - `FixturesSuite` mirrors the calibration's strict checks.
+
+## 14. Round 112: the engine, D-59 and the fractional findings
+
+### 14.1 The engine (no statistical change)
+
+- `engine.logistic.LogisticRE` validates as §5: outcomes outside [0, 1], null and non-finite values are counted per
+  column, aliased features are named, and fewer than two providers or no more rows than fixed effects fail. The
+  working set is the linear model's provider-local one, holding the features, then the offset (0 without one), then
+  y, the kernel's layout, so blocks need no copy.
+- Two passes give the centring (means over rows, with an intercept) and the aliasing check, which takes Cholesky's
+  pivots on the centred X′X. `DistributedBlocks` evaluates each block's share of D and ∇D, the nAGQ = 0 sums and
+  the modes, reduced in block order and placed by group index. The nAGQ = 0 step gathers m providers' sums on the
+  driver under its budget (OI-98).
+- The provider table holds the key, `records`, `weight`, `blup`, `variance` and `se`, built on the driver by group
+  index and keyed through the plan's placements.
+- `predict` (response or link, with the BLUPs under any key type, X-044) and `fitted` (with `xbeta`, `eta`, μ̂, the
+  response, Pearson and deviance residuals, the deviance residuals with the saturated terms of fractional outcomes).
+- `laplaceDeviance(df, fit, σ, β)` evaluates D on the training data at given parameters, for D-59's check and slice
+  4b-2's profile.
+- As nAGQ = 1's start, stage 1's Brent search stops at 10⁻⁴; the quasi-Newton refines it. nAGQ = 0 fits keep 10⁻¹⁰.
+- Each evaluation is one Spark job, and a fit takes about 200 of them: stage 1's grid and Brent search, with Newton
+  iterations at each σ, then the quasi-Newton. That is about 35 seconds on 3,000 rows in a local session, which is why
+  the fixture sweep runs the kernel on the driver (OI-99).
+
+### 14.2 D-59
+
+- The fixed points of the fixtures move σ and at most one coefficient, offsetting a slope's move in the intercept
+  so that the linear predictor's mean stays put. On lgre-shifted the old points moved every coefficient at once and
+  pushed the linear predictor to extremes, where lme4's deviance differs; with the new points it agrees within
+  0.006 of T-coef, a strict check.
+- `LogisticRESuite` (6 tests):
+  - the kernel on every case, with both nAGQ, against pprof_py at T-est (T-opt where σ̂ < 0.1) and lme4 at T-opt,
+    with the optimality check;
+  - the engine against the kernel at T-part on lgre-base, lgre-offset and lgre-text, with their fitted values,
+    predictions and residuals against the references;
+  - lgre-shifted's invariance against lgre-base, and bitwise invariance to row order and partitioning;
+  - the refusals.
+
+### 14.3 Fractional outcomes (round 111's probes)
+
+- `glmer`'s fit to fractional outcomes is not the quasi-likelihood fit. At σ = 0 that model reduces to `glm`, which
+  gives β̂ = (−0.93, 0.64, −0.37) on lgre-fractional, while `glmer` returns σ̂ = 0 with β̂ = (−2.31, 1.28, −0.75). The
+  likely cause: lme4 takes its Laplace deviance's likelihood term from the binomial family's `aic`, which rounds m·y,
+  while its PIRLS uses the fractional values. That mechanism is inferred, not traced in lme4's code; the inconsistency
+  is observed. lme4 is no reference for fractional outcomes (D-58).
+- pprof_py, and so pprof_spark, treats a proportion such as 3/8 as one observation with a Bernoulli-like likelihood.
+  That understates the information of eight trials: `glmer` with `cbind(k, 8 − k)` gives σ̂ = 0.628 and β̂ = (−0.967,
+  0.694, −0.385), against pprof_py's σ̂ = 0.562. It is pprof_py's definition and is kept; the Python guide will say
+  so, and binomial trials would be a separate option (spec 4b-1 §5 has no trials).

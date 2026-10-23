@@ -3,8 +3,8 @@
   "deviance": [
    "0x1.599cde41741c0p+10",
    "0x1.5aaef46e2d2c4p+10",
-   "0x1.61be028801462p+10",
-   "0x1.5a9ea884f6c8fp+10"
+   "0x1.5d844f51ac3c0p+10",
+   "0x1.59dc11b274b24p+10"
   ],
   "deviance0": [
    "0x1.5c15f42c5347ep+10",
@@ -21,12 +21,12 @@
    "0x1.374f338165c44p-1",
    "-0x1.7db3fa4d058fap-1",
    "0x1.1a10aec6b1823p-2",
-   "-0x1.56a86c4e19ab0p-1",
+   "-0x1.db4bf46685b0ep-1",
    "0x1.80edb6efff02ap-1",
-   "-0x1.affb49ae553e7p-2",
+   "-0x1.7db3fa4d058fap-1",
    "0x1.1a10aec6b1823p-1",
-   "-0x1.0ead415853b95p+0",
-   "0x1.127ff1ca19251p-1",
+   "-0x1.c3a979f8e4d6ap-1",
+   "0x1.374f338165c44p-1",
    "-0x1.d08f2507f307dp-1"
   ],
   "sigma0": [
@@ -39,10 +39,10 @@
    "0x1.31b1a71f223e8p+1",
    "-0x1.2de465d602a9dp+2",
    "0x1.cbfd79a4271abp+0",
-   "-0x1.c06c5343fc990p+6",
-   "0x1.5efae1fed7933p+6",
-   "0x1.564c7ae6b2cb9p+6",
-   "0x1.66a178cd49dcdp+5"
+   "-0x1.80ff029256a89p+6",
+   "-0x1.5ebfb60b7e6afp+2",
+   "0x1.fee3731ca735bp+5",
+   "-0x1.cdee3d3270d7dp+1"
   ],
   "slope_points": [
    "0x1.a719062a0a434p-1",
@@ -50,9 +50,9 @@
    "0x1.374f338165c44p-1",
    "-0x1.7db3fa4d058fap-1",
    "0x1.1a10aec6b1823p-2",
-   "-0x1.56a86c4e19ab0p-1",
+   "-0x1.db4bf46685b0ep-1",
    "0x1.80edb6efff02ap-1",
-   "-0x1.affb49ae553e7p-2"
+   "-0x1.7db3fa4d058fap-1"
   ]
  },
  "nagq0": {
