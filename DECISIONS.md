@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-59: Slice 4b-1, tighter agreement checks and the fixtures' fixed points (Proposed: awaiting the maintainer's approval)
+### D-59: Slice 4b-1, tighter agreement checks and the fixtures' fixed points (Accepted: approved by the maintainer, 2026-10-23)
 
 The end-to-end tolerance for the fitted estimates, T-opt, allows about a hundred times more than the agreement
 observed in round 111 (the maintainer's question, 2026-10-22). Proposed for slice 4b-1, in round 112:
@@ -120,6 +120,8 @@ observed in round 111 (the maintainer's question, 2026-10-22). Proposed for slic
    checked against the kernel at T-part on three cases, with its fitted values, predictions and residuals against
    the references.
 5. The fractional-outcome findings go into spec 4b-1 §12, and OI-98 and OI-99 are opened.
+
+Approved as proposed on 2026-10-23.
 
 ### D-58: Slice 4b-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-10-22)
 

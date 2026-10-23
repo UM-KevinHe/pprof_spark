@@ -1,7 +1,7 @@
 # Specification: logistic random effects — estimation (slice 4b-1)
 
 - Status: approved with D-57 (2026-10-22), with X-043; fixtures and calibration in round 110 (D-58, approved with X-044); the numerics kernel in round 111; the engine in
-  round 112, with D-59 proposed.
+  round 112 (D-59, approved); Python in round 113.
 - Reference: pprof_py v0.7.0 (`9320766`), `LogisticRandomEffectModel` (`models/logistic/random_effect.py`), and
   lme4 1.1-35.1's `glmer` (family binomial, nAGQ 1 and 0). Plan: [../random-effects/plan.md](../random-effects/plan.md)
   (D-51, part 4b). Reused: the three-stage model's stage 2 (`ThreeStageGlmm`, D-41) and `BoundedQuasiNewton`, the
@@ -281,3 +281,19 @@ BOBYQA's tolerances tightened.
   That understates the information of eight trials: `glmer` with `cbind(k, 8 − k)` gives σ̂ = 0.628 and β̂ = (−0.967,
   0.694, −0.385), against pprof_py's σ̂ = 0.562. It is pprof_py's definition and is kept; the Python guide will say
   so, and binomial trials would be a separate option (spec 4b-1 §5 has no trials).
+
+## 15. Round 113: Python (no statistical change)
+
+- `app.LogisticRERunSpec.model` reads the model's JSON: `columns` (`outcome`, `features`, `provider`, `offset`, `rowId`)
+  and `fit` (`stage2`, `includeIntercept`, `sigmaUpper`, `maxIterations`, `blocks`), every problem at once. The facade
+  parses through it from the start, and slice 4b-3's job runner will read whole specifications with the same object.
+- The facade (`PythonApi`): `logisticREFit`, `logisticREModel`, `logisticRESummary` (JSON, doubles in hexadecimal),
+  `logisticREProviders`, `logisticREPredict` and `logisticREFitted`.
+- `LogisticRandomEffect` and `LogisticRandomEffectModel` take pprof_py's argument names. `max_iter_pirls` is accepted
+  and not used, as the tolerances and optimizer names are, with a warning when it differs from pprof_py's default.
+  §9's table gave it the inner Newton's cap; pprof_spark's inner Newton runs to its own precision, with its own cap
+  of 200 steps.
+- `PythonApiLogisticRESuite` (2 tests), and `python/tests/test_logistic_re.py` (3 tests, one fit of lgre-offset):
+  - the estimates against pprof_py at T-est and lme4 at T-opt;
+  - the predictions with the BLUPs under integer keys against lme4 (X-044), and the fitted values and residuals;
+  - the warnings and the options' mapping.

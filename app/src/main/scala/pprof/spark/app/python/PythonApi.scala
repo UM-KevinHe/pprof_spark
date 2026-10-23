@@ -5,7 +5,15 @@ import scala.jdk.CollectionConverters._
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.databind.node.ObjectNode
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import pprof.spark.app.{LinearRERunSpec, LinearRunSpec, RunSpec, ThreeStageJob, ThreeStageRunSpec}
+import pprof.spark.app.{
+  LinearRERunSpec,
+  LinearRunSpec,
+  LogisticRERunSpec,
+  RunSpec,
+  ThreeStageJob,
+  ThreeStageRunSpec
+}
+import pprof.spark.engine.logistic.{LogisticRE, LogisticREFit, LogisticREOptions, LogisticRESpec}
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.linear.{
   LinearFE,
@@ -1189,6 +1197,87 @@ object PythonApi {
   }
 
   def linearREProviders(fit: LinearREFit): DataFrame = fit.providers
+
+  /** Fits the logistic random-intercept model (docs/spec/logistic/random-effect-estimation.md): `columns` and `fit` as
+    * `LogisticRERunSpec.model` reads them, every problem at once.
+    */
+  def logisticREFit(df: DataFrame, columnsJson: String, fitJson: String): LogisticREFit = {
+    val (spec, options) = logisticREModel(columnsJson, fitJson)
+    LogisticRE.fit(df, spec, options)
+  }
+
+  def logisticREModel(columnsJson: String, fitJson: String): (LogisticRESpec, LogisticREOptions) =
+    LogisticRERunSpec.model(columnsJson, fitJson)
+
+  /** The logistic random-effect fit as JSON, doubles as `Double.toHexString` strings (spec 4b-1 §4). */
+  def logisticRESummary(fit: LogisticREFit): String = {
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    def hex(value: Double): String = java.lang.Double.toHexString(value)
+    root.put("kind", "LogisticREFit")
+    root.put("status", fit.status)
+    root.put("criterion", fit.criterion)
+    val coefficients = root.putArray("coefficients")
+    fit.coefficients.foreach { c =>
+      val node = coefficients.addObject()
+      node.put("feature", c.feature)
+      node.put("estimate", hex(c.estimate))
+      node.put("standardError", hex(c.standardError))
+    }
+    val covariance = root.putArray("covariance")
+    fit.covariance.foreach(v => covariance.add(hex(v)))
+    Seq(
+      "sigma" -> fit.sigma,
+      "deviance" -> fit.deviance,
+      "loglik" -> fit.loglik,
+      "aic" -> fit.aic,
+      "bic" -> fit.bic,
+      "pwrss" -> fit.pwrss,
+      "logDetH" -> fit.logDetH,
+      "ussq" -> fit.ussq
+    ).foreach { case (key, value) => root.put(key, hex(value)) }
+    root.put("rows", fit.rows)
+    root.put("providers", fit.providerCount)
+    val search = root.putObject("search")
+    search.put("stage1Evaluations", fit.search.stage1Evaluations)
+    search.put("stage2Evaluations", fit.search.stage2Evaluations)
+    search.put("projectedGradient", hex(fit.search.projectedGradient))
+    search.put("converged", fit.search.converged)
+    fit.search.boundary.foreach(b => search.put("boundary", b))
+    val warnings = root.putArray("warnings")
+    fit.warnings.foreach(w => warnings.add(w))
+    val columns = root.putObject("columns")
+    columns.put("outcome", fit.spec.outcome)
+    val features = columns.putArray("features")
+    fit.spec.features.foreach(f => features.add(f))
+    columns.put("provider", fit.spec.provider)
+    fit.spec.offset.foreach(o => columns.put("offset", o))
+    fit.spec.rowId.foreach(r => columns.put("rowId", r))
+    val options = root.putObject("fit")
+    options.put("stage2", fit.options.nagq1)
+    options.put("includeIntercept", fit.options.includeIntercept)
+    options.put("sigmaUpper", hex(fit.options.sigmaUpper))
+    options.put("maxIterations", fit.options.maxIterations)
+    val software = root.putObject("software")
+    fit.software.toFields.foreach { case (key, value) => software.put(key, value) }
+    root.put("fingerprint", fit.fingerprint)
+    mapper.writeValueAsString(root)
+  }
+
+  def logisticREProviders(fit: LogisticREFit): DataFrame = fit.providers
+
+  /** `df` with `prediction` (spec 4b-1 §6): response or link; the BLUPs when `useRe`; the offset when `withOffset`. */
+  def logisticREPredict(
+      df: DataFrame,
+      fit: LogisticREFit,
+      useRe: Boolean,
+      withOffset: Boolean,
+      kind: String
+  ): DataFrame =
+    LogisticRE.predict(df, fit, useRe, withOffset, kind)
+
+  /** The training rows with `xbeta`, `eta`, `fitted`, `residual`, `pearson` and `deviance_residual`. */
+  def logisticREFitted(df: DataFrame, fit: LogisticREFit): DataFrame = LogisticRE.fitted(df, fit)
 
   /** `df` with `prediction` (spec 4a-1 §6): with the BLUPs when `useRe`, with the offset when `withOffset`. */
   def linearREPredict(

@@ -1,0 +1,68 @@
+package pprof.spark.app.python
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import pprof.spark.engine.logistic.LogisticRESpec
+import pprof.spark.testkit.{Fixtures, SparkSuite, Tolerances}
+
+/** The facade's logistic random-effect methods (spec 4b-1 §9): the model's JSON reports every problem at once and maps
+  * the options; the fit is the model the JSON names, and the summary carries it bit for bit.
+  */
+class PythonApiLogisticRESuite extends SparkSuite {
+
+  override val munitTimeout: scala.concurrent.duration.Duration =
+    scala.concurrent.duration.Duration(5, "min")
+
+  test("logisticREModel reports every problem at once and maps the options") {
+    val message = intercept[IllegalArgumentException](
+      PythonApi.logisticREModel(
+        """{"outcome": 3, "trials": "n"}""",
+        """{"stage2": "yes", "blocks": {"bogus": 1}}"""
+      )
+    ).getMessage
+    Seq(
+      "columns.outcome must be a string",
+      "columns.provider is required",
+      "columns.trials does not belong to a logistic-re model",
+      "fit.stage2 must be true or false",
+      "fit.blocks.bogus does not belong to a logistic-re model"
+    ).foreach(p => assert(message.contains(p), s"missing '$p' in: $message"))
+    val bounded = intercept[IllegalArgumentException](
+      PythonApi.logisticREModel("""{"outcome": "y", "provider": "p"}""", """{"maxIterations": 5}""")
+    ).getMessage
+    assert(bounded.contains("maxIterations must be at least 20"), bounded)
+    val (spec, options) = PythonApi.logisticREModel(
+      """{"outcome": "y", "features": ["x1"], "provider": "p", "offset": "o"}""",
+      """{"stage2": false, "sigmaUpper": 3}"""
+    )
+    assertEquals(spec, LogisticRESpec("y", Seq("x1"), "p", offset = Some("o")))
+    assertEquals((options.nagq1, options.sigmaUpper, options.includeIntercept), (false, 3.0, true))
+  }
+
+  test("logisticREFit fits the model the JSON names, and the summary carries the fit bit for bit") {
+    val df = spark.read
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .csv(Fixtures.root.resolve("logistic-re/lgre-text/input.csv").toString)
+    val fit = PythonApi.logisticREFit(
+      df,
+      """{"outcome": "y", "features": ["x1", "x2"], "provider": "provider", "rowId": "id"}""",
+      "{}"
+    )
+    assertEquals(fit.spec, LogisticRESpec("y", Seq("x1", "x2"), "provider", rowId = Some("id")))
+    val expected = Fixtures.doubles(
+      Fixtures.json("logistic-re/lgre-text/pprof_py.json").get("nagq1").get("tight").get("beta")
+    )
+    assert(Tolerances("T-est").worstRatio(fit.estimates.toArray, expected) <= 1.0)
+    val summary = new ObjectMapper().readTree(PythonApi.logisticRESummary(fit))
+    assertEquals(summary.get("criterion").asText(), "Laplace")
+    assertEquals(summary.get("providers").asInt(), 30)
+    assertEquals(java.lang.Double.parseDouble(summary.get("sigma").asText()), fit.sigma)
+    val estimates = (0 until fit.coefficients.size).map(i =>
+      java.lang.Double.parseDouble(summary.get("coefficients").get(i).get("estimate").asText())
+    )
+    assertEquals(
+      estimates.map(java.lang.Double.doubleToRawLongBits),
+      fit.estimates.map(java.lang.Double.doubleToRawLongBits)
+    )
+  }
+}

@@ -142,6 +142,30 @@ names it. Rows with a missing value fail with counts per column (X-038) rather t
 the training data and check it against the fit (API-3). A saved fit also loads in Scala (`LinearREFitIO.load`), and
 `LinearREJob` (docs/guide/linear-re-job.md) writes one with its other outputs.
 
+## Logistic random-effect models
+
+```python
+from pprof_spark import LogisticRandomEffect
+
+fit = LogisticRandomEffect("readmitted", ["age", "comorbidity"], "facility", row_id="id").fit(df)
+fit.coefficients, fit.covariance, fit.sigma         # β̂ with standard errors, Var(β̂), the provider SD
+fit.deviance, fit.loglik, fit.aic, fit.bic         # the Laplace deviance (−2ℓ) and the criteria, with p + 1 parameters
+fit.providers()                                    # records, weight, blup, variance, se per provider
+fit.predict(df, use_re=True)                       # probabilities with the BLUPs; type="link" for the linear predictor
+fit.fitted_values(df)                              # μ̂, residuals, Pearson and deviance residuals
+```
+
+`LogisticRandomEffect` takes pprof_py's `LogisticRandomEffectModel` arguments
+(docs/spec/logistic/random-effect-estimation.md). `stage2=True`, the default, fits the Laplace approximation
+(lme4's nAGQ = 1); `stage2=False` fits nAGQ = 0. `sigma_upper` bounds σ, and `max_iter_outer` caps the quasi-Newton.
+`max_iter_pirls`, `tol_pirls`, `tol_outer` and the two optimizer names are accepted but not used, because pprof_spark's
+searches run to their own precision; a value other than pprof_py's default gives a warning. Predictions with
+`use_re` add the BLUPs under integer provider keys as well, which pprof_py does not (X-044).
+
+A fractional outcome, such as 3/8, counts as one observation with a Bernoulli-like likelihood, as in pprof_py. That
+carries less information than eight trials would; spec §14.3 compares the two. A fit runs one Spark job per
+evaluation of its criterion, about 200 in all (OI-99). Inference, measures and saving arrive with slices 4b-2 and 4b-3.
+
 ## Large data: strata, blocks and row identifiers
 
 These options were added in round 83 (D-49).
