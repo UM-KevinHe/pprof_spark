@@ -103,7 +103,38 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-60: Slice 4b-2 specification (Proposed: awaiting the maintainer's approval)
+### D-61: Slice 4b-2 fixtures, calibration and tolerance classes (Proposed: awaiting the maintainer's approval)
+
+1. Fixtures (round 116), from pprof_py's tightened nAGQ = 1 fit:
+   - `inference_pprof_py.json` in all ten `fixtures/logistic-re` cases: `summary`, twelve test variants, option
+     `alpha`, the `SM` intervals for each alternative and at the size-weighted mean given as a number (X-046), the
+     measures at three references, `profile_sigma`, and negative controls.
+   - `r_lme4.json` gains R pprof's `logis_re` outputs on `glmer`'s tightened fit, in the seven cases R pprof can fit
+     (no offset, an intercept, binary outcomes), and lme4's profile interval.
+   - `REFERENCE.lock` pins R pprof's six files.
+2. `docs/parity/logistic-re-inference-calibration.md` passes every strict check:
+   - pprof_py's tables satisfy their definitions exactly;
+   - R pprof's Wald tests, option `alpha` and direct measures and intervals agree within 0.034 of T-opt;
+   - lme4's profile interval agrees within 0.37 of T-opt;
+   - the negative controls miss by at least 4.3·10⁶.
+3. The references are run to their precision:
+   - R pprof on `glmer`'s tightened fit, because its default stops early on lgre-small-sigma and lgre-many;
+   - lme4's profile at zeta steps of 0.02, because the default grid's spline interpolation moved lgre-base's upper
+     limit by 1.8·10⁻⁴.
+4. lgre-small-sigma is a boundary fit: lme4's σ̂ is 0 and pprof_py's 1.7·10⁻⁸. Its Wald tests are untested in
+   pprof_spark (X-048); R pprof's z there are 0/0 and pprof_py's noise, so they are informational.
+5. Classes for 4b-2's code. Lockstep, pprof_spark evaluated at pprof_py's tightened (σ, β):
+   - `summary` and the Wald test at T-test, T-p, T-flag and T-coef;
+   - `poibin_exact` at T-test and T-p, its inverted limits at T-coef, as slice 2c;
+   - the measures and `SM` intervals at T-meas, with X-026's binned direct sums. X-045's one-sided indirect limits
+     are compared on their finite side, and the `mean` reference through the size-weighted fixture (X-046);
+   - `resampling` within 4.5 Monte Carlo standard errors of pprof_py's p-values;
+   - `profile_sigma` at T-opt against pprof_py and lme4.
+   End to end, from pprof_spark's own fit, at T-est (T-opt where σ̂ < 0.1).
+6. `compare_outputs.py` compares regenerated resampling values at a Monte Carlo class (rtol 2·10⁻², atol 10⁻³);
+   the family's other values stay at T-opt, and those at fixed parameters at 10⁻⁸.
+
+### D-60: Slice 4b-2 specification (Accepted: approved by the maintainer, 2026-10-23)
 
 `docs/spec/logistic/random-effect-inference.md`: inference, measures and σ's profile for the logistic
 random-intercept model.
@@ -117,6 +148,8 @@ random-intercept model.
   definitions match pprof_py's; lme4's profile interval at T-opt.
 - Proposed with it: X-045 (one-sided indirect intervals), X-046 (the size-weighted mean in the intervals), X-047 (R
   pprof's informational differences) and X-048 (Wald tests untested at a boundary fit).
+
+Approved as proposed, with X-045 to X-048, on 2026-10-23.
 
 ### D-59: Slice 4b-1, tighter agreement checks and the fixtures' fixed points (Accepted: approved by the maintainer, 2026-10-23)
 

@@ -1,6 +1,7 @@
 # Specification: logistic random effects — inference, measures and σ's profile (slice 4b-2)
 
-- Status: proposed with D-60 (round 115, 2026-10-23), awaiting the maintainer's approval.
+- Status: approved with D-60 (2026-10-23), with X-045 to X-048; fixtures and calibration in round 116 (D-61,
+  proposed).
 - Reference: pprof_py v0.7.0 (`9320766`): `LogisticRandomEffectModel.summary`, `test`, `calculate_confidence_intervals`
   (`inference/logistic/random_effect.py`), `calculate_standardized_measures` (`measures/logistic/random_effect.py`)
   and `profile_sigma` (`models/logistic/random_effect.py`), with the shared `effect_test`, `count_test`,
@@ -133,7 +134,26 @@ The fixture round proposes the classes (D-61).
 |---|---|---|---|
 | X-026 (precedent) | B | Direct sums by binned Taylor expansions | Approved (slice 2d) |
 | X-043 (precedent) | — | Var(β̂) conditional on the modes | Approved (D-57) |
-| X-045 | B | One-sided SM intervals for indirect measures are one-sided; pprof_py keeps both limits finite at the one-sided critical value (round 115: for `greater`, provider 1 of lgre-base gets the upper limit 2.11) | Proposed (D-60) |
-| X-046 | B | `reference = "mean"` is size-weighted in the intervals as in the tests and measures; pprof_py's intervals take the unweighted mean (round 115, lgre-base: 0.0562 weighted, 0.0091 unweighted) | Proposed (D-60) |
-| X-047 | — | R pprof's `logis_re` family differs from pprof_py, and is a reference only for the Wald tests, option `alpha` and the direct measures and intervals:<br>• its summary uses `glmer`'s default `vcov` (X-043), and its p-value 2(1 − Φ(z)) exceeds 1 for negative estimates (round 115: 2.000000 and 1.999991);<br>• its indirect ratio is Σ μ̂ᵢ/Σ expit(ηᵢ), with the BLUPs and γ₀ = 0, where pprof_py's is Oⱼ/Eⱼ (lgre-base's provider 1: 1.0217 against 1.1327);<br>• its indirect SM limits transform the BLUP's limits | Proposed, informational (D-60) |
-| X-048 | B | Wald tests at a boundary fit leave every provider untested, as slice 4a-2 (D-55); pprof_py divides by max(seⱼ, 10⁻¹⁵), giving z = 0 at γ₀ = 0 and ±10¹⁵γ₀ otherwise | Proposed (D-60) |
+| X-045 | B | One-sided SM intervals for indirect measures are one-sided; pprof_py keeps both limits finite at the one-sided critical value (round 115: for `greater`, provider 1 of lgre-base gets the upper limit 2.11) | Approved (D-60) |
+| X-046 | B | `reference = "mean"` is size-weighted in the intervals as in the tests and measures; pprof_py's intervals take the unweighted mean (round 115, lgre-base: 0.0562 weighted, 0.0091 unweighted) | Approved (D-60) |
+| X-047 | — | R pprof's `logis_re` family differs from pprof_py, and is a reference only for the Wald tests, option `alpha` and the direct measures and intervals:<br>• its summary uses `glmer`'s default `vcov` (X-043), and its p-value 2(1 − Φ(z)) exceeds 1 for negative estimates (round 115: 2.000000 and 1.999991);<br>• its indirect ratio is Σ μ̂ᵢ/Σ expit(ηᵢ), with the BLUPs and γ₀ = 0, where pprof_py's is Oⱼ/Eⱼ (lgre-base's provider 1: 1.0217 against 1.1327);<br>• its indirect SM limits transform the BLUP's limits | Approved (D-60), informational |
+| X-048 | B | Wald tests at a boundary fit leave every provider untested, as slice 4a-2 (D-55); pprof_py divides by max(seⱼ, 10⁻¹⁵), giving z = 0 at γ₀ = 0 and ±10¹⁵γ₀ otherwise | Approved (D-60) |
+
+## 12. Fixture findings (round 116)
+
+- `inference_pprof_py.json` in every case of `fixtures/logistic-re`, from pprof_py's tightened fit. R pprof's
+  `logis_re` family runs on `glmer`'s tightened fit in the seven cases it can fit, with `computeDirectExp` written in
+  R. lme4's profile interval comes from `profile(delta = 0.02)` and `confint` on the tightened fit.
+- `docs/parity/logistic-re-inference-calibration.md` passes every strict check:
+  - pprof_py's Wald z, `alpha` limits and ratios satisfy their definitions exactly;
+  - R pprof agrees at T-opt (worst 0.034, option `alpha` on lgre-small-sigma);
+  - lme4's profile agrees within 0.37 of T-opt (lgre-nointercept);
+  - every negative control misses by at least 4.3·10⁶.
+- Before the references were tightened, the first calibration failed 14 checks:
+  - `glmer`'s default fit inside R pprof stopped early on lgre-small-sigma and lgre-many;
+  - lme4's default profile grid put lgre-base's upper limit at 0.742990 on the tightened fit, against 0.743168 on
+    the default fit and pprof_py's 0.743147.
+- lgre-small-sigma is a boundary fit (lme4's σ̂ = 0, pprof_py's 1.7·10⁻⁸). R pprof's Wald z there are 0/0,
+  pprof_py's are ±4·10⁻⁸, and pprof_spark leaves them untested (X-048).
+- `resampling` warned on 4 of lgre-base's 40 providers that simulated tails reached the floor. Its p-values are
+  checked against `poibin_exact`'s only informationally, since mid-p and exact tails differ.

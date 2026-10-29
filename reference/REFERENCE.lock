@@ -42,7 +42,9 @@ lme4 = "1.1-35.1"
 # logistic fixed-effect fixtures (D-30), with Ubuntu 24.04's r-cran-rcpp 1.0.12,
 # r-cran-rcpparmadillo 0.12.8.1.0 and r-cran-rcppparallel 5.1.7.
 # The linear random-effect inference fixtures (D-54) source R/linear_re.R, R/test.linear_re.R and
-# R/confint.linear_re.R.
+# R/confint.linear_re.R. The logistic random-effect inference fixtures (D-60) source R/logis_re.R,
+# R/test.logis_re.R, R/SM_output.logis_re.R, R/confint.logis_re.R, R/summary.logis_re.R and R/data_check.R, with
+# the Rcpp computeDirectExp written in R.
 repository = "https://github.com/cran/pprof"
 version = "1.0.3"
 commit = "1efc4040de386900a7eeed222e478b18b77a6ff2"
@@ -60,6 +62,12 @@ license = "MIT"
 "linear_re.R" = "e3d1616c2e420189e33588966470c43626e587eea131c4a5bc52951f42a09d32"
 "test.linear_re.R" = "c4d47c3c3fdbdaa01e5c06938721e2f9e70393cbaa49a4b474e78a42f5fd7885"
 "confint.linear_re.R" = "dfe94d9054c9f5bb00c1dc115a35ffd49041b9501a0b179f9e08c566ea8d6fa4"
+"logis_re.R" = "c5f78b09a8afc2d692cf9aac9e4faf46b31349a2ddeb67b8bfcde8b68810e2ec"
+"test.logis_re.R" = "0eb8304cdd6cc687032fb6f3715affd87d7d365c0bec1186054fae229a7d0c3d"
+"SM_output.logis_re.R" = "5ef06bd16aba9b96604b6e120bfb0385d763e1526de884cae0dfa4ce944cf2d7"
+"confint.logis_re.R" = "499b42dc8624f64f32021b1efb9746fa4df29f34e5bd7c945d3d0f4fa4ad96bb"
+"summary.logis_re.R" = "c1279281c5667f91b87a6db54d34b1fdc1982bee6e5bba81d9ca5139aea3e3cd"
+"data_check.R" = "7f04cc24e4490d121958e933ee05a05cba958d0b1cb7e9915e3b3aee60fed199"
 
 [r_poibin]
 # poibin (GPL-2; run only, never ported), needed by R pprof's exact test for the slice 2c fixtures (D-35).

@@ -9,7 +9,8 @@ ratio of observed difference to allowed difference:
   - each negative control against pprof_py: must be at least MARGIN, so a real defect fails.
 Writes docs/parity/cox-calibration.md, logistic-calibration.md, three-stage-calibration.md, linear-calibration.md,
 linear-inference-calibration.md, linear-re-calibration.md,
-linear-re-inference-calibration.md and logistic-re-calibration.md. Usage: python reference/fixtures/calibrate.py
+linear-re-inference-calibration.md, logistic-re-calibration.md and
+logistic-re-inference-calibration.md. Usage: python reference/fixtures/calibrate.py
 """
 
 import json
@@ -793,6 +794,102 @@ def logistic_re(tol, manifest, fixtures):
     return failures
 
 
+# R pprof's default glmer fit is optimizer-limited and inaccurate on lgre-shifted (D-58), and lme4 fits another model to
+# fractional outcomes: their agreement with pprof_py is informational there.
+LOGISTIC_RE_INF_INFORMATIONAL = {"lgre-shifted", "lgre-fractional"}
+
+
+def logistic_re_inference(tol, manifest, fixtures):
+    """Slice 4b-2's references (D-60): pprof_py's inference against its own definitions (its tables' identities),
+    against R pprof's Wald tests, option alpha and direct measures and intervals at T-opt, and its profile interval
+    against lme4's at T-opt; R pprof's indirect quantities and summary informational (X-047); the negative controls;
+    writes docs/parity/logistic-re-inference-calibration.md."""
+    rows, failures = [], []
+
+    def add(case, label, cls, value, ok):
+        rows.append((case, label, cls, f"{value:.3g}", "yes" if ok is True else "**no**" if ok is False else "informational"))
+        if ok is False:
+            failures.append((case, label))
+
+    def h(v):
+        return [float.fromhex(x) for x in v]
+
+    def hexes(values):
+        return [float(v).hex() for v in values]
+
+    for case in manifest["cases"].get("logistic-re", []):
+        base = os.path.join(fixtures, "logistic-re", case)
+        inf = json.load(open(os.path.join(base, "inference_pprof_py.json"), encoding="utf-8"))
+        r = json.load(open(os.path.join(base, "r_lme4.json"), encoding="utf-8"))
+        strict = case not in LOGISTIC_RE_INF_INFORMATIONAL
+        wald = inf["test"]["wald_zero"]
+        z = [(e - n) / s for e, n, s in zip(h(wald["estimate"]), h(wald["null_value"]), h(wald["se"]))]
+        value = ratio(tol, "T-test", hexes(z), wald["z_raw"])
+        add(case, "pprof_py's Wald z = (estimate - reference)/se", "T-test", value, value <= 1.0)
+        c = 1.959963984540054
+        lower = [e - c * s for e, s in zip(h(wald["estimate"]), h(wald["se"]))]
+        value = ratio(tol, "T-coef", hexes(lower), inf["alpha_ci"]["lower"])
+        add(case, "pprof_py's option alpha = BLUP - 1.96 se", "T-coef", value, value <= 1.0)
+        me = inf["measures_median"]
+        ir = [o / e for o, e in zip(h(me["indirect"]["observed"]), h(me["indirect"]["expected"]))]
+        value = ratio(tol, "T-meas", hexes(ir), me["indirect"]["indirect_ratio"])
+        add(case, "pprof_py's indirect ratio = observed/expected", "T-meas", value, value <= 1.0)
+        value = ratio(tol, "T-meas", inf["sm_two_sided"]["indirect_ratio"]["value"], me["indirect"]["indirect_ratio"])
+        add(case, "pprof_py's SM indirect ratio = its measure at the median", "T-meas", value, value <= 1.0)
+        value = ratio(tol, "T-meas", inf["sm_two_sided"]["direct_ratio"]["value"], me["direct"]["direct_ratio"])
+        add(case, "pprof_py's SM direct ratio = its measure", "T-meas", value, value <= 1.0)
+        if "rpprof" in r:
+            rp = r["rpprof"]
+            # At a boundary fit (lme4's sigma 0, pprof_py's 1.7e-8 on lgre-small-sigma) R pprof's z is 0/0 and pprof_py's
+            # noise: both untested in pprof_spark (X-048), so the comparison is informational there.
+            boundary = h(r["nagq1"]["tight"]["sigma"])[0] == 0.0
+            value = ratio(tol, "T-opt", rp["wald"]["z"], wald["z_raw"])
+            add(case, "Wald z: R pprof (tightened glmer) vs pprof_py" + (" (a boundary fit, X-048)" if boundary else ""),
+                "T-opt", value, value <= 1.0 if strict and not boundary else None)
+            value = ratio(tol, "T-opt", rp["alpha"]["lower"] + rp["alpha"]["upper"], inf["alpha_ci"]["lower"] + inf["alpha_ci"]["upper"])
+            add(case, "option alpha: R pprof vs pprof_py", "T-opt", value, value <= 1.0 if strict else None)
+            for q in ("direct_ratio", "direct_rate"):
+                value = ratio(tol, "T-opt", rp["measures"][q], me["direct"][q])
+                add(case, f"{q}: R pprof vs pprof_py", "T-opt", value, value <= 1.0 if strict else None)
+            for alt, key in (("two_sided", "sm_two_sided"), ("greater", "sm_greater"), ("less", "sm_less")):
+                for q in ("direct_ratio", "direct_rate"):
+                    ours = inf[key][q]
+                    for side in ("lower", "upper"):
+                        theirs = rp[f"sm_{alt}"][f"{q}_{side}"]
+                        value = ratio(tol, "T-opt", theirs, ours[side])
+                        add(case, f"SM {alt} {q} {side}: R pprof vs pprof_py", "T-opt", value, value <= 1.0 if strict else None)
+            value = ratio(tol, "T-opt", rp["measures"]["indirect_ratio"], me["indirect"]["indirect_ratio"])
+            add(case, "indirect ratio: R pprof (model-based, X-047) vs pprof_py", "T-opt", value, None)
+        value = ratio(tol, "T-opt", inf["profile_sigma"]["lower"] + inf["profile_sigma"]["upper"], r["profile"]["lme4"]["limits"])
+        add(case, "profile_sigma: pprof_py vs lme4's profile", "T-opt", value, value <= 1.0 if strict else None)
+        pb, rs = h(inf["test"]["poibin_zero"]["p_value"]), h(inf["test"]["resampling_zero"]["p_value"])
+        worst = max(abs(a - b) / max(4.5 * math.sqrt(2.0 * max(b * (1 - b), 1e-12) / 20000.0), 1e-12) for a, b in zip(rs, pb))
+        add(case, "resampling p vs poibin_exact p, in 4.5 Monte Carlo SEs (mid-p against exact tails)", "MC", worst, None)
+        for name, control in inf["negative_controls"].items():
+            miss = ratio(tol, "T-test", control["wald_zero_z"], wald["z_raw"])
+            add(case, f"negative control {name}: Wald z", "T-test", miss, miss >= MARGIN)
+            miss = ratio(tol, "T-meas", control["indirect_ratio"], me["indirect"]["indirect_ratio"])
+            add(case, f"negative control {name}: indirect ratio", "T-meas", miss, miss >= MARGIN)
+    lines = ["# Logistic random-effect inference tolerance calibration (D-60)", "",
+             "Generated by `reference/fixtures/calibrate.py` from the fixtures of pprof_py "
+             f"{manifest['reference']['pprof_py']['version']}, R {manifest['reference']['r']['version']} with lme4 "
+             f"{manifest['reference']['r']['lme4']}, and R pprof 1.0.3's `logis_re` family. Ratios are observed "
+             "difference over allowed difference under testkit's `Tolerance` rule. pprof_py's tables must satisfy their "
+             "own definitions at the tight classes. R pprof's Wald tests, option alpha and direct measures and intervals "
+             "(on glmer's tightened fit) and lme4's profile interval (the tightened fit, zeta steps of 0.02) must agree with pprof_py's "
+             "at T-opt. R pprof's indirect quantities (X-047), the comparisons on lgre-shifted and lgre-fractional, and "
+             "the Monte Carlo check are informational. Every negative control must miss by at least "
+             f"{MARGIN:g}.", "", "| Case | Quantity | Class | Ratio | OK |", "|---|---|---|---|---|"]
+    lines += [f"| {case} | {label} | {cls} | {value} | {ok} |" for case, label, cls, value, ok in rows]
+    lines += ["", f"Result: {'all checks pass' if not failures else f'{len(failures)} checks fail'}."]
+    with open(os.path.join(ROOT, "docs", "parity", "logistic-re-inference-calibration.md"), "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+    print(f"logistic random-effect inference: {lines[-1]}")
+    for failure in failures:
+        print("FAIL logistic-re-inference", *failure)
+    return failures
+
+
 def main():
     tol = tolerances()
     fixtures = os.path.join(ROOT, "fixtures")
@@ -843,6 +940,7 @@ def main():
     failures += linear_re(tol, manifest, fixtures)
     failures += linear_re_inference(tol, manifest, fixtures)
     failures += logistic_re(tol, manifest, fixtures)
+    failures += logistic_re_inference(tol, manifest, fixtures)
     return 1 if failures else 0
 
 

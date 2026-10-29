@@ -9,9 +9,12 @@ item 8); the deviance at fixed parameters is not, and is compared at T-fn. gener
 `generate(out, inputs, lock, write_json)`; the output is deterministic.
 """
 
+import hashlib
 import os
 import shutil
 import subprocess
+import tempfile
+import urllib.request
 import warnings
 
 import numpy as np
@@ -34,6 +37,12 @@ CASES = (
     {"id": "lgre-fractional", "seed": 59, "sizes": BASE_SIZES, "fractional": True},
 )
 STAGES = (("nagq1", True), ("nagq0", False))
+R_PPROF_FILES = ("logis_re.R", "test.logis_re.R", "SM_output.logis_re.R", "confint.logis_re.R", "summary.logis_re.R",
+                 "data_check.R")
+# R pprof's logis_re takes neither an offset nor a model without an intercept, and glmer fits another model to
+# fractional outcomes (D-58): those cases have no R pprof outputs.
+R_PPROF_CASES = {"lgre-base", "lgre-provider-level", "lgre-extreme", "lgre-small-sigma", "lgre-shifted", "lgre-text",
+                 "lgre-many"}
 TIGHT = {"tol_outer": 1e-10, "tol_pirls": 1e-13, "max_iter_outer": 20000, "max_iter_pirls": 200}
 
 OPTIONS = {
@@ -50,6 +59,16 @@ OPTIONS = {
                       "(pprof_py: PIRLS over u from 0, then _laplace_deviance; lme4: the nAGQ = 1 deviance function of "
                       "c(theta, beta)), with pprof_py's Richardson central differences there; the nAGQ = 0 criterion at "
                       "three sigma values",
+    "inference": "inference_pprof_py.json: pprof_py's summary (level 0.9), test (wald at references 0, median, mean, "
+                 "0.1, greater and less at the median, critical 2.5, the first five providers; poibin_exact at 0, the "
+                 "median and greater; resampling at 0 with n_resample 20000 and seed 7), option alpha, the SM intervals "
+                 "(indirect and direct ratios and rates at the median for each alternative, and two-sided at the "
+                 "size-weighted mean given as a number, X-046), the measures at the median, the mean and 0, and "
+                 "profile_sigma, all on its tightened nAGQ = 1 fit; with negative controls from the flipped-provider fit",
+    "r_pprof": "R pprof 1.0.3's logis_re (glmer with the tightened control passed through), test.logis_re, "
+               "confint.logis_re (option alpha; option SM for each alternative) and SM_output.logis_re, with "
+               "computeDirectExp written in R; and lme4's profile of the tightened glmer fit at zeta steps of 0.02, "
+               "with confint",
     "negative_controls": "pprof_py's tight nAGQ = 1 fit with every outcome of the largest provider replaced by 1 - y "
                          "(flipped_provider) and with the first row of every provider so replaced (flipped_first_rows)",
 }
@@ -209,10 +228,97 @@ def negative_controls(df, case):
     return out
 
 
-def r_outputs(case_dir, case, function):
+def r_pprof_sources(lock, directory):
+    """R pprof's logistic random-effect functions at the pinned commit, checked against REFERENCE.lock."""
+    pin = lock["r_pprof"]
+    os.makedirs(directory, exist_ok=True)
+    for name in R_PPROF_FILES:
+        path = os.path.join(directory, name)
+        if not os.path.exists(path):
+            url = f"https://raw.githubusercontent.com/cran/pprof/{pin['commit']}/R/{name}"
+            with urllib.request.urlopen(url, timeout=60) as response, open(path, "wb") as handle:
+                handle.write(response.read())
+        with open(path, "rb") as handle:
+            digest = hashlib.sha256(handle.read()).hexdigest()
+        if digest != pin["sha256"][name]:
+            raise SystemExit(f"{name}: sha256 {digest} differs from REFERENCE.lock")
+    return directory
+
+
+def flags(values):
+    return hexes([np.nan if v is None or (isinstance(v, float) and np.isnan(v)) or pd.isna(v) else float(v)
+                  for v in values])
+
+
+def table(frame, columns):
+    return {c: (flags(frame[c]) if c == "flag" else hexes(frame[c].astype(float))) for c in columns}
+
+
+TEST_COLUMNS = ("estimate", "se", "null_value", "z_raw", "p_value", "flag", "ci_lower", "ci_upper")
+
+
+def inference(model, df, case):
+    """pprof_py's inference on its tightened nAGQ = 1 fit (spec 4b-2 §10)."""
+    out = {"estimates": {"sigma": hexes([model.sigma_["provider"]]), "beta": hexes(model.coefficients_["beta"])}}
+    s = model.summary(level=0.9)
+    out["summary"] = {"estimate": hexes(s["Estimate"]), "se": hexes(s["Std.Error"]), "z": hexes(s["z value"]),
+                      "p": hexes(s["Pr(>|z|)"]), "lower": hexes(s["ci_lower"]), "upper": hexes(s["ci_upper"])}
+    labels = [label(v) for v in model.coefficients_["alpha"]["provider"].index]
+    variants = (("wald_zero", {}), ("wald_median", {"reference": "median"}), ("wald_mean", {"reference": "mean"}),
+                ("wald_given", {"reference": 0.1}),
+                ("wald_greater", {"reference": "median", "alternative": "greater"}),
+                ("wald_less", {"reference": "median", "alternative": "less"}),
+                ("wald_critical", {"critical": 2.5}), ("wald_subset", {"providers": labels[:5]}),
+                ("poibin_zero", {"test_method": "poibin_exact"}),
+                ("poibin_median", {"test_method": "poibin_exact", "reference": "median"}),
+                ("poibin_greater", {"test_method": "poibin_exact", "reference": "median", "alternative": "greater"}),
+                ("resampling_zero", {"test_method": "resampling", "n_resample": 20000, "seed": 7}))
+    out["test"] = {}
+    for name, kwargs in variants:
+        t = model.test(**kwargs)
+        out["test"][name] = dict(table(t, TEST_COLUMNS), providers=[label(v) for v in t.index], options={
+            k: (v if not isinstance(v, list) else v) for k, v in kwargs.items()})
+    a = model.calculate_confidence_intervals(option="alpha")["alpha_ci"]
+    out["alpha_ci"] = {"alpha": hexes(a["alpha"]), "lower": hexes(a["alpha_lower"]), "upper": hexes(a["alpha_upper"])}
+    idx = np.asarray(model._group_indices[0]).ravel()
+    blups = model.coefficients_["alpha"]["provider"].to_numpy()
+    weighted = float(np.average(blups, weights=np.bincount(idx)))
+    out["weighted_mean"] = hexes([weighted])
+    for name, kwargs in (("two_sided", {}), ("greater", {"alternative": "greater"}), ("less", {"alternative": "less"}),
+                         ("mean_weighted", {"reference": weighted})):
+        ci = model.calculate_confidence_intervals(option="SM", stdz=["indirect", "direct"], measure=["ratio", "rate"],
+                                                  **kwargs)
+        out[f"sm_{name}"] = {key: {"value": hexes(ci[key][key]), "lower": hexes(ci[key]["lower"]),
+                                   "upper": hexes(ci[key]["upper"])} for key in
+                             ("indirect_ratio", "indirect_rate", "direct_ratio", "direct_rate")}
+    for name, reference in (("median", "median"), ("mean", "mean"), ("zero", 0.0)):
+        me = model.calculate_standardized_measures(stdz=["indirect", "direct"], reference=reference)
+        out[f"measures_{name}"] = {kind: {c: hexes(me[kind][c]) for c in me[kind].columns if c != "provider_id"}
+                                   for kind in ("indirect", "direct")}
+    pr = model.profile_sigma(level=0.95)
+    out["profile_sigma"] = {"sigma": hexes(pr["sigma"]), "lower": hexes(pr["lower"]), "upper": hexes(pr["upper"])}
+    return out
+
+
+def inference_controls(df, case):
+    """The inference of pprof_py's tight fit with the largest provider's outcomes flipped: a defect T-test and T-meas
+    must catch."""
+    sizes = df.groupby("provider", sort=False).size().to_numpy()
+    key = df["provider"].drop_duplicates().iloc[int(np.argmax(sizes))]
+    flipped = df.copy()
+    rows = df["provider"].to_numpy() == key
+    flipped.loc[rows, "y"] = 1.0 - flipped.loc[rows, "y"]
+    model, _ = fit(flipped, case, True, True)
+    me = model.calculate_standardized_measures(stdz=["indirect"], reference="median")
+    return {"flipped_provider": {"wald_zero_z": hexes(model.test()["z_raw"]),
+                                 "indirect_ratio": hexes(me["indirect"]["indirect_ratio"])}}
+
+
+def r_outputs(case_dir, case, function, rpprof=None):
     args = {"features": ",".join(features(case)), "intercept": "1" if case.get("intercept", True) else "0",
             "offset": "1" if case.get("offset") else "0", "points": ",".join(function["points"]),
-            "sigma0": ",".join(function["sigma0"])}
+            "sigma0": ",".join(function["sigma0"]),
+            "rpprof": rpprof if (rpprof and case["id"] in R_PPROF_CASES) else ""}
     path_args = os.path.join(case_dir, "r_args.txt")
     with open(path_args, "w", encoding="utf-8") as handle:
         handle.write("".join(f"{k}\t{v}\n" for k, v in args.items()))
@@ -231,9 +337,10 @@ def r_outputs(case_dir, case, function):
 
 
 def generate(out, inputs, lock, write_json):
-    """Writes out/logistic-re/<case>/{case.json, input.csv, pprof_py.json, r_lme4.json}."""
+    """Writes out/logistic-re/<case>/{case.json, input.csv, pprof_py.json, r_lme4.json, inference_pprof_py.json}."""
     root = os.path.join(out, "logistic-re")
     shutil.rmtree(root, ignore_errors=True)
+    rpprof = r_pprof_sources(lock, tempfile.mkdtemp(prefix="r_pprof_logistic_re_"))
     names = []
     for case in CASES:
         case_dir = os.path.join(root, case["id"])
@@ -258,10 +365,13 @@ def generate(out, inputs, lock, write_json):
                                   tight_models["nagq0"].sigma_["provider"], centre, intercept)
         reference["function"] = function
         reference["negative_controls"] = negative_controls(df, case)
+        inferred = inference(t1, df, case)
+        inferred["negative_controls"] = inference_controls(df, case)
+        write_json(os.path.join(case_dir, "inference_pprof_py.json"), inferred)
         write_json(os.path.join(case_dir, "case.json"), dict(case, features=features(case), rows=len(df),
                                                             providers=len(case["sizes"]), text=bool(case.get("text"))))
         write_json(os.path.join(case_dir, "pprof_py.json"), reference)
-        write_json(os.path.join(case_dir, "r_lme4.json"), r_outputs(case_dir, case, function))
+        write_json(os.path.join(case_dir, "r_lme4.json"), r_outputs(case_dir, case, function, rpprof))
         names.append(case["id"])
         print("logistic-re", case["id"], "done", flush=True)
     return names
