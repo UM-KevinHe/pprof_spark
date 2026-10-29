@@ -103,6 +103,21 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-60: Slice 4b-2 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/logistic/random-effect-inference.md`: inference, measures and σ's profile for the logistic
+random-intercept model.
+- Scope: `summary` (Wald z); provider tests `wald`, `poibin_exact` and `resampling` in slice 2c's table; option
+  `alpha` and the `SM` intervals for indirect and direct ratios and rates; the standardized measures; and
+  `profile_sigma`, with β minimized by the bounded quasi-Newton and the limits found to 10⁻¹⁰.
+- Excluded: `null_model` (OI-87), `funnel_limits` (OI-88) and `exact` (part 4d).
+- Distributed: measures and intervals in one pass over the training data checked against the fingerprint, with the
+  direct sums binned (X-026); count tests within provider-local blocks.
+- Validation: lockstep at pprof_py's tightened estimates, at the tight classes; end to end at T-est; R pprof where its
+  definitions match pprof_py's; lme4's profile interval at T-opt.
+- Proposed with it: X-045 (one-sided indirect intervals), X-046 (the size-weighted mean in the intervals), X-047 (R
+  pprof's informational differences) and X-048 (Wald tests untested at a boundary fit).
+
 ### D-59: Slice 4b-1, tighter agreement checks and the fixtures' fixed points (Accepted: approved by the maintainer, 2026-10-23)
 
 The end-to-end tolerance for the fitted estimates, T-opt, allows about a hundred times more than the agreement

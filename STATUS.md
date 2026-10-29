@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-23, round 114.
+Updated 2026-10-23, round 115.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -9,7 +9,7 @@ round 26; the 2a estimator in round 27; persistence and the slice review in roun
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 **Phase 4, random-effect models (milestone M4): plan approved** (D-51, 2026-10-21, with X-037;
-`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2 complete in rounds 101 to 104; slice 4a-3 complete in rounds 105 to 107; part 4a's S1 smoke prepared in round 108 and not yet run, its gate review waiting with it (OI-97); slice 4b-1 complete in rounds 109 to 113 (D-57, D-58, D-59). D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
+`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2 complete in rounds 101 to 104; slice 4a-3 complete in rounds 105 to 107; part 4a's S1 smoke prepared in round 108 and not yet run, its gate review waiting with it (OI-97); slice 4b-1 complete in rounds 109 to 114 (D-57, D-58, D-59; CI green); slice 4b-2's specification proposed in round 115 (D-60). D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
 through round 100 as the maintainer reported.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -143,7 +143,8 @@ through round 100 as the maintainer reported.
 | 111 | D-58 approved with X-044; slice 4b-1's numerics kernel `LogisticRE` (Laplace deviance and gradient, the nAGQ = 0 Newton, both fits), `BoundedQuasiNewton.minimizeWithGradient`, `LogisticREKernelSuite`, `FixturesSuite`'s 4b-1 mirror | Merged (9fe2f50) |
 | 112 | Slice 4b-1 engine `LogisticRE` (validation, provider-local blocks, distributed sums, provider table, `predict`, `fitted`, `laplaceDeviance`); the fixtures' fixed points moved one coordinate at a time and regenerated; class T-est; `LogisticRESuite` (6 tests); D-59 proposed; OI-98, OI-99 | Merged (d8b1391); CI failed in `TolerancesSuite`, fixed by round 114 |
 | 113 | D-59 approved; slice 4b-1 Python: `LogisticRERunSpec.model`, the facade's logistic random-effect methods, `LogisticRandomEffect` and `LogisticRandomEffectModel`; `PythonApiLogisticRESuite`, `test_logistic_re.py`; the guide | Merged (5c42a64); CI failed in `TolerancesSuite`, fixed by round 114 |
-| 114 | CI fix: T-est registered in `Tolerances.Classes` and PROJECT_CONTEXT §8.4 (v2.10) | Delivered as a patch |
+| 114 | CI fix: T-est registered in `Tolerances.Classes` and PROJECT_CONTEXT §8.4 (v2.10) | Merged (4447402); CI green |
+| 115 | Slice 4b-2's specification (`docs/spec/logistic/random-effect-inference.md`, D-60 proposed); X-045 to X-048 proposed | Delivered as a patch |
 
 ## Decisions and spikes
 
