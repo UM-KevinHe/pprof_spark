@@ -1,7 +1,7 @@
 # Specification: logistic random effects — inference, measures and σ's profile (slice 4b-2)
 
 - Status: approved with D-60 (2026-10-23), with X-045 to X-048; fixtures and calibration in round 116 (D-61,
-  proposed).
+  approved); the engine in round 117.
 - Reference: pprof_py v0.7.0 (`9320766`): `LogisticRandomEffectModel.summary`, `test`, `calculate_confidence_intervals`
   (`inference/logistic/random_effect.py`), `calculate_standardized_measures` (`measures/logistic/random_effect.py`)
   and `profile_sigma` (`models/logistic/random_effect.py`), with the shared `effect_test`, `count_test`,
@@ -157,3 +157,32 @@ The fixture round proposes the classes (D-61).
   pprof_py's are ±4·10⁻⁸, and pprof_spark leaves them untested (X-048).
 - `resampling` warned on 4 of lgre-base's 40 providers that simulated tails reached the floor. Its p-values are
   checked against `poibin_exact`'s only informationally, since mid-p and exact tails differ.
+
+## 13. Implementation notes (round 117, engine; no statistical change)
+
+- The kernel's `at`, and the engine's `LogisticRE.fitAt(df, spec, options, σ, β)`, give the fit's quantities at given
+  parameters without a search: the Laplace deviance, the modes, Var(β̂) and the provider table. `fit` and `fitAt`
+  share one pipeline. The provider table's `records` was 0 for nAGQ = 0 fits since round 112, because only the
+  nAGQ = 1 path counted them; both paths count them now.
+- `LogisticRE.training` rebuilds the training data's working set with the fit's centring and checks its fingerprint
+  and row count (API-3); `LogisticREInference` reads rows only through it.
+- `engine.logistic.LogisticREInference`:
+  - `summary`;
+  - `test`: `wald` from the provider table, untested at a boundary fit (X-048); `poibin_exact` and `resampling`
+    within the provider-local blocks, through `PoissonBinomial`'s tails, inversion and seeded bootstrap, as slice 2c;
+  - `alphaIntervals`;
+  - `measures` and `smIntervals`, one pass with per-provider sums and Taylor-bin moments of η (X-026);
+  - `profileSigma`, minimizing over β with `BoundedQuasiNewton.minimizeWithGradient` and Brent's method to 10⁻¹⁰.
+- `resampling` follows pprof_py's `count_test`: a simulated tail at the floor 0.5/`n_resample` is replaced by the
+  exact Poisson-binomial tail. Before this was found, round 117's first run gave lgre-base 5·10⁻⁵ where pprof_py
+  gave 2.3·10⁻¹².
+- `LogisticREInferenceSuite` (9 tests):
+  - lockstep at pprof_py's tightened (σ, β) on seven cases, the full battery on lgre-base, lgre-text and lgre-offset:
+    `summary`, eleven test variants, option `alpha`, the measures, and the `SM` intervals for each alternative;
+  - `resampling` against pprof_py within 4.5 Monte Carlo standard errors of a two-sided p, which is twice a
+    simulated tail;
+  - `profileSigma` at T-opt against pprof_py and lme4;
+  - the refusals.
+  `poibin_exact` is compared under X-024: z where pprof_py's p ≥ 10⁻⁶, and p within 10⁻¹⁴ absolute. pprof_py's FFT
+  tails are exact only to about 10⁻¹⁶, and lgre-base's and lgre-offset's small p-values differed by up to
+  1.5·10⁻⁶ relative.

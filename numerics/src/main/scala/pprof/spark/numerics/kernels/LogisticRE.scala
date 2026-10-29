@@ -596,6 +596,49 @@ object LogisticRE {
         val s = blocks.stage1(sigma, beta, u)
         (u, s.weights)
       }
+    assemble(
+      blocks,
+      rows,
+      p,
+      intercept,
+      centre,
+      sigma,
+      beta,
+      modes,
+      weights,
+      deviance,
+      if (nagq1) 1 else 0,
+      converged,
+      projected,
+      stage1Evaluations,
+      stage2Evaluations,
+      boundary,
+      warnings.result()
+    )
+  }
+
+  /** The estimates of §4 at (σ, β), with β in the centred coordinates: Var(β̂) from the Schur complement at the
+    * modes, transformed back with the intercept.
+    */
+  private def assemble(
+      blocks: Blocks,
+      rows: Long,
+      p: Int,
+      intercept: Boolean,
+      centre: Array[Double],
+      sigma: Double,
+      beta: Array[Double],
+      modes: Array[Double],
+      weights: Array[Double],
+      deviance: Double,
+      nagq: Int,
+      converged: Boolean,
+      projected: Double,
+      stage1Evaluations: Int,
+      stage2Evaluations: Int,
+      boundary: Option[String],
+      warnings: Vector[String]
+  ): Fit = {
     val sums = blocks.stage1(sigma, beta, modes)
     val information = if (p == 0) None else Some(Cholesky.factor(schur(sums, sigma, p), p))
     val centred = information.fold(new Array[Double](0))(_.inversePacked)
@@ -638,13 +681,58 @@ object LogisticRE {
       pwrss = sums.penalized,
       logDetH = sums.logH,
       ussq = ussq,
-      nagq = if (nagq1) 1 else 0,
+      nagq = nagq,
       converged = converged,
       projectedGradient = projected,
       stage1Evaluations = stage1Evaluations,
       stage2Evaluations = stage2Evaluations,
       boundary = boundary,
-      warnings = warnings.result()
+      warnings = warnings
+    )
+  }
+
+  /** The fit's quantities at given (σ, β), β in the original coordinates, without a search: the Laplace deviance,
+    * the modes, Var(β̂) and the BLUPs there (spec 4b-2 §10's lockstep, D-61).
+    */
+  def at(
+      blocks: Blocks,
+      rows: Long,
+      p: Int,
+      intercept: Boolean,
+      centre: Array[Double],
+      sigma: Double,
+      beta: Array[Double]
+  ): Fit = {
+    require(sigma >= 0.0, s"sigma must be non-negative, got $sigma")
+    require(beta.length == p, s"beta has ${beta.length} values; the model has $p fixed effects")
+    val centred = beta.clone()
+    if (intercept && p > 0) {
+      var k = 1
+      while (k < p) {
+        centred(0) += centre(k) * beta(k)
+        k += 1
+      }
+    }
+    val deviance = blocks.laplace(sigma, centred).deviance
+    val (modes, weights) = blocks.modes(sigma, centred)
+    assemble(
+      blocks,
+      rows,
+      p,
+      intercept,
+      centre,
+      sigma,
+      centred,
+      modes,
+      weights,
+      deviance,
+      1,
+      converged = true,
+      projected = Double.NaN,
+      stage1Evaluations = 0,
+      stage2Evaluations = 0,
+      if (sigma == 0.0) Some("lower") else None,
+      Vector.empty
     )
   }
 }

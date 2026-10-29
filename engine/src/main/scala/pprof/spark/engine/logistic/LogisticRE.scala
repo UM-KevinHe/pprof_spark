@@ -254,7 +254,44 @@ object LogisticRE {
       options.blocks
     )
     val workingSet = LinearWorkingSet.build(input, plan, options.blocks.resolvedStorageLevel)
-    try fitOn(df, spec, options, input, plan, workingSet, p, m)
+    try
+      fitOn(df, spec, options, input, plan, workingSet, p, m) {
+        (blocks, rows, centre, outcomeMean) =>
+          Kernel.fit(
+            blocks,
+            rows,
+            m,
+            p,
+            options.includeIntercept,
+            centre,
+            outcomeMean,
+            options.nagq1,
+            options.sigmaUpper,
+            options.maxIterations
+          )
+      }
+    finally workingSet.release()
+  }
+
+  /** The fit's quantities at given (σ, β), β in the original coordinates, without a search (D-61's lockstep): the
+    * Laplace deviance there, the modes, Var(β̂) and the provider table, as `fit` reports them at its optimum.
+    */
+  def fitAt(
+      df: DataFrame,
+      spec: LogisticRESpec,
+      options: LogisticREOptions,
+      sigma: Double,
+      beta: Seq[Double]
+  ): LogisticREFit = {
+    val (input, sizes, plan) = layout(df, spec, options)
+    val p = input.spec.features.size - 1
+    val m = sizes.size
+    require(beta.length == p, s"beta has ${beta.length} values; the model has $p fixed effects")
+    val workingSet = LinearWorkingSet.build(input, plan, options.blocks.resolvedStorageLevel)
+    try
+      fitOn(df, spec, options, input, plan, workingSet, p, m) { (blocks, rows, centre, _) =>
+        Kernel.at(blocks, rows, p, options.includeIntercept, centre, sigma, beta.toArray)
+      }
     finally workingSet.release()
   }
 
@@ -267,7 +304,7 @@ object LogisticRE {
       workingSet: LinearWorkingSet,
       p: Int,
       m: Int
-  ): LogisticREFit = {
+  )(solve: (DistributedBlocks, Long, Array[Double], Double) => Kernel.Fit): LogisticREFit = {
     val first = workingSet.blocks
       .map((block: LinearBlock) => firstSums(block))(Encoders.product[LogisticREFirstPartial])
       .collect()
@@ -293,18 +330,11 @@ object LogisticRE {
       if (aliased.nonEmpty) throw new LogisticREAliasingException(aliased.map(names))
     }
     val blocks = new DistributedBlocks(workingSet, p, centre, m)
-    val solution = Kernel.fit(
-      blocks,
-      rows,
-      m,
-      p,
-      intercept,
-      centre,
-      outcomeMean,
-      options.nagq1,
-      options.sigmaUpper,
-      options.maxIterations
-    )
+    val solution = solve(blocks, rows, centre, outcomeMean)
+    blocks.modes(
+      solution.sigma,
+      centredOf(solution.beta, centre, options.includeIntercept)
+    ) // the records
     val coefficients = names.indices.map { i =>
       LogisticRECoefficient(
         names(i),
@@ -382,7 +412,55 @@ object LogisticRE {
     finally workingSet.release()
   }
 
-  private def kernelRows(block: LinearBlock): Kernel.Rows =
+  /** β in the centred coordinates of `centre` (spec 4b-1 §3). */
+  private[logistic] def centredOf(
+      beta: Array[Double],
+      centre: Array[Double],
+      intercept: Boolean
+  ): Array[Double] = {
+    val out = beta.clone()
+    if (intercept && out.nonEmpty) (1 until out.length).foreach(k => out(0) += centre(k) * beta(k))
+    out
+  }
+
+  /** The training data's provider-local working set with the fit's centring, checked against the fit's fingerprint
+    * and row count (API-3); the caller releases the working set.
+    */
+  private[logistic] final case class Training(
+      workingSet: LinearWorkingSet,
+      input: LinearInput,
+      plan: LayoutPlan,
+      blocks: DistributedBlocks,
+      centre: Array[Double],
+      p: Int,
+      m: Int,
+      rows: Long
+  )
+
+  private[logistic] def training(df: DataFrame, fit: LogisticREFit): Training = {
+    val (input, sizes, plan) = layout(df, fit.spec, fit.options)
+    val p = input.spec.features.size - 1
+    val workingSet = LinearWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel)
+    val first = workingSet.blocks
+      .map((block: LinearBlock) => firstSums(block))(Encoders.product[LogisticREFirstPartial])
+      .collect()
+      .sortBy(_.blockId)
+    val rows = first.iterator.map(_.rows).sum
+    if (first.iterator.map(_.fingerprint).sum != fit.fingerprint || rows != fit.rows) {
+      workingSet.release()
+      throw new IllegalArgumentException(
+        "the data differ from the fit's (fingerprint); this needs the training data (API-3)"
+      )
+    }
+    val centre = Array.tabulate(p) { k =>
+      if (!fit.options.includeIntercept || k == 0) 0.0
+      else Summation.pairwise(first.map(_.xSum(k))) / rows.toDouble
+    }
+    val blocks = new DistributedBlocks(workingSet, p, centre, sizes.size)
+    Training(workingSet, input, plan, blocks, centre, p, sizes.size, rows)
+  }
+
+  private[logistic] def kernelRows(block: LinearBlock): Kernel.Rows =
     Kernel.Rows(block.groupStart, block.values, block.p - 1)
 
   private def firstSums(block: LinearBlock): LogisticREFirstPartial = {
@@ -436,7 +514,7 @@ object LogisticRE {
   }
 
   /** The kernel's blocks over the working set: each evaluation one pass, block sums reduced in block order. */
-  private final class DistributedBlocks(
+  private[logistic] final class DistributedBlocks(
       workingSet: LinearWorkingSet,
       p: Int,
       centre: Array[Double],

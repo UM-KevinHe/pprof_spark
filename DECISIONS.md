@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-61: Slice 4b-2 fixtures, calibration and tolerance classes (Proposed: awaiting the maintainer's approval)
+### D-61: Slice 4b-2 fixtures, calibration and tolerance classes (Accepted: approved by the maintainer, 2026-10-23)
 
 1. Fixtures (round 116), from pprof_py's tightened nAGQ = 1 fit:
    - `inference_pprof_py.json` in all ten `fixtures/logistic-re` cases: `summary`, twelve test variants, option
@@ -133,6 +133,8 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
    End to end, from pprof_spark's own fit, at T-est (T-opt where σ̂ < 0.1).
 6. `compare_outputs.py` compares regenerated resampling values at a Monte Carlo class (rtol 2·10⁻², atol 10⁻³);
    the family's other values stay at T-opt, and those at fixed parameters at 10⁻⁸.
+
+Approved as proposed on 2026-10-23.
 
 ### D-60: Slice 4b-2 specification (Accepted: approved by the maintainer, 2026-10-23)
 
