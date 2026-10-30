@@ -1,7 +1,7 @@
 # Specification: logistic random effects — inference, measures and σ's profile (slice 4b-2)
 
 - Status: approved with D-60 (2026-10-23), with X-045 to X-048; fixtures and calibration in round 116 (D-61,
-  approved); the engine in round 117.
+  approved); the engine in round 117 and Python in round 118.
 - Reference: pprof_py v0.7.0 (`9320766`): `LogisticRandomEffectModel.summary`, `test`, `calculate_confidence_intervals`
   (`inference/logistic/random_effect.py`), `calculate_standardized_measures` (`measures/logistic/random_effect.py`)
   and `profile_sigma` (`models/logistic/random_effect.py`), with the shared `effect_test`, `count_test`,
@@ -186,3 +186,21 @@ The fixture round proposes the classes (D-61).
   `poibin_exact` is compared under X-024: z where pprof_py's p ≥ 10⁻⁶, and p within 10⁻¹⁴ absolute. pprof_py's FFT
   tails are exact only to about 10⁻¹⁶, and lgre-base's and lgre-offset's small p-values differed by up to
   1.5·10⁻⁶ relative.
+
+## 14. Implementation notes (round 118, Python; no statistical change)
+
+- The facade (`PythonApi`) gains `logisticRECovariateTests` (JSON), `logisticRETest`, `logisticREAlphaIntervals`,
+  `logisticREMeasures`, `logisticREIntervals` (DataFrames) and `logisticREProfile` (JSON). `LogisticREInference.test`
+  builds its table in the fit's session, so a Wald test needs no data.
+- `LogisticRandomEffectModel` gains pprof_py's `summary(level)`, `test`, `calculate_confidence_intervals`,
+  `calculate_standardized_measures` and `profile_sigma`, with pprof_py's argument names and keys.
+  - The methods that read rows take the training data `df` first: `test` for `poibin_exact` and `resampling`,
+    option `SM`, the measures and the profile.
+  - `null_model` fails, naming OI-87; `exact` fails, naming part 4d; `interval` accepts `inversion` only.
+  - `providers` filters the result. An `SM` table's value column is named for its key, as pprof_py's.
+- Tests:
+  - `PythonApiLogisticRESuite` gains one test, of the JSON and frames against `LogisticREInference`, with a Wald
+    test without data;
+  - `python/tests/test_logistic_re.py` gains three, end to end on lgre-offset at T-est: `summary`, the Wald and
+    exact tests (X-024's allowance), option `alpha`, the measures and the `SM` intervals; then `profile_sigma` at
+    T-opt and the refusals.

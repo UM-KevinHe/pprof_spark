@@ -13,7 +13,13 @@ import pprof.spark.app.{
   ThreeStageJob,
   ThreeStageRunSpec
 }
-import pprof.spark.engine.logistic.{LogisticRE, LogisticREFit, LogisticREOptions, LogisticRESpec}
+import pprof.spark.engine.logistic.{
+  LogisticRE,
+  LogisticREFit,
+  LogisticREInference,
+  LogisticREOptions,
+  LogisticRESpec
+}
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.linear.{
   LinearFE,
@@ -1278,6 +1284,105 @@ object PythonApi {
 
   /** The training rows with `xbeta`, `eta`, `fitted`, `residual`, `pearson` and `deviance_residual`. */
   def logisticREFitted(df: DataFrame, fit: LogisticREFit): DataFrame = LogisticRE.fitted(df, fit)
+
+  /** `LogisticREInference.summary` as JSON (spec 4b-2 §2), doubles as `Double.toHexString` strings. */
+  def logisticRECovariateTests(fit: LogisticREFit, level: Double): String = {
+    val mapper = new ObjectMapper()
+    val array = mapper.createArrayNode()
+    LogisticREInference.summary(fit, level).foreach { t =>
+      val node = array.addObject()
+      node.put("feature", t.feature)
+      Seq(
+        "estimate" -> t.estimate,
+        "standardError" -> t.standardError,
+        "statistic" -> t.statistic,
+        "pValue" -> t.pValue,
+        "lower" -> t.lower,
+        "upper" -> t.upper
+      ).foreach { case (k, v) => node.put(k, java.lang.Double.toHexString(v)) }
+    }
+    mapper.writeValueAsString(array)
+  }
+
+  /** Provider tests (spec 4b-2 §3); `df`, the training data, is needed by `poibin_exact` and `resampling` only;
+    * `reference` is median, mean or a number, `critical` NaN for none.
+    */
+  def logisticRETest(
+      df: DataFrame,
+      fit: LogisticREFit,
+      method: String,
+      reference: String,
+      alternative: String,
+      level: Double,
+      critical: Double,
+      providersJson: String,
+      nResample: Int,
+      seed: Long
+  ): DataFrame =
+    LogisticREInference.test(
+      Option(df).getOrElse(fit.providers),
+      fit,
+      method,
+      effectReference(reference),
+      alternative,
+      level,
+      if (critical.isNaN) None else Some(critical),
+      stringList(providersJson, "providers"),
+      nResample,
+      seed
+    )
+
+  def logisticREAlphaIntervals(fit: LogisticREFit, level: Double): DataFrame =
+    LogisticREInference.alphaIntervals(fit, level)
+
+  /** Standardized measures (spec 4b-2 §5) on the training data (API-3). */
+  def logisticREMeasures(
+      df: DataFrame,
+      fit: LogisticREFit,
+      kindsJson: String,
+      reference: String
+  ): java.util.Map[String, DataFrame] =
+    LogisticREInference
+      .measures(
+        df,
+        fit,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect")),
+        effectReference(reference)
+      )
+      .asJava
+
+  /** Option `SM` (spec 4b-2 §4) on the training data (API-3). */
+  def logisticREIntervals(
+      df: DataFrame,
+      fit: LogisticREFit,
+      kindsJson: String,
+      measuresJson: String,
+      reference: String,
+      alternative: String,
+      level: Double
+  ): java.util.Map[String, DataFrame] =
+    LogisticREInference
+      .smIntervals(
+        df,
+        fit,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect")),
+        stringList(measuresJson, "measures").getOrElse(Seq("rate", "ratio")),
+        effectReference(reference),
+        alternative,
+        level
+      )
+      .asJava
+
+  /** σ's profile interval (spec 4b-2 §6) as JSON: sigma, lower, upper (hexadecimal) and evaluations. */
+  def logisticREProfile(df: DataFrame, fit: LogisticREFit, level: Double): String = {
+    val p = LogisticREInference.profileSigma(df, fit, level)
+    val node = new ObjectMapper().createObjectNode()
+    node.put("sigma", java.lang.Double.toHexString(p.sigma))
+    node.put("lower", java.lang.Double.toHexString(p.lower))
+    node.put("upper", java.lang.Double.toHexString(p.upper))
+    node.put("evaluations", p.evaluations)
+    node.toString
+  }
 
   /** `df` with `prediction` (spec 4a-1 §6): with the BLUPs when `useRe`, with the offset when `withOffset`. */
   def linearREPredict(

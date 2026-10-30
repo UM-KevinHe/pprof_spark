@@ -13,6 +13,18 @@ from .cox import _float
 
 
 @dataclass(frozen=True)
+class LogisticRETest:
+    """One fixed effect's Wald test (pprof_py's `summary` row)."""
+    feature: str
+    estimate: float
+    standard_error: float
+    statistic: float
+    p_value: float
+    lower: float
+    upper: float
+
+
+@dataclass(frozen=True)
 class LogisticRECoefficient:
     feature: str
     estimate: float
@@ -64,7 +76,8 @@ class LogisticRandomEffect:
 
 class LogisticRandomEffectModel:
     """A fitted logistic random-intercept model: a handle to the JVM's `LogisticREFit` and its summary, with pprof_py's
-    method names where they apply. Inference (`summary`, tests, intervals, measures) arrives with slice 4b-2."""
+    method names (docs/spec/logistic/random-effect-inference.md for the inference). Methods that read rows take the
+    fit's training data `df`, checked against the fit (API-3)."""
 
     def __init__(self, spark, handle):
         self._spark = spark
@@ -114,6 +127,83 @@ class LogisticRandomEffectModel:
             raise ValueError("type must be 'response' or 'link'")
         return self._frame(api(self._spark).logisticREPredict(df._jdf, self._handle, bool(use_re),
                                                               offset_var is not None, type))
+
+    def _names(self, values) -> str:
+        return json.dumps([str(v) for v in values]) if values else ""
+
+    def _keep(self, frame: DataFrame, providers) -> DataFrame:
+        if not providers:
+            return frame
+        key = self.summary_json["columns"]["provider"]
+        return frame.filter(frame[key].cast("string").isin([str(p) for p in providers]))
+
+    def summary(self, level: float = 0.95) -> List[LogisticRETest]:
+        """pprof_py's `summary`: Wald z for the fixed effects on the normal (spec 4b-2 §2)."""
+        rows = json.loads(api(self._spark).logisticRECovariateTests(self._handle, float(level)))
+        return [LogisticRETest(r["feature"], _float(r["estimate"]), _float(r["standardError"]), _float(r["statistic"]),
+                               _float(r["pValue"]), _float(r["lower"]), _float(r["upper"])) for r in rows]
+
+    def test(self, df: Optional[DataFrame] = None, providers=None, test_method: str = "wald", reference=0.0,
+             null_model=None, alternative: str = "two_sided", level: float = 0.95, critical: Optional[float] = None,
+             interval: str = "inversion", n_resample: int = 10000, seed: int = 0) -> DataFrame:
+        """pprof_py's `test` (spec 4b-2 §3): `wald` (the default), `poibin_exact` and `resampling`, the latter two on
+        the training data `df`; slice 2c's table, one row per provider. `exact` needs a cluster factor (part 4d),
+        `null_model` waits for OI-87, and only `interval="inversion"` is supported."""
+        if null_model is not None:
+            raise NotImplementedError("null_model arrives with OI-87")
+        if test_method == "exact":
+            raise NotImplementedError("test_method='exact' needs a cluster factor besides the provider (part 4d, OI-93)")
+        if interval != "inversion":
+            raise ValueError("only interval='inversion' is supported")
+        if test_method != "wald" and df is None:
+            raise ValueError(f"test_method={test_method!r} needs the fit's training data (API-3)")
+        jdf = None if df is None else df._jdf
+        return self._frame(api(self._spark).logisticRETest(
+            jdf, self._handle, test_method, str(reference), alternative, float(level),
+            float("nan") if critical is None else float(critical), self._names(providers), int(n_resample), int(seed)))
+
+    def calculate_confidence_intervals(self, df: Optional[DataFrame] = None, providers=None, level: float = 0.95,
+                                       option: str = "SM", stdz="indirect", reference="median",
+                                       measure=("rate", "ratio"), alternative: str = "two_sided") -> Dict[str, DataFrame]:
+        """pprof_py's `calculate_confidence_intervals` (spec 4b-2 §4), keyed as pprof_py: `alpha_ci` for option
+        `alpha` (two-sided); `indirect_ratio`, `indirect_rate`, `direct_ratio` and `direct_rate` for option `SM`,
+        which needs the training data `df`. One-sided indirect intervals are one-sided (X-045), and `mean` is the
+        size-weighted mean of the BLUPs (X-046)."""
+        if option == "alpha":
+            if alternative != "two_sided":
+                raise ValueError("option 'alpha' supports only two-sided intervals")
+            return {"alpha_ci": self._keep(self._frame(
+                api(self._spark).logisticREAlphaIntervals(self._handle, float(level))), providers)}
+        if option != "SM":
+            raise ValueError("option must be 'alpha' or 'SM'")
+        if df is None:
+            raise ValueError("option 'SM' needs the fit's training data (API-3)")
+        kinds = [stdz] if isinstance(stdz, str) else list(stdz)
+        measures = [measure] if isinstance(measure, str) else list(measure)
+        tables = api(self._spark).logisticREIntervals(df._jdf, self._handle, json.dumps(kinds), json.dumps(measures),
+                                                      str(reference), alternative, float(level))
+        out = {}
+        for key in sorted(tables.keySet()):
+            frame = self._frame(tables.get(key)).withColumnRenamed("value", key)
+            out[key] = self._keep(frame, providers)
+        return out
+
+    def calculate_standardized_measures(self, df: DataFrame, providers=None, stdz="indirect",
+                                        reference="median") -> Dict[str, DataFrame]:
+        """pprof_py's `calculate_standardized_measures` (spec 4b-2 §5) on the training data `df`: `indirect`
+        (ratio, rate, observed, expected) and `direct` tables."""
+        kinds = [stdz] if isinstance(stdz, str) else list(stdz)
+        tables = api(self._spark).logisticREMeasures(df._jdf, self._handle, json.dumps(kinds), str(reference))
+        return {key: self._keep(self._frame(tables.get(key)), providers) for key in sorted(tables.keySet())}
+
+    def profile_sigma(self, df: DataFrame, var: Optional[str] = None, level: float = 0.95) -> Dict[str, float]:
+        """pprof_py's `profile_sigma` (spec 4b-2 §6): σ̂ with its profile-likelihood limits, on the training data
+        `df`; the Laplace fit only."""
+        provider = self.summary_json["columns"]["provider"]
+        if var is not None and var != provider:
+            raise ValueError(f"var must name the provider column ({provider!r}) until part 4d")
+        r = json.loads(api(self._spark).logisticREProfile(df._jdf, self._handle, float(level)))
+        return {"sigma": _float(r["sigma"]), "lower": _float(r["lower"]), "upper": _float(r["upper"])}
 
     def fitted_values(self, df: DataFrame) -> DataFrame:
         """The training rows with `xbeta`, `eta`, `fitted` (μ̂ with the BLUPs), `residual`, `pearson` and

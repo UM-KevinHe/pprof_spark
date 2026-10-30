@@ -65,4 +65,60 @@ class PythonApiLogisticRESuite extends SparkSuite {
       fit.estimates.map(java.lang.Double.doubleToRawLongBits)
     )
   }
+
+  test(
+    "the inference methods: JSON and frames as LogisticREInference gives them; a Wald test without data"
+  ) {
+    val df = spark.read
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .csv(Fixtures.root.resolve("logistic-re/lgre-text/input.csv").toString)
+    val fit = pprof.spark.engine.logistic.LogisticRE.fitAt(
+      df,
+      LogisticRESpec("y", Seq("x1", "x2"), "provider", rowId = Some("id")),
+      pprof.spark.engine.logistic.LogisticREOptions(),
+      0.5,
+      Seq(-1.0, 0.7, -0.4)
+    )
+    val tests = new ObjectMapper().readTree(PythonApi.logisticRECovariateTests(fit, 0.9))
+    val expected = pprof.spark.engine.logistic.LogisticREInference.summary(fit, 0.9)
+    assertEquals(tests.size(), expected.size)
+    assertEquals(
+      java.lang.Double.parseDouble(tests.get(1).get("statistic").asText()),
+      expected(1).statistic
+    )
+    val wald = PythonApi.logisticRETest(
+      null,
+      fit,
+      "wald",
+      "median",
+      "two_sided",
+      0.95,
+      Double.NaN,
+      "",
+      10000,
+      0L
+    )
+    assertEquals(wald.count(), 30L)
+    val subset = PythonApi.logisticRETest(
+      null,
+      fit,
+      "wald",
+      "0.1",
+      "greater",
+      0.9,
+      2.0,
+      "[\"prov-1\", \"prov-2\"]",
+      10000,
+      0L
+    )
+    assertEquals(subset.count(), 2L)
+    assertEquals(
+      PythonApi.logisticREMeasures(df, fit, "[\"indirect\", \"direct\"]", "mean").keySet().size(),
+      2
+    )
+    val intervals =
+      PythonApi.logisticREIntervals(df, fit, "[\"direct\"]", "[\"ratio\"]", "median", "less", 0.9)
+    assertEquals(intervals.keySet().toArray.toSeq, Seq("direct_ratio"))
+  }
 }

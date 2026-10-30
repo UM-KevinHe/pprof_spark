@@ -81,3 +81,52 @@ def test_unused_settings_warn_and_options_map():
         LogisticRandomEffect("y", FEATURES, "provider", cluster_vars=["c"])
     model = LogisticRandomEffect("y", FEATURES, "provider", stage2=False, sigma_upper=3.0)
     assert model.options == {"stage2": False, "includeIntercept": True, "sigmaUpper": 3.0, "maxIterations": 200}
+
+
+def inference_fixture():
+    return fixture("lgre-offset", "inference_pprof_py.json")
+
+
+def test_summary_tests_and_alpha_end_to_end_at_t_est(offset_model, offset_data):
+    inf = inference_fixture()
+    s = offset_model.summary(level=0.9)
+    assert within([t.statistic for t in s], inf["summary"]["z"], T_EST)
+    assert within([t.lower for t in s], inf["summary"]["lower"], T_EST)
+    wald = offset_model.test()
+    assert within(column(wald, "z_raw"), inf["test"]["wald_zero"]["z_raw"], T_EST)
+    assert within(column(wald, "ci_lower"), inf["test"]["wald_zero"]["ci_lower"], T_EST)
+    exact = offset_model.test(offset_data, test_method="poibin_exact")
+    p = [float.fromhex(v) for v in inf["test"]["poibin_zero"]["p_value"]]
+    clear = [i for i, v in enumerate(p) if v >= 1e-6]  # X-024: pprof_py's FFT tails are exact to about 1e-16 absolute
+    z = column(exact, "z_raw")
+    assert within([z[i] for i in clear], [inf["test"]["poibin_zero"]["z_raw"][i] for i in clear], T_EST)
+    alpha = offset_model.calculate_confidence_intervals(option="alpha")["alpha_ci"]
+    assert within(column(alpha, "alpha_lower"), inf["alpha_ci"]["lower"], T_EST)
+
+
+def test_measures_and_sm_intervals_end_to_end_at_t_est(offset_model, offset_data):
+    inf = inference_fixture()
+    measures = offset_model.calculate_standardized_measures(offset_data, stdz=["indirect", "direct"])
+    for kind in ("indirect", "direct"):
+        for q in (f"{kind}_ratio", f"{kind}_rate", "expected"):
+            assert within(column(measures[kind], q), inf["measures_median"][kind][q], T_EST), (kind, q)
+    sm = offset_model.calculate_confidence_intervals(offset_data, stdz=["indirect", "direct"], measure=["ratio"])
+    for key in ("indirect_ratio", "direct_ratio"):
+        assert within(column(sm[key], key), inf["sm_two_sided"][key]["value"], T_EST), key
+        for side in ("lower", "upper"):
+            assert within(column(sm[key], side), inf["sm_two_sided"][key][side], T_EST), (key, side)
+
+
+def test_profile_sigma_and_refusals(offset_model, offset_data):
+    inf = inference_fixture()
+    profile = offset_model.profile_sigma(offset_data)
+    assert within([profile["lower"], profile["upper"]],
+                  inf["profile_sigma"]["lower"] + inf["profile_sigma"]["upper"], T_OPT)
+    with pytest.raises(ValueError, match="training data"):
+        offset_model.test(test_method="poibin_exact")
+    with pytest.raises(NotImplementedError, match="OI-87"):
+        offset_model.test(null_model="empirical")
+    with pytest.raises(NotImplementedError, match="part 4d"):
+        offset_model.test(offset_data, test_method="exact")
+    with pytest.raises(ValueError, match="two-sided"):
+        offset_model.calculate_confidence_intervals(option="alpha", alternative="greater")

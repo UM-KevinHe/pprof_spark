@@ -238,7 +238,7 @@ object LogisticREInference {
         } finally t.workingSet.release()
       }
     val wald = method == "wald"
-    val spark = df.sparkSession
+    val spark = fit.providers.sparkSession // `df` is read only by the count tests
     val wanted = providers.map(_.map(_.toString).toSet)
     val kept = rows
       .filter(r => wanted.forall(_.contains(e.keys(r.groupIndex).toString)))

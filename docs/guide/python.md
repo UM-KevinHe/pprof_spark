@@ -153,6 +153,10 @@ fit.deviance, fit.loglik, fit.aic, fit.bic         # the Laplace deviance (−2�
 fit.providers()                                    # records, weight, blup, variance, se per provider
 fit.predict(df, use_re=True)                       # probabilities with the BLUPs; type="link" for the linear predictor
 fit.fitted_values(df)                              # μ̂, residuals, Pearson and deviance residuals
+fit.summary(), fit.test()                          # Wald z for β; Wald tests of the providers, reference 0
+fit.test(df, test_method="poibin_exact")            # exact tests on the training data; also "resampling"
+fit.calculate_confidence_intervals(df, stdz=["indirect", "direct"])   # SM intervals; option="alpha" needs no data
+fit.calculate_standardized_measures(df), fit.profile_sigma(df)          # ratios and rates; σ's profile interval
 ```
 
 `LogisticRandomEffect` takes pprof_py's `LogisticRandomEffectModel` arguments
@@ -164,7 +168,8 @@ searches run to their own precision; a value other than pprof_py's default gives
 
 A fractional outcome, such as 3/8, counts as one observation with a Bernoulli-like likelihood, as in pprof_py. That
 carries less information than eight trials would; spec §14.3 compares the two. A fit runs one Spark job per
-evaluation of its criterion, about 200 in all (OI-99). Inference, measures and saving arrive with slices 4b-2 and 4b-3.
+evaluation of its criterion, about 200 in all (OI-99). The methods that read rows take the training data and check it against the fit (API-3). Saving and loading
+arrive with slice 4b-3.
 
 ## Large data: strata, blocks and row identifiers
 
