@@ -103,6 +103,17 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-62: Slice 4b-3 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/logistic/random-effect-job.md`: persistence, the job runner and Python save and load for the logistic
+random-intercept model, as slice 4a-3 did for the linear one, with no new statistics.
+- `LogisticREFitIO` format version 1: a `metadata` line with every double as its bit pattern, and the provider table
+  in Parquet, saved and loaded bit for bit.
+- `pprof.spark.app.LogisticREJob` runs a `logistic-re` specification with every output of slices 4b-1 and 4b-2: one or
+  more provider-test methods, each to its own directory, the measures and intervals, the profile, predictions and
+  fitted values, then a run record. The six jobs refuse each other's specifications by name.
+- Python gains `save` and `load`; `LogisticRERunSpec` gains `parse`.
+
 ### D-61: Slice 4b-2 fixtures, calibration and tolerance classes (Accepted: approved by the maintainer, 2026-10-23)
 
 1. Fixtures (round 116), from pprof_py's tightened nAGQ = 1 fit:
