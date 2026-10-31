@@ -130,3 +130,16 @@ def test_profile_sigma_and_refusals(offset_model, offset_data):
         offset_model.test(offset_data, test_method="exact")
     with pytest.raises(ValueError, match="two-sided"):
         offset_model.calculate_confidence_intervals(option="alpha", alternative="greater")
+
+
+def test_save_and_load(offset_model, offset_data, tmp_path):
+    from pprof_spark import LogisticRandomEffectModel
+    path = str(tmp_path / "fit")
+    offset_model.save(path)
+    loaded = LogisticRandomEffectModel.load(offset_data.sparkSession, path)
+    assert [c.estimate for c in loaded.coefficients] == [c.estimate for c in offset_model.coefficients]
+    assert (loaded.sigma, loaded.deviance, loaded.criterion) == (offset_model.sigma, offset_model.deviance, offset_model.criterion)
+    assert column(loaded.providers(), "blup") == column(offset_model.providers(), "blup")
+    assert column(loaded.test(), "z_raw") == column(offset_model.test(), "z_raw")
+    with pytest.raises(Exception, match="path|exist"):
+        offset_model.save(path)

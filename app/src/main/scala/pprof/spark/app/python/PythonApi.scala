@@ -16,6 +16,7 @@ import pprof.spark.app.{
 import pprof.spark.engine.logistic.{
   LogisticRE,
   LogisticREFit,
+  LogisticREFitIO,
   LogisticREInference,
   LogisticREOptions,
   LogisticRESpec
@@ -1271,6 +1272,12 @@ object PythonApi {
   }
 
   def logisticREProviders(fit: LogisticREFit): DataFrame = fit.providers
+
+  def logisticRESave(spark: SparkSession, fit: LogisticREFit, path: String): Unit =
+    LogisticREFitIO.save(spark, fit, path)
+
+  def logisticRELoad(spark: SparkSession, path: String): LogisticREFit =
+    LogisticREFitIO.load(spark, path)
 
   /** `df` with `prediction` (spec 4b-1 §6): response or link; the BLUPs when `useRe`; the offset when `withOffset`. */
   def logisticREPredict(

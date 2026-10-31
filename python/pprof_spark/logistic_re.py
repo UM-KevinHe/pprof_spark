@@ -77,7 +77,8 @@ class LogisticRandomEffect:
 class LogisticRandomEffectModel:
     """A fitted logistic random-intercept model: a handle to the JVM's `LogisticREFit` and its summary, with pprof_py's
     method names (docs/spec/logistic/random-effect-inference.md for the inference). Methods that read rows take the
-    fit's training data `df`, checked against the fit (API-3)."""
+    fit's training data `df`, checked against the fit (API-3). `save` and `load` keep a fit
+    (docs/spec/logistic/random-effect-job.md)."""
 
     def __init__(self, spark, handle):
         self._spark = spark
@@ -204,6 +205,15 @@ class LogisticRandomEffectModel:
             raise ValueError(f"var must name the provider column ({provider!r}) until part 4d")
         r = json.loads(api(self._spark).logisticREProfile(df._jdf, self._handle, float(level)))
         return {"sigma": _float(r["sigma"]), "lower": _float(r["lower"]), "upper": _float(r["upper"])}
+
+    def save(self, path: str) -> None:
+        """Saves the fit (`LogisticREFitIO`, format version 1); the path must not exist."""
+        api(self._spark).logisticRESave(self._spark._jsparkSession, self._handle, path)
+
+    @classmethod
+    def load(cls, spark, path: str) -> "LogisticRandomEffectModel":
+        """Loads a fit saved by `save` or by `LogisticREJob`, bit for bit."""
+        return cls(spark, api(spark).logisticRELoad(spark._jsparkSession, path))
 
     def fitted_values(self, df: DataFrame) -> DataFrame:
         """The training rows with `xbeta`, `eta`, `fitted` (μ̂ with the BLUPs), `residual`, `pearson` and

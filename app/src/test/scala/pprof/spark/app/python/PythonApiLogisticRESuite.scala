@@ -121,4 +121,25 @@ class PythonApiLogisticRESuite extends SparkSuite {
       PythonApi.logisticREIntervals(df, fit, "[\"direct\"]", "[\"ratio\"]", "median", "less", 0.9)
     assertEquals(intervals.keySet().toArray.toSeq, Seq("direct_ratio"))
   }
+
+  test("logisticRESave and logisticRELoad round-trip; the loaded summary is the same") {
+    val df = spark.read
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .csv(Fixtures.root.resolve("logistic-re/lgre-text/input.csv").toString)
+    val fit = pprof.spark.engine.logistic.LogisticRE.fitAt(
+      df,
+      LogisticRESpec("y", Seq("x1", "x2"), "provider", rowId = Some("id")),
+      pprof.spark.engine.logistic.LogisticREOptions(),
+      0.5,
+      Seq(-1.0, 0.7, -0.4)
+    )
+    val path =
+      java.nio.file.Files.createTempDirectory("pprof-facade-logistic-re").resolve("fit").toString
+    PythonApi.logisticRESave(spark, fit, path)
+    assertEquals(
+      PythonApi.logisticRESummary(PythonApi.logisticRELoad(spark, path)),
+      PythonApi.logisticRESummary(fit)
+    )
+  }
 }

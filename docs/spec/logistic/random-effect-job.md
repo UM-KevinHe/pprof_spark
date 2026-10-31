@@ -1,6 +1,6 @@
 # Specification: logistic random effects — persistence, job runner and Python (slice 4b-3)
 
-- Status: approved with D-62 (2026-10-23); persistence and the job runner in round 120.
+- Status: approved with D-62 (2026-10-23); persistence and the job runner in round 120, Python in round 121.
 - References: slice 4a-3 ([../linear/random-effect-job.md](../linear/random-effect-job.md), D-56), applied to slices
   4b-1 and 4b-2 ([random-effect-estimation.md](random-effect-estimation.md),
   [random-effect-inference.md](random-effect-inference.md)). No new statistics.
@@ -146,3 +146,10 @@ None new.
 4. `LogisticREFitIOSuite` (3 tests) and `LogisticREJobSuite` (4 tests), as §7. The job's outputs are compared with
    the library's results on the fit the job saved, which the persistence tests show is the job's fit bit for bit, so
    the test fits once. The guide is `docs/guide/logistic-re-job.md`.
+
+## 10. Implementation notes (round 121; no statistical change)
+
+- The facade gains `logisticRESave` and `logisticRELoad`, which wrap `LogisticREFitIO`.
+- `LogisticRandomEffectModel` gains `save(path)` and `LogisticRandomEffectModel.load(spark, path)`.
+- Tests: `PythonApiLogisticRESuite` gains a round trip whose summaries match, on a fit at given parameters. A Python
+  test saves the fit, loads it, compares its estimates, BLUPs and Wald tests, and checks that saving does not overwrite.

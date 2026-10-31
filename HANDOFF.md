@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3's specification approved (D-62), its persistence and job runner in round 120 |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke and gate review next |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -181,8 +181,9 @@ as round 82 did:
      smoke is prepared (round 108, `docs/parity/scale/s1-linear-re.md`) and waits for the maintainer's
      `spark-submit` run; the gate review (`docs/gates/phase-4a.md`) follows it (OI-97).
    - 4b, logistic random effects: 4b-1 is complete (D-57, D-58, D-59; rounds 109 to 114); 4b-2 is
-     complete (D-60, D-61; rounds 115 to 118); 4b-3's specification is approved (D-62), and its persistence and
-     job runner are in (round 120); next Python save and load (round 121); then part 4b's S1 smoke. OI-98 (the nAGQ = 0 step on the driver)
+     complete (D-60, D-61; rounds 115 to 118); 4b-3 is complete (D-62; rounds 119 to 121). Next part 4b's S1
+     smoke (a `spark-submit` application like part 4a's, `S1LinearRE`), whose run waits for the maintainer
+     with 4a's (OI-97); then parts 4c and 4d. OI-98 (the nAGQ = 0 step on the driver)
      and OI-99 (Spark jobs per fit) wait for S1.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
@@ -197,6 +198,21 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 121 (2026-10-23): slice 4b-3 Python, save and load
+
+- CI passed rounds 118, 119 and 120.
+- The facade gains `logisticRESave` and `logisticRELoad`. `LogisticRandomEffectModel` gains `save(path)` and
+  `LogisticRandomEffectModel.load(spark, path)`.
+- `PythonApiLogisticRESuite` gains a round-trip test and `test_logistic_re.py` one more; the Python guide; spec 4b-3
+  §10. Slice 4b-3 is complete, and with it part 4b's code.
+
+Evidence (assistant sandbox): app and app-test compile with the build's flags after scalafmt;
+`PythonApiLogisticRESuite` passes, 4 of 4, and the Python logistic random-effect tests, 7 of 7; `check-engine-api.sh`
+passes; the patch applies to a fresh clone of `main` with an identical tree, and scalafmt is clean on the build's
+modules.
+
+What to send back: the CI run.
 
 ## Round 120 (2026-10-23): slice 4b-3 persistence and job runner
 
