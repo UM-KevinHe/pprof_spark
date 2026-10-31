@@ -178,6 +178,8 @@ object LogisticRunSpec {
         problems += "model linear: run this specification with pprof.spark.app.LinearJob"
       case Some(v) if v.isTextual && v.asText() == "linear-re" =>
         problems += "model linear-re: run this specification with pprof.spark.app.LinearREJob"
+      case Some(v) if v.isTextual && v.asText() == "logistic-re" =>
+        problems += "model logistic-re: run this specification with pprof.spark.app.LogisticREJob"
       case Some(v) => problems += s"model must be logistic for this job, got ${v.toString}"
       case None    =>
         problems += "model is required; a specification without one is a Cox specification, for pprof.spark.app.CoxJob"

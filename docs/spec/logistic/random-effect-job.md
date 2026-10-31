@@ -1,6 +1,6 @@
 # Specification: logistic random effects — persistence, job runner and Python (slice 4b-3)
 
-- Status: proposed with D-62 (round 119, 2026-10-23), awaiting the maintainer's approval.
+- Status: approved with D-62 (2026-10-23); persistence and the job runner in round 120.
 - References: slice 4a-3 ([../linear/random-effect-job.md](../linear/random-effect-job.md), D-56), applied to slices
   4b-1 and 4b-2 ([random-effect-estimation.md](random-effect-estimation.md),
   [random-effect-inference.md](random-effect-inference.md)). No new statistics.
@@ -131,3 +131,18 @@ gains `parse` for whole specifications.
 ## 8. Known discrepancies
 
 None new.
+
+## 9. Implementation notes (round 120; no statistical change)
+
+1. `engine.logistic.LogisticREFitIO`, format version 1, as §2, follows `LinearREFitIO` with the logistic fit's
+   fields: `nagq1`, σ_upper's bit pattern, and both stages' evaluations, the projected gradient, convergence and the
+   boundary.
+2. `app.LogisticRERunSpec.parse` reads whole specifications. `model`, used by the facade since round 113, shares its
+   readers and keeps its messages. `providerTests` takes one object or a list with distinct methods; `exact`,
+   `nullModel` and a profile of a nAGQ = 0 fit are problems at parse time. `RunSpec`, `LogisticRunSpec`,
+   `ThreeStageRunSpec`, `LinearRunSpec` and `LinearRERunSpec` refuse `model` `logistic-re`, naming `LogisticREJob`.
+3. `app.LogisticREJob` reads the input once and calls the library for each output. `summaryFrame` and `profileFrame`
+   build the two driver-side tables.
+4. `LogisticREFitIOSuite` (3 tests) and `LogisticREJobSuite` (4 tests), as §7. The job's outputs are compared with
+   the library's results on the fit the job saved, which the persistence tests show is the job's fit bit for bit, so
+   the test fits once. The guide is `docs/guide/logistic-re-job.md`.

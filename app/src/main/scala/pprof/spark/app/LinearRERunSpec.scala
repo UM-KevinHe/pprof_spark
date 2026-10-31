@@ -55,8 +55,10 @@ object LinearRERunSpec {
       case None => problems += "version is required"
     }
     node(root, "model") match {
-      case Some(v) if v.isTextual && v.asText() == "linear-re" => ()
-      case Some(v) if v.isTextual && v.asText() == "linear"    =>
+      case Some(v) if v.isTextual && v.asText() == "linear-re"   => ()
+      case Some(v) if v.isTextual && v.asText() == "logistic-re" =>
+        problems += "model logistic-re: run this specification with pprof.spark.app.LogisticREJob"
+      case Some(v) if v.isTextual && v.asText() == "linear" =>
         problems += "model linear: run this specification with pprof.spark.app.LinearJob"
       case Some(v) if v.isTextual && v.asText() == "logistic" =>
         problems += "model logistic: run this specification with pprof.spark.app.LogisticJob"

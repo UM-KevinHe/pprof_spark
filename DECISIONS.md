@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-62: Slice 4b-3 specification (Proposed: awaiting the maintainer's approval)
+### D-62: Slice 4b-3 specification (Accepted: approved by the maintainer, 2026-10-23)
 
 `docs/spec/logistic/random-effect-job.md`: persistence, the job runner and Python save and load for the logistic
 random-intercept model, as slice 4a-3 did for the linear one, with no new statistics.
@@ -113,6 +113,8 @@ random-intercept model, as slice 4a-3 did for the linear one, with no new statis
   more provider-test methods, each to its own directory, the measures and intervals, the profile, predictions and
   fitted values, then a run record. The six jobs refuse each other's specifications by name.
 - Python gains `save` and `load`; `LogisticRERunSpec` gains `parse`.
+
+Approved as proposed on 2026-10-23.
 
 ### D-61: Slice 4b-2 fixtures, calibration and tolerance classes (Accepted: approved by the maintainer, 2026-10-23)
 

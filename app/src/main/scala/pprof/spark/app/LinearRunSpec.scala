@@ -168,6 +168,8 @@ object LinearRunSpec {
       case Some(v) if v.isTextual && v.asText() == "linear"    => ()
       case Some(v) if v.isTextual && v.asText() == "linear-re" =>
         problems += "model linear-re: run this specification with pprof.spark.app.LinearREJob"
+      case Some(v) if v.isTextual && v.asText() == "logistic-re" =>
+        problems += "model logistic-re: run this specification with pprof.spark.app.LogisticREJob"
       case Some(v) if v.isTextual && v.asText() == "logistic" =>
         problems += "model logistic: run this specification with pprof.spark.app.LogisticJob"
       case Some(v) if v.isTextual && v.asText() == "three-stage" =>
