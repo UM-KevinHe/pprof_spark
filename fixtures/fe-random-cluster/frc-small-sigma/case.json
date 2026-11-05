@@ -1,0 +1,11 @@
+{
+ "features": [
+  "x1",
+  "x2"
+ ],
+ "given_sigma": 0.05,
+ "id": "frc-small-sigma",
+ "rows": 3000,
+ "seed": 65,
+ "text": false
+}

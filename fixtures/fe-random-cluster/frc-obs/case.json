@@ -1,0 +1,11 @@
+{
+ "adjusted": true,
+ "features": [
+  "x1",
+  "x2"
+ ],
+ "id": "frc-obs",
+ "rows": 3000,
+ "seed": 62,
+ "text": false
+}

@@ -1,0 +1,12 @@
+{
+ "bound_mode": "absolute",
+ "extreme": true,
+ "features": [
+  "x1",
+  "x2"
+ ],
+ "id": "frc-absolute",
+ "rows": 3000,
+ "seed": 63,
+ "text": false
+}

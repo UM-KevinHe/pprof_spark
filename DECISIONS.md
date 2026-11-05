@@ -103,7 +103,32 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-63: Slice 4c-1 specification (Proposed: awaiting the maintainer's approval)
+### D-64: Slice 4c-1 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+
+1. Fixtures (round 124, `reference/fixtures/fe_random_cluster_fixtures.py`): `fixtures/fe-random-cluster`, five cases
+   of crossed providers and clusters, from pprof_py's `LogisticFERandomClusterModel` with β, σ and the start given.
+   - frc-base;
+   - frc-obs, an adjusted outcome with `obs_var`;
+   - frc-absolute, with a provider whose outcomes are all 0 held at the bound;
+   - frc-text;
+   - frc-small-sigma, σ = 0.05, since pprof_py cannot fit σ = 0 (X-005).
+   Each holds pprof_py's default and tightened fits, and on the tightened fit its tests, intervals and measures,
+   with negative controls.
+2. `docs/parity/fe-random-cluster-calibration.md` passes every strict check:
+   - pprof_py's tightened fits have largest scores of 10⁻¹³ or less, and its tables satisfy their definitions within
+     2.5·10⁻⁸ of T-meas;
+   - the negative controls miss by at least 1.8·10⁷.
+   pprof_py's default fit lies within 0.009 of T-coef of its tightened one, because Newton's method overshoots its
+   tolerance.
+3. Classes for 4c-1's code, those of the three-stage model's stage 3 and its inference (D-40, D-43), against the
+   tightened fit:
+   - γ̂ at T-coef, the clusters' posterior moments and the fitted values at T-meas, the log-likelihood at T-fn;
+   - the tests at T-test, T-p, T-flag and T-coef, with X-024's allowance for the exact tails;
+   - the measures and intervals at T-meas;
+   - `resampling` within 4.5 Monte Carlo standard errors.
+   The three-stage fixtures check the stage sources, and σ = 0 is checked against `LogisticFE` with offset xβ.
+
+### D-63: Slice 4c-1 specification (Accepted: approved by the maintainer, 2026-11-05)
 
 `docs/spec/logistic/fe-random-cluster.md`: pprof_py's `LogisticFERandomClusterModel` as a model of its own. It has
 fixed provider effects and random cluster effects, with β and σ held fixed, and its statistics are the three-stage
@@ -115,6 +140,8 @@ model's stage 3 and stage-3 inference (specs 2f-2 and 2f-3).
   `calculate_confidence_intervals` and `calculate_standardized_measures` use the three-stage code.
 - Validation: the three-stage fixtures, plus a new `fixtures/fe-random-cluster` family from pprof_py's model
   directly. No new discrepancies.
+
+Approved as proposed on 2026-11-05.
 
 ### D-62: Slice 4b-3 specification (Accepted: approved by the maintainer, 2026-10-23)
 

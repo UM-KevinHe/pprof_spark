@@ -1,6 +1,6 @@
 # Specification: fixed provider effects with random cluster effects (slice 4c-1)
 
-- Status: proposed with D-63 (round 123, 2026-11-05), awaiting the maintainer's approval.
+- Status: approved with D-63 (2026-11-05); fixtures and calibration in round 124 (D-64, proposed).
 - Reference: pprof_py v0.7.0 (`9320766`), `LogisticFERandomClusterModel` (`models/logistic/fe_random_cluster.py`,
   `inference/logistic/fe_random_cluster.py`, `measures/logistic/fe_random_cluster.py`).
 - Plan: [../random-effects/plan.md](../random-effects/plan.md) §1.3 and part 4c (D-51 item 4).
@@ -88,7 +88,7 @@ The outputs:
 
 | Case | pprof_spark |
 |---|---|
-| σ = 0 | The clusters' effects are 0, and γ maximizes the fixed-effect likelihood with offset xβ |
+| σ = 0 | The clusters' effects are 0, and γ maximizes the fixed-effect likelihood with offset xβ; pprof_py divides by σ² and fails (X-005) |
 | A provider whose outcomes are all 0 or all 1 | γ̂ stops at the bound, as pprof_py |
 | One provider, or one cluster | Fits, as pprof_py; the tests need no second level |
 | Fractional `y` | Fitted as stage 3 fits the adjusted outcome; the tests count `obs`, rounded as `poibin_tails` |
@@ -120,3 +120,19 @@ The outputs:
 ## 9. Known discrepancies
 
 None new: the three-stage model's approved discrepancies on stage 3 and its inference apply (specs 2f-2 and 2f-3).
+
+## 10. Fixture findings (round 124)
+
+- `fixtures/fe-random-cluster` holds five cases of crossed providers (30) and clusters (12) over 3,000 records,
+  from pprof_py's model with β (the truth plus 0.05), σ and the start given: frc-base, frc-obs, frc-absolute,
+  frc-text and frc-small-sigma. Regenerating them reproduces every file byte for byte.
+- pprof_py's `marginal` converges quadratically: its tightened fits (tol 10⁻¹²) end with largest scores of 10⁻¹³
+  or less in 4 to 9 iterations, and its default fits (tol 10⁻⁵) lie within 0.009 of T-coef of them.
+- At σ = 0, pprof_py's `_cluster_modes` divides by σ² and raises `ZeroDivisionError`, as X-005 records for
+  `sigma_sensitivity`, so the fixtures take σ = 0.05. pprof_spark's stage-3 kernel has a σ = 0 path, which the code
+  round checks against `LogisticFE` with offset xβ.
+- `docs/parity/fe-random-cluster-calibration.md` passes every strict check:
+  - the fitted values match expit(γ̂ + E[α] + xᵀβ) within 2.5·10⁻⁸ of T-meas;
+  - the measures' ratios, the SM values and option `gamma`'s limits match their definitions exactly. A provider
+    whose outcomes are all 0 has an infinite lower limit in both the interval and the test;
+  - the negative controls miss by at least 1.8·10⁷.

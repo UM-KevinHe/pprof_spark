@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-05, round 123.
+Updated 2026-11-05, round 124.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -9,7 +9,7 @@ round 26; the 2a estimator in round 27; persistence and the slice review in roun
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 **Phase 4, random-effect models (milestone M4): plan approved** (D-51, 2026-10-21, with X-037;
-`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2 complete in rounds 101 to 104; slice 4a-3 complete in rounds 105 to 107; part 4a's S1 smoke prepared in round 108 and not yet run, its gate review waiting with it (OI-97); slice 4b-1 complete in rounds 109 to 114 (D-57, D-58, D-59; CI green); slice 4b-2 complete in rounds 115 to 118 (D-60, D-61); slice 4b-3 complete in rounds 119 to 121 (D-62); part 4b's S1 smoke prepared in round 122 and not yet run, its gate review waiting with it (OI-100); part 4c's first specification proposed in round 123 (D-63). D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
+`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2 complete in rounds 101 to 104; slice 4a-3 complete in rounds 105 to 107; part 4a's S1 smoke prepared in round 108 and not yet run, its gate review waiting with it (OI-97); slice 4b-1 complete in rounds 109 to 114 (D-57, D-58, D-59; CI green); slice 4b-2 complete in rounds 115 to 118 (D-60, D-61); slice 4b-3 complete in rounds 119 to 121 (D-62); part 4b's S1 smoke prepared in round 122 and not yet run, its gate review waiting with it (OI-100); slice 4c-1's specification approved (D-63), its fixtures and calibration in round 124 (D-64 proposed). D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
 through round 100 as the maintainer reported.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -152,7 +152,8 @@ through round 100 as the maintainer reported.
 | 120 | D-62 approved; slice 4b-3: `LogisticREFitIO` (format version 1), `LogisticRERunSpec.parse` and `LogisticREJob`, the five other jobs refusing `logistic-re`; `LogisticREFitIOSuite`, `LogisticREJobSuite`; the job guide | Merged (1be793c); CI green |
 | 121 | Slice 4b-3 Python: `logisticRESave` and `logisticRELoad`, `LogisticRandomEffectModel.save` and `load`; tests; the guide. Slice 4b-3 and part 4b's slices complete | Merged (087c0ae); CI green |
 | 122 | Part 4b's S1 scale smoke prepared: `pprof.spark.bench.S1LogisticRE`, `S1LogisticRESuite`, `docs/parity/scale/s1-logistic-re.md`; OI-100; the sandbox's tools rebuilt after a reset | Merged (e43857f); CI to report |
-| 123 | Part 4c begins: slice 4c-1's specification (`docs/spec/logistic/fe-random-cluster.md`, D-63 proposed); the sandbox's reference environment restored (R 4.3.3 with lme4, pprof_py at `9320766`) | Delivered as a patch |
+| 123 | Part 4c begins: slice 4c-1's specification (`docs/spec/logistic/fe-random-cluster.md`, D-63 proposed); the sandbox's reference environment restored (R 4.3.3 with lme4, pprof_py at `9320766`) | Merged (92adf1c) |
+| 124 | D-63 approved; slice 4c-1's fixtures (`fixtures/fe-random-cluster`, five cases) and calibration (`docs/parity/fe-random-cluster-calibration.md`); D-64 proposed | Delivered as a patch |
 
 ## Decisions and spikes
 

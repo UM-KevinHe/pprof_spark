@@ -9,8 +9,8 @@ ratio of observed difference to allowed difference:
   - each negative control against pprof_py: must be at least MARGIN, so a real defect fails.
 Writes docs/parity/cox-calibration.md, logistic-calibration.md, three-stage-calibration.md, linear-calibration.md,
 linear-inference-calibration.md, linear-re-calibration.md,
-linear-re-inference-calibration.md, logistic-re-calibration.md and
-logistic-re-inference-calibration.md. Usage: python reference/fixtures/calibrate.py
+linear-re-inference-calibration.md, logistic-re-calibration.md,
+logistic-re-inference-calibration.md and fe-random-cluster-calibration.md. Usage: python reference/fixtures/calibrate.py
 """
 
 import json
@@ -890,6 +890,83 @@ def logistic_re_inference(tol, manifest, fixtures):
     return failures
 
 
+def fe_random_cluster(tol, manifest, fixtures):
+    """Slice 4c-1's references (D-63): pprof_py's LogisticFERandomClusterModel against its own definitions on its
+    tightened fit (the fitted values, the measures' ratios, the SM values, the gamma intervals as the exact test's
+    limits), its default fit against the tightened one, and the negative controls; writes
+    docs/parity/fe-random-cluster-calibration.md."""
+    import pandas as pd
+    rows, failures = [], []
+
+    def add(case, label, cls, value, ok):
+        rows.append((case, label, cls, f"{value:.3g}", "yes" if ok is True else "**no**" if ok is False else "informational"))
+        if ok is False:
+            failures.append((case, label))
+
+    def h(v):
+        return [float.fromhex(x) for x in v]
+
+    def hexes(values):
+        return [float(v).hex() for v in values]
+
+    for case in manifest["cases"].get("fe-random-cluster", []):
+        base = os.path.join(fixtures, "fe-random-cluster", case)
+        py = json.load(open(os.path.join(base, "pprof_py.json"), encoding="utf-8"))
+        df = pd.read_csv(os.path.join(base, "input.csv")).head(100)
+        t, inf = py["tight"], py["inference"]
+        value = h(t["convergence"])[0]
+        add(case, "tightened fit: the largest score (at most 1e-10)", "-", value, value <= 1e-10)
+        gamma = dict(zip(map(str, t["providers"]), h(t["gamma"])))
+        alpha = dict(zip(map(str, t["clusters"]), h(t["alpha_mean"])))
+        beta = h(py["given"]["beta"])
+        eta = [gamma[str(p)] + beta[0] * a + beta[1] * b + alpha[str(c)]
+               for p, c, a, b in zip(df["provider"], df["cluster"], df["x1"], df["x2"])]
+        fitted = [1.0 / (1.0 + math.exp(-e)) for e in eta]
+        value = ratio(tol, "T-meas", hexes(fitted), t["fitted"])
+        add(case, "fitted = expit(gamma + E[alpha] + x'beta)", "T-meas", value, value <= 1.0)
+        me = inf["measures_median"]
+        r = [o / e for o, e in zip(h(me["indirect"]["observed"]), h(me["indirect"]["expected"]))]
+        value = ratio(tol, "T-meas", hexes(r), me["indirect"]["indirect_ratio"])
+        add(case, "indirect ratio = observed/expected", "T-meas", value, value <= 1.0)
+        for key, kind in (("indirect_ratio", "indirect"), ("direct_ratio", "direct")):
+            value = ratio(tol, "T-meas", inf["sm_two_sided"][key]["value"], me[kind][key])
+            add(case, f"SM {key} = its measure at the median", "T-meas", value, value <= 1.0)
+        exact = inf["test"]["exact_median"]
+        ours, theirs = h(inf["gamma_ci"]["lower"] + inf["gamma_ci"]["upper"]), h(exact["ci_lower"] + exact["ci_upper"])
+        finite = [i for i, (x, y) in enumerate(zip(ours, theirs)) if math.isfinite(x) and math.isfinite(y)]
+        same_ends = all(x == y for x, y in zip(ours, theirs) if not (math.isfinite(x) and math.isfinite(y)))
+        value = ratio(tol, "T-coef", hexes([ours[i] for i in finite]), hexes([theirs[i] for i in finite]))
+        # a provider whose outcomes are all 0 has an infinite lower limit in both (frc-absolute)
+        add(case, "option gamma = the exact test's limits at the median (infinite ends equal)", "T-coef", value,
+            value <= 1.0 and same_ends)
+        value = ratio(tol, "T-coef", py["default"]["gamma"], t["gamma"])
+        add(case, "default fit (tol 1e-5) vs the tightened one: gamma", "T-coef", value, None)
+        pe, pr = h(exact["p_value"]), h(inf["test"]["resampling_median"]["p_value"])
+        worst = max(abs(a - b) / max(4.5 * math.sqrt(8.0 * max(min(b / 2, 0.5) * (1 - min(b / 2, 0.5)), 1e-8) / 20000.0), 1e-12)
+                    for a, b in zip(pr, pe))
+        add(case, "resampling p vs exact p, in 4.5 Monte Carlo SEs (different nulls)", "MC", worst, None)
+        for name, control in py["negative_controls"].items():
+            miss = ratio(tol, "T-coef", control["gamma"], t["gamma"])
+            add(case, f"negative control {name}: gamma", "T-coef", miss, miss >= MARGIN)
+            miss = ratio(tol, "T-test", control["exact_median_z"], exact["z_raw"])
+            add(case, f"negative control {name}: exact z", "T-test", miss, miss >= MARGIN)
+    lines = ["# Fixed-effect random-cluster tolerance calibration (D-63)", "",
+             "Generated by `reference/fixtures/calibrate.py` from the fixtures of pprof_py "
+             f"{manifest['reference']['pprof_py']['version']}'s `LogisticFERandomClusterModel` with β, σ and the start "
+             "given. There is no R counterpart: pprof_py's tightened fit must satisfy its own definitions at the "
+             "tight classes, and every negative control must miss by at least "
+             f"{MARGIN:g}. The default fit and the Monte Carlo check are informational.", "",
+             "| Case | Quantity | Class | Ratio | OK |", "|---|---|---|---|---|"]
+    lines += [f"| {case} | {label} | {cls} | {value} | {ok} |" for case, label, cls, value, ok in rows]
+    lines += ["", f"Result: {'all checks pass' if not failures else f'{len(failures)} checks fail'}."]
+    with open(os.path.join(ROOT, "docs", "parity", "fe-random-cluster-calibration.md"), "w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+    print(f"fixed-effect random clusters: {lines[-1]}")
+    for failure in failures:
+        print("FAIL fe-random-cluster", *failure)
+    return failures
+
+
 def main():
     tol = tolerances()
     fixtures = os.path.join(ROOT, "fixtures")
@@ -941,6 +1018,7 @@ def main():
     failures += linear_re_inference(tol, manifest, fixtures)
     failures += logistic_re(tol, manifest, fixtures)
     failures += logistic_re_inference(tol, manifest, fixtures)
+    failures += fe_random_cluster(tol, manifest, fixtures)
     return 1 if failures else 0
 
 
