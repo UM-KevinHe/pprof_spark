@@ -103,6 +103,19 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-63: Slice 4c-1 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/logistic/fe-random-cluster.md`: pprof_py's `LogisticFERandomClusterModel` as a model of its own. It has
+fixed provider effects and random cluster effects, with β and σ held fixed, and its statistics are the three-stage
+model's stage 3 and stage-3 inference (specs 2f-2 and 2f-3).
+- β, σ and the start are given, or taken from a `LogisticFE` fit and a three-stage stage-2 fit. A
+  `LogisticRandomEffectModel` with cluster factors waits for part 4d.
+- An optional observed outcome is counted by the tests.
+- The estimator is `marginal`; `he2013` is slice 4c-2. `summary` is delegated to stage 1, and `test`,
+  `calculate_confidence_intervals` and `calculate_standardized_measures` use the three-stage code.
+- Validation: the three-stage fixtures, plus a new `fixtures/fe-random-cluster` family from pprof_py's model
+  directly. No new discrepancies.
+
 ### D-62: Slice 4b-3 specification (Accepted: approved by the maintainer, 2026-10-23)
 
 `docs/spec/logistic/random-effect-job.md`: persistence, the job runner and Python save and load for the logistic
