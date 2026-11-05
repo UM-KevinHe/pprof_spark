@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke and gate review next |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -52,7 +52,7 @@ round 100 as the maintainer reported (rounds 83 and 84 failed and were fixed by 
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage, linear and linear random-effect wrappers, ADR-0009) and its pytest suite |
 | `databricks/` | `00_build` (builds a commit on the driver into workspace files), `01_parity` (fixtures and R0 on the cluster), `02_scale` (a first look at scale); guide `docs/guide/databricks.md` |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4), `fixtures/linear` (6), `fixtures/linear-re` (9), `fixtures/logistic-re` (10), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py`; `fixtures.yml` (manual dispatch) regenerates and compares on CI's runner |
-| Documents | Specifications in `docs/spec/` (cox, logistic, linear, random-effects, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-62), `DISCREPANCIES.md` (to X-048), `OPEN_ITEMS.md` (to OI-99), `STATUS.md` |
+| Documents | Specifications in `docs/spec/` (cox, logistic, linear, random-effects, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-62), `DISCREPANCIES.md` (to X-048), `OPEN_ITEMS.md` (to OI-100), `STATUS.md` |
 
 ### 4. How the work runs
 
@@ -90,6 +90,15 @@ and 89, `bench` added in round 92; `SETUP.md` inside) emulates the build:
 - `regen_check.sh` regenerates the Cox and logistic fixtures, then compares and calibrates; `probe_check.sh`
   compiles the tutorial probes. Rehearsals also run `scripts/check-engine-api.sh`, CI's first check (round 99.1).
 - Not rebuilt: the harness that runs the Databricks notebooks with stand-ins for `dbutils` and `display`.
+- Round 122 found the sandbox reset, and `sandbox-tools.zip` gone with it. It rebuilt a minimal kit
+  (`sandbox-tools-r122.zip`, delivered with the round):
+  - JDK 17 from Ubuntu's packages;
+  - `pyspark==4.1.0` and `pytest==8.4.2` in `venv-ci`;
+  - scalafmt 3.11.5's native binary from its GitHub release;
+  - a munit stand-in, without the `Compare` rule or enforced timeouts;
+  - a suite runner, `build.sh` (with the `BuildInfo` stub) and `test.sh`.
+  Still to rebuild when a round needs them: the reference environment (pprof_py, R and its packages) for fixture
+  rounds, `pytest.sh`'s JAR packaging for Python rounds, the regeneration and probe checks, and the Connect stub.
 
 Limits: a tool call ends after about five minutes and a turn allows about twenty calls; about 3 GB of memory, so one
 JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the GitHub API is rate-limited, but
@@ -181,9 +190,9 @@ as round 82 did:
      smoke is prepared (round 108, `docs/parity/scale/s1-linear-re.md`) and waits for the maintainer's
      `spark-submit` run; the gate review (`docs/gates/phase-4a.md`) follows it (OI-97).
    - 4b, logistic random effects: 4b-1 is complete (D-57, D-58, D-59; rounds 109 to 114); 4b-2 is
-     complete (D-60, D-61; rounds 115 to 118); 4b-3 is complete (D-62; rounds 119 to 121). Next part 4b's S1
-     smoke (a `spark-submit` application like part 4a's, `S1LinearRE`), whose run waits for the maintainer
-     with 4a's (OI-97); then parts 4c and 4d. OI-98 (the nAGQ = 0 step on the driver)
+     complete (D-60, D-61; rounds 115 to 118); 4b-3 is complete (D-62; rounds 119 to 121). Part 4b's S1 smoke
+     is prepared (round 122, `docs/parity/scale/s1-logistic-re.md`) and waits for the maintainer's run with
+     4a's (OI-97, OI-100); then the two gate reviews, and parts 4c and 4d. OI-98 (the nAGQ = 0 step on the driver)
      and OI-99 (Spark jobs per fit) wait for S1.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
@@ -198,6 +207,28 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 122 (2026-11-05): part 4b's S1 scale smoke, prepared
+
+- The sandbox had been reset since round 121, so the round began by rebuilding a minimal build-and-test kit (§5).
+- `pprof.spark.bench.S1LogisticRE` runs part 4b's S1 smoke as a `spark-submit` application, as `S1LinearRE` does for
+  part 4a. On `bench.synthetic`'s logistic point (10⁷ rows, 10⁴ providers, 20 features by default) it runs:
+  - the Laplace fit, then the Wald tests, option `alpha`, the measures and the SM ratio intervals;
+  - an R0 rerun, checked bit for bit;
+  - with `--layout true`, a fit with half-size blocks, within T-part.
+  Its checks cover the fixed effects, σ̂ and the `alpha` intervals' coverage. The count tests and the profile are
+  left to S2 (OI-99). One JSON report holds the timings, the driver's peak heap, the single-task stages and every
+  verdict.
+- `S1LogisticRESuite` runs a small point (n = 2·10⁴, m = 100, p = 4) and every check passes: R0 identical, max |z|
+  1.31, σ̂'s z −1.23, coverage 0.93, half-size blocks equal. `docs/parity/scale/s1-logistic-re.md` describes the
+  point, the checks and the commands; the parity matrix's 4b rows point to it; OI-100.
+
+Evidence (assistant sandbox, the rebuilt kit): numerics, testkit, engine, bench and bench-test compile with the build's
+flags after scalafmt; `S1LogisticRESuite` passes, 2 of 2, and its report is in the evidence log; `check-engine-api.sh`
+passes; the patch applies to a fresh clone of `main` with an identical tree, and scalafmt is clean on the build's
+modules.
+
+What to send back: the CI run for rounds 121 and 122, and, when you can, the S1 reports of parts 4a and 4b.
 
 ## Round 121 (2026-10-23): slice 4b-3 Python, save and load
 
