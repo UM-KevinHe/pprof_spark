@@ -1,6 +1,6 @@
 # Specification: fixed provider effects with random cluster effects (slice 4c-1)
 
-- Status: approved with D-63 (2026-11-05); fixtures and calibration in round 124 (D-64, proposed).
+- Status: approved with D-63 (2026-11-05); fixtures and calibration in round 124 (D-64, approved); the engine in round 125.
 - Reference: pprof_py v0.7.0 (`9320766`), `LogisticFERandomClusterModel` (`models/logistic/fe_random_cluster.py`,
   `inference/logistic/fe_random_cluster.py`, `measures/logistic/fe_random_cluster.py`).
 - Plan: [../random-effects/plan.md](../random-effects/plan.md) §1.3 and part 4c (D-51 item 4).
@@ -136,3 +136,22 @@ None new: the three-stage model's approved discrepancies on stage 3 and its infe
   - the measures' ratios, the SM values and option `gamma`'s limits match their definitions exactly. A provider
     whose outcomes are all 0 has an infinite lower limit in both the interval and the test;
   - the negative controls miss by at least 1.8·10⁷.
+
+## 11. Implementation notes (round 125, engine; no statistical change)
+
+- `engine.logistic.LogisticFERandomCluster` prepares the records as stage 3 reads them:
+  - `y_adj` is the model's outcome, `stage1_offset` is xβ, and a private column holds the observed outcome that
+    the tests count;
+  - it validates as §2 and compresses the records into cells (`ThreeStage.compress`);
+  - it runs `ThreeStage.stage3` from the start.
+  The `Stages` source takes β by feature name from the `LogisticFE` fit, σ as the stage-2 fit's cluster SD, and the
+  start as its provider BLUPs plus its intercept, matched by key.
+- The fit keeps its records persisted and its cells, so that `summary` (stage 1's `waldTests`, which must use the
+  β the fit used), `test`, `measures`, `intervals` and `fitted` can call `ThreeStagePipeline` and `ThreeStage`.
+- LogisticSpec has no offset, so the σ = 0 check of D-64 item 3 holds each free provider's score equation
+  Σ(y − expit(γ̂ⱼ + xᵀβ)) = 0 instead of comparing with `LogisticFE`; the clusters' posterior moments are 0 there.
+- `LogisticFERandomClusterSuite` (8 tests):
+  - the five fixture cases against pprof_py's tightened fit at D-64's classes;
+  - σ = 0;
+  - the stage sources reproducing a three-stage fit's own stage 3 bit for bit (ts-synthetic);
+  - the refusals.

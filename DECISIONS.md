@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-64: Slice 4c-1 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+### D-64: Slice 4c-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 
 1. Fixtures (round 124, `reference/fixtures/fe_random_cluster_fixtures.py`): `fixtures/fe-random-cluster`, five cases
    of crossed providers and clusters, from pprof_py's `LogisticFERandomClusterModel` with β, σ and the start given.
@@ -127,6 +127,8 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
    - the measures and intervals at T-meas;
    - `resampling` within 4.5 Monte Carlo standard errors.
    The three-stage fixtures check the stage sources, and σ = 0 is checked against `LogisticFE` with offset xβ.
+
+Approved as proposed on 2026-11-05.
 
 ### D-63: Slice 4c-1 specification (Accepted: approved by the maintainer, 2026-11-05)
 
