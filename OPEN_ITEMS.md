@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-11-05, round 126. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-11-05, round 127. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -106,3 +106,4 @@ decision is approved.
 | OI-98 | The logistic random-effect fit's nAGQ = 0 step gathers m providers' sums (p + 3 values each) on the driver, so a fit beyond the driver budget fails at its start; a distributed step, as OI-95 gave the linear model, is needed before m reaches the budget | A distributed nAGQ = 0 step, or evidence at scale that the budget suffices |
 | OI-99 | A logistic random-effect fit runs about 200 Spark jobs, one per evaluation (round 112: about 35 seconds on 3,000 rows locally); the per-job overhead on a cluster is unmeasured | S1's timings; then, if needed, a cheaper start for nAGQ = 1 or stage 1's grid in fewer passes |
 | OI-100 | Part 4b (logistic random effects) is complete in code and parity-checked in the sandbox, but its S1 smoke (`docs/parity/scale/s1-logistic-re.md`, round 122) has not run, and its gate review waits for that run, as part 4a's (OI-97) | The maintainer's `spark-submit` run of `S1LogisticRE`, then the gate review |
+| OI-101 | The he2013 estimator (slice 4c-2) brings every cell's sums at all Gauss–Hermite nodes to the driver each iteration (cells × `nNodes` doubles); a fit beyond the driver budget fails | Evidence at scale that the budget suffices, or the E-step's cluster sums reduced on the executors |

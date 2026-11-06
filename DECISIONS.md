@@ -103,6 +103,20 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-65: Slice 4c-2 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/logistic/fe-random-cluster-he2013.md`: pprof_py's `estimator="he2013"` for the random-cluster model of
+slice 4c-1.
+- The iteration of He et al. (2013), reproduced step for step: fixed Gauss–Hermite nodes of N(0, σ²); an E-step on
+  the records, with the fractional outcome's mixture form; a Newton step for γ with He et al.'s second-order terms;
+  the information floor and clipping; both convergence criteria.
+- Its outputs are the fixed point's γ̂ and the last E-step's moments. The marginal log-likelihood is evaluated at the
+  end.
+- Distributed: two passes over the records in cells per iteration, with cell sums added on the driver in key order
+  (OI-101 beyond the driver budget).
+- Validation: pprof_py's he2013 fixtures at their defaults and at the fixed point.
+- Proposed with it: X-049 (σ = 0 iterates where pprof_py raises).
+
 ### D-64: Slice 4c-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 
 1. Fixtures (round 124, `reference/fixtures/fe_random_cluster_fixtures.py`): `fixtures/fe-random-cluster`, five cases
