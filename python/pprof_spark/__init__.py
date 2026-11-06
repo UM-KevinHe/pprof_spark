@@ -7,6 +7,7 @@ from .cox import Coefficient, CoxPH, CoxPHModel
 from .linear import LinearCoefficient, LinearFixedEffect, LinearFixedEffectModel, LinearTest
 from .linear_re import LinearREFixedEffect, LinearRandomEffect, LinearRandomEffectModel
 from .logistic_re import LogisticRECoefficient, LogisticRandomEffect, LogisticRandomEffectModel, LogisticRETest
+from .fe_random_cluster import LogisticFERandomCluster, LogisticFERandomClusterModel
 from .logistic import LogisticFixedEffect, LogisticFixedEffectModel, Test
 from .nulls import FixedNull, TheoreticalNull
 from .three_stage import SigmaSensitivity, ThreeStage, ThreeStageModel
@@ -14,4 +15,5 @@ from .three_stage import SigmaSensitivity, ThreeStage, ThreeStageModel
 __all__ = ["__version__", "api", "Coefficient", "CoxPH", "CoxPHModel", "FixedNull", "LogisticFixedEffect",
            "LinearCoefficient", "LinearFixedEffect", "LinearFixedEffectModel", "LinearRandomEffect",
            "LinearRandomEffectModel", "LinearREFixedEffect", "LinearTest", "LogisticRECoefficient",
-    "LogisticRandomEffect", "LogisticRandomEffectModel", "LogisticRETest", "LogisticFixedEffectModel", "SigmaSensitivity", "Test", "TheoreticalNull", "ThreeStage", "ThreeStageModel"]
+    "LogisticFERandomCluster", "LogisticFERandomClusterModel", "LogisticRandomEffect", "LogisticRandomEffectModel",
+    "LogisticRETest", "LogisticFixedEffectModel", "SigmaSensitivity", "Test", "TheoreticalNull", "ThreeStage", "ThreeStageModel"]

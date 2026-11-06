@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1's specification (D-63) and fixtures (D-64) approved, its engine in round 125 |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -100,8 +100,10 @@ and 89, `bench` added in round 92; `SETUP.md` inside) emulates the build:
   Round 123 restored the reference environment: R 4.3.3 with lme4 1.1-35.1, survival, Rcpp, RcppArmadillo,
   sandwich and jsonlite from Ubuntu's packages, and pprof_py at `9320766` installed editable in `venv-ref` with
   `reference/fixtures/requirements.txt`.
-  Still to rebuild when a round needs them: R's poibin (not packaged by Ubuntu), `pytest.sh`'s JAR packaging for
-  Python rounds, the regeneration and probe checks, and the Connect stub.
+  Round 126 rebuilt `pytest.sh`: it packages numerics, engine and app as JARs with JDK 17's `jar` and runs pytest
+  from `python/` with `PPROF_SPARK_JARS`, as CI's python job does.
+  Still to rebuild when a round needs them: R's poibin (not packaged by Ubuntu), the regeneration and probe checks,
+  and the Connect stub.
 
 Limits: a tool call ends after about five minutes and a turn allows about twenty calls; about 3 GB of memory, so one
 JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the GitHub API is rate-limited, but
@@ -196,8 +198,8 @@ as round 82 did:
      complete (D-60, D-61; rounds 115 to 118); 4b-3 is complete (D-62; rounds 119 to 121). Part 4b's S1 smoke
      is prepared (round 122, `docs/parity/scale/s1-logistic-re.md`) and waits for the maintainer's run with
      4a's (OI-97, OI-100); then the two gate reviews.
-   - 4c, fixed provider effects with random clusters: 4c-1's specification (D-63) and fixtures (D-64) are approved,
-     and its engine is in (round 125); next its Python wrapper; then 4c-2 (`he2013`, OI-94) and 4c-3; then part 4d. OI-98 (the nAGQ = 0 step on the driver)
+   - 4c, fixed provider effects with random clusters: 4c-1 is complete (D-63, D-64; rounds 123 to 126); next 4c-2
+     (`he2013`, OI-94), then 4c-3; then part 4d. OI-98 (the nAGQ = 0 step on the driver)
      and OI-99 (Spark jobs per fit) wait for S1.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
@@ -212,6 +214,23 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 126 (2026-11-05): slice 4c-1 Python, the random-cluster wrapper
+
+- `PythonApi` gains ten `feRandomCluster*` methods: fits from given values or from stages, and the summary, tables,
+  tests, measures, intervals and fitted values.
+- `LogisticFERandomCluster` and `LogisticFERandomClusterModel`, with pprof_py's names. `stage1` is a
+  `LogisticFixedEffectModel` and `stage2` a `ThreeStageModel`; pprof_py's two-factor `LogisticRandomEffectModel`
+  waits for part 4d.
+- `test_fe_random_cluster.py` (2 tests); spec 4c-1 §12. Slice 4c-1 is complete.
+- The sandbox's `pytest.sh` is rebuilt (§5).
+
+Evidence (assistant sandbox): app and app-test compile with the build's flags after scalafmt; the new Python tests
+pass, 2 of 2; `PythonApiSuite`, `PythonApiLinearRESuite` and `PythonApiLogisticRESuite` pass, and so does the whole
+Python suite (the evidence log has both); `check-engine-api.sh` passes; the patch applies to a fresh clone of `main`
+with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI runs for rounds 125 and 126.
 
 ## Round 125 (2026-11-05): slice 4c-1 engine, fixed provider effects with random clusters
 

@@ -4,7 +4,8 @@ import scala.jdk.CollectionConverters._
 
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.databind.node.ObjectNode
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.types.{DoubleType, LongType, StringType, StructField, StructType}
 import pprof.spark.app.{
   LinearRERunSpec,
   LinearRunSpec,
@@ -14,6 +15,11 @@ import pprof.spark.app.{
   ThreeStageRunSpec
 }
 import pprof.spark.engine.logistic.{
+  LogisticFERandomCluster,
+  LogisticFERandomClusterFit,
+  LogisticFERandomClusterOptions,
+  LogisticFERandomClusterSource,
+  LogisticFERandomClusterSpec,
   LogisticRE,
   LogisticREFit,
   LogisticREFitIO,
@@ -1272,6 +1278,251 @@ object PythonApi {
   }
 
   def logisticREProviders(fit: LogisticREFit): DataFrame = fit.providers
+
+  /** The random-cluster model's `columns` and options as JSON (spec 4c-1 §2, §3), every problem at once. */
+  private def feRandomClusterModel(
+      columnsJson: String,
+      optionsJson: String
+  ): (LogisticFERandomClusterSpec, LogisticFERandomClusterOptions) = {
+    val mapper = new ObjectMapper()
+    val c = mapper.readTree(if (columnsJson == null || columnsJson.isEmpty) "{}" else columnsJson)
+    val o = mapper.readTree(if (optionsJson == null || optionsJson.isEmpty) "{}" else optionsJson)
+    val problems = Vector.newBuilder[String]
+    def unknown(
+        node: com.fasterxml.jackson.databind.JsonNode,
+        where: String,
+        known: Set[String]
+    ): Unit =
+      node
+        .fieldNames()
+        .asScala
+        .filterNot(known)
+        .foreach(k => problems += s"$where.$k is not a role or option of this model")
+    unknown(c, "columns", Set("outcome", "features", "provider", "cluster", "observed", "rowId"))
+    unknown(
+      o,
+      "fit",
+      Set(
+        "nNodes",
+        "maxIter",
+        "tol",
+        "bound",
+        "boundMode",
+        "estimator",
+        "convergenceCriterion",
+        "path"
+      )
+    )
+    def text(n: com.fasterxml.jackson.databind.JsonNode, k: String): Option[String] =
+      Option(n.get(k)).filterNot(_.isNull).map(_.asText())
+    Seq("outcome", "provider", "cluster")
+      .filterNot(k => text(c, k).nonEmpty)
+      .foreach(k => problems += s"columns.$k is required")
+    val found = problems.result()
+    if (found.nonEmpty)
+      throw new IllegalArgumentException(s"the model has problems: ${found.mkString("; ")}")
+    val d = LogisticFERandomClusterOptions()
+    val spec = LogisticFERandomClusterSpec(
+      text(c, "outcome").get,
+      Option(c.get("features"))
+        .map(_.elements().asScala.map(_.asText()).toSeq)
+        .getOrElse(Seq.empty),
+      text(c, "provider").get,
+      text(c, "cluster").get,
+      text(c, "observed"),
+      text(c, "rowId")
+    )
+    val options = LogisticFERandomClusterOptions(
+      Option(o.get("nNodes")).map(_.asInt()).getOrElse(d.nNodes),
+      Option(o.get("maxIter")).map(_.asInt()).getOrElse(d.maxIter),
+      Option(o.get("tol")).map(_.asDouble()).getOrElse(d.tol),
+      Option(o.get("bound")).map(_.asDouble()).getOrElse(d.bound),
+      text(o, "boundMode").getOrElse(d.boundMode),
+      text(o, "estimator").getOrElse(d.estimator),
+      path = text(o, "path").getOrElse(d.path)
+    )
+    (spec, options)
+  }
+
+  /** Fits the random-cluster model (spec 4c-1) with β, σ and the start given; `betaJson` and `startJson` are lists. */
+  def feRandomClusterFit(
+      df: DataFrame,
+      columnsJson: String,
+      optionsJson: String,
+      betaJson: String,
+      sigma: Double,
+      startJson: String
+  ): LogisticFERandomClusterFit = {
+    val (spec, options) = feRandomClusterModel(columnsJson, optionsJson)
+    val mapper = new ObjectMapper()
+    def doubles(json: String) = mapper.readTree(json).elements().asScala.map(_.asDouble()).toSeq
+    LogisticFERandomCluster.fit(
+      df,
+      spec,
+      LogisticFERandomClusterSource.Given(doubles(betaJson), sigma, doubles(startJson)),
+      options
+    )
+  }
+
+  /** Fits it from a `LogisticFE` fit and a three-stage fit's stage 2 (spec 4c-1 §2). */
+  def feRandomClusterFitStages(
+      df: DataFrame,
+      columnsJson: String,
+      optionsJson: String,
+      stage1: LogisticFit,
+      threeStage: ThreeStageFit
+  ): LogisticFERandomClusterFit = {
+    val (spec, options) = feRandomClusterModel(columnsJson, optionsJson)
+    LogisticFERandomCluster.fit(
+      df,
+      spec,
+      LogisticFERandomClusterSource.Stages(stage1, threeStage.stage2),
+      options
+    )
+  }
+
+  /** The random-cluster fit as JSON, doubles as `Double.toHexString` strings. */
+  def feRandomClusterSummary(fit: LogisticFERandomClusterFit): String = {
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    def hex(v: Double): String = java.lang.Double.toHexString(v)
+    val beta = root.putArray("beta")
+    fit.beta.foreach(b => beta.add(hex(b)))
+    root.put("sigma", hex(fit.sigma))
+    root.put("logLikelihood", hex(fit.stage3.loglik))
+    root.put("criterion", hex(fit.stage3.criterion))
+    root.put("iterations", fit.stage3.iterations)
+    root.put("converged", fit.stage3.converged)
+    root.put("providers", fit.stage3.providers.size)
+    root.put("clusters", fit.stage3.clusters.size)
+    root.put("withStage1", fit.stage1.nonEmpty)
+    mapper.writeValueAsString(root)
+  }
+
+  private def keyed(
+      spark: SparkSession,
+      keys: Vector[pprof.spark.engine.layout.GroupKey],
+      columns: Seq[(String, Array[Double])],
+      name: String
+  ): DataFrame = {
+    val values = keys.map(pprof.spark.engine.layout.GroupKey.value)
+    val text = values.exists(_.isInstanceOf[String])
+    val schema = StructType(
+      StructField(name, if (text) StringType else LongType, nullable = false) +:
+        columns.map { case (c, _) => StructField(c, DoubleType, nullable = false) }
+    )
+    val rows = values.indices.map { i =>
+      val key: Any = if (text) values(i).toString else values(i).asInstanceOf[Number].longValue
+      Row.fromSeq(key +: columns.map(_._2(i)))
+    }
+    spark.createDataFrame(rows.asJava, schema)
+  }
+
+  /** One row per provider: `gamma` and `held_at_bound` (1 when the bound holds it). */
+  def feRandomClusterProviders(spark: SparkSession, fit: LogisticFERandomClusterFit): DataFrame =
+    keyed(
+      spark,
+      fit.stage3.providers,
+      Seq("gamma" -> fit.gamma, "held_at_bound" -> fit.stage3.held.map(h => if (h) 1.0 else 0.0)),
+      fit.spec.provider
+    )
+
+  /** One row per cluster: the posterior mean and variance of its effect. */
+  def feRandomClusterClusters(spark: SparkSession, fit: LogisticFERandomClusterFit): DataFrame =
+    keyed(
+      spark,
+      fit.stage3.clusters,
+      Seq("alpha_mean" -> fit.stage3.alphaMean, "alpha_var" -> fit.stage3.alphaVar),
+      fit.spec.cluster
+    )
+
+  /** `summary` (spec 4c-1 §5) as JSON: stage 1's Wald tests; `stage1` may be null when the fit has one. */
+  def feRandomClusterCovariateTests(
+      fit: LogisticFERandomClusterFit,
+      stage1: LogisticFit,
+      level: Double,
+      nullValue: Double,
+      alternative: String
+  ): String = {
+    val mapper = new ObjectMapper()
+    val array = mapper.createArrayNode()
+    LogisticFERandomCluster.summary(fit, Option(stage1), level, nullValue, alternative).foreach {
+      t =>
+        val node = array.addObject()
+        node.put("feature", t.feature)
+        Seq(
+          "estimate" -> t.estimate,
+          "standardError" -> t.standardError,
+          "statistic" -> t.statistic,
+          "pValue" -> t.pValue,
+          "lower" -> t.lower,
+          "upper" -> t.upper
+        ).foreach { case (k, v) => node.put(k, java.lang.Double.toHexString(v)) }
+    }
+    mapper.writeValueAsString(array)
+  }
+
+  def feRandomClusterTest(
+      fit: LogisticFERandomClusterFit,
+      method: String,
+      reference: String,
+      alternative: String,
+      level: Double,
+      critical: Double,
+      providersJson: String,
+      nResample: Int,
+      seed: Long
+  ): DataFrame =
+    LogisticFERandomCluster.test(
+      fit,
+      method,
+      effectReference(reference),
+      alternative,
+      level,
+      if (critical.isNaN) None else Some(critical),
+      stringList(providersJson, "providers"),
+      nResample,
+      seed
+    )
+
+  def feRandomClusterMeasures(
+      fit: LogisticFERandomClusterFit,
+      kindsJson: String,
+      reference: String
+  ): java.util.Map[String, DataFrame] =
+    LogisticFERandomCluster
+      .measures(
+        fit,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect")),
+        effectReference(reference)
+      )
+      .asJava
+
+  def feRandomClusterIntervals(
+      fit: LogisticFERandomClusterFit,
+      option: String,
+      kindsJson: String,
+      measureJson: String,
+      alternative: String,
+      level: Double,
+      method: String,
+      reference: String
+  ): java.util.Map[String, DataFrame] =
+    LogisticFERandomCluster
+      .intervals(
+        fit,
+        option,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect")),
+        stringList(measureJson, "measure").getOrElse(Seq("rate", "ratio")),
+        alternative,
+        level,
+        method,
+        effectReference(reference)
+      )
+      .asJava
+
+  def feRandomClusterFitted(fit: LogisticFERandomClusterFit): DataFrame =
+    LogisticFERandomCluster.fitted(fit)
 
   def logisticRESave(spark: SparkSession, fit: LogisticREFit, path: String): Unit =
     LogisticREFitIO.save(spark, fit, path)

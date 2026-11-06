@@ -1,6 +1,6 @@
 # Specification: fixed provider effects with random cluster effects (slice 4c-1)
 
-- Status: approved with D-63 (2026-11-05); fixtures and calibration in round 124 (D-64, approved); the engine in round 125.
+- Status: approved with D-63 (2026-11-05); fixtures and calibration in round 124 (D-64, approved); the engine in round 125 and Python in round 126.
 - Reference: pprof_py v0.7.0 (`9320766`), `LogisticFERandomClusterModel` (`models/logistic/fe_random_cluster.py`,
   `inference/logistic/fe_random_cluster.py`, `measures/logistic/fe_random_cluster.py`).
 - Plan: [../random-effects/plan.md](../random-effects/plan.md) §1.3 and part 4c (D-51 item 4).
@@ -155,3 +155,18 @@ None new: the three-stage model's approved discrepancies on stage 3 and its infe
   - σ = 0;
   - the stage sources reproducing a three-stage fit's own stage 3 bit for bit (ts-synthetic);
   - the refusals.
+
+## 12. Implementation notes (round 126, Python; no statistical change)
+
+- The facade (`PythonApi`) gains `feRandomClusterFit` (given values), `feRandomClusterFitStages` (a `LogisticFit`
+  and a `ThreeStageFit`, whose stage 2 is the source), `feRandomClusterSummary`, `feRandomClusterProviders`,
+  `feRandomClusterClusters`, `feRandomClusterCovariateTests`, `feRandomClusterTest`, `feRandomClusterMeasures`,
+  `feRandomClusterIntervals` and `feRandomClusterFitted`. The columns and options are read as JSON, every problem at
+  once.
+- Python's `LogisticFERandomCluster` takes pprof_py's names; `observed` is `obs_var`. `fit(df, beta=, sigma=,
+  gamma_init=)` or `fit(df, stage1=, stage2=)`, where `stage1` is a `LogisticFixedEffectModel` and `stage2` a
+  `ThreeStageModel`. The model has `providers`, `clusters`, `summary`, `test`, `calculate_confidence_intervals`,
+  `calculate_standardized_measures` and `fitted_values`. Like pprof_py's, these take no data: the fit keeps its
+  records.
+- `python/tests/test_fe_random_cluster.py` (2 tests): frc-base against pprof_py's tightened fit, its tests, measures
+  and intervals; frc-obs with the observed outcome; and the refusals.
