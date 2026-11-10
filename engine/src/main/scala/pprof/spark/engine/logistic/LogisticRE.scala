@@ -55,8 +55,13 @@ final case class LogisticREOptions(
     includeIntercept: Boolean = true,
     sigmaUpper: Double = Double.PositiveInfinity,
     maxIterations: Int = 200,
-    blocks: BlockOptions = BlockOptions()
+    blocks: BlockOptions = BlockOptions(),
+    path: String = "auto"
 ) {
+  require(
+    Seq("auto", "driver", "executors").contains(path),
+    s"path must be auto, driver or executors, got $path"
+  )
   require(sigmaUpper > 0.0, s"sigmaUpper must be positive, got $sigmaUpper")
   require(maxIterations >= 20, s"maxIterations must be at least 20, got $maxIterations")
 }
@@ -329,7 +334,8 @@ object LogisticRE {
       val aliased = Cholesky.factor(xx, p).aliased
       if (aliased.nonEmpty) throw new LogisticREAliasingException(aliased.map(names))
     }
-    val blocks = new DistributedBlocks(workingSet, p, centre, m)
+    val blocks =
+      new DistributedBlocks(workingSet, p, centre, m, onDriver(workingSet, plan, p, options))
     val solution = solve(blocks, rows, centre, outcomeMean)
     blocks.modes(
       solution.sigma,
@@ -406,7 +412,13 @@ object LogisticRE {
     require(beta.length == p, s"beta has ${beta.length} values; the model has $p fixed effects")
     val workingSet = LinearWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel)
     try
-      new DistributedBlocks(workingSet, p, new Array[Double](p), fit.providerCount)
+      new DistributedBlocks(
+        workingSet,
+        p,
+        new Array[Double](p),
+        fit.providerCount,
+        onDriver(workingSet, plan, p, fit.options)
+      )
         .laplace(sigma, beta.toArray)
         .deviance
     finally workingSet.release()
@@ -456,8 +468,33 @@ object LogisticRE {
       if (!fit.options.includeIntercept || k == 0) 0.0
       else Summation.pairwise(first.map(_.xSum(k))) / rows.toDouble
     }
-    val blocks = new DistributedBlocks(workingSet, p, centre, sizes.size)
+    val blocks = new DistributedBlocks(
+      workingSet,
+      p,
+      centre,
+      sizes.size,
+      onDriver(workingSet, plan, p, fit.options)
+    )
     Training(workingSet, input, plan, blocks, centre, p, sizes.size, rows)
+  }
+
+  /** The blocks on the driver for the searches (OI-99), when `path` is `driver`, or `auto` and their rows take at
+    * most half the driver budget; otherwise None, and every evaluation is a pass over the working set.
+    */
+  private def onDriver(
+      workingSet: LinearWorkingSet,
+      plan: LayoutPlan,
+      p: Int,
+      options: LogisticREOptions
+  ): Option[Array[LinearBlock]] = {
+    val bytes = 8L * plan.rowCount * (p + 4L)
+    if (options.path == "driver")
+      DriverGuards.requireWithinBudget("the rows on the driver", bytes, options.blocks)
+    if (
+      options.path == "driver" || (options.path == "auto" && bytes <= options.blocks.driverBudgetBytes / 2)
+    )
+      Some(workingSet.blocks.collect().sortBy(_.blockId))
+    else None
   }
 
   private[logistic] def kernelRows(block: LinearBlock): Kernel.Rows =
@@ -518,41 +555,49 @@ object LogisticRE {
       workingSet: LinearWorkingSet,
       p: Int,
       centre: Array[Double],
-      m: Int
+      m: Int,
+      local: Option[Array[LinearBlock]] = None
   ) extends Kernel.Blocks {
 
     var records: Array[Long] = new Array[Long](m)
 
+    /** Each block's result, on the driver's copy of the blocks when the fit took one (OI-99), else in one pass; the
+      * same function in the same block order either way, so both paths give the same bits.
+      */
+    private def each[T: scala.reflect.ClassTag](
+        f: LinearBlock => T
+    )(encoder: org.apache.spark.sql.Encoder[T]): Array[T] =
+      local match {
+        case Some(blocks) => blocks.map(f)
+        case None         => workingSet.blocks.map(f)(encoder).collect()
+      }
+
     def laplace(sigma: Double, beta: Array[Double]): Kernel.LaplaceSums = {
       val c = centre
-      val parts = workingSet.blocks
-        .map { (block: LinearBlock) =>
-          val s = Kernel.laplace(kernelRows(block), sigma, beta, c)
-          LogisticRELaplacePartial(block.blockId, s.deviance, s.gradient)
-        }(Encoders.product[LogisticRELaplacePartial])
-        .collect()
+      val parts = each { (block: LinearBlock) =>
+        val s = Kernel.laplace(kernelRows(block), sigma, beta, c)
+        LogisticRELaplacePartial(block.blockId, s.deviance, s.gradient)
+      }(Encoders.product[LogisticRELaplacePartial])
         .sortBy(_.blockId)
       Kernel.combineLaplace(parts.map(t => Kernel.LaplaceSums(t.deviance, t.gradient)).toSeq)
     }
 
     def stage1(sigma: Double, beta: Array[Double], u: Array[Double]): Kernel.Stage1Sums = {
       val c = centre
-      val parts = workingSet.blocks
-        .map { (block: LinearBlock) =>
-          val s = Kernel.stage1(kernelRows(block), sigma, beta, block.groupIndex.map(u), c)
-          LogisticREStage1Partial(
-            block.blockId,
-            block.groupIndex,
-            s.weights,
-            s.wx,
-            s.residuals,
-            s.xwx,
-            s.rx,
-            s.penalized,
-            s.logH
-          )
-        }(Encoders.product[LogisticREStage1Partial])
-        .collect()
+      val parts = each { (block: LinearBlock) =>
+        val s = Kernel.stage1(kernelRows(block), sigma, beta, block.groupIndex.map(u), c)
+        LogisticREStage1Partial(
+          block.blockId,
+          block.groupIndex,
+          s.weights,
+          s.wx,
+          s.residuals,
+          s.xwx,
+          s.rx,
+          s.penalized,
+          s.logH
+        )
+      }(Encoders.product[LogisticREStage1Partial])
         .sortBy(_.blockId)
       val weights = new Array[Double](m)
       val wx = new Array[Double](m * p)
@@ -578,17 +623,15 @@ object LogisticRE {
 
     def modes(sigma: Double, beta: Array[Double]): (Array[Double], Array[Double]) = {
       val c = centre
-      val parts = workingSet.blocks
-        .map { (block: LinearBlock) =>
-          val (u, w) = Kernel.modes(kernelRows(block), sigma, beta, c)
-          val sizes = block.groupStart.indices.map { g =>
-            val until =
-              if (g + 1 < block.groupStart.length) block.groupStart(g + 1) else block.rowId.length
-            (until - block.groupStart(g)).toLong
-          }.toArray
-          LogisticREModesPartial(block.blockId, block.groupIndex, sizes, u, w)
-        }(Encoders.product[LogisticREModesPartial])
-        .collect()
+      val parts = each { (block: LinearBlock) =>
+        val (u, w) = Kernel.modes(kernelRows(block), sigma, beta, c)
+        val sizes = block.groupStart.indices.map { g =>
+          val until =
+            if (g + 1 < block.groupStart.length) block.groupStart(g + 1) else block.rowId.length
+          (until - block.groupStart(g)).toLong
+        }.toArray
+        LogisticREModesPartial(block.blockId, block.groupIndex, sizes, u, w)
+      }(Encoders.product[LogisticREModesPartial])
       val u = new Array[Double](m)
       val w = new Array[Double](m)
       val counts = new Array[Long](m)

@@ -275,4 +275,23 @@ class LogisticRESuite extends SparkSuite {
       intercept[InvalidInputException](LogisticRE.fit(single, spec)).getMessage.contains("provider")
     )
   }
+
+  test("the driver's copy of the blocks and the executors' passes give the same bits (OI-99)") {
+    val (spec, intercept) = setup("lgre-text")
+    val df = input("lgre-text")
+    def fit(path: String) =
+      LogisticRE.fit(df, spec, LogisticREOptions(includeIntercept = intercept, path = path))
+    val (driver, executors) = (fit("driver"), fit("executors"))
+    def bits(v: Seq[Double]) = v.map(java.lang.Double.doubleToRawLongBits)
+    def blups(f: LogisticREFit) =
+      f.providers.orderBy("provider").select("blup").collect().toSeq.map(_.getDouble(0))
+    assertEquals(bits(driver.estimates), bits(executors.estimates))
+    assertEquals(bits(driver.covariance), bits(executors.covariance))
+    assertEquals(
+      bits(Seq(driver.sigma, driver.deviance)),
+      bits(Seq(executors.sigma, executors.deviance))
+    )
+    assertEquals(bits(blups(driver)), bits(blups(executors)))
+    assertEquals(driver.search, executors.search)
+  }
 }

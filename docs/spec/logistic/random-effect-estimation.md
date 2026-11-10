@@ -297,3 +297,14 @@ BOBYQA's tolerances tightened.
   - the estimates against pprof_py at T-est and lme4 at T-opt;
   - the predictions with the BLUPs under integer keys against lme4 (X-044), and the fitted values and residuals;
   - the warnings and the options' mapping.
+
+## Implementation note (round 130): the searches on the driver's copy of the blocks (OI-99)
+
+`LogisticREOptions.path` (`auto`, the default, `driver` or `executors`) decides where the searches evaluate the
+Laplace deviance, stage 1's sums and the modes.
+- On the driver, when `path` is `driver`, or `auto` and the working set's rows take at most half the driver
+  budget. The blocks are collected once, and each evaluation runs the kernel on them, in block order.
+- Otherwise, one Spark pass per evaluation, as before.
+The per-block function and the order of the combination are the same either way, so both paths give the same bits.
+`LogisticRESuite` checks this on lgre-text. Fits, `fitAt`, `laplaceDeviance` and the inference's training data
+(the profile among them) all take the path. No statistics change.

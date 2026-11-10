@@ -86,13 +86,28 @@ private[logistic] object He2013 {
       val rule = GaussHermite.rule(k)
       val a = rule.nodes.map(t => StrictMath.sqrt(2.0) * sigma * t)
       val w = rule.weights.map(_ / StrictMath.sqrt(StrictMath.PI))
-      def pass(f: He2013Cell => Array[Double]): Array[He2013Partial] =
-        cells
-          .map((c: He2013Cell) => He2013Partial(c.provider, c.cluster, f(c)))(
-            Encoders.product[He2013Partial]
-          )
-          .collect()
-          .sortBy(p => (p.provider, p.cluster))
+      // The cells on the driver (OI-99) when `path` is `driver`, or `auto` and they take at most half the budget
+      val rows = records.count()
+      val bytes = 16L * rows + 64L * count
+      if (options.path == "driver")
+        DriverGuards.requireWithinBudget("the cells on the driver", bytes, options.blocks)
+      val local =
+        if (
+          options.path == "driver" || (options.path == "auto" && bytes <= options.blocks.driverBudgetBytes / 2)
+        )
+          Some(cells.collect().sortBy(c => (c.provider, c.cluster)))
+        else None
+      // the same function in the same cell order on either path, so both give the same bits
+      def pass(f: He2013Cell => Array[Double]): Array[He2013Partial] = local match {
+        case Some(onDriver) => onDriver.map(c => He2013Partial(c.provider, c.cluster, f(c)))
+        case None           =>
+          cells
+            .map((c: He2013Cell) => He2013Partial(c.provider, c.cluster, f(c)))(
+              Encoders.product[He2013Partial]
+            )
+            .collect()
+            .sortBy(p => (p.provider, p.cluster))
+      }
       var gamma = start.clone()
       var mean = new Array[Double](h)
       var variance = new Array[Double](h)

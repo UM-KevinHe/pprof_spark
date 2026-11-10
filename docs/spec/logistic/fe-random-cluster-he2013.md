@@ -124,3 +124,10 @@ is delegated to stage 1, as for `marginal`.
   - `test_fe_random_cluster.py` gains a he2013 test on frc-text.
 - The first run passed on string keys and failed on integral ones, which CSV reading made `Integer`, so the cells'
   keys are now cast to Long.
+
+## 10. Implementation note (round 130): the iteration on the driver's copy of the cells (OI-99)
+
+With `path` `driver`, or `auto` when the cells' rows take at most half the driver budget, he2013 collects its cells
+once and runs every pass on the driver. Otherwise every pass is a Spark job, as round 129 had it. The same per-cell
+function and the same order give the same bits either way, and `LogisticFERandomClusterSuite` checks this on
+frc-text. A he2013 test on frc-base took 112 seconds in the sandbox before and 7 after.

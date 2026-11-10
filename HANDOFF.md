@@ -216,6 +216,29 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 130 (2026-11-05): CI fix, the logistic random-effect searches and he2013 on the driver when they fit
+
+- CI passed round 128, but round 129's run exceeded the job's 30-minute limit: its he2013 tests added minutes to
+  suites that already paid a Spark job for each of hundreds of evaluations (OI-99).
+- `LogisticREOptions.path` (`auto`, `driver`, `executors`): when the working set's rows take at most half the driver
+  budget, `auto` collects the blocks once and the searches run the kernel on them. Otherwise each evaluation is a
+  pass, as before. he2013 does the same with its cells, through the random-cluster model's existing `path` option.
+  The same functions run in the same order, so both paths give the same bits. `LogisticRESuite` and
+  `LogisticFERandomClusterSuite` each gain a test that checks this, driver against executors.
+- Sandbox timings, before and after:
+  - `LogisticREInferenceSuite`, about 4 minutes before and 1 after; its profile test went from 110 to 5 seconds;
+  - the he2013 tests, about 3.5 minutes before and 0.5 after;
+  - `LogisticRESuite`'s engine tests, about 3 minutes before and 1.3 after.
+- No statistics change; spec notes in 4b-1 and 4c-2 §10; OI-99 updated.
+
+Evidence (assistant sandbox): engine, engine-test, app, app-test, bench and bench-test compile with the build's flags
+after scalafmt; `LogisticRESuite`, `LogisticREInferenceSuite`, `LogisticFERandomClusterSuite`, `LogisticREFitIOSuite`,
+`LogisticREJobSuite`, `PythonApiLogisticRESuite` and `S1LogisticRESuite` pass, and so do the Python logistic
+random-effect and random-cluster tests (the evidence log lists them); `check-engine-api.sh` passes; the patch applies
+to a fresh clone of `main` with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI run. If a job still nears its limit, its log's slowest suites.
+
 ## Round 129 (2026-11-05): slice 4c-2 code, the he2013 estimator
 
 - The maintainer approved D-66 as proposed (2026-11-05).

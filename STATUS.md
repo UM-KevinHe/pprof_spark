@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-05, round 129.
+Updated 2026-11-05, round 130.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -157,8 +157,9 @@ through round 100 as the maintainer reported.
 | 125 | D-64 approved; slice 4c-1's engine `LogisticFERandomCluster` over the three-stage stage 3 and its inference; `LogisticFERandomClusterSuite` | Merged (8eced2b) |
 | 126 | Slice 4c-1 Python: the facade's `feRandomCluster*` methods, `LogisticFERandomCluster` and `LogisticFERandomClusterModel`, `test_fe_random_cluster.py`; the sandbox's `pytest.sh` rebuilt | Merged (86ddcc9) |
 | 127 | Slice 4c-2's specification (`docs/spec/logistic/fe-random-cluster-he2013.md`, D-65 proposed); X-049; OI-101 | Merged (5003ab1) |
-| 128 | D-65 approved with X-049; slice 4c-2's fixtures (he2013 in `fixtures/fe-random-cluster`) and calibration; D-66 proposed | Merged (d08c808) |
-| 129 | D-66 approved; slice 4c-2's code: `He2013` in the engine, the options, the facade and Python; tests | Delivered as a patch |
+| 128 | D-65 approved with X-049; slice 4c-2's fixtures (he2013 in `fixtures/fe-random-cluster`) and calibration; D-66 proposed | Merged (d08c808); CI green |
+| 129 | D-66 approved; slice 4c-2's code: `He2013` in the engine, the options, the facade and Python; tests | Merged (e6a54d2); CI timed out (30 minutes) |
+| 130 | CI fix: the logistic random-effect searches and he2013 run on a driver copy of their blocks or cells when they fit (`path` option; OI-99); bitwise path tests | Delivered as a patch |
 
 ## Decisions and spikes
 

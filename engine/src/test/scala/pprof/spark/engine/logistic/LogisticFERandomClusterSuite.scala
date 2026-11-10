@@ -400,4 +400,19 @@ class LogisticFERandomClusterSuite extends SparkSuite {
       options.copy(estimator = "he2013", convergenceCriterion = "other")
     )
   }
+
+  test(
+    "he2013 on the driver's copy of the cells and on the executors gives the same bits (OI-99)"
+  ) {
+    val (spec, source, options) = setup("frc-text")
+    val df = input("frc-text")
+    def fit(path: String) =
+      LogisticFERandomCluster.fit(df, spec, source, options.copy(estimator = "he2013", path = path))
+    val (driver, executors) = (fit("driver"), fit("executors"))
+    def bits(v: Seq[Double]) = v.map(java.lang.Double.doubleToRawLongBits)
+    assertEquals(bits(driver.gamma.toSeq), bits(executors.gamma.toSeq))
+    assertEquals(bits(driver.stage3.alphaMean.toSeq), bits(executors.stage3.alphaMean.toSeq))
+    assertEquals(bits(driver.stage3.alphaVar.toSeq), bits(executors.stage3.alphaVar.toSeq))
+    assertEquals(driver.stage3.iterations, executors.stage3.iterations)
+  }
 }
