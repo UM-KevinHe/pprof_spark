@@ -1,6 +1,6 @@
 # Specification: the `he2013` estimator for fixed provider effects with random clusters (slice 4c-2)
 
-- Status: proposed with D-65 (round 127, 2026-11-05), awaiting the maintainer's approval.
+- Status: approved with D-65 (2026-11-05), with X-049; fixtures and calibration in round 128 (D-66, proposed).
 - Reference: pprof_py v0.7.0 (`9320766`), `LogisticFERandomClusterModel(estimator="he2013")`
   (`models/logistic/fe_random_cluster.py`, the iteration after `gauss_hermite_normal`). pprof_py follows He et al.
   (2013) and R's `glmm.fac.hosp`, which is not on CRAN; pprof_py is the only executable reference (OI-94).
@@ -91,4 +91,15 @@ is delegated to stage 1, as for `marginal`.
 
 | ID | Class | Summary | Status |
 |---|---|---|---|
-| X-049 | B | At σ = 0, pprof_spark's he2013 drops the objective's prior term (its limit) and iterates; pprof_py raises `ZeroDivisionError`, as for `marginal` (X-005) | Proposed (D-65) |
+| X-049 | B | At σ = 0, pprof_spark's he2013 drops the objective's prior term (its limit) and iterates; pprof_py raises `ZeroDivisionError`, as for `marginal` (X-005) | Approved (D-65) |
+
+## 8. Fixture findings (round 128)
+
+- Every `fixtures/fe-random-cluster` case gains pprof_py's he2013 fits under both criteria, at the defaults and at
+  `tol` 10⁻¹². The `max_delta_gamma` fixed point carries its exact test and measures at the median, and a negative
+  control. Regenerating reproduces every file byte for byte.
+- he2013 converges linearly. At `tol` 10⁻¹² it takes 43 to 88 iterations, and the two criteria's fixed points agree
+  within 9·10⁻⁵ of T-coef. At the defaults it takes 5 to 39 iterations and stops up to 995 of T-coef from the fixed
+  point, about 10⁻⁵ in γ, as a stopping rule on the change predicts for a linear rate.
+- The fitted values follow §2: γ after the last update with the moments before it, within 3·10⁻⁸ of T-meas.
+- The negative controls miss by at least 1.9·10⁷ of T-coef.

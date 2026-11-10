@@ -37,6 +37,9 @@ OPTIONS = {
                  "gamma (exact) and option SM (indirect and direct, ratio and rate, exact; two-sided and greater); "
                  "calculate_standardized_measures (indirect and direct) at the median, the mean and 0",
     "negative_controls": "the tightened fit with every outcome of the largest provider replaced by 1 - y",
+    "he2013": "estimator='he2013' (slice 4c-2, D-65) with convergence_criterion max_delta_gamma and relative, each at "
+              "its defaults (tol 1e-5) and at tol 1e-12; on the max_delta_gamma fixed point the exact test at the median "
+              "and the measures at the median; a negative control with the largest provider's outcomes flipped",
 }
 
 
@@ -85,9 +88,10 @@ def given(df, case):
     return BETA_TRUE + 0.05, case.get("given_sigma", BASE["sigma"]), np.log(p / (1.0 - p))
 
 
-def fit(df, case, tight):
+def fit(df, case, tight, estimator="marginal", criterion="max_delta_gamma"):
     beta, sigma, start = given(df, case)
-    model = LogisticFERandomClusterModel(bound_mode=case.get("bound_mode", "relative"), **(TIGHT if tight else {}))
+    model = LogisticFERandomClusterModel(bound_mode=case.get("bound_mode", "relative"), estimator=estimator,
+                                         convergence_criterion=criterion, **(TIGHT if tight else {}))
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         model.fit(df, "y", ["x1", "x2"], "provider", "cluster", beta=beta, sigma=sigma, gamma_init=start,
@@ -135,6 +139,34 @@ def inference(model):
     return out
 
 
+def he2013(df, case):
+    """Slice 4c-2 (D-65): the he2013 iteration under each criterion at its defaults and at tol 1e-12 (the fixed point),
+    the exact tests and measures of the max_delta_gamma fixed point, and a negative control."""
+    out = {}
+    for criterion in ("max_delta_gamma", "relative"):
+        default, caught = fit(df, case, False, "he2013", criterion)
+        tight, caught_tight = fit(df, case, True, "he2013", criterion)
+        out[criterion] = {"default": record(default, caught), "tight": record(tight, caught_tight)}
+        if criterion == "max_delta_gamma":
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                t = tight.test()
+            me = tight.calculate_standardized_measures(stdz=["indirect", "direct"], reference="median")
+            out["inference"] = {
+                "exact_median": {c: (flags(t[c]) if c == "flag" else hexes(t[c].astype(float))) for c in TEST_COLUMNS},
+                "measures_median": {kind: {c: hexes(me[kind][c]) for c in me[kind].columns if c != "provider_id"}
+                                    for kind in ("indirect", "direct")},
+            }
+    sizes = df.groupby("provider", sort=False).size()
+    flipped = df.copy()
+    rows = flipped["provider"] == sizes.idxmax()
+    for column in ("y", "obs") if case.get("adjusted") else ("y",):
+        flipped.loc[rows, column] = 1.0 - flipped.loc[rows, column]
+    control, _ = fit(flipped, case, True, "he2013")
+    out["negative_controls"] = {"flipped_provider": {"gamma": hexes(control.gamma_)}}
+    return out
+
+
 def negative_controls(df, case):
     sizes = df.groupby("provider", sort=False).size()
     key = sizes.idxmax()
@@ -171,7 +203,8 @@ def generate(out, inputs, lock, write_json):
         tight, caught_tight = fit(df, case, True)
         reference = {"given": {"beta": hexes(beta), "sigma": hexes([sigma]), "start": hexes(start)},
                      "default": record(default, caught), "tight": record(tight, caught_tight),
-                     "inference": inference(tight), "negative_controls": negative_controls(df, case)}
+                     "inference": inference(tight), "negative_controls": negative_controls(df, case),
+                     "he2013": he2013(df, case)}
         write_json(os.path.join(case_dir, "case.json"), dict(case, features=["x1", "x2"], rows=len(df),
                                                             text=bool(case.get("text"))))
         write_json(os.path.join(case_dir, "pprof_py.json"), reference)

@@ -103,7 +103,23 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-65: Slice 4c-2 specification (Proposed: awaiting the maintainer's approval)
+### D-66: Slice 4c-2 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+
+1. `fixtures/fe-random-cluster` gains he2013 (round 128). For every case, pprof_py's `estimator="he2013"` runs under
+   `max_delta_gamma` and `relative`, each at its defaults (`tol` 10⁻⁵) and at `tol` 10⁻¹² (the fixed point). The
+   `max_delta_gamma` fixed point also carries its exact test and measures at the median, and a negative control.
+2. `docs/parity/fe-random-cluster-calibration.md` passes every strict check:
+   - the two criteria reach the same fixed point, within 9·10⁻⁵ of T-coef;
+   - the fitted values use the last E-step's moments, within 3·10⁻⁸ of T-meas;
+   - the negative controls miss by at least 1.9·10⁷.
+   he2013 converges linearly: 43 to 88 iterations to the fixed point, and 5 to 39 at its defaults, which stop up to
+   995 of T-coef from it. Its fixed point lies up to 2.5·10⁸ of T-coef from `marginal`'s maximum.
+3. Classes for 4c-2's code, which runs the same iteration with the same arithmetic up to rounding:
+   - the fixed point's γ̂ at T-coef, its moments and fitted values at T-meas, and its log-likelihood at T-fn;
+   - the default runs: the same iteration counts as pprof_py, and γ̂ at T-coef;
+   - the exact test and the measures on the fixed point at slice 4c-1's classes.
+
+### D-65: Slice 4c-2 specification (Accepted: approved by the maintainer, 2026-11-05)
 
 `docs/spec/logistic/fe-random-cluster-he2013.md`: pprof_py's `estimator="he2013"` for the random-cluster model of
 slice 4c-1.
@@ -116,6 +132,8 @@ slice 4c-1.
   (OI-101 beyond the driver budget).
 - Validation: pprof_py's he2013 fixtures at their defaults and at the fixed point.
 - Proposed with it: X-049 (σ = 0 iterates where pprof_py raises).
+
+Approved as proposed, with X-049, on 2026-11-05.
 
 ### D-64: Slice 4c-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 
