@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2's specification approved (D-65), its fixtures and calibration in round 128 (D-66 proposed) |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2 complete (D-65, D-66; rounds 127 to 129) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -198,9 +198,9 @@ as round 82 did:
      complete (D-60, D-61; rounds 115 to 118); 4b-3 is complete (D-62; rounds 119 to 121). Part 4b's S1 smoke
      is prepared (round 122, `docs/parity/scale/s1-logistic-re.md`) and waits for the maintainer's run with
      4a's (OI-97, OI-100); then the two gate reviews.
-   - 4c, fixed provider effects with random clusters: 4c-1 is complete (D-63, D-64; rounds 123 to 126); 4c-2's
-     specification (`he2013`, OI-94) is approved (D-65) and its fixtures are in (round 128, D-66 proposed); next its
-     code and Python; then 4c-3; then part 4d. OI-98 (the nAGQ = 0 step on the driver)
+   - 4c, fixed provider effects with random clusters: 4c-1 is complete (D-63, D-64; rounds 123 to 126); 4c-2 (`he2013`)
+     is complete (D-65, D-66; rounds 127 to 129); next 4c-3 (persistence, the job runner, Python save and load); then
+     part 4d. OI-98 (the nAGQ = 0 step on the driver)
      and OI-99 (Spark jobs per fit) wait for S1.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
@@ -215,6 +215,27 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 129 (2026-11-05): slice 4c-2 code, the he2013 estimator
+
+- The maintainer approved D-66 as proposed (2026-11-05).
+- `engine.logistic.He2013` runs He et al.'s iteration in pprof_py's order, over record cells. Each iteration is
+  three passes (the E-step, the M-step and the objective), with cell sums added on the driver in a fixed order.
+  Spec 4c-2 §9 has the details.
+- `LogisticFERandomClusterOptions` takes `estimator` `he2013` and `convergenceCriterion`; the facade and Python pass
+  them.
+- `LogisticFERandomClusterSuite` gains five he2013 tests, one per case, and the σ = 0 test of X-049. Every case's
+  fixed point matches pprof_py at D-66's classes, and every default run takes pprof_py's iteration count.
+  `test_fe_random_cluster.py` gains a he2013 test.
+- Fixed on the way: integral keys arrived as `Integer` from CSV reading, which `GroupKey` rejects, so the cells' keys
+  are cast to Long, as `compress` does.
+
+Evidence (assistant sandbox): engine, engine-test and app compile with the build's flags after scalafmt;
+`LogisticFERandomClusterSuite` passes, and so do the Python random-cluster tests and the whole Python suite (the
+evidence log lists them); `check-engine-api.sh` passes; the patch applies to a fresh clone of `main` with an identical
+tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI runs for rounds 128 and 129.
 
 ## Round 128 (2026-11-05): slice 4c-2 fixtures and calibration (he2013)
 

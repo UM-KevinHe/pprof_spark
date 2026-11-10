@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-66: Slice 4c-2 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+### D-66: Slice 4c-2 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 
 1. `fixtures/fe-random-cluster` gains he2013 (round 128). For every case, pprof_py's `estimator="he2013"` runs under
    `max_delta_gamma` and `relative`, each at its defaults (`tol` 10⁻⁵) and at `tol` 10⁻¹² (the fixed point). The
@@ -118,6 +118,8 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
    - the fixed point's γ̂ at T-coef, its moments and fitted values at T-meas, and its log-likelihood at T-fn;
    - the default runs: the same iteration counts as pprof_py, and γ̂ at T-coef;
    - the exact test and the measures on the fixed point at slice 4c-1's classes.
+
+Approved as proposed on 2026-11-05.
 
 ### D-65: Slice 4c-2 specification (Accepted: approved by the maintainer, 2026-11-05)
 

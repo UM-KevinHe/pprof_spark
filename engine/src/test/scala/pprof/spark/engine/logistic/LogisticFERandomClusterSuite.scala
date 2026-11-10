@@ -250,7 +250,7 @@ class LogisticFERandomClusterSuite extends SparkSuite {
         options
       )
     )
-    intercept[IllegalArgumentException](LogisticFERandomClusterOptions(estimator = "he2013"))
+    intercept[IllegalArgumentException](LogisticFERandomClusterOptions(estimator = "other"))
     val fit = LogisticFERandomCluster.fit(df, spec, source, options)
     intercept[IllegalArgumentException](LogisticFERandomCluster.summary(fit))
   }
@@ -288,6 +288,116 @@ class LogisticFERandomClusterSuite extends SparkSuite {
     assertEquals(
       LogisticFERandomCluster.summary(fit).map(_.statistic),
       LogisticFE.waldTests(three.preparation.stage1).map(_.statistic)
+    )
+  }
+
+  for (name <- Seq("frc-base", "frc-obs", "frc-absolute", "frc-text", "frc-small-sigma")) {
+    test(
+      s"$name: he2013 under both criteria, at the defaults and the fixed point, against pprof_py (D-66)"
+    ) {
+      val (spec, source, options) = setup(name)
+      val df = input(name)
+      val he = Fixtures.json(s"fe-random-cluster/$name/pprof_py.json").get("he2013")
+      for (criterion <- Seq("max_delta_gamma", "relative")) {
+        val expected = he.get(criterion)
+        val fixed = LogisticFERandomCluster.fit(
+          df,
+          spec,
+          source,
+          options.copy(estimator = "he2013", convergenceCriterion = criterion, tol = 1e-12)
+        )
+        val t = expected.get("tight")
+        assert(fixed.stage3.converged, s"$name $criterion: ${fixed.warnings}")
+        check("T-coef", s"$name $criterion fixed point gamma", fixed.gamma.toSeq, h(t.get("gamma")))
+        check(
+          "T-meas",
+          s"$name $criterion alpha mean",
+          fixed.stage3.alphaMean.toSeq,
+          h(t.get("alpha_mean"))
+        )
+        check(
+          "T-meas",
+          s"$name $criterion alpha var",
+          fixed.stage3.alphaVar.toSeq,
+          h(t.get("alpha_var"))
+        )
+        check("T-fn", s"$name $criterion loglik", Seq(fixed.stage3.loglik), h(t.get("loglik")))
+        val fitted = LogisticFERandomCluster
+          .fitted(fixed)
+          .orderBy("id")
+          .limit(100)
+          .select("fitted")
+          .collect()
+          .map(_.getDouble(0))
+        check("T-meas", s"$name $criterion fitted", fitted.toSeq, h(t.get("fitted")))
+        val default = LogisticFERandomCluster.fit(
+          df,
+          spec,
+          source,
+          options.copy(estimator = "he2013", convergenceCriterion = criterion)
+        )
+        val d = expected.get("default")
+        assertEquals(
+          default.stage3.iterations,
+          d.get("iterations").asInt(),
+          s"$name $criterion default iterations"
+        )
+        check("T-coef", s"$name $criterion default gamma", default.gamma.toSeq, h(d.get("gamma")))
+        if (criterion == "max_delta_gamma") {
+          val inf = he.get("inference")
+          val tbl = LogisticFERandomCluster.test(fixed).orderBy("provider").collect()
+          val x = inf.get("exact_median")
+          val (z, ez, ep) = (column(tbl, "z_raw"), h(x.get("z_raw")), h(x.get("p_value")))
+          val clear = z.indices.filter(i => ep(i) >= 1e-6) // X-024
+          check("T-test", s"$name he2013 exact z", clear.map(z), clear.map(ez).toArray)
+          val me = LogisticFERandomCluster.measures(fixed, Seq("indirect", "direct"))
+          for (kind <- Seq("indirect", "direct")) {
+            val rows = me(kind).orderBy("provider").collect()
+            val mx = inf.get("measures_median").get(kind)
+            mx.fieldNames().forEachRemaining { q =>
+              if (rows.head.schema.fieldNames.contains(q))
+                check("T-meas", s"$name he2013 measures $kind $q", column(rows, q), h(mx.get(q)))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  test(
+    "he2013 at sigma = 0 (X-049): it converges with zero moments, and every free provider's score equation holds"
+  ) {
+    val (spec, LogisticFERandomClusterSource.Given(beta, _, start), options) =
+      setup("frc-base"): @unchecked
+    val df = input("frc-base")
+    val fit = LogisticFERandomCluster.fit(
+      df,
+      spec,
+      LogisticFERandomClusterSource.Given(beta, 0.0, start),
+      options.copy(estimator = "he2013", tol = 1e-12)
+    )
+    assert(
+      fit.stage3.converged && fit.stage3.alphaMean.forall(_ == 0.0) && fit.stage3.alphaVar.forall(
+        _ == 0.0
+      )
+    )
+    val gamma = fit.providers
+      .map(k => pprof.spark.engine.layout.GroupKey.value(k).toString)
+      .zip(fit.gamma)
+      .toMap
+    val keyed =
+      spark.createDataFrame(gamma.toSeq.map { case (k, g) => (k.toLong, g) }).toDF("provider", "g")
+    val eta = col("g") + col("x1") * lit(beta(0)) + col("x2") * lit(beta(1))
+    val scores = df
+      .join(keyed, "provider")
+      .groupBy("provider")
+      .agg(sum(col("y") - lit(1.0) / (lit(1.0) + exp(-eta))).as("score"))
+      .collect()
+    scores.foreach(r =>
+      assert(math.abs(r.getDouble(1)) < 1e-8, s"provider ${r.get(0)}: score ${r.getDouble(1)}")
+    )
+    intercept[IllegalArgumentException](
+      options.copy(estimator = "he2013", convergenceCriterion = "other")
     )
   }
 }

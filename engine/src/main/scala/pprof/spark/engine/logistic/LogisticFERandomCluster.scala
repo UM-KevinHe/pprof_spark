@@ -37,10 +37,17 @@ final case class LogisticFERandomClusterOptions(
     boundMode: String = "relative",
     estimator: String = "marginal",
     blocks: BlockOptions = BlockOptions(),
-    path: String = "auto"
+    path: String = "auto",
+    convergenceCriterion: String = "max_delta_gamma"
 ) {
-  require(estimator != "he2013", "estimator he2013 arrives with slice 4c-2 (OI-94)")
-  require(estimator == "marginal", s"estimator must be marginal, got $estimator")
+  require(
+    Seq("marginal", "he2013").contains(estimator),
+    s"estimator must be marginal or he2013, got $estimator"
+  )
+  require(
+    Seq("max_delta_gamma", "relative").contains(convergenceCriterion),
+    s"convergenceCriterion must be max_delta_gamma or relative, got $convergenceCriterion"
+  )
   def stage3: ThreeStageStage3Options =
     ThreeStageStage3Options(nNodes, maxIter, tol, bound, boundMode, blocks, path)
 }
@@ -56,7 +63,8 @@ final case class LogisticFERandomClusterFit(
     cells: ThreeStageCells,
     stage1: Option[LogisticFit],
     spec: LogisticFERandomClusterSpec,
-    options: LogisticFERandomClusterOptions
+    options: LogisticFERandomClusterOptions,
+    warnings: Vector[String] = Vector.empty
 ) {
   def gamma: Array[Double] = stage3.gamma
   def providers: Vector[GroupKey] = stage3.providers
@@ -128,8 +136,11 @@ object LogisticFERandomCluster {
         )
         cells.providers.map(k => byKey(GroupKey.value(k).toString) + s2.intercept).toArray
     }
-    val stage3 = ThreeStage.stage3(cells, sigma, start, options.stage3)
-    LogisticFERandomClusterFit(stage3, beta, sigma, records, cells, stage1, spec, options)
+    val (stage3, warnings) =
+      if (options.estimator == "he2013")
+        He2013.run(records, spec, cells, sigma, start, options) // slice 4c-2
+      else (ThreeStage.stage3(cells, sigma, start, options.stage3), Vector.empty[String])
+    LogisticFERandomClusterFit(stage3, beta, sigma, records, cells, stage1, spec, options, warnings)
   }
 
   /** Missing or non-finite values fail with counts per column (X-038's rule); outcomes must lie in [0, 1]. */

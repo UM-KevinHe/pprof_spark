@@ -1339,7 +1339,8 @@ object PythonApi {
       Option(o.get("bound")).map(_.asDouble()).getOrElse(d.bound),
       text(o, "boundMode").getOrElse(d.boundMode),
       text(o, "estimator").getOrElse(d.estimator),
-      path = text(o, "path").getOrElse(d.path)
+      path = text(o, "path").getOrElse(d.path),
+      convergenceCriterion = text(o, "convergenceCriterion").getOrElse(d.convergenceCriterion)
     )
     (spec, options)
   }
@@ -1396,6 +1397,9 @@ object PythonApi {
     root.put("providers", fit.stage3.providers.size)
     root.put("clusters", fit.stage3.clusters.size)
     root.put("withStage1", fit.stage1.nonEmpty)
+    root.put("estimator", fit.options.estimator)
+    val warnings = root.putArray("warnings")
+    fit.warnings.foreach(w => warnings.add(w))
     mapper.writeValueAsString(root)
   }
 

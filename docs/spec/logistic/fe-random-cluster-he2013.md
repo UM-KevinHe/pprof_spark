@@ -1,6 +1,6 @@
 # Specification: the `he2013` estimator for fixed provider effects with random clusters (slice 4c-2)
 
-- Status: approved with D-65 (2026-11-05), with X-049; fixtures and calibration in round 128 (D-66, proposed).
+- Status: approved with D-65 (2026-11-05), with X-049; fixtures and calibration in round 128 (D-66, approved); code and Python in round 129.
 - Reference: pprof_py v0.7.0 (`9320766`), `LogisticFERandomClusterModel(estimator="he2013")`
   (`models/logistic/fe_random_cluster.py`, the iteration after `gauss_hermite_normal`). pprof_py follows He et al.
   (2013) and R's `glmm.fac.hosp`, which is not on CRAN; pprof_py is the only executable reference (OI-94).
@@ -103,3 +103,24 @@ is delegated to stage 1, as for `marginal`.
   point, about 10⁻⁵ in γ, as a stopping rule on the change predicts for a linear rate.
 - The fitted values follow §2: γ after the last update with the moments before it, within 3·10⁻⁸ of T-meas.
 - The negative controls miss by at least 1.9·10⁷ of T-coef.
+
+## 9. Implementation notes (round 129; no statistical change)
+
+- `engine.logistic.He2013` groups the records into provider × cluster cells, sorted by the row identifier (or by
+  their offset and outcome without one). Integral keys are read as Long, as `ThreeStage.compress` reads them.
+- Each iteration takes three passes: the E-step's node sums, the M-step's score and information, and the objective
+  at the new γ. Their cell sums come back sorted by provider and cluster and are added on the driver with Neumaier's
+  compensation. The driver forms the moments, the step, the median clip and the criterion, in pprof_py's order.
+- `log q` is −log(1 + e^η), the stable form; it differs from pprof_py's `log(plogis(−η))` only where that underflows.
+- The result is a `ThreeStageStage3`, with `held` marking the providers at the bound, so `test`, `measures`,
+  `intervals` and `fitted` work unchanged. The fit carries he2013's warnings: floored information, a zero
+  denominator, non-convergence.
+- `LogisticFERandomClusterOptions` takes `estimator` `he2013` and `convergenceCriterion`. The facade and Python
+  pass them, and the Python summary reports the estimator and the warnings.
+- Tests:
+  - `LogisticFERandomClusterSuite` gains a he2013 test for every case (both criteria; the fixed point at D-66's
+    classes; the default runs' iteration counts equal to pprof_py's, with γ̂ at T-coef; the exact test and
+    measures) and the σ = 0 test of X-049;
+  - `test_fe_random_cluster.py` gains a he2013 test on frc-text.
+- The first run passed on string keys and failed on integral ones, which CSV reading made `Integer`, so the cells'
+  keys are now cast to Long.

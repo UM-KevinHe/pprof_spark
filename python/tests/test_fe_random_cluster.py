@@ -66,9 +66,20 @@ def test_observed_outcome_and_refusals(spark):
         m.fit(df, beta=[0.0, 0.0])
     with pytest.raises(ValueError, match="both stage1 and stage2"):
         m.fit(df, stage1=object())
-    with pytest.raises(NotImplementedError, match="4c-2"):
-        LogisticFERandomCluster("y", ["x1", "x2"], "provider", "cluster", estimator="he2013")
+    with pytest.raises(ValueError, match="estimator"):
+        LogisticFERandomCluster("y", ["x1", "x2"], "provider", "cluster", estimator="other")
     with pytest.raises(NotImplementedError, match="OI-87"):
         fit.test(null_model="empirical")
     with pytest.raises(Exception, match="stage 1"):
         fit.summary()
+
+
+def test_he2013_matches_pprof_py_at_its_defaults(spark):
+    py = fixture("frc-text")
+    g, d = py["given"], py["he2013"]["relative"]["default"]
+    model = LogisticFERandomCluster("y", ["x1", "x2"], "provider", "cluster", row_id="id", estimator="he2013",
+                                    convergence_criterion="relative")
+    fit = model.fit(read(spark, "frc-text"), beta=[float.fromhex(v) for v in g["beta"]],
+                    sigma=float.fromhex(g["sigma"][0]), gamma_init=[float.fromhex(v) for v in g["start"]])
+    assert fit.estimator == "he2013" and fit.iterations == d["iterations"] and fit.converged
+    assert within(column(fit.providers(), "gamma"), d["gamma"], T_COEF)

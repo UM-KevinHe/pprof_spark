@@ -13,22 +13,25 @@ from .logistic_re import LogisticRETest
 
 class LogisticFERandomCluster:
     """Column roles and options with pprof_py's `LogisticFERandomClusterModel` names: `n_nodes`, `max_iter`, `tol`,
-    `bound`, `bound_mode` and `estimator` (`marginal`; `he2013` arrives with slice 4c-2). `convergence_criterion`
-    applies to `he2013` only and is accepted. `observed` is pprof_py's `obs_var`, the outcome the tests count."""
+    `bound`, `bound_mode`, `estimator` (`marginal`, the default, or `he2013`, He et al.'s iteration, slice 4c-2) and
+    `convergence_criterion` (`max_delta_gamma` or `relative`, for `he2013`). `observed` is pprof_py's `obs_var`, the
+    outcome the tests count."""
 
     def __init__(self, outcome: str, features: Sequence[str], provider: str, cluster: str, *,
                  observed: Optional[str] = None, row_id: Optional[str] = None, n_nodes: int = 20,
                  max_iter: int = 10000, tol: float = 1e-5, bound: float = 10.0, bound_mode: str = "relative",
                  estimator: str = "marginal", convergence_criterion: str = "max_delta_gamma"):
-        if estimator == "he2013":
-            raise NotImplementedError("estimator='he2013' arrives with slice 4c-2 (OI-94)")
-        if convergence_criterion != "max_delta_gamma":
+        if estimator not in ("marginal", "he2013"):
+            raise ValueError("estimator must be 'marginal' or 'he2013'")
+        if convergence_criterion not in ("max_delta_gamma", "relative"):
+            raise ValueError("convergence_criterion must be 'max_delta_gamma' or 'relative'")
+        if estimator == "marginal" and convergence_criterion != "max_delta_gamma":
             warnings.warn("convergence_criterion applies to estimator='he2013' only", UserWarning, stacklevel=2)
         columns = {"outcome": outcome, "features": list(features), "provider": provider, "cluster": cluster,
                    "observed": observed, "rowId": row_id}
         self.columns = {k: v for k, v in columns.items() if v is not None}
         self.options = {"nNodes": int(n_nodes), "maxIter": int(max_iter), "tol": float(tol), "bound": float(bound),
-                        "boundMode": bound_mode, "estimator": estimator}
+                        "boundMode": bound_mode, "estimator": estimator, "convergenceCriterion": convergence_criterion}
 
     def fit(self, df: DataFrame, *, stage1=None, stage2=None, beta=None, sigma: Optional[float] = None,
             gamma_init=None) -> "LogisticFERandomClusterModel":
@@ -71,6 +74,8 @@ class LogisticFERandomClusterModel:
         self.converged = bool(s["converged"])
         self.n_providers = s["providers"]
         self.n_clusters = s["clusters"]
+        self.estimator = s["estimator"]
+        self.warnings = list(s["warnings"])
 
     def _frame(self, jdf) -> DataFrame:
         return DataFrame(jdf, self._spark)
