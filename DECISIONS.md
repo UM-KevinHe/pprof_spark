@@ -103,6 +103,20 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-67: Slice 4c-3 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/logistic/fe-random-cluster-job.md`: persistence, the job runner and Python save and load for the
+random-cluster model, with no new statistics.
+- A fit records its rows and an order-free fingerprint, computed in the validation pass.
+- `LogisticFERandomClusterFitIO` format version 1 saves everything but the records, as `ThreeStageFitIO` does:
+  metadata with doubles as bit patterns, a providers table and a clusters table. `attach` re-joins the training data
+  and checks it.
+- `pprof.spark.app.LogisticFERandomClusterJob` runs `model` `fe-random-cluster`:
+  - its source is either given values or the paths of a saved `LogisticFE` fit and a saved three-stage fit;
+  - its outputs are every one of slices 4c-1 and 4c-2's, then a run record;
+  - the seven jobs refuse each other's specifications.
+- Python's `save`, and `load(spark, path, df=None)`.
+
 ### D-66: Slice 4c-2 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 
 1. `fixtures/fe-random-cluster` gains he2013 (round 128). For every case, pprof_py's `estimator="he2013"` runs under
