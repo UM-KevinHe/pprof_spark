@@ -1,6 +1,6 @@
 # Specification: the logistic random-effect model with cluster factors (slice 4d-2)
 
-- Status: approved with D-71 (2026-11-05); fixtures and calibration in round 140 (D-72, proposed).
+- Status: approved with D-71 (2026-11-05); fixtures and calibration in round 140 (D-72, approved); the kernel in round 141.
 - Plan: [../random-effects/cluster-terms-plan.md](../random-effects/cluster-terms-plan.md) (D-68), slice 4d-2.
 - References: pprof_py v0.7.0 (`9320766`) `LogisticRandomEffectModel(...).fit(..., cluster_vars=...)`
   (`models/logistic/random_effect.py`; `inference/logistic/random_effect.py`: `test`, `_get_posterior_var`;
@@ -105,3 +105,21 @@ None expected.
   `deviance()` differs, so the comparisons use the log-likelihood.
 - pprof_py's stage 1 falls back from BOBYQA to Powell without nlopt, as in 4b's fixtures; its default fits still lie
   within 0.005 of T-opt of the tightened ones.
+
+## 10. Implementation notes (round 141, the kernel; no statistical change)
+
+- `numerics.kernels.CrossedSystem` is the elimination of §2, built from each level's diagonal value and the level
+  pairs' off-diagonal values. It gives log det, solves and the inverse's diagonal. 4d-1's linear kernel keeps its
+  own copy of the same steps, so that its tested code stays unchanged.
+- `numerics.kernels.LogisticREClusters` holds the rows in memory, with each factor pair's level pairs precomputed.
+  - `modes` runs PIRLS for u at (σ, β), or for (β, u) jointly for nAGQ = 0 through the β system's Schur
+    complement, with step halving on the penalized deviance and a relative tolerance of 10⁻¹³.
+  - `laplace` gives lme4's Laplace deviance.
+  - `fit` runs the two stages: σ by the nAGQ = 0 deviance from σ = 1, then (σ, β) by the Laplace deviance. Both use
+    `BoundedQuasiNewton` with central differences in every coordinate. §4 planned the analytic β gradient; central
+    differences reach the same optimum within the fixtures' classes.
+  - The outputs are the BLUPs σₖuₖ, the posterior variances σₖ²·diag(H⁻¹) and Var(β̂) from the β system
+    conditional on the modes.
+- `LogisticREClustersKernelSuite` builds every case's rows without Spark. All six cases passed on the first run:
+  σ̂, β̂, every factor's BLUPs and posterior SEs (T-opt), and the log-likelihood (T-fn), against both pprof_py and
+  glmer; D-59's optimality check against both optima.

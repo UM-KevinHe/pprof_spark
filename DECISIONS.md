@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-72: Slice 4d-2 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+### D-72: Slice 4d-2 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 
 1. Fixtures (round 140, `reference/fixtures/logistic_re_cluster_fixtures.py` and `logistic_re_cluster_r.R`):
    `fixtures/logistic-re-clusters` has six cases, each with 30 providers over 3,000 records: lgc-one, lgc-two,
@@ -129,6 +129,8 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
      exact tails), `resampling` within 4.5 Monte Carlo standard errors, the measures and intervals at T-meas, and
      the profile limits at T-opt;
    - a fit without cluster factors equal to 4b's bit for bit.
+
+Approved as proposed on 2026-11-05.
 
 ### D-71: Slice 4d-2 specification (Accepted: approved by the maintainer, 2026-11-05)
 
