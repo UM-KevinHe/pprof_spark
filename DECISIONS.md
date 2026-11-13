@@ -103,7 +103,20 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-73: X-050, the linear cluster fit's summary degrees of freedom (Proposed: awaiting the maintainer's approval)
+### D-74: Slice 4d-3 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/random-effects/cluster-terms-job.md`: persistence, the jobs, Python and 4c's stage 2 for the cluster-factor
+fits, with no new statistics.
+- `LinearREClusterFitIO` and `LogisticREClusterFitIO` are kinds of their own, each at format version 1. The logistic
+  fit is saved without its records and re-attached with `attach`, as 4c-3's fit is.
+- `LinearREJob` and `LogisticREJob` gain `columns.clusters`, with the outputs that apply and an `effects` output; the
+  linear job refuses provider profiling, as pprof_py does.
+- Python's `cluster_vars` for both models.
+- The random-cluster model's stage 2 from a logistic cluster fit, by pprof_py's `_values_from_stages` rules.
+- This amends D-68's "format version 2 of both random-effect fits": the cluster fits are separate types, so they get
+  their own kinds, and the single-factor formats stay unchanged.
+
+### D-73: X-050, the linear cluster fit's summary degrees of freedom (Accepted: approved by the maintainer, 2026-11-05)
 
 Spec 4d-1 §5 promised pprof_py's `summary`, `fixed_effects_table` and `conf_int` for a linear fit with cluster
 factors, and round 144 implements them.
@@ -116,6 +129,8 @@ factors, and round 144 implements them.
   divergence. The tests assert that pprof_py's limits follow its own count from our estimates, and ours the
   corrected one. At these fixtures the two differ in the sixth significant digit of the t quantile. Bug-compatible
   behavior would be a one-line change if preferred.
+
+Approved as proposed, with the corrected degrees of freedom, on 2026-11-05.
 
 ### D-72: Slice 4d-2 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 
