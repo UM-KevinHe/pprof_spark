@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2 complete (D-65, D-66; rounds 127 to 129); slice 4c-3 complete (D-67; rounds 131 to 133); part 4d's plan approved (D-68), slice 4d-1's specification (D-69) and fixtures (D-70) approved, its kernel in round 137 |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2 complete (D-65, D-66; rounds 127 to 129); slice 4c-3 complete (D-67; rounds 131 to 133); part 4d's plan approved (D-68), slice 4d-1 complete (D-69, D-70; rounds 135 to 138) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -202,9 +202,9 @@ as round 82 did:
      is complete (D-65, D-66; rounds 127 to 129), and its CI runs fit their limits again (round 130); 4c-3 is
      complete (D-67; rounds 131 to 133), and with it part 4c's code.
    - 4d, cluster terms (OI-93): the plan is approved (D-68): 4d-1 the linear model's cluster factors (estimation
-     only), 4d-2 the logistic model's (with `exact`), 4d-3 persistence, jobs, Python and 4c's stage 2. 4d-1's
-     specification (D-69) and fixtures (D-70) are approved, and its kernel is in (round 137); next the engine (one
-     pass of sufficient statistics, the fit, fitted values and predictions), then Python. OI-98 (the nAGQ = 0 step on the driver)
+     only), 4d-2 the logistic model's (with `exact`), 4d-3 persistence, jobs, Python and 4c's stage 2. 4d-1 is
+     complete (D-69, D-70; rounds 135 to 138), its Python with 4d-3; next 4d-2's specification (the logistic model's
+     cluster factors). OI-98 (the nAGQ = 0 step on the driver)
      and OI-99 (Spark jobs per fit) wait for S1.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
@@ -219,6 +219,26 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 138 (2026-11-05): slice 4d-1 engine, the linear model's cluster factors
+
+- `engine.linear.LinearREClusters` fits pprof_py's linear model with `cluster_vars` from a Spark DataFrame. A
+  validation pass gives counts, the fingerprint and the outcome's mean. One pass groups the rows by provider, in
+  canonical order, into provider and cell sums. The driver then assembles the kernel's data in key order and runs
+  the search.
+- `fitted` adds every factor's BLUPs, and `predict` the factors named. `LinearREClusterFit` carries every factor's
+  BLUP table. Spec 4d-1 §11 has the details.
+- `LinearREClustersSuite` (9 tests) passed on its first run:
+  - all seven cases, REML and ML, against pprof_py and lme4 at D-70's classes, with the fitted values;
+  - invariance bit for bit;
+  - predictions and refusals.
+  Slice 4d-1's estimation is complete; Python, persistence and the jobs come with 4d-3 (D-68).
+
+Evidence (assistant sandbox): engine and engine-test compile with the build's flags after scalafmt;
+`LinearREClustersSuite` passes, 9 of 9, and `LinearREClustersKernelSuite` 7 of 7; `check-engine-api.sh` passes; the
+patch applies to a fresh clone of `main` with an identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the CI runs for rounds 137 and 138.
 
 ## Round 137 (2026-11-05): slice 4d-1 kernel, the linear model's cluster factors
 

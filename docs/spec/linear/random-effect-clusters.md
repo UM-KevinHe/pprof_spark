@@ -1,6 +1,6 @@
 # Specification: the linear random-effect model with cluster factors (slice 4d-1)
 
-- Status: approved with D-69 (2026-11-05); fixtures and calibration in round 136 (D-70, approved); the kernel in round 137.
+- Status: approved with D-69 (2026-11-05); fixtures and calibration in round 136 (D-70, approved); the kernel in round 137 and the engine in round 138.
 - Plan: [../random-effects/cluster-terms-plan.md](../random-effects/cluster-terms-plan.md) (D-68), slice 4d-1.
 - References: pprof_py v0.7.0 (`9320766`) `LinearRandomEffectModel(...).fit(..., cluster_vars=...)`
   (`models/linear/random_effect.py`: `_build_H_C`, `_solve_inner`, `_objective_from_state`, `predict`); lme4
@@ -118,3 +118,28 @@ None expected.
   - the search's θ, β, σ, standard errors, criterion and every factor's BLUPs against pprof_py's and lme4's.
 - The engine's single pass, the fit object, fitted values and predictions come next. They take a spec of their own,
   `LinearREClusterSpec`, rather than §6's new field on `LinearRESpec`, so that 4a's fit and its types stay unchanged.
+
+## 11. Implementation notes (round 138, the engine; no statistical change)
+
+- `engine.linear.LinearREClusters.fit(df, LinearREClusterSpec, LinearREClusterOptions)`:
+  1. One validation pass gives the counts per column (X-038's rules), non-positive weights, the row count, the
+     fingerprint (xxhash64 in two 32-bit halves, as slice 4c-3's) and the weighted mean of y − o. The mean centres
+     y when the model has an intercept.
+  2. Each factor's keys are collected and sorted, integral keys as Long.
+  3. One pass groups the rows by provider and sorts them by the row identifier, or canonically without one. It
+     gives each provider's sums and its cells' sums (by cluster levels), with Neumaier's compensation.
+  4. The driver adds the providers in key order into the kernel's `Data` and runs the search (spec §10). Its
+     budget covers the cells and the cluster block (OI-59).
+- `LinearREClusterFit` holds:
+  - the coefficients and Var(β̂), θ̂ by factor and σ̂;
+  - each factor's BLUP table (key, `records`, `weight`, `blup`);
+  - the criterion, log-likelihood (−criterion/2), AIC and BIC, with p + factors + 1 parameters, as pprof_py's;
+  - the search's record, the boundary factors and the fingerprint.
+- `fitted(df, fit)` adds every factor's BLUP to the offset and xβ, as pprof_py's `fitted_values`. `predict(df, fit,
+  reVars)` adds only the named factors' BLUPs, and unseen levels contribute 0.
+- `LinearREClustersSuite` (9 tests) passed on its first run:
+  - every case's REML and ML fits against pprof_py and lme4 at D-70's classes, and the fitted values;
+  - invariance to row order and partitioning, bit for bit;
+  - predictions by factor, and the refusals.
+- With the engine, slice 4d-1's estimation is complete. Persistence, the jobs and Python come with slice 4d-3, as
+  the plan orders them (D-68).
