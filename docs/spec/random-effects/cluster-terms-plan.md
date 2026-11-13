@@ -1,6 +1,6 @@
 # Plan: cluster terms in the random-effect models (part 4d)
 
-- Status: proposed with D-68 (round 134, 2026-11-05), awaiting the maintainer's approval.
+- Status: approved with D-68 (2026-11-05); slice 4d-1's specification proposed in round 135 (D-69).
 - Parent: [plan.md](plan.md) (D-51), part 4d and §4.4; OI-93.
 - References: pprof_py v0.7.0 (`9320766`) `LinearRandomEffectModel` and `LogisticRandomEffectModel` with
   `cluster_vars`; lme4 1.1-35.1, `lmer` and `glmer` with `(1 | provider) + (1 | cluster)`.

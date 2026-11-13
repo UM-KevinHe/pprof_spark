@@ -103,7 +103,20 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-68: Part 4d plan, cluster terms (Proposed: awaiting the maintainer's approval)
+### D-69: Slice 4d-1 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/linear/random-effect-clusters.md`: the linear random-effect model with crossed cluster factors, as
+pprof_py's `cluster_vars`, estimation only.
+- θ per factor by profiled REML or ML, the criterion of pprof_py's `_objective_from_state`. The search is
+  `BoundedQuasiNewton` with central-difference gradients from θ = 1; one factor keeps 4a-1's search.
+- The system is solved by eliminating the provider block onto the cluster levels, with a dense Cholesky factor of
+  the cluster block, from one pass of level sums and level-pair sums. The search then runs on the driver (OI-59
+  beyond its budget).
+- Outputs: β and its tables, θ̂ and σ̂θ̂ per factor, every factor's BLUPs, fitted values, and predictions over the
+  chosen factors. Provider profiling is refused, as pprof_py refuses it.
+- A fit without cluster factors stays 4a-1's bit for bit; fixtures come from pprof_py and `lmer`.
+
+### D-68: Part 4d plan, cluster terms (Accepted: approved by the maintainer, 2026-11-05)
 
 `docs/spec/random-effects/cluster-terms-plan.md`: crossed cluster factors in the random-effect models, as pprof_py's
 `cluster_vars` (OI-93). Round 134's probe agreed with lme4.
@@ -115,6 +128,8 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 - The core: the provider block eliminated onto the cluster levels, as the three-stage model's stage 2 does, from
   provider × cluster cell sums.
 - Fixtures: new cases in `fixtures/linear-re` and `fixtures/logistic-re`, from pprof_py and lme4.
+
+Approved as proposed on 2026-11-05.
 
 ### D-67: Slice 4c-3 specification (Accepted: approved by the maintainer, 2026-11-05)
 
