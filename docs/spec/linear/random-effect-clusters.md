@@ -1,6 +1,6 @@
 # Specification: the linear random-effect model with cluster factors (slice 4d-1)
 
-- Status: approved with D-69 (2026-11-05); fixtures and calibration in round 136 (D-70, proposed).
+- Status: approved with D-69 (2026-11-05); fixtures and calibration in round 136 (D-70, approved); the kernel in round 137.
 - Plan: [../random-effects/cluster-terms-plan.md](../random-effects/cluster-terms-plan.md) (D-68), slice 4d-1.
 - References: pprof_py v0.7.0 (`9320766`) `LinearRandomEffectModel(...).fit(..., cluster_vars=...)`
   (`models/linear/random_effect.py`: `_build_H_C`, `_solve_inner`, `_objective_from_state`, `predict`); lme4
@@ -100,3 +100,21 @@ None expected.
   - every factor's BLUPs at T-opt.
   On lrc-boundary both put the cluster factor's θ at 0, lme4 reporting a singular fit.
 - pprof_py's default Powell search (tol 10⁻⁸) stops within 0.0012 of T-opt of its tightened optimum.
+
+## 10. Implementation notes (round 137, the kernel; no statistical change)
+
+- `numerics.kernels.LinearREClusters`:
+  - `Data` holds §3's sufficient statistics: each factor's level sums, the level-pair weight totals, XᵀWX, XᵀWỹ,
+    ỹᵀWỹ, Σ log w and n. ỹ = y − o − ȳ, with ȳ the weighted mean, added back to the intercept (when the model has
+    one) to reduce cancellation in the penalized residual sum of squares.
+  - `evaluate(data, θ, reml)` builds the provider diagonal and the couplings, forms the cluster levels' Schur
+    complement and factors it. It solves H by block elimination, and gives the criterion, β, u, σ², log det H,
+    log det of the β system and its inverse. The sums are compensated.
+  - `fit` searches θ with `BoundedQuasiNewton` (central differences, gradient tolerance 10⁻⁹) from θ = 1. A finite
+    `thetaUpper` clamps inside the criterion.
+- `LinearREClustersKernelSuite` builds every fixture case's statistics without Spark and passes on all seven cases,
+  REML and ML:
+  - the criterion at pprof_py's tightened θ against its objective (T-fn), and β there (T-opt);
+  - the search's θ, β, σ, standard errors, criterion and every factor's BLUPs against pprof_py's and lme4's.
+- The engine's single pass, the fit object, fitted values and predictions come next. They take a spec of their own,
+  `LinearREClusterSpec`, rather than §6's new field on `LinearRESpec`, so that 4a's fit and its types stay unchanged.

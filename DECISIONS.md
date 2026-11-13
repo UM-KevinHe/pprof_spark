@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-70: Slice 4d-1 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+### D-70: Slice 4d-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 
 1. Fixtures (round 136, `reference/fixtures/linear_re_cluster_fixtures.py` and `linear_re_cluster_r.R`): a new family,
    `fixtures/linear-re-clusters`, rather than new cases in `fixtures/linear-re`, whose generator and files are built
@@ -121,6 +121,8 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
      optimality check of D-59 (the gradient at T-opt's scale, or the bound);
    - the criterion at T-fn against both, and at pprof_py's tightened θ against its objective (the kernel at fixed θ);
    - a fit without cluster factors equal to 4a-1's bit for bit.
+
+Approved as proposed on 2026-11-05.
 
 ### D-69: Slice 4d-1 specification (Accepted: approved by the maintainer, 2026-11-05)
 
