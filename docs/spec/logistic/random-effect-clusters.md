@@ -165,3 +165,17 @@ None expected.
 - `LogisticREClustersSuite` gains a lockstep test on all six cases at pprof_py's tightened (σ, β). The measures and
   options `alpha` and `SM` agree at T-meas, and every factor's profile limits at T-opt. It passed on the first run.
 - Slice 4d-2's estimation and inference are complete. Persistence, the jobs and Python come with slice 4d-3 (D-68).
+
+## 13. Round 144: the fitted values and predictions §5 promised
+
+Round 143 called this slice's estimation and inference complete, but §5's fitted values and predictions had not
+been written.
+- `LogisticREClusters.fitted(df, fit)` gives 4b's columns, with every factor's BLUP in η: `xbeta`, `eta`, `fitted`,
+  `residual`, `pearson` and `deviance_residual`.
+- `LogisticREClusters.predict(df, fit, reVars, withOffset, type)` uses the BLUPs of the named factors, unseen levels
+  contributing 0, on the response or link scale. Keys match by value, as 4b's predictions do after X-044.
+- `LogisticREClustersSuite` gains a test on four cases:
+  - the fitted values against pprof_py's at its tightened (σ, β) at T-meas;
+  - predictions with every factor equal to the fitted values within a few ulps, and without effects equal to
+    expit(xβ̂);
+  - an unknown factor refused.

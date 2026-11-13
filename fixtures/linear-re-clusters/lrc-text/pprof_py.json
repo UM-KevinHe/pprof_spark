@@ -16,6 +16,18 @@
   "bic": [
    "0x1.0fb153960f9e6p+13"
   ],
+  "conf_int": {
+   "lower": [
+    "0x1.026669d441d4dp-2",
+    "0x1.8a811e74427fap-1",
+    "-0x1.43975d6932a6cp-1"
+   ],
+   "upper": [
+    "0x1.2e8a33f7aa6c0p+0",
+    "0x1.af3f5782775a0p-1",
+    "-0x1.f004a53115d94p-2"
+   ]
+  },
   "converged": true,
   "fitted": [
    "0x1.877d84a4bcde0p+0",
@@ -119,6 +131,33 @@
    "0x1.89ae254e720ecp-1",
    "0x1.5a9e7b0c7c608p+0"
   ],
+  "fixed_effects_table": {
+   "Estimate": [
+    "0x1.6f23ce6cbae13p-1",
+    "0x1.9ce03afb5cecdp-1",
+    "-0x1.1dccd800dec9bp-1"
+   ],
+   "Pr(>|t|)": [
+    "0x1.482ee092e2df7p-9",
+    "0x0.0p+0",
+    "0x1.b2ec1e1c8d559p-158"
+   ],
+   "Std. Error": [
+    "0x1.e56781df50b92p-3",
+    "0x1.2bd3e499984e1p-6",
+    "0x1.34613d0ca5c53p-5"
+   ],
+   "df": [
+    "0x1.76a0000000000p+11",
+    "0x1.76a0000000000p+11",
+    "0x1.76a0000000000p+11"
+   ],
+   "t value": [
+    "0x1.8341785f21169p+1",
+    "0x1.6085f21ed2b4ap+5",
+    "-0x1.da82de23b1a33p+3"
+   ]
+  },
   "loglik": [
    "-0x1.0e3105576cd76p+12"
   ],
@@ -223,6 +262,38 @@
   "sigma": [
    "0x1.ff5fdf3e45ec3p-1"
   ],
+  "summary": {
+   "ci_lower": [
+    "0x1.0266616a3d4c9p-2",
+    "0x1.8a811e211a602p-1",
+    "-0x1.43975e1441521p-1"
+   ],
+   "ci_upper": [
+    "0x1.2e8a36122b8e1p+0",
+    "0x1.af3f57d59f798p-1",
+    "-0x1.f004a3daf882bp-2"
+   ],
+   "estimate": [
+    "0x1.6f23ce6cbae13p-1",
+    "0x1.9ce03afb5cecdp-1",
+    "-0x1.1dccd800dec9bp-1"
+   ],
+   "p_value": [
+    "0x1.4830f139939f8p-9",
+    "0x0.0p+0",
+    "0x0.0p+0"
+   ],
+   "stat": [
+    "0x1.8341785f21169p+1",
+    "0x1.6085f21ed2b4ap+5",
+    "-0x1.da82de23b1a33p+3"
+   ],
+   "std_error": [
+    "0x1.e56781df50b92p-3",
+    "0x1.2bd3e499984e1p-6",
+    "0x1.34613d0ca5c53p-5"
+   ]
+  },
   "theta": [
    "0x1.1cde25e62499cp-1",
    "0x1.34b01cdecae59p-1"
@@ -246,6 +317,18 @@
   "bic": [
    "0x1.0fb153960f9e6p+13"
   ],
+  "conf_int": {
+   "lower": [
+    "0x1.02666a3e45db4p-2",
+    "0x1.8a811e74a8273p-1",
+    "-0x1.43975d6744564p-1"
+   ],
+   "upper": [
+    "0x1.2e8a33dc91f70p+0",
+    "0x1.af3f578291e01p-1",
+    "-0x1.f004a52e688b4p-2"
+   ]
+  },
   "converged": true,
   "fitted": [
    "0x1.877d84aa0f2c8p+0",
@@ -349,6 +432,33 @@
    "0x1.89ae2551e7ef3p-1",
    "0x1.5a9e7b113fed6p+0"
   ],
+  "fixed_effects_table": {
+   "Estimate": [
+    "0x1.6f23ce6c236ddp-1",
+    "0x1.9ce03afb9d03ap-1",
+    "-0x1.1dccd7ff3c4dfp-1"
+   ],
+   "Pr(>|t|)": [
+    "0x1.482eddb6d6e41p-9",
+    "0x0.0p+0",
+    "0x1.b2ec1d5ef413ap-158"
+   ],
+   "Std. Error": [
+    "0x1.e5678171f8882p-3",
+    "0x1.2bd3e497333abp-6",
+    "0x1.34613d0a3afabp-5"
+   ],
+   "df": [
+    "0x1.76a0000000000p+11",
+    "0x1.76a0000000000p+11",
+    "0x1.76a0000000000p+11"
+   ],
+   "t value": [
+    "0x1.834178b5bd852p+1",
+    "0x1.6085f221da407p+5",
+    "-0x1.da82de24b2fb4p+3"
+   ]
+  },
   "loglik": [
    "-0x1.0e3105576cd76p+12"
   ],
@@ -453,6 +563,38 @@
   "sigma": [
    "0x1.ff5fdf3a068a2p-1"
   ],
+  "summary": {
+   "ci_lower": [
+    "0x1.026661d44154ep-2",
+    "0x1.8a811e218007ap-1",
+    "-0x1.43975e1253018p-1"
+   ],
+   "ci_upper": [
+    "0x1.2e8a35f71318ap+0",
+    "0x1.af3f57d5b9ffap-1",
+    "-0x1.f004a3d84b34cp-2"
+   ],
+   "estimate": [
+    "0x1.6f23ce6c236ddp-1",
+    "0x1.9ce03afb9d03ap-1",
+    "-0x1.1dccd7ff3c4dfp-1"
+   ],
+   "p_value": [
+    "0x1.4830f139939f8p-9",
+    "0x0.0p+0",
+    "0x0.0p+0"
+   ],
+   "stat": [
+    "0x1.834178b5bd852p+1",
+    "0x1.6085f221da407p+5",
+    "-0x1.da82de24b2fb4p+3"
+   ],
+   "std_error": [
+    "0x1.e5678171f8882p-3",
+    "0x1.2bd3e497333abp-6",
+    "0x1.34613d0a3afabp-5"
+   ]
+  },
   "theta": [
    "0x1.1cde270866aadp-1",
    "0x1.34b01c445ba3ep-1"
@@ -489,6 +631,18 @@
   "bic": [
    "0x1.101068c2a12cap+13"
   ],
+  "conf_int": {
+   "lower": [
+    "0x1.d82627d027d7ep-3",
+    "0x1.8a7f79a8f55dbp-1",
+    "-0x1.43967a17d5d1dp-1"
+   ],
+   "upper": [
+    "0x1.341d76a1fcec8p+0",
+    "0x1.af40e07564f87p-1",
+    "-0x1.eff5c4b942851p-2"
+   ]
+  },
   "converged": true,
   "fitted": [
    "0x1.8771a532e6759p+0",
@@ -592,6 +746,33 @@
    "0x1.89e8ff9766a31p-1",
    "0x1.5a8c66262bc02p+0"
   ],
+  "fixed_effects_table": {
+   "Estimate": [
+    "0x1.6f223b9c01e78p-1",
+    "0x1.9ce02d0f2d2b1p-1",
+    "-0x1.1dc8ae3a3b8a3p-1"
+   ],
+   "Pr(>|t|)": [
+    "0x1.fcc2d74b42571p-9",
+    "0x0.0p+0",
+    "0x1.d7c608fd879c8p-158"
+   ],
+   "Std. Error": [
+    "0x1.fc2a063981f24p-3",
+    "0x1.2bedd4d706c45p-6",
+    "0x1.347bf6f785385p-5"
+   ],
+   "df": [
+    "0x1.76a0000000000p+11",
+    "0x1.76a0000000000p+11",
+    "0x1.76a0000000000p+11"
+   ],
+   "t value": [
+    "0x1.71e7ae785f8e9p+1",
+    "0x1.60676998367d3p+5",
+    "-0x1.da52d8fca9e4cp+3"
+   ]
+  },
   "loglik": [
    "-0x1.0e901a83fe65ap+12"
   ],
@@ -696,6 +877,38 @@
   "sigma": [
    "0x1.ff8beec041f5ep-1"
   ],
+  "summary": {
+   "ci_lower": [
+    "0x1.d82616321f936p-3",
+    "0x1.8a7f7955c60c8p-1",
+    "-0x1.43967ac2f3505p-1"
+   ],
+   "ci_upper": [
+    "0x1.341d78d5bdf51p+0",
+    "0x1.af40e0c89449ap-1",
+    "-0x1.eff5c36307882p-2"
+   ],
+   "estimate": [
+    "0x1.6f223b9c01e78p-1",
+    "0x1.9ce02d0f2d2b1p-1",
+    "-0x1.1dc8ae3a3b8a3p-1"
+   ],
+   "p_value": [
+    "0x1.fcc4e21cc02a2p-9",
+    "0x0.0p+0",
+    "0x0.0p+0"
+   ],
+   "stat": [
+    "0x1.71e7ae785f8e9p+1",
+    "0x1.60676998367d3p+5",
+    "-0x1.da52d8fca9e4cp+3"
+   ],
+   "std_error": [
+    "0x1.fc2a063981f24p-3",
+    "0x1.2bedd4d706c45p-6",
+    "0x1.347bf6f785385p-5"
+   ]
+  },
   "theta": [
    "0x1.1dbbeec3193f4p-1",
    "0x1.463223e3dc0d5p-1"
@@ -719,6 +932,18 @@
   "bic": [
    "0x1.101068c2a12c9p+13"
   ],
+  "conf_int": {
+   "lower": [
+    "0x1.d82629fd13132p-3",
+    "0x1.8a7f79a8e95a7p-1",
+    "-0x1.43967a182b13bp-1"
+   ],
+   "upper": [
+    "0x1.341d765c77631p+0",
+    "0x1.af40e0756daa1p-1",
+    "-0x1.eff5c4b99854bp-2"
+   ]
+  },
   "converged": true,
   "fitted": [
    "0x1.8771a533417f8p+0",
@@ -822,6 +1047,33 @@
    "0x1.89e8ff9491455p-1",
    "0x1.5a8c6626d50f6p+0"
   ],
+  "fixed_effects_table": {
+   "Estimate": [
+    "0x1.6f223b9c19c57p-1",
+    "0x1.9ce02d0f2b824p-1",
+    "-0x1.1dc8ae3a7b9f0p-1"
+   ],
+   "Pr(>|t|)": [
+    "0x1.fcc2cd1d23fd7p-9",
+    "0x0.0p+0",
+    "0x1.d7c6097cd2c58p-158"
+   ],
+   "Std. Error": [
+    "0x1.fc2a051daa407p-3",
+    "0x1.2bedd4d7afbb8p-6",
+    "0x1.347bf6f832047p-5"
+   ],
+   "df": [
+    "0x1.76a0000000000p+11",
+    "0x1.76a0000000000p+11",
+    "0x1.76a0000000000p+11"
+   ],
+   "t value": [
+    "0x1.71e7af4715452p+1",
+    "0x1.606769976e8b9p+5",
+    "-0x1.da52d8fc0a8f1p+3"
+   ]
+  },
   "loglik": [
    "-0x1.0e901a83fe659p+12"
   ],
@@ -926,6 +1178,38 @@
   "sigma": [
    "0x1.ff8beec165bfep-1"
   ],
+  "summary": {
+   "ci_lower": [
+    "0x1.d826185f0ad8ap-3",
+    "0x1.8a7f7955ba095p-1",
+    "-0x1.43967ac348922p-1"
+   ],
+   "ci_upper": [
+    "0x1.341d7890386a6p+0",
+    "0x1.af40e0c89cfb3p-1",
+    "-0x1.eff5c3635d57cp-2"
+   ],
+   "estimate": [
+    "0x1.6f223b9c19c57p-1",
+    "0x1.9ce02d0f2b824p-1",
+    "-0x1.1dc8ae3a7b9f0p-1"
+   ],
+   "p_value": [
+    "0x1.fcc4e21cc02a2p-9",
+    "0x0.0p+0",
+    "0x0.0p+0"
+   ],
+   "stat": [
+    "0x1.71e7af4715452p+1",
+    "0x1.606769976e8b9p+5",
+    "-0x1.da52d8fc0a8f1p+3"
+   ],
+   "std_error": [
+    "0x1.fc2a051daa407p-3",
+    "0x1.2bedd4d7afbb8p-6",
+    "0x1.347bf6f832047p-5"
+   ]
+  },
   "theta": [
    "0x1.1dbbeeae564e6p-1",
    "0x1.4632230a5787ep-1"

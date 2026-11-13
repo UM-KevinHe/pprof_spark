@@ -150,3 +150,17 @@ None expected.
   is no greater than this kernel's criterion at pprof_py's or lme4's optimum, within 10⁻¹⁰ relative.
 - `LinearREClustersSuite` gains a fit without a row identifier: lrc-weights, shuffled and repartitioned. Its
   canonical order gives the same bits; it matches the fit with the identifier at T-opt.
+
+## 13. Round 144: the fixed-effect tables §5 promised
+
+Rounds 138 and 139 called this slice complete, but §5's `summary`, `fixed_effects_table` and `conf_int` had not been
+written; preparing slice 4d-3 found the gap.
+- `LinearREClusters.fixedEffectsTable` and `confInt` follow pprof_py: Student t with max(n − p, 1) degrees of freedom.
+- `LinearREClusters.summary` uses n − p − (providers) degrees of freedom, where pprof_py counts the grouping factors
+  instead (X-050, proposed in D-73).
+- The fixtures now record pprof_py's three tables for every fit, and only these entries are new; every earlier value
+  regenerates unchanged.
+- `LinearREClustersSuite` gains a test on all seven cases:
+  - the tables against pprof_py at T-opt, and the degrees of freedom exactly;
+  - the t distribution reproducing pprof_py's p-values from its own t within 10⁻¹⁰ relative;
+  - pprof_py's summary limits following its own count from our estimates, and ours the corrected one.

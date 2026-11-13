@@ -25,7 +25,7 @@ import pprof.spark.engine.backend.{BlockOptions, DriverGuards}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.layout.GroupKey
 import pprof.spark.engine.metadata.SoftwareInfo
-import pprof.spark.numerics.NeumaierSum
+import pprof.spark.numerics.{NeumaierSum, StudentT}
 import pprof.spark.numerics.kernels.{LinearREClusters => Kernel}
 
 /** Column roles of the linear model with cluster factors (docs/spec/linear/random-effect-clusters.md §6, §10). */
@@ -486,5 +486,83 @@ object LinearREClusters {
       s"unknown grouping variables ${unknown.mkString(", ")}; fitted: ${fit.factors.mkString(", ")}"
     )
     withEta(df, fit, reVars).withColumnRenamed("eta", "prediction")
+  }
+
+  /** pprof_py's `summary` (spec 4d-1 §5): t = (β̂ − null)/se on n − p − m degrees of freedom, m the providers, as
+    * pprof_py's rule for one factor and its comment intend. With cluster factors pprof_py counts its factors instead
+    * (`len(coefficients_["alpha"])`), a reference defect (X-050).
+    */
+  def summary(
+      fit: LinearREClusterFit,
+      level: Double = 0.95,
+      nullValue: Double = 0.0,
+      alternative: String = "two_sided"
+  ): Vector[LinearTest] = {
+    require(level > 0.0 && level < 1.0, s"level must lie strictly between 0 and 1, got $level")
+    require(
+      Seq("two_sided", "greater", "less").contains(alternative),
+      s"unknown alternative $alternative"
+    )
+    val providers = fit.effects(fit.spec.provider).count()
+    val df = (fit.rows - fit.coefficients.size - providers).toDouble
+    fit.coefficients.map { c =>
+      val t = (c.estimate - nullValue) / c.standardError
+      alternative match {
+        case "two_sided" =>
+          val q = StudentT.upperQuantile((1.0 - level) / 2.0, df)
+          LinearTest(
+            c.feature,
+            c.estimate,
+            c.standardError,
+            t,
+            StudentT.twoSided(t, df),
+            c.estimate - q * c.standardError,
+            c.estimate + q * c.standardError
+          )
+        case "greater" =>
+          val q = StudentT.upperQuantile(1.0 - level, df)
+          LinearTest(
+            c.feature,
+            c.estimate,
+            c.standardError,
+            t,
+            StudentT.upperTail(t, df),
+            c.estimate - q * c.standardError,
+            Double.PositiveInfinity
+          )
+        case _ =>
+          val q = StudentT.upperQuantile(1.0 - level, df)
+          LinearTest(
+            c.feature,
+            c.estimate,
+            c.standardError,
+            t,
+            StudentT.cdf(t, df),
+            Double.NegativeInfinity,
+            c.estimate + q * c.standardError
+          )
+      }
+    }
+  }
+
+  /** pprof_py's `fixed_effects_table`: t = β̂/se with max(n − p, 1) degrees of freedom. */
+  def fixedEffectsTable(fit: LinearREClusterFit): Vector[LinearREFixedEffect] = {
+    val df = math.max(fit.rows - fit.coefficients.size, 1L).toDouble
+    fit.coefficients.map { c =>
+      val t = if (c.standardError == 0.0) Double.NaN else c.estimate / c.standardError
+      LinearREFixedEffect(c.feature, c.estimate, c.standardError, t, df, StudentT.twoSided(t, df))
+    }
+  }
+
+  /** pprof_py's `conf_int`: β̂ ∓ t·se with max(n − p, 1) degrees of freedom; (feature, lower, upper). */
+  def confInt(fit: LinearREClusterFit, level: Double = 0.95): Vector[(String, Double, Double)] = {
+    require(level > 0.0 && level < 1.0, s"level must lie strictly between 0 and 1, got $level")
+    val q = StudentT.upperQuantile(
+      (1.0 - level) / 2.0,
+      math.max(fit.rows - fit.coefficients.size, 1L).toDouble
+    )
+    fit.coefficients.map(c =>
+      (c.feature, c.estimate - q * c.standardError, c.estimate + q * c.standardError)
+    )
   }
 }

@@ -103,6 +103,20 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-73: X-050, the linear cluster fit's summary degrees of freedom (Proposed: awaiting the maintainer's approval)
+
+Spec 4d-1 §5 promised pprof_py's `summary`, `fixed_effects_table` and `conf_int` for a linear fit with cluster
+factors, and round 144 implements them.
+- `fixed_effects_table` and `conf_int` follow pprof_py exactly: Student t with max(n − p, 1) degrees of freedom.
+- pprof_py's `summary` takes n − p − m degrees of freedom, with m = `len(coefficients_["alpha"])`. Its comment calls
+  this "consistent with fixed_effect model": m is the provider count. With cluster factors, `coefficients_["alpha"]`
+  becomes a dict keyed by factor, so m counts the factors (2 or 3) instead of the 30 providers. Round 144's probe
+  matched the summary's limits to n − p − (factors) on lrc-one and lrc-two.
+- Proposed (X-050, class B): the corrected behavior, n − p − (providers) as pprof_py intends, documented as a
+  divergence. The tests assert that pprof_py's limits follow its own count from our estimates, and ours the
+  corrected one. At these fixtures the two differ in the sixth significant digit of the t quantile. Bug-compatible
+  behavior would be a one-line change if preferred.
+
 ### D-72: Slice 4d-2 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 
 1. Fixtures (round 140, `reference/fixtures/logistic_re_cluster_fixtures.py` and `logistic_re_cluster_r.R`):

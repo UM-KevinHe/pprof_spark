@@ -35,6 +35,7 @@ OPTIONS = {
     "r": "lmer(y ~ x1 + x2 + (1 | provider) + (1 | c1) [+ (1 | c2)] [+ offset(o)], weights, REML = TRUE and FALSE, "
          "nloptwrap with xtol_abs = ftol_abs = 1e-14 and maxeval 1e5), in linear_re_cluster_r.R",
     "negative_controls": "the tightened REML fit with 0.5 added to every outcome of the first cluster level of the first factor",
+    "tables": "every fit also records pprof_py's summary(), fixed_effects_table() and conf_int() at their defaults (round 144)",
 }
 
 
@@ -104,7 +105,15 @@ def record(model, case, caught):
         "aic": hexes([model.aic_]), "bic": hexes([model.bic_]), "se": hexes(model.standard_errors().to_numpy()),
         "random_effects": effects, "fitted": hexes(np.asarray(model.fitted_values())[:100]),
         "converged": bool(model.converged_), "warnings": caught,
+        "summary": frame(model.summary()), "fixed_effects_table": frame(model.fixed_effects_table()),
+        "conf_int": frame(model.conf_int()),
     }
+
+
+def frame(table):
+    """A table's numeric columns as hex doubles, in the table's row order."""
+    return {str(c): hexes(pd.to_numeric(table[c], errors="coerce").astype(float)) for c in table.columns
+            if pd.api.types.is_numeric_dtype(table[c])}
 
 
 def generate(out, inputs, lock, write_json):

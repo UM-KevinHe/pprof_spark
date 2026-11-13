@@ -52,7 +52,7 @@ round 100 as the maintainer reported (rounds 83 and 84 failed and were fixed by 
 | `python/` | The `pprof_spark` package (Cox, logistic, three-stage, linear and linear random-effect wrappers, ADR-0009) and its pytest suite |
 | `databricks/` | `00_build` (builds a commit on the driver into workspace files), `01_parity` (fixtures and R0 on the cluster), `02_scale` (a first look at scale); guide `docs/guide/databricks.md` |
 | Fixtures | `fixtures/cox` (6 cases), `fixtures/logistic` (6), `fixtures/three-stage` (4), `fixtures/linear` (6), `fixtures/linear-re` (9), `fixtures/logistic-re` (10), `fixtures/fe-random-cluster` (5), `fixtures/linear-re-clusters` (7), `fixtures/logistic-re-clusters` (6), made by `reference/fixtures/generate.py`; byte-identical regeneration; `calibrate.py`; `fixtures.yml` (manual dispatch) regenerates and compares on CI's runner |
-| Documents | Specifications in `docs/spec/` (cox, logistic, linear, random-effects, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-72), `DISCREPANCIES.md` (to X-049), `OPEN_ITEMS.md` (to OI-102), `STATUS.md` |
+| Documents | Specifications in `docs/spec/` (cox, logistic, linear, random-effects, scale), the job, Python and Databricks guides, tutorials (`docs/tutorials/cox`, `logistic`), the issue review (`docs/reviews/`), `docs/parity/`; `DECISIONS.md` (to D-73), `DISCREPANCIES.md` (to X-050), `OPEN_ITEMS.md` (to OI-102), `STATUS.md` |
 
 ### 4. How the work runs
 
@@ -221,6 +221,30 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 144 (2026-11-05): the cluster fits' missing outputs; X-050
+
+- Preparing slice 4d-3 found that two specified outputs had never been written, though earlier rounds called the
+  slices complete:
+  - the linear cluster fit's `summary`, `fixed_effects_table` and `conf_int` (spec 4d-1 §5; rounds 138 and 139);
+  - the logistic cluster fit's fitted values and predictions (spec 4d-2 §5; round 143).
+  Both are written now: `LinearREClusters.summary`, `fixedEffectsTable` and `confInt`, and `LogisticREClusters.fitted`
+  and `predict`.
+- The linear fixtures now record pprof_py's three tables; every earlier value regenerates unchanged.
+- Found while matching pprof_py: its linear `summary` with cluster factors counts the grouping factors where it means
+  the providers (X-050, class B). D-73 proposes the corrected count; the tests document both.
+- New tests:
+  - `LinearREClustersSuite`: the tables on all seven cases;
+  - `LogisticREClustersSuite`: fitted values and predictions on four cases.
+  Their first runs failed only on two over-strict test assertions, now corrected: p-values compared beyond what
+  T-opt implies, and prediction paths compared bit for bit.
+
+Evidence (assistant sandbox): engine and engine-test compile with the build's flags after scalafmt; the four
+cluster-factor suites pass in a full run (the evidence log lists them); the linear cluster fixtures regenerate with
+only the new tables added; `check-engine-api.sh` passes; the patch applies to a fresh clone of `main` with an
+identical tree, and scalafmt is clean on the build's modules.
+
+What to send back: the decision on D-73 (X-050), and the CI runs for rounds 143 and 144.
 
 ## Round 143 (2026-11-05): slice 4d-2 measures, intervals and profiles
 

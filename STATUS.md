@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-05, round 143.
+Updated 2026-11-05, round 144.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -172,7 +172,8 @@ through round 100 as the maintainer reported.
 | 140 | D-71 approved; slice 4d-2's fixtures (`fixtures/logistic-re-clusters`, six cases) and calibration; D-72 proposed | Merged (11535a0) |
 | 141 | D-72 approved; slice 4d-2's kernel: `CrossedSystem` and `LogisticREClusters` (PIRLS, both deviances, the two stages, posterior variances) and `LogisticREClustersKernelSuite` | Merged (90f19ee) |
 | 142 | Slice 4d-2's engine: `LogisticREClusters` (fit on the driver, `fitAt`, `summary`, every test method) and `LogisticREClustersSuite`; OI-102 | Merged (d2fa035) |
-| 143 | Slice 4d-2's measures, options `alpha` and `SM`, and every factor's σ profile; the lockstep test; slice 4d-2's estimation and inference complete | Delivered as a patch |
+| 143 | Slice 4d-2's measures, options `alpha` and `SM`, and every factor's σ profile; the lockstep test; slice 4d-2's estimation and inference complete | Merged (c3947e6) |
+| 144 | The specified outputs rounds 138 to 143 had missed: the linear cluster fit's `summary`, `fixedEffectsTable` and `confInt`; the logistic cluster fit's `fitted` and `predict`; their tests; X-050 and D-73 proposed | Delivered as a patch |
 
 ## Decisions and spikes
 

@@ -243,4 +243,61 @@ class LogisticREClustersSuite extends SparkSuite {
       }
     }
   }
+
+  for (name <- Seq("lgc-one", "lgc-two", "lgc-text", "lgc-offset")) {
+    test(
+      s"$name: fitted values against pprof_py at its tightened (sigma, beta); predictions by factor"
+    ) {
+      val py = Fixtures.json(s"logistic-re-clusters/$name/pprof_py.json").get("tight")
+      val df = input(name)
+      val fit = LogisticREClusters.fitAt(
+        df,
+        spec(name),
+        LogisticREClusterOptions(),
+        listed(py.get("sigma")).toSeq,
+        listed(py.get("beta")).toSeq
+      )
+      val fitted = LogisticREClusters
+        .fitted(df, fit)
+        .orderBy("id")
+        .select("id", "fitted", "xbeta", "eta")
+        .collect()
+      check(
+        "T-meas",
+        s"$name fitted",
+        fitted.take(100).map(_.getDouble(1)).toSeq,
+        listed(py.get("fitted"))
+      )
+      val all = LogisticREClusters
+        .predict(df, fit, fit.factors)
+        .orderBy("id")
+        .select("prediction")
+        .collect()
+        .map(_.getDouble(0))
+      def near(a: Double, b: Double): Boolean =
+        math.abs(a - b) <= 8e-15 * math.max(math.abs(b), 1e-300) // a few ulps
+      all.zip(fitted).foreach { case (a, row) =>
+        assert(near(a, row.getDouble(1)), s"$name prediction $a against fitted ${row.getDouble(1)}")
+      }
+      val none = LogisticREClusters
+        .predict(df, fit)
+        .orderBy("id")
+        .select("prediction")
+        .collect()
+        .map(_.getDouble(0))
+      none.zip(fitted).foreach { case (v, row) =>
+        val expected = 1.0 / (1.0 + math.exp(-row.getDouble(2)))
+        assert(near(v, expected), s"$name prediction without effects $v against $expected")
+      }
+      val link = LogisticREClusters
+        .predict(df, fit, Seq("provider"), `type` = "link")
+        .orderBy("id")
+        .select("prediction")
+        .collect()
+      assert(link.map(_.getDouble(0)).zip(fitted.map(_.getDouble(3))).exists { case (a, b) =>
+        a != b
+      } || fit.factors.size == 1)
+      intercept[IllegalArgumentException](LogisticREClusters.predict(df, fit, Seq("other")))
+    }
+  }
 }

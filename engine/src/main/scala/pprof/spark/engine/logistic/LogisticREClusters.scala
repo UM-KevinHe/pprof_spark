@@ -773,4 +773,87 @@ object LogisticREClusters {
       if (estimate <= 0.0 || excess(0.0) <= 0.0) 0.0 else Brent.root(excess, 0.0, estimate, 1e-10)
     LogisticREProfile(estimate, lower, upper, evaluations)
   }
+
+  /** η over `factors`: the offset (when `withOffset`), xβ̂ and the BLUPs of the named factors, unseen levels 0. */
+  private def withEta(
+      df: DataFrame,
+      fit: LogisticREClusterFit,
+      factors: Seq[String],
+      withOffset: Boolean
+  ): DataFrame = {
+    val b = fit.estimates
+    val names = fit.coefficients.map(_.feature)
+    val xbeta = names.indices.foldLeft(lit(0.0): Column) { (acc, j) =>
+      if (names(j) == InterceptName) acc + lit(b(j))
+      else acc + Validation.column(names(j)).cast(DoubleType) * lit(b(j))
+    }
+    val offset =
+      if (withOffset)
+        fit.spec.offset
+          .filter(df.columns.contains)
+          .fold(lit(0.0))(n => Validation.column(n).cast(DoubleType))
+      else lit(0.0)
+    var out = df.withColumn("xbeta", offset + xbeta)
+    var eta: Column = Validation.column("xbeta")
+    factors.zipWithIndex.foreach { case (f, i) =>
+      val effect = fit.effects(f)
+      val keyName = s"__pprof_key_$i"
+      val blupName = s"__pprof_blup_$i"
+      val table = org.apache.spark.sql.functions
+        .broadcast(effect.select(effect(f).as(keyName), effect("blup").as(blupName)))
+      val left =
+        if (effect.schema(f).dataType == StringType) Validation.column(f).cast(StringType)
+        else Validation.column(f).cast(LongType)
+      out = out.join(table, left === table(keyName), "left").drop(keyName)
+      eta = eta + coalesce(Validation.column(blupName), lit(0.0))
+    }
+    out.withColumn("eta", eta).drop(factors.indices.map(i => s"__pprof_blup_$i"): _*)
+  }
+
+  /** The training rows with `xbeta` (offset + xᵀβ̂), `eta` (with every factor's BLUP), `fitted` (μ̂), `residual`,
+    * `pearson` and `deviance_residual`, as 4b's `fitted` and pprof_py's `fitted_` (§5).
+    */
+  def fitted(df: DataFrame, fit: LogisticREClusterFit): DataFrame = {
+    val frame = withEta(df, fit, fit.factors, withOffset = true)
+    val eta = Validation.column("eta")
+    val mu = lit(1.0) / (lit(1.0) + org.apache.spark.sql.functions.exp(-eta))
+    val y = Validation.column(fit.spec.outcome).cast(DoubleType)
+    def xlogx(a: Column, b: Column): Column =
+      when(a > lit(0.0), a * org.apache.spark.sql.functions.log(a / b)).otherwise(lit(0.0))
+    val unit = lit(2.0) * (xlogx(y, mu) + xlogx(lit(1.0) - y, lit(1.0) - mu))
+    val sign = when(y >= mu, lit(1.0)).otherwise(lit(-1.0))
+    frame
+      .withColumn("fitted", mu)
+      .withColumn("residual", y - mu)
+      .withColumn("pearson", (y - mu) / org.apache.spark.sql.functions.sqrt(mu * (lit(1.0) - mu)))
+      .withColumn("deviance_residual", sign * org.apache.spark.sql.functions.sqrt(unit))
+  }
+
+  /** pprof_py's `predict(..., use_re, re_vars)` (§5): `prediction` from the offset (when `withOffset`), xβ̂ and the
+    * BLUPs of the factors `reVars` names, unseen levels 0; `response` (the probability) or `link`.
+    */
+  def predict(
+      df: DataFrame,
+      fit: LogisticREClusterFit,
+      reVars: Seq[String] = Seq.empty,
+      withOffset: Boolean = true,
+      `type`: String = "response"
+  ): DataFrame = {
+    require(
+      Seq("response", "link").contains(`type`),
+      s"type must be response or link, got ${`type`}"
+    )
+    val unknown = reVars.filterNot(fit.factors.contains)
+    require(
+      unknown.isEmpty,
+      s"unknown grouping variables ${unknown.mkString(", ")}; fitted: ${fit.factors.mkString(", ")}"
+    )
+    val frame = withEta(df, fit, reVars, withOffset)
+    val eta = Validation.column("eta")
+    frame.withColumn(
+      "prediction",
+      if (`type` == "link") eta
+      else lit(1.0) / (lit(1.0) + org.apache.spark.sql.functions.exp(-eta))
+    )
+  }
 }

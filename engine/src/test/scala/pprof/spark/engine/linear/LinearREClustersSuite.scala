@@ -201,4 +201,72 @@ class LinearREClustersSuite extends SparkSuite {
       withId.theta.toArray
     )
   }
+
+  for (
+    name <- Seq(
+      "lrc-one",
+      "lrc-two",
+      "lrc-text",
+      "lrc-weights",
+      "lrc-offset",
+      "lrc-nested",
+      "lrc-boundary"
+    )
+  ) {
+    test(
+      s"$name: summary, fixed-effects table and conf_int against pprof_py; the summary's degrees of freedom (X-050)"
+    ) {
+      val fit = LinearREClusters.fit(input(name), spec(name))
+      val t = Fixtures.json(s"linear-re-clusters/$name/pprof_py.json").get("reml_tight")
+      val fe = LinearREClusters.fixedEffectsTable(fit)
+      val pf = t.get("fixed_effects_table")
+      check("T-opt", s"$name table estimates", fe.map(_.estimate), listed(pf.get("Estimate")))
+      check(
+        "T-opt",
+        s"$name table standard errors",
+        fe.map(_.standardError),
+        listed(pf.get("Std. Error"))
+      )
+      check("T-opt", s"$name table t", fe.map(_.statistic), listed(pf.get("t value")))
+      assertEquals(fe.map(_.degreesOfFreedom), listed(pf.get("df")).toVector, s"$name table df")
+      // the p-values follow from t, which agrees at T-opt; the t distribution itself must reproduce pprof_py's p from its t
+      listed(pf.get("t value")).zip(listed(pf.get("Pr(>|t|)"))).zip(listed(pf.get("df"))).foreach {
+        case ((tv, pv), d) =>
+          val ours = pprof.spark.numerics.StudentT.twoSided(tv, d)
+          assert(
+            math.abs(ours - pv) <= 1e-15 + 1e-10 * pv,
+            s"$name: the t distribution gives $ours where pprof_py gives $pv at t = $tv"
+          )
+      }
+      val ci = LinearREClusters.confInt(fit)
+      check(
+        "T-opt",
+        s"$name conf_int",
+        ci.map(_._2) ++ ci.map(_._3),
+        listed(t.get("conf_int").get("lower")) ++ listed(t.get("conf_int").get("upper"))
+      )
+      val s0 = LinearREClusters.summary(fit)
+      val ps = t.get("summary")
+      check("T-opt", s"$name summary estimates", s0.map(_.estimate), listed(ps.get("estimate")))
+      check("T-opt", s"$name summary statistics", s0.map(_.statistic), listed(ps.get("stat")))
+      // X-050: pprof_py's limits use n − p − (the number of factors) degrees of freedom; ours n − p − (the providers)
+      val dfPy = (fit.rows - fit.coefficients.size - fit.factors.size).toDouble
+      val qPy = pprof.spark.numerics.StudentT.upperQuantile(0.025, dfPy)
+      check(
+        "T-opt",
+        s"$name pprof_py's summary limits from its degrees of freedom",
+        fit.coefficients.map(c => c.estimate - qPy * c.standardError) ++ fit.coefficients.map(c =>
+          c.estimate + qPy * c.standardError
+        ),
+        listed(ps.get("ci_lower")) ++ listed(ps.get("ci_upper"))
+      )
+      val providers = fit.effects("provider").count()
+      val qOurs = pprof.spark.numerics.StudentT
+        .upperQuantile(0.025, (fit.rows - fit.coefficients.size - providers).toDouble)
+      s0.zip(fit.coefficients).foreach { case (row, c) =>
+        assertEquals(row.lower, c.estimate - qOurs * c.standardError)
+        assertEquals(row.upper, c.estimate + qOurs * c.standardError)
+      }
+    }
+  }
 }
