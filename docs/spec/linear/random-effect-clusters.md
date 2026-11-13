@@ -143,3 +143,10 @@ None expected.
   - predictions by factor, and the refusals.
 - With the engine, slice 4d-1's estimation is complete. Persistence, the jobs and Python come with slice 4d-3, as
   the plan orders them (D-68).
+
+## 12. Round 139: the tests round 138 lacked
+
+- `LinearREClustersKernelSuite` now runs D-59's optimality check on every case, REML and ML. The search's criterion
+  is no greater than this kernel's criterion at pprof_py's or lme4's optimum, within 10⁻¹⁰ relative.
+- `LinearREClustersSuite` gains a fit without a row identifier: lrc-weights, shuffled and repartitioned. Its
+  canonical order gives the same bits; it matches the fit with the identifier at T-opt.

@@ -173,4 +173,32 @@ class LinearREClustersSuite extends SparkSuite {
       LinearREClusters.fit(nulls, LinearREClusterSpec("y", Seq("x1"), "provider", Seq("c1")))
     )
   }
+
+  test(
+    "without a row identifier: the canonical order makes the fit invariant to row order and partitioning, bit for bit"
+  ) {
+    val df = input("lrc-weights").drop("id")
+    val noId = spec("lrc-weights").copy(rowId = None)
+    val a = LinearREClusters.fit(df, noId)
+    val b = LinearREClusters.fit(df.orderBy(rand(11)).repartition(7, col("x2")), noId)
+    def bits(v: Seq[Double]) = v.map(java.lang.Double.doubleToRawLongBits)
+    assertEquals(bits(b.theta), bits(a.theta))
+    assertEquals(
+      bits(b.estimates :+ b.sigma :+ b.deviance),
+      bits(a.estimates :+ a.sigma :+ a.deviance)
+    )
+    a.factors.foreach(f =>
+      assertEquals(
+        b.effects(f).orderBy(f).collect().toSeq.map(_.toString),
+        a.effects(f).orderBy(f).collect().toSeq.map(_.toString)
+      )
+    )
+    val withId = LinearREClusters.fit(input("lrc-weights"), spec("lrc-weights"))
+    check(
+      "T-opt",
+      "lrc-weights without and with a row identifier, theta",
+      a.theta,
+      withId.theta.toArray
+    )
+  }
 }

@@ -103,6 +103,22 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-71: Slice 4d-2 specification (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/logistic/random-effect-clusters.md`: the logistic random-effect model with crossed cluster factors, as
+pprof_py's `cluster_vars`.
+- pprof_py's two stages, nAGQ = 0 then the Laplace fit, with a σ per factor.
+- The PIRLS solves eliminate the provider block onto the cluster levels, as 4d-1 does. The posterior variances are
+  σₖ²·diag(H⁻¹), and the driver's copy of the rows is used when they fit (OI-99).
+- Every method:
+  - `summary`;
+  - `test` with `wald`, `poibin_exact` (the cluster BLUPs plugged in), `resampling` (cluster posteriors drawn,
+    the row mixture at the floor) and `exact` (one cluster factor only);
+  - the measures and intervals, as 4b-2, which pprof_py keeps provider-only;
+  - `profile_sigma(var)` for any factor.
+- A fit without cluster factors stays 4b's bit for bit.
+- Fixtures: a new family, `fixtures/logistic-re-clusters`, from pprof_py and `glmer`.
+
 ### D-70: Slice 4d-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 
 1. Fixtures (round 136, `reference/fixtures/linear_re_cluster_fixtures.py` and `linear_re_cluster_r.R`): a new family,

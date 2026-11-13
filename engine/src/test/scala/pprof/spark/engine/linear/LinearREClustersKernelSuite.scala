@@ -145,6 +145,15 @@ class LinearREClustersKernelSuite extends munit.FunSuite {
           Fixtures.doubles(t.get("beta"))
         )
         val fit = Kernel.fit(d, reml)
+        // D-59's optimality check: the search's optimum is no worse than either reference's, by this kernel's criterion
+        Seq("pprof_py" -> theta, "lme4" -> listed(r.get(mode).get("theta"))).foreach {
+          case (who, other) =>
+            val there = Kernel.evaluate(d, other, reml).criterion
+            assert(
+              fit.evaluation.criterion <= there + 1e-10 * math.abs(there),
+              s"$name $mode: ${fit.evaluation.criterion} > $there at $who's optimum"
+            )
+        }
         check("T-opt", s"$name $mode theta vs pprof_py", fit.theta.toSeq, theta)
         val rr = r.get(mode)
         check("T-opt", s"$name $mode theta vs lme4", fit.theta.toSeq, listed(rr.get("theta")))
