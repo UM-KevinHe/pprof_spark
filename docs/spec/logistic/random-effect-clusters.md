@@ -1,6 +1,6 @@
 # Specification: the logistic random-effect model with cluster factors (slice 4d-2)
 
-- Status: approved with D-71 (2026-11-05); fixtures and calibration in round 140 (D-72, approved); the kernel in round 141, the engine's fit and tests in round 142.
+- Status: approved with D-71 (2026-11-05); fixtures and calibration in round 140 (D-72, approved); the kernel in round 141, the engine's fit and tests in round 142, the measures, intervals and profiles in round 143.
 - Plan: [../random-effects/cluster-terms-plan.md](../random-effects/cluster-terms-plan.md) (D-68), slice 4d-2.
 - References: pprof_py v0.7.0 (`9320766`) `LogisticRandomEffectModel(...).fit(..., cluster_vars=...)`
   (`models/logistic/random_effect.py`; `inference/logistic/random_effect.py`: `test`, `_get_posterior_var`;
@@ -147,3 +147,21 @@ None expected.
   pprof_py's is 0. The generator had also described the fixtures' tests as at the median; the description now says
   0, and the fixture data are unchanged.
 - The measures, the intervals and the profile come next.
+
+## 12. Implementation notes (round 143, the measures, intervals and profiles; no statistical change)
+
+- `measures(fit, kinds, reference)`, `alphaIntervals(fit, level)` and `smIntervals(fit, kinds, measures, reference,
+  alternative, level)` keep 4b-2's definitions on the driver's rows, as §6 says: the provider BLUPs and pprof_py's
+  `xbeta_` (offset and xβ̂) alone.
+  - The direct sums are exact, since the rows are on the driver; 4b-2's binned sums (X-026) serve its distributed
+    path.
+  - `reference = mean` is the record-weighted mean in both the measures and the intervals, as 4b-2 decided (X-046).
+  - One-sided indirect intervals are one-sided, as X-045 decided.
+- `profileSigma(fit, factor, level)` follows pprof_py's `profile_sigma(var)`:
+  - at each candidate σ of the factor, the Laplace deviance is minimized over β and the other factors' σ's by
+    `BoundedQuasiNewton`, warm-started from the previous point;
+  - the limits are found by Brent's method to 10⁻¹⁰, the upper bracket doubling from σ̂ + max(0.1, σ̂), and the lower
+    limit is 0 when the deviance at σ = 0 stays within χ²₁(level).
+- `LogisticREClustersSuite` gains a lockstep test on all six cases at pprof_py's tightened (σ, β). The measures and
+  options `alpha` and `SM` agree at T-meas, and every factor's profile limits at T-opt. It passed on the first run.
+- Slice 4d-2's estimation and inference are complete. Persistence, the jobs and Python come with slice 4d-3 (D-68).

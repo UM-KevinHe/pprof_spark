@@ -191,4 +191,56 @@ class LogisticREClustersSuite extends SparkSuite {
       bits(a.sigma ++ a.estimates :+ a.deviance)
     )
   }
+
+  for (name <- cases) {
+    test(
+      s"$name: lockstep: the measures, options alpha and SM, and every factor's profile (D-72)"
+    ) {
+      val py = Fixtures.json(s"logistic-re-clusters/$name/pprof_py.json")
+      val t = py.get("tight")
+      val fit = LogisticREClusters.fitAt(
+        input(name),
+        spec(name),
+        LogisticREClusterOptions(),
+        listed(t.get("sigma")).toSeq,
+        listed(t.get("beta")).toSeq
+      )
+      val inf = py.get("inference")
+      val me = LogisticREClusters.measures(fit, Seq("indirect", "direct"), EffectReference.Median)
+      for (kind <- Seq("indirect", "direct")) {
+        val rows = me(kind).orderBy("provider").collect()
+        val x = inf.get("measures_median").get(kind)
+        Seq(s"${kind}_ratio", s"${kind}_rate", "observed", "expected").foreach { q =>
+          check("T-meas", s"$name measures $kind $q", column(rows, q), listed(x.get(q)))
+        }
+      }
+      val alpha = LogisticREClusters.alphaIntervals(fit).orderBy("provider").collect()
+      Seq("alpha", "alpha_lower", "alpha_upper").foreach(q =>
+        check(
+          "T-meas",
+          s"$name option alpha $q",
+          column(alpha, q),
+          listed(inf.get("alpha_ci").get(q))
+        )
+      )
+      val sm = LogisticREClusters.smIntervals(fit, Seq("indirect", "direct"), Seq("ratio"))
+      for (key <- Seq("indirect_ratio", "direct_ratio")) {
+        val rows = sm(key).orderBy("provider").collect()
+        val x = inf.get("sm_two_sided").get(key)
+        check("T-meas", s"$name SM $key", column(rows, "value"), listed(x.get(key)))
+        check("T-meas", s"$name SM $key lower", column(rows, "lower"), listed(x.get("lower")))
+        check("T-meas", s"$name SM $key upper", column(rows, "upper"), listed(x.get("upper")))
+      }
+      fit.factors.foreach { f =>
+        val profile = LogisticREClusters.profileSigma(fit, f)
+        val x = inf.get("profile_sigma").get(f)
+        check(
+          "T-opt",
+          s"$name profile of $f",
+          Seq(profile.lower, profile.upper),
+          listed(x.get("lower")) ++ listed(x.get("upper"))
+        )
+      }
+    }
+  }
 }
