@@ -103,6 +103,25 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-75: Performance phase plan for Cox and logistic fixed effects (Proposed, round 149)
+
+`docs/spec/performance/plan.md`, following the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`).
+- The plan: step 0, a harness and a baseline of `main`; step 1, executor-side reduction in fixed groups, retiring block
+  growth; step 2, chunked compensated accumulation in both kernels; step 3, the Cox weighted-Gram information with Efron
+  ties and entry times; step 4, Cox per-time aggregates for unstratified fits and oversized strata on gridded times;
+  step 5, logistic profile-likelihood Newton; step 6, internal scaling and the wide-model question. Each step has an
+  exit measurement on the standard cluster (32 GB driver, 30 workers of 32 GB), and plan §3 lists where it departs
+  from the study.
+- Golden runs, which NUM-2 relies on, are defined (plan §6.1): the Cox and logistic fixture cases and two multi-block
+  synthetic cases per model, recorded bit for bit in a manifest that `GoldenRunsSuite` checks, with a one-ulp negative
+  control.
+- A change that reorders floating-point sums without changing what is summed is admitted under a re-baselining rule
+  (plan §6.3): fixtures within their classes; the old and new manifests within 1·10⁻¹³ at fixed β and within T-part at
+  convergence, with identical iteration counts and flags; R0 for the new code; and the new manifest committed in the
+  same round. Changes of iterates are compared at convergence and registered as discrepancies.
+- Phase 4 is paused at round 148 (plan §8).
+- Profile-likelihood Newton is built as an option; making it the default is a later decision on step 5's measurements.
+
 ### D-74: Slice 4d-3 specification (Accepted: approved by the maintainer, 2026-11-05)
 
 `docs/spec/random-effects/cluster-terms-job.md`: persistence, the jobs, Python and 4c's stage 2 for the cluster-factor

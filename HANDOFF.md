@@ -1,6 +1,6 @@
 # Handoff
 
-## Session handoff: reported issues fixed, roadmap set (2026-10-19)
+## Session handoff: performance phase begins, Phase 4 paused (2026-11-13)
 
 This section stands on its own for a new session. The round log below it is the detailed history.
 
@@ -23,7 +23,8 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2 complete (D-65, D-66; rounds 127 to 129); slice 4c-3 complete (D-67; rounds 131 to 133); part 4d's plan approved (D-68), slice 4d-1 complete (D-69, D-70; rounds 135 to 139); slice 4d-2 complete (D-71, D-72; rounds 139 to 144), on the driver path (OI-102); slice 4d-3's specification approved (D-74), its persistence, jobs and Python in rounds 146 to 148 |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2 complete (D-65, D-66; rounds 127 to 129); slice 4c-3 complete (D-67; rounds 131 to 133); part 4d's plan approved (D-68), slice 4d-1 complete (D-69, D-70; rounds 135 to 139); slice 4d-2 complete (D-71, D-72; rounds 139 to 144), on the driver path (OI-102); slice 4d-3's specification approved (D-74), its persistence, jobs and Python in rounds 146 to 148. **Paused on 2026-11-13 after round 148**, at a clean point (plan §8) |
+| Performance phase, Cox and logistic fixed effects | Plan proposed (D-75, round 149, `docs/spec/performance/plan.md`), from the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`). Steps 0 to 6: harness and baseline of `main`; executor-side reduction in fixed groups; chunked compensated accumulation; the Cox weighted-Gram information; Cox per-time aggregates; logistic profile-likelihood Newton; internal scaling. The 2026-11-13 scale runs used round 81's build, whose fixed 4 MB blocks explain each `DriverLimitExceededException` (OI-103) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -165,6 +166,7 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 
 ### 7. Open items to carry
 
+- Performance phase (D-75): OI-103 (the 2026-11-13 runs were round 81), OI-104 (the Breslow buffer), OI-105 (`withGamma`), OI-106 (the unexplained slow Cox run), OI-107 (golden runs), OI-108 (operation tags), OI-109 (the validation aggregate); and, for its steps, OI-02, OI-03, OI-30, OI-38, OI-61, OI-66.
 - Inference parity (D-50, P0): OI-87 (null models on provider tests), OI-88 (funnel limits), OI-89 (the logistic
   fixed-effect model's intervals), OI-90 (`interval`, VIF), with OI-78 and OI-58; OI-91 (the Python facade's tests).
 - Statistics: OI-78 (the empirical null, under its own specification), OI-65 and OI-66 (Cox addenda: monotone
@@ -182,6 +184,10 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
   the history that still holds round 93's removed text (the maintainer's decision).
 
 ### 8. Next
+
+**The performance phase comes first** (D-75 proposed, `docs/spec/performance/plan.md`). After its approval, step 0: the harness in `bench` (`perf.Generator`, `perf.Recorder`, `perf.PerfJob`), `GoldenRunsSuite` with its manifest, operation tags on the passes of both models, and the runbook with the `spark-submit` commands; the maintainer then runs the baseline of `main`. Steps 1 to 6 follow, each closed by its exit measurement, with step 0b inserted first if step 0 finds more than a quarter of a fit's wall time outside the Newton and SerBIN passes.
+
+**Phase 4 is paused** after round 148. To resume, in order: slice 4d-3's stage 2 from a `LogisticREClusterFit` (spec 4d-3 §4, fixture case frc-stages-re); OI-102; the S1 runs and the gate reviews (OI-97, OI-100). The list below is Phase 4's sequence as it stood.
 
 D-50, as amended in round 94, sets the sequence. Issues the maintainer reports come first when they arrive, handled
 as round 82 did:
@@ -221,6 +227,35 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 149 (2026-11-13): performance phase plan (D-75 proposed); Phase 4 paused
+
+- The sandbox was rebuilt from `sandbox-tools-r148.zip`; round 148 is on `main` as `303ae11`. CoxPHSuite (89) and
+  LogisticFESuite (6) pass.
+- `docs/reviews/algorithmic-feasibility-2026-11.md`: the study, committed as written with a provenance note, with its
+  evidence log and probes beside it (not part of the build).
+- `docs/spec/performance/plan.md`, proposed as D-75: steps 0 to 6 with exit measurements, the benchmark grid and harness,
+  a definition of golden runs and a re-baselining rule for changes of summation order (plan §6), and Phase 4's pause.
+- Reading the code at round 148 corrected the study's starting point:
+  - The 2026-11-13 scale runs used round 81's build, whose fixed 4 MB blocks account for each
+    `DriverLimitExceededException` by arithmetic.
+  - `main` grows blocks instead (round 83), up to 256 MB at 50M rows and 180 features, and should fail the guard only
+    at 100M rows and 180 features (arithmetic, plan §2.2).
+  - The two collect sites that run every SerBIN iteration (`LogisticFE.scala` 808 and 840) were missing from the
+    study's list.
+  - The Breslow sweep zeroes the Efron buffer at every distinct time.
+- A one-core sandbox profile by call site (200,000 rows, 100 features): the Newton passes take three quarters of the Cox
+  fit's attributed CPU, at 15.9 µs per row, and validation and the working-set build most of the rest. For the
+  logistic model SerBIN's passes take only 39% of the CPU, and validation takes 35% of the wall time. Validation
+  mixes `countDistinct` on the row identifier with 2p + 10 counts, which Spark plans by grouping every count on the
+  row identifier (`explain`): the leading candidate for the slow Cox run of round 81 (OI-106, OI-109).
+- New open items OI-103 to OI-109.
+
+Evidence (assistant sandbox): the suites above; the profile's raw output and the guard arithmetic in the evidence log;
+the patch applies to a fresh clone of `main` with an identical tree, scalafmt is clean on the build's modules, and
+`check-engine-api.sh` passes with its self-test. The round changes documents only.
+
+What to send back: approval of D-75 (or changes to it), and the CI runs for rounds 147 to 149.
 
 ## Round 148 (2026-11-05): slice 4d-3 Python, `cluster_vars`
 
