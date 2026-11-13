@@ -113,8 +113,10 @@ object RunSpec {
             problems += "model linear-re: run this specification with pprof.spark.app.LinearREJob"
           case "logistic-re" =>
             problems += "model logistic-re: run this specification with pprof.spark.app.LogisticREJob"
+          case "fe-random-cluster" =>
+            problems += "model fe-random-cluster: run this specification with pprof.spark.app.LogisticFERandomClusterJob"
           case other =>
-            problems += s"model must be cox, logistic, three-stage, linear, linear-re or logistic-re, got $other"
+            problems += s"model must be cox, logistic, three-stage, linear, linear-re, logistic-re or fe-random-cluster, got $other"
         }
     }
 

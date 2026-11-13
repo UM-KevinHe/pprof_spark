@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-67: Slice 4c-3 specification (Proposed: awaiting the maintainer's approval)
+### D-67: Slice 4c-3 specification (Accepted: approved by the maintainer, 2026-11-05)
 
 `docs/spec/logistic/fe-random-cluster-job.md`: persistence, the job runner and Python save and load for the
 random-cluster model, with no new statistics.
@@ -116,6 +116,8 @@ random-cluster model, with no new statistics.
   - its outputs are every one of slices 4c-1 and 4c-2's, then a run record;
   - the seven jobs refuse each other's specifications.
 - Python's `save`, and `load(spark, path, df=None)`.
+
+Approved as proposed on 2026-11-05.
 
 ### D-66: Slice 4c-2 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 

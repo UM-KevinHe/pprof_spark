@@ -58,6 +58,8 @@ object LinearRERunSpec {
       case Some(v) if v.isTextual && v.asText() == "linear-re"   => ()
       case Some(v) if v.isTextual && v.asText() == "logistic-re" =>
         problems += "model logistic-re: run this specification with pprof.spark.app.LogisticREJob"
+      case Some(v) if v.isTextual && v.asText() == "fe-random-cluster" =>
+        problems += "model fe-random-cluster: run this specification with pprof.spark.app.LogisticFERandomClusterJob"
       case Some(v) if v.isTextual && v.asText() == "linear" =>
         problems += "model linear: run this specification with pprof.spark.app.LinearJob"
       case Some(v) if v.isTextual && v.asText() == "logistic" =>

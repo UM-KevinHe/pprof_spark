@@ -1,11 +1,20 @@
 package pprof.spark.engine.logistic
 
 import org.apache.spark.sql.{Column, DataFrame}
-import org.apache.spark.sql.functions.{coalesce, count, lit, sum, when}
+import org.apache.spark.sql.functions.{
+  coalesce,
+  count,
+  lit,
+  shiftrightunsigned,
+  sum,
+  when,
+  xxhash64
+}
 import org.apache.spark.sql.types.{DoubleType, NumericType, StringType}
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.layout.GroupKey
+import pprof.spark.engine.metadata.SoftwareInfo
 
 /** Column roles (docs/spec/logistic/fe-random-cluster.md §2): `outcome` is the likelihood's outcome in [0, 1];
   * `observed`, when given, is the outcome the tests count.
@@ -64,7 +73,10 @@ final case class LogisticFERandomClusterFit(
     stage1: Option[LogisticFit],
     spec: LogisticFERandomClusterSpec,
     options: LogisticFERandomClusterOptions,
-    warnings: Vector[String] = Vector.empty
+    warnings: Vector[String] = Vector.empty,
+    rows: Long = 0L,
+    fingerprint: Long = 0L,
+    software: Option[SoftwareInfo] = None
 ) {
   def gamma: Array[Double] = stage3.gamma
   def providers: Vector[GroupKey] = stage3.providers
@@ -89,7 +101,6 @@ object LogisticFERandomCluster {
       source: LogisticFERandomClusterSource,
       options: LogisticFERandomClusterOptions = LogisticFERandomClusterOptions()
   ): LogisticFERandomClusterFit = {
-    validate(df, spec)
     val (beta, sigma, stage1) = source match {
       case LogisticFERandomClusterSource.Given(b, s, _) =>
         require(
@@ -108,18 +119,7 @@ object LogisticFERandomCluster {
         val byName = names.zip(s1.estimates).toMap
         (spec.features.map(byName).toVector, s2.sigmaCluster, Some(s1))
     }
-    val xbeta = spec.features.zip(beta).foldLeft(lit(0.0): Column) { case (acc, (name, b)) =>
-      acc + Validation.column(name).cast(DoubleType) * lit(b)
-    }
-    val observed = Validation.column(spec.observed.getOrElse(spec.outcome)).cast(DoubleType)
-    val records = df
-      .withColumn("y_adj", Validation.column(spec.outcome).cast(DoubleType))
-      .withColumn("stage1_offset", xbeta)
-      .withColumn(ObservedColumn, observed)
-      .persist(options.blocks.resolvedStorageLevel)
-    val threeStage =
-      ThreeStageSpec(ObservedColumn, spec.features, spec.provider, spec.cluster, spec.rowId)
-    val cells = ThreeStage.compress(records, threeStage, options.stage3)
+    val (records, cells, rows, fingerprint) = prepare(df, spec, beta, options)
     val start = source match {
       case LogisticFERandomClusterSource.Given(_, _, s) =>
         require(
@@ -140,11 +140,48 @@ object LogisticFERandomCluster {
       if (options.estimator == "he2013")
         He2013.run(records, spec, cells, sigma, start, options) // slice 4c-2
       else (ThreeStage.stage3(cells, sigma, start, options.stage3), Vector.empty[String])
-    LogisticFERandomClusterFit(stage3, beta, sigma, records, cells, stage1, spec, options, warnings)
+    LogisticFERandomClusterFit(
+      stage3,
+      beta,
+      sigma,
+      records,
+      cells,
+      stage1,
+      spec,
+      options,
+      warnings,
+      rows,
+      fingerprint,
+      Some(SoftwareInfo.capture(df.sparkSession))
+    )
+  }
+
+  /** Validates `df` (§2), counts its rows and fingerprints them (spec 4c-3 §2) in one pass, and prepares the records
+    * and cells as stage 3 reads them with `beta`; the fit and `LogisticFERandomClusterFitIO.attach` share it.
+    */
+  private[logistic] def prepare(
+      df: DataFrame,
+      spec: LogisticFERandomClusterSpec,
+      beta: Vector[Double],
+      options: LogisticFERandomClusterOptions
+  ): (DataFrame, ThreeStageCells, Long, Long) = {
+    val (rows, fingerprint) = validate(df, spec)
+    val xbeta = spec.features.zip(beta).foldLeft(lit(0.0): Column) { case (acc, (name, b)) =>
+      acc + Validation.column(name).cast(DoubleType) * lit(b)
+    }
+    val observed = Validation.column(spec.observed.getOrElse(spec.outcome)).cast(DoubleType)
+    val records = df
+      .withColumn("y_adj", Validation.column(spec.outcome).cast(DoubleType))
+      .withColumn("stage1_offset", xbeta)
+      .withColumn(ObservedColumn, observed)
+      .persist(options.blocks.resolvedStorageLevel)
+    val threeStage =
+      ThreeStageSpec(ObservedColumn, spec.features, spec.provider, spec.cluster, spec.rowId)
+    (records, ThreeStage.compress(records, threeStage, options.stage3), rows, fingerprint)
   }
 
   /** Missing or non-finite values fail with counts per column (X-038's rule); outcomes must lie in [0, 1]. */
-  private def validate(df: DataFrame, spec: LogisticFERandomClusterSpec): Unit = {
+  private def validate(df: DataFrame, spec: LogisticFERandomClusterSpec): (Long, Long) = {
     val types = df.schema.fields.map(f => f.name -> f.dataType).toMap
     val numeric = (spec.outcome +: spec.features) ++ spec.observed
     val structural = (numeric ++ Seq(spec.provider, spec.cluster)).distinct.flatMap { name =>
@@ -166,6 +203,19 @@ object LogisticFERandomCluster {
       (spec.outcome +: spec.observed.toSeq).map { name =>
         val v = Validation.column(name).cast(DoubleType)
         countWhere(v < lit(0.0) || v > lit(1.0))
+      } ++ {
+        // the fingerprint (spec 4c-3 §2): a 64-bit hash of each row's model columns, summed in two 32-bit halves
+        val hashed = ((Seq(
+          spec.provider,
+          spec.cluster,
+          spec.outcome
+        ) ++ spec.observed ++ spec.features ++ spec.rowId).distinct)
+          .map(Validation.column)
+        val h = xxhash64(hashed: _*)
+        Seq(
+          coalesce(sum(h.bitwiseAND(lit(0xffffffffL))), lit(0L)),
+          coalesce(sum(shiftrightunsigned(h, 32)), lit(0L))
+        )
       } :+ count(lit(1))
     val row = df.agg(checks.head, checks.tail: _*).collect().head
     var i = 0
@@ -183,9 +233,12 @@ object LogisticFERandomCluster {
       val outside = next()
       if (outside > 0) problems += InputProblem.OutsideUnitInterval(name, outside)
     }
-    if (next() == 0L) problems += InputProblem.EmptyInput
+    val (low, high) = (next(), next())
+    val rows = next()
+    if (rows == 0L) problems += InputProblem.EmptyInput
     val found = problems.result()
     if (found.nonEmpty) throw new InvalidInputException(found)
+    (rows, low + (high << 32))
   }
 
   /** `summary` (§5): stage 1's Wald tests of β, which must be the β the fit used (10⁻¹⁰ relative, 10⁻¹² absolute). */

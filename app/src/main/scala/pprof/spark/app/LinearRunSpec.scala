@@ -170,6 +170,8 @@ object LinearRunSpec {
         problems += "model linear-re: run this specification with pprof.spark.app.LinearREJob"
       case Some(v) if v.isTextual && v.asText() == "logistic-re" =>
         problems += "model logistic-re: run this specification with pprof.spark.app.LogisticREJob"
+      case Some(v) if v.isTextual && v.asText() == "fe-random-cluster" =>
+        problems += "model fe-random-cluster: run this specification with pprof.spark.app.LogisticFERandomClusterJob"
       case Some(v) if v.isTextual && v.asText() == "logistic" =>
         problems += "model logistic: run this specification with pprof.spark.app.LogisticJob"
       case Some(v) if v.isTextual && v.asText() == "three-stage" =>

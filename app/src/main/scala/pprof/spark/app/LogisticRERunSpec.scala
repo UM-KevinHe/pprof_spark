@@ -240,7 +240,8 @@ object LogisticRERunSpec {
     "logistic" -> "LogisticJob",
     "three-stage" -> "ThreeStageJob",
     "linear" -> "LinearJob",
-    "linear-re" -> "LinearREJob"
+    "linear-re" -> "LinearREJob",
+    "fe-random-cluster" -> "LogisticFERandomClusterJob"
   )
 
   private def node(parent: JsonNode, field: String): Option[JsonNode] =

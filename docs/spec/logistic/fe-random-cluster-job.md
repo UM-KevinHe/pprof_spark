@@ -1,6 +1,6 @@
 # Specification: fixed provider effects with random clusters — persistence, job runner and Python (slice 4c-3)
 
-- Status: proposed with D-67 (round 131, 2026-11-05), awaiting the maintainer's approval.
+- Status: approved with D-67 (2026-11-05); persistence and the job runner in round 132.
 - References: slices 4c-1 and 4c-2 ([fe-random-cluster.md](fe-random-cluster.md),
   [fe-random-cluster-he2013.md](fe-random-cluster-he2013.md)). It follows the three-stage model's persistence, a saved
   fit plus `attach` (spec 2f-4 §5), and slice 4b-3's job ([random-effect-job.md](random-effect-job.md)). No new
@@ -118,3 +118,26 @@ and scalars work, and the methods that need records fail and say so.
 ## 8. Known discrepancies
 
 None new.
+
+## 9. Implementation notes (round 132; no statistical change)
+
+1. `LogisticFERandomCluster.prepare` validates, counts and fingerprints the rows in one pass, then builds the records
+   and cells. The fit and `attach` share it, and the fit now carries `rows`, `fingerprint` and `software`.
+   - Spark's `xxhash64` hashes the model's columns.
+   - The hashes are summed in two 32-bit halves, so the sums cannot overflow under ANSI mode for fewer than 2³¹ rows.
+   - The halves are joined on the driver into one wrapping 64-bit sum.
+2. `LogisticFERandomClusterFitIO`:
+   - writes its metadata as one JSON line, every double as its bit pattern, with providers and clusters as Parquet;
+   - `load` checks the kind, the version and the tables' lengths;
+   - `attach` rebuilds the records and cells with the saved β and requires the same rows, fingerprint, providers
+     and clusters;
+   - the metadata write is the first, in `errorifexists` mode, so nothing is overwritten. Checking the path through
+     Hadoop's file system would need the SparkContext, which Spark Connect lacks (ARCH-2).
+3. `app.LogisticFERandomClusterRunSpec.parse` and `app.LogisticFERandomClusterJob` follow §4 and §5. The six other
+   parsers refuse `fe-random-cluster` by name, and this one refuses theirs.
+4. Tests:
+   - `LogisticFERandomClusterFitIOSuite` (3): frc-obs with `marginal` and frc-text with `he2013`, saved, loaded and
+     re-attached bit for bit with the same inference; the refusals;
+   - `LogisticFERandomClusterJobSuite` (3): every output against the library; the stages source reproducing
+     ts-synthetic's stage 3 bit for bit, with the summary; invalid specifications, the refusals and arguments.
+   The guide is `docs/guide/fe-random-cluster-job.md`.
