@@ -207,4 +207,72 @@ class LinearREJobSuite extends SparkSuite {
     assertEquals(LinearREJob.specification(Array("--spec", "p"), path => s"read $path"), "read p")
     intercept[IllegalArgumentException](LinearREJob.specification(Array("--other"), _ => ""))
   }
+
+  test(
+    "columns.clusters: every output that applies equals the library's on the saved fit; provider profiling refused"
+  ) {
+    val dir = java.nio.file.Files.createTempDirectory("pprof-lrc-job").toString
+    val inputPath = s"$dir/input"
+    spark.read
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .csv(
+        pprof.spark.testkit.Fixtures.root.resolve("linear-re-clusters/lrc-two/input.csv").toString
+      )
+      .write
+      .parquet(inputPath)
+    val columns =
+      """"columns": {"outcome": "y", "features": ["x1", "x2"], "provider": "provider", "clusters": ["c1", "c2"], "rowId": "id"}"""
+    val json =
+      s"""{"version": 1, "model": "linear-re", "input": {"path": "$inputPath"}, $columns,
+         |"outputs": {"path": "$dir/out", "fit": true, "effects": true, "summary": {"level": 0.9}, "fixedEffects": true,
+         |  "confInt": {"level": 0.9}, "predictions": {"reVars": ["c1"]}, "fitted": true}}""".stripMargin
+    val record = LinearREJob.run(spark, LinearRERunSpec.parse(json), json)
+    val df = spark.read.parquet(inputPath)
+    val fit = LinearREClusterFitIO.load(spark, s"$dir/out/fit")
+    def read(name: String) = spark.read.parquet(s"$dir/out/$name")
+    fit.factors.foreach(f => assertEquals(rows(read(s"effects/$f"), f), rows(fit.effects(f), f)))
+    assertEquals(
+      rows(read("summary"), "feature"),
+      rows(LinearJob.summaryTable(spark, LinearREClusters.summary(fit, 0.9)), "feature")
+    )
+    assertEquals(
+      rows(read("fixed_effects"), "feature"),
+      rows(LinearREJob.fixedEffectsFrame(spark, LinearREClusters.fixedEffectsTable(fit)), "feature")
+    )
+    assertEquals(
+      rows(read("conf_int"), "feature"),
+      rows(LinearREJob.confIntFrame(spark, LinearREClusters.confInt(fit, 0.9)), "feature")
+    )
+    assertEquals(
+      rows(read("predictions"), "id"),
+      rows(LinearREClusters.predict(df, fit, Seq("c1")), "id")
+    )
+    assertEquals(rows(read("fitted"), "id"), rows(LinearREClusters.fitted(df, fit), "id"))
+    val written = new com.fasterxml.jackson.databind.ObjectMapper()
+      .readTree(spark.read.text(s"$dir/out/run").collect().head.getString(0))
+    assertEquals(
+      (0 until written.get("factors").size).map(i => written.get("factors").get(i).asText()),
+      Seq("provider", "c1", "c2")
+    )
+    assert(written.get("theta").has("c2"))
+    assertEquals(record.fingerprint, fit.fingerprint)
+    val bad =
+      s"""{"version": 1, "model": "linear-re", "input": {"path": "x"}, $columns,
+         |"outputs": {"path": "y", "providers": true, "providerTests": {}, "measures": {}, "predictions": {"reVars": ["c9"]}}}""".stripMargin
+    val message = intercept[IllegalArgumentException](LinearRERunSpec.parse(bad)).getMessage
+    Seq(
+      "outputs.providers needs a fit without cluster factors",
+      "outputs.providerTests needs a fit without cluster factors",
+      "outputs.measures needs a fit without cluster factors",
+      "c9 is not a fitted factor"
+    ).foreach(p => assert(message.contains(p), s"missing '$p' in: $message"))
+    val single =
+      """{"version": 1, "model": "linear-re", "input": {"path": "x"}, "columns": {"outcome": "y", "provider": "provider"},
+                   |"outputs": {"path": "y", "effects": true}}""".stripMargin
+    assert(
+      intercept[IllegalArgumentException](LinearRERunSpec.parse(single)).getMessage
+        .contains("outputs.effects needs columns.clusters")
+    )
+  }
 }

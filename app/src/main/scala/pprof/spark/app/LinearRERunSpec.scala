@@ -22,14 +22,17 @@ final case class LinearREOutputSpec(
     measures: Option[LinearMeasuresRequest],
     measureIntervals: Option[LinearMeasureIntervalsRequest],
     predictions: Option[Boolean],
-    fitted: Boolean
+    fitted: Boolean,
+    effects: Boolean = false,
+    predictionFactors: Seq[String] = Seq.empty
 )
 
 final case class LinearRERunSpec(
     input: InputSpec,
     spec: LinearRESpec,
     options: LinearREOptions,
-    outputs: LinearREOutputSpec
+    outputs: LinearREOutputSpec,
+    clusters: Seq[String] = Seq.empty
 )
 
 /** Parses linear random-effect run specifications (version 1, `model` `linear-re`,
@@ -47,7 +50,22 @@ object LinearRERunSpec {
           )
       }
     val problems = Vector.newBuilder[String]
-    val (spec, options) = model(root, problems)
+    // `columns.clusters` (spec 4d-3 §2.1): read here, and hidden from the single-factor model's reader
+    val clusterNode =
+      node(root, "columns").flatMap(c => Option(c.get("clusters"))).filterNot(_.isNull)
+    val clusters: Seq[String] = clusterNode match {
+      case Some(v) if v.isArray && v.size > 0 && v.elements().asScala.forall(_.isTextual) =>
+        v.elements().asScala.map(_.asText()).toSeq
+      case Some(_) =>
+        problems += "columns.clusters must be a non-empty list of column names"
+        Seq.empty
+      case None => Seq.empty
+    }
+    val modelRoot = root.deepCopy[JsonNode]()
+    Option(modelRoot.get("columns")).collect {
+      case o: com.fasterxml.jackson.databind.node.ObjectNode => o.remove("clusters")
+    }
+    val (spec, options) = model(modelRoot, problems)
     node(root, "version") match {
       case Some(v) if v.isInt && v.asInt() == RunSpec.Version => ()
       case Some(v)                                            =>
@@ -104,9 +122,18 @@ object LinearRERunSpec {
         "measures",
         "measureIntervals",
         "predictions",
-        "fitted"
+        "fitted",
+        "effects"
       )
     )
+    if (clusters.nonEmpty)
+      Seq("providers", "providerTests", "alphaIntervals", "measures", "measureIntervals")
+        .filter(name => node(outputs, name).exists(v => !(v.isBoolean && !v.asBoolean())))
+        .foreach(name =>
+          problems += s"outputs.$name needs a fit without cluster factors, as pprof_py's provider profiling does"
+        )
+    else if (node(outputs, "effects").isDefined)
+      problems += "outputs.effects needs columns.clusters; a fit without them writes outputs.providers"
     val summary = node(outputs, "summary").map { s =>
       p.unknown(s, "outputs.summary", Set("level", "null", "alternative"))
       LinearSummaryRequest(
@@ -167,12 +194,33 @@ object LinearRERunSpec {
     val predictions = node(outputs, "predictions").flatMap {
       case v if v.isBoolean => if (v.asBoolean()) Some(false) else None
       case v if v.isObject  =>
-        p.unknown(v, "outputs.predictions", Set("useRe"))
+        p.unknown(
+          v,
+          "outputs.predictions",
+          if (clusters.nonEmpty) Set("useRe", "reVars") else Set("useRe")
+        )
         Some(p.flag(v, "useRe", "outputs.predictions", default = false))
       case _ =>
         problems += "outputs.predictions must be true, false or an object with useRe"
         None
     }
+    // with cluster factors: the factors whose BLUPs the predictions add (`reVars`, else every factor with useRe)
+    val factors = if (clusters.nonEmpty) spec.provider +: clusters else Seq.empty
+    val predictionFactors: Seq[String] =
+      node(outputs, "predictions").filter(_.isObject).toSeq.flatMap { v =>
+        Option(v.get("reVars")).filterNot(_.isNull) match {
+          case Some(r) if r.isArray && r.elements().asScala.forall(_.isTextual) =>
+            val names = r.elements().asScala.map(_.asText()).toSeq
+            names
+              .filterNot(factors.contains)
+              .foreach(n => problems += s"outputs.predictions.reVars: $n is not a fitted factor")
+            names
+          case Some(_) =>
+            problems += "outputs.predictions.reVars must be a list of factor names"
+            Seq.empty
+          case None => if (predictions.contains(true)) factors else Seq.empty
+        }
+      }
     val outputSpec = LinearREOutputSpec(
       p.text(outputs, "path", "outputs", required = true).getOrElse(""),
       p.flag(outputs, "fit", "outputs", default = false),
@@ -185,14 +233,24 @@ object LinearRERunSpec {
       measures,
       measureIntervals,
       predictions,
-      p.flag(outputs, "fitted", "outputs", default = false)
+      p.flag(outputs, "fitted", "outputs", default = false),
+      p.flag(outputs, "effects", "outputs", default = false),
+      predictionFactors
     )
     val found = problems.result()
     if (found.nonEmpty)
       throw new IllegalArgumentException(
         s"the run specification has problems: ${found.mkString("; ")}"
       )
-    LinearRERunSpec(inputSpec, spec, options, outputSpec)
+    if (
+      clusters.nonEmpty && (clusters.contains(
+        spec.provider
+      ) || clusters.distinct.size != clusters.size)
+    )
+      throw new IllegalArgumentException(
+        s"the run specification has problems: columns.clusters must differ from the provider and from each other"
+      )
+    LinearRERunSpec(inputSpec, spec, options, outputSpec, clusters)
   }
 
   /** `columns` and `fit` alone, as the Python facade takes them (spec §6); every problem at once. */

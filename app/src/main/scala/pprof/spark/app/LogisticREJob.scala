@@ -56,7 +56,11 @@ object LogisticREJob {
       )
     )
 
-  def run(spark: SparkSession, spec: LogisticRERunSpec, specJson: String): RunRecord = {
+  def run(spark: SparkSession, spec: LogisticRERunSpec, specJson: String): RunRecord =
+    if (spec.clusters.nonEmpty) runClusters(spark, spec, specJson)
+    else runOne(spark, spec, specJson)
+
+  private def runOne(spark: SparkSession, spec: LogisticRERunSpec, specJson: String): RunRecord = {
     val timings = scala.collection.mutable.LinkedHashMap.empty[String, Long]
     def timed[A](stage: String)(body: => A): A = {
       val start = System.nanoTime()
@@ -193,5 +197,150 @@ object LogisticREJob {
       .mode("errorifexists")
       .text(s"$out/run")
     RunRecord(json, fit.search.converged, fit.fingerprint, outputs)
+  }
+
+  /** `columns.clusters` (spec 4d-3 §2.2): `LogisticREClusters` with every output, `effects/<factor>` and
+    * `profile/<factor>` among them.
+    */
+  private def runClusters(
+      spark: SparkSession,
+      spec: LogisticRERunSpec,
+      specJson: String
+  ): RunRecord = {
+    val timings = scala.collection.mutable.LinkedHashMap.empty[String, Long]
+    def timed[A](stage: String)(body: => A): A = {
+      val start = System.nanoTime()
+      try body
+      finally timings(stage) = (System.nanoTime() - start) / 1000000L
+    }
+    val out = spec.outputs.path.stripSuffix("/")
+    val written = Vector.newBuilder[String]
+    def write(table: DataFrame, name: String): Unit = {
+      table.write.mode("errorifexists").parquet(s"$out/$name")
+      written += s"$out/$name"
+    }
+    val df = timed("read") {
+      val reader = spark.read.options(spec.input.options)
+      spec.input.table.fold(reader.format(spec.input.format).load(spec.input.path.get))(t =>
+        reader.table(t)
+      )
+    }
+    val s = spec.spec
+    val clusterSpec =
+      LogisticREClusterSpec(s.outcome, s.features, s.provider, spec.clusters, s.offset, s.rowId)
+    val clusterOptions = LogisticREClusterOptions(
+      spec.options.includeIntercept,
+      spec.options.sigmaUpper,
+      blocks = spec.options.blocks
+    )
+    val fit = timed("fit")(LogisticREClusters.fit(df, clusterSpec, clusterOptions))
+    val o = spec.outputs
+    if (o.fit) timed("write fit") {
+      LogisticREClusterFitIO.save(spark, fit, s"$out/fit")
+      written += s"$out/fit"
+    }
+    if (o.providers) timed("providers")(write(fit.effects(s.provider), "providers"))
+    if (o.effects) timed("effects")(fit.factors.foreach(f => write(fit.effects(f), s"effects/$f")))
+    o.summary.foreach(level =>
+      timed("summary")(
+        write(summaryFrame(spark, LogisticREClusters.summary(fit, level)), "summary")
+      )
+    )
+    o.providerTests.foreach { t =>
+      timed(s"provider tests (${t.method})")(
+        write(
+          LogisticREClusters.test(
+            fit,
+            t.method,
+            t.reference,
+            t.alternative,
+            t.level,
+            t.critical,
+            t.nResample,
+            t.seed
+          ),
+          s"provider_tests/${t.method}"
+        )
+      )
+    }
+    o.alphaIntervals.foreach(level =>
+      timed("alpha intervals")(
+        write(LogisticREClusters.alphaIntervals(fit, level), "alpha_intervals")
+      )
+    )
+    o.measures.foreach(m =>
+      timed("measures")(LogisticREClusters.measures(fit, m.kinds, m.reference).foreach {
+        case (k, t) => write(t, s"measures/$k")
+      })
+    )
+    o.measureIntervals.foreach(m =>
+      timed("measure intervals")(
+        LogisticREClusters
+          .smIntervals(fit, m.kinds, m.measures, m.reference, m.alternative, m.level)
+          .foreach { case (k, t) =>
+            write(t, s"measure_intervals/$k")
+          }
+      )
+    )
+    o.profile.foreach(level =>
+      o.profileFactors.foreach(f =>
+        timed(s"profile ($f)")(
+          write(profileFrame(spark, LogisticREClusters.profileSigma(fit, f, level)), s"profile/$f")
+        )
+      )
+    )
+    o.predictions.foreach { case (_, kind) =>
+      timed("predictions")(
+        write(
+          LogisticREClusters.predict(df, fit, o.predictionFactors, withOffset = true, kind),
+          "predictions"
+        )
+      )
+    }
+    if (o.fitted) timed("fitted")(write(LogisticREClusters.fitted(df, fit), "fitted"))
+    val outputs = written.result()
+    val mapper = new ObjectMapper()
+    val record = mapper.createObjectNode()
+    def number(into: ObjectNode, key: String, value: Double): Unit =
+      if (value.isInfinite || value.isNaN) into.putNull(key) else into.put(key, value)
+    record.put("model", "logistic-re")
+    record.set("specification", mapper.readTree(specJson))
+    val software = record.putObject("software")
+    fit.software.toFields.foreach { case (k, v) => software.put(k, v) }
+    record.put("fingerprint", fit.fingerprint)
+    record.put("rows", fit.rowCount)
+    val factors = record.putArray("factors")
+    fit.factors.foreach(f => factors.add(f))
+    val sigma = record.putObject("sigma")
+    fit.factors.zip(fit.sigma).foreach { case (f, v) => number(sigma, f, v) }
+    record.put("criterion", "Laplace")
+    Seq(
+      "deviance" -> fit.deviance,
+      "loglik" -> fit.loglik,
+      "aic" -> fit.aic,
+      "bic" -> fit.bic,
+      "stage1Deviance" -> fit.stage1Deviance
+    )
+      .foreach { case (k, v) => number(record, k, v) }
+    val boundary = record.putArray("boundary")
+    fit.boundary.foreach(b => boundary.add(b))
+    val warnings = record.putArray("warnings")
+    fit.warnings.foreach(w => warnings.add(w))
+    record.put("converged", fit.converged)
+    val outputList = record.putArray("outputs")
+    outputs.foreach(p => outputList.add(p))
+    val times = record.putObject("timingsMillis")
+    timings.foreach { case (stage, ms) => times.put(stage, ms) }
+    val json = mapper.writeValueAsString(record)
+    spark
+      .createDataFrame(
+        java.util.List.of(Row(json)),
+        StructType(Seq(StructField("value", StringType)))
+      )
+      .coalesce(1)
+      .write
+      .mode("errorifexists")
+      .text(s"$out/run")
+    RunRecord(json, fit.converged, fit.fingerprint, outputs)
   }
 }

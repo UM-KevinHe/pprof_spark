@@ -1,6 +1,6 @@
 # Specification: cluster terms — persistence, jobs, Python and 4c's stage 2 (slice 4d-3)
 
-- Status: approved with D-74 (2026-11-05); persistence in round 146.
+- Status: approved with D-74 (2026-11-05); persistence in round 146, the jobs in round 147.
 - Plan: [cluster-terms-plan.md](cluster-terms-plan.md) (D-68), slice 4d-3. It builds on slices 4d-1 and 4d-2
   ([../linear/random-effect-clusters.md](../linear/random-effect-clusters.md),
   [../logistic/random-effect-clusters.md](../logistic/random-effect-clusters.md)), on 4a-3's and 4b-3's jobs, and on
@@ -133,3 +133,25 @@ None new.
   - `LogisticREClusterFitIOSuite` (3): lgc-one and lgc-two saved, loaded and re-attached bit for bit, with the tests,
     measures, option `alpha`, fitted values and, on lgc-one, the cluster factor's profile unchanged; the refusals,
     other and changed data among them.
+
+## 8. Implementation notes (round 147, the jobs; no statistical change)
+
+- `LinearRERunSpec` and `LogisticRERunSpec` read `columns.clusters` themselves and hide it from the single-factor
+  model readers, which the Python facade still uses as before. The run specifications gain `clusters`, empty by
+  default, and their outputs gain `effects`, the factors for predictions and, for the logistic job, the factors for
+  the profile.
+- Problems are reported at parse time:
+  - with cluster factors: the linear job's provider-profiling outputs, `fit.stage2: false`, `exact` with two or more
+    cluster factors, and a cluster column repeating the provider or another cluster;
+  - without them: `effects` and `exact`.
+- `LinearREJob` and `LogisticREJob` dispatch to `runClusters` when `clusters` is non-empty. It fits through
+  `LinearREClusters` or `LogisticREClusters`, saves with the round-146 `FitIO`s, writes each output §2 lists, and
+  ends with a run record that names the factors and gives θ̂ or σ̂ by factor.
+  - The logistic job maps `fit.sigmaUpper`, `includeIntercept` and `blocks` to `LogisticREClusterOptions`, keeping
+    the cluster fit's own iteration cap.
+  - The linear job maps `reml`, `includeIntercept`, `thetaUpper` and `blocks` to `LinearREClusterOptions`. Its
+    `maxEvaluations`, the single-factor search's grid cap, does not apply.
+- `LogisticREClusterFit` gains a public `rowCount` for the run record.
+- Tests: `LinearREJobSuite` and `LogisticREJobSuite` each gain one test, run with `columns.clusters` and every
+  output that applies. Each output must equal the library's on the saved fit (re-attached, for the logistic one) bit
+  for bit, and the cluster rules must be refused with their messages. Both passed on the first run.

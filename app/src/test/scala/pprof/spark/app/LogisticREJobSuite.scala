@@ -191,4 +191,94 @@ class LogisticREJobSuite extends SparkSuite {
     assertEquals(LogisticREJob.specification(Array("--spec", "p"), path => s"read $path"), "read p")
     intercept[IllegalArgumentException](LogisticREJob.specification(Array("--other"), _ => ""))
   }
+
+  test(
+    "columns.clusters: every output equals the library's on the saved and re-attached fit; the cluster rules"
+  ) {
+    val dir = Files.createTempDirectory("pprof-lgc-job").toString
+    val inputPath = s"$dir/input"
+    spark.read
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .csv(Fixtures.root.resolve("logistic-re-clusters/lgc-one/input.csv").toString)
+      .write
+      .parquet(inputPath)
+    val columns =
+      """"columns": {"outcome": "y", "features": ["x1", "x2"], "provider": "provider", "clusters": ["c1"], "rowId": "id"}"""
+    val json =
+      s"""{"version": 1, "model": "logistic-re", "input": {"path": "$inputPath"}, $columns,
+         |"outputs": {"path": "$dir/out", "fit": true, "providers": true, "effects": true, "summary": {"level": 0.9},
+         |  "providerTests": [{"method": "wald"}, {"method": "exact", "reference": "median"}, {"method": "poibin_exact"}],
+         |  "alphaIntervals": {"level": 0.9}, "measures": {"kinds": ["indirect", "direct"]},
+         |  "measureIntervals": {"kinds": ["indirect", "direct"], "measures": ["ratio"]},
+         |  "profile": {"level": 0.9, "factors": ["c1"]}, "predictions": {"reVars": ["c1"], "type": "link"}, "fitted": true}}""".stripMargin
+    val record = LogisticREJob.run(spark, LogisticRERunSpec.parse(json), json)
+    val df = spark.read.parquet(inputPath)
+    val fit = LogisticREClusterFitIO.attach(df, LogisticREClusterFitIO.load(spark, s"$dir/out/fit"))
+    def read(name: String) = spark.read.parquet(s"$dir/out/$name")
+    assertEquals(rows(read("providers"), "provider"), rows(fit.effects("provider"), "provider"))
+    fit.factors.foreach(f => assertEquals(rows(read(s"effects/$f"), f), rows(fit.effects(f), f)))
+    assertEquals(
+      rows(read("summary"), "feature"),
+      rows(LogisticREJob.summaryFrame(spark, LogisticREClusters.summary(fit, 0.9)), "feature")
+    )
+    assertEquals(
+      rows(read("provider_tests/wald"), "provider"),
+      rows(LogisticREClusters.test(fit, "wald"), "provider")
+    )
+    assertEquals(
+      rows(read("provider_tests/exact"), "provider"),
+      rows(LogisticREClusters.test(fit, "exact", EffectReference.Median), "provider")
+    )
+    assertEquals(
+      rows(read("provider_tests/poibin_exact"), "provider"),
+      rows(LogisticREClusters.test(fit, "poibin_exact"), "provider")
+    )
+    assertEquals(
+      rows(read("alpha_intervals"), "provider"),
+      rows(LogisticREClusters.alphaIntervals(fit, 0.9), "provider")
+    )
+    val me = LogisticREClusters.measures(fit, Seq("indirect", "direct"))
+    Seq("indirect", "direct").foreach(k =>
+      assertEquals(rows(read(s"measures/$k"), "provider"), rows(me(k), "provider"))
+    )
+    LogisticREClusters.smIntervals(fit, Seq("indirect", "direct"), Seq("ratio")).foreach {
+      case (k, t) =>
+        assertEquals(rows(read(s"measure_intervals/$k"), "provider"), rows(t, "provider"))
+    }
+    assertEquals(
+      rows(read("profile/c1"), "sigma"),
+      rows(
+        LogisticREJob.profileFrame(spark, LogisticREClusters.profileSigma(fit, "c1", 0.9)),
+        "sigma"
+      )
+    )
+    assertEquals(
+      rows(read("predictions"), "id"),
+      rows(LogisticREClusters.predict(df, fit, Seq("c1"), `type` = "link"), "id")
+    )
+    assertEquals(rows(read("fitted"), "id"), rows(LogisticREClusters.fitted(df, fit), "id"))
+    val written =
+      new ObjectMapper().readTree(spark.read.text(s"$dir/out/run").collect().head.getString(0))
+    assert(written.get("sigma").has("c1") && written.get("factors").size == 2)
+    assertEquals(record.fingerprint, fit.fingerprint)
+    val two =
+      """"columns": {"outcome": "y", "features": ["x1"], "provider": "provider", "clusters": ["c1", "c2"]}"""
+    val bad =
+      s"""{"version": 1, "model": "logistic-re", "input": {"path": "x"}, $two, "fit": {"stage2": false},
+         |"outputs": {"path": "y", "providerTests": {"method": "exact"}, "profile": {"factors": ["c9"]}}}""".stripMargin
+    val message = intercept[IllegalArgumentException](LogisticRERunSpec.parse(bad)).getMessage
+    Seq(
+      "fit.stage2 false is not available with columns.clusters",
+      "exact needs exactly one cluster factor",
+      "c9 is not a fitted factor"
+    ).foreach(p => assert(message.contains(p), s"missing '$p' in: $message"))
+    val single =
+      """{"version": 1, "model": "logistic-re", "input": {"path": "x"}, "columns": {"outcome": "y", "provider": "provider"},
+                   |"outputs": {"path": "y", "effects": true, "providerTests": {"method": "exact"}}}""".stripMargin
+    val m2 = intercept[IllegalArgumentException](LogisticRERunSpec.parse(single)).getMessage
+    Seq("outputs.effects needs columns.clusters", "exact needs a cluster factor").foreach(p =>
+      assert(m2.contains(p), s"missing '$p' in: $m2")
+    )
+  }
 }

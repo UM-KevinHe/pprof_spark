@@ -59,7 +59,11 @@ object LinearREJob {
       )
     )
 
-  def run(spark: SparkSession, spec: LinearRERunSpec, specJson: String): RunRecord = {
+  def run(spark: SparkSession, spec: LinearRERunSpec, specJson: String): RunRecord =
+    if (spec.clusters.nonEmpty) runClusters(spark, spec, specJson)
+    else runOne(spark, spec, specJson)
+
+  private def runOne(spark: SparkSession, spec: LinearRERunSpec, specJson: String): RunRecord = {
     val timings = scala.collection.mutable.LinkedHashMap.empty[String, Long]
     def timed[A](stage: String)(body: => A): A = {
       val start = System.nanoTime()
@@ -201,5 +205,133 @@ object LinearREJob {
       .mode("errorifexists")
       .text(s"$out/run")
     RunRecord(json, converged = true, fit.fingerprint, outputs)
+  }
+
+  /** `columns.clusters` (spec 4d-3 §2.1): `LinearREClusters` with the outputs that apply, `effects/<factor>` among them. */
+  private def runClusters(
+      spark: SparkSession,
+      spec: LinearRERunSpec,
+      specJson: String
+  ): RunRecord = {
+    val timings = scala.collection.mutable.LinkedHashMap.empty[String, Long]
+    def timed[A](stage: String)(body: => A): A = {
+      val start = System.nanoTime()
+      try body
+      finally timings(stage) = (System.nanoTime() - start) / 1000000L
+    }
+    val out = spec.outputs.path.stripSuffix("/")
+    val written = Vector.newBuilder[String]
+    def write(table: DataFrame, name: String): Unit = {
+      table.write.mode("errorifexists").parquet(s"$out/$name")
+      written += s"$out/$name"
+    }
+    val df = timed("read") {
+      val reader = spark.read.options(spec.input.options)
+      spec.input.table.fold(reader.format(spec.input.format).load(spec.input.path.get))(t =>
+        reader.table(t)
+      )
+    }
+    val s = spec.spec
+    val clusterSpec = LinearREClusterSpec(
+      s.outcome,
+      s.features,
+      s.provider,
+      spec.clusters,
+      s.offset,
+      s.weights,
+      s.rowId
+    )
+    val clusterOptions = LinearREClusterOptions(
+      spec.options.reml,
+      spec.options.includeIntercept,
+      spec.options.thetaUpper,
+      blocks = spec.options.blocks
+    )
+    val fit = timed("fit")(LinearREClusters.fit(df, clusterSpec, clusterOptions))
+    val o = spec.outputs
+    if (o.fit) timed("write fit") {
+      LinearREClusterFitIO.save(spark, fit, s"$out/fit")
+      written += s"$out/fit"
+    }
+    if (o.effects) timed("effects")(fit.factors.foreach(f => write(fit.effects(f), s"effects/$f")))
+    o.summary.foreach(r =>
+      timed("summary")(
+        write(
+          LinearJob.summaryTable(
+            spark,
+            LinearREClusters.summary(fit, r.level, r.nullValue, r.alternative)
+          ),
+          "summary"
+        )
+      )
+    )
+    if (o.fixedEffects)
+      timed("fixed effects")(
+        write(fixedEffectsFrame(spark, LinearREClusters.fixedEffectsTable(fit)), "fixed_effects")
+      )
+    o.confInt.foreach(level =>
+      timed("conf_int")(
+        write(confIntFrame(spark, LinearREClusters.confInt(fit, level)), "conf_int")
+      )
+    )
+    if (o.predictions.isDefined)
+      timed("predictions")(
+        write(LinearREClusters.predict(df, fit, o.predictionFactors), "predictions")
+      )
+    if (o.fitted) timed("fitted")(write(LinearREClusters.fitted(df, fit), "fitted"))
+    val outputs = written.result()
+    val mapper = new com.fasterxml.jackson.databind.ObjectMapper()
+    val record = mapper.createObjectNode()
+    def number(
+        into: com.fasterxml.jackson.databind.node.ObjectNode,
+        key: String,
+        value: Double
+    ): Unit =
+      if (value.isInfinite || value.isNaN) into.putNull(key) else into.put(key, value)
+    record.put("model", "linear-re")
+    record.set("specification", mapper.readTree(specJson))
+    val software = record.putObject("software")
+    fit.software.toFields.foreach { case (k, v) => software.put(k, v) }
+    record.put("fingerprint", fit.fingerprint)
+    record.put("rows", fit.rows)
+    val factors = record.putArray("factors")
+    fit.factors.foreach(f => factors.add(f))
+    val theta = record.putObject("theta")
+    fit.factors.zip(fit.theta).foreach { case (f, v) => number(theta, f, v) }
+    number(record, "sigma", fit.sigma)
+    record.put("criterion", fit.criterion)
+    Seq("deviance" -> fit.deviance, "loglik" -> fit.loglik, "aic" -> fit.aic, "bic" -> fit.bic)
+      .foreach { case (k, v) =>
+        number(record, k, v)
+      }
+    val search = record.putObject("search")
+    search.put("iterations", fit.search.iterations)
+    search.put("evaluations", fit.search.evaluations)
+    number(search, "projectedGradient", fit.search.projectedGradient)
+    search.put("converged", fit.search.converged)
+    val boundary = search.putArray("boundary")
+    fit.search.boundary.foreach(b => boundary.add(b))
+    val warnings = record.putArray("warnings")
+    fit.warnings.foreach(w => warnings.add(w))
+    record.put("converged", fit.search.converged)
+    val outputList = record.putArray("outputs")
+    outputs.foreach(p => outputList.add(p))
+    val times = record.putObject("timingsMillis")
+    timings.foreach { case (stage, ms) => times.put(stage, ms) }
+    val json = mapper.writeValueAsString(record)
+    spark
+      .createDataFrame(
+        java.util.List.of(org.apache.spark.sql.Row(json)),
+        org.apache.spark.sql.types.StructType(
+          Seq(
+            org.apache.spark.sql.types.StructField("value", org.apache.spark.sql.types.StringType)
+          )
+        )
+      )
+      .coalesce(1)
+      .write
+      .mode("errorifexists")
+      .text(s"$out/run")
+    RunRecord(json, fit.search.converged, fit.fingerprint, outputs)
   }
 }

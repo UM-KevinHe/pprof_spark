@@ -44,14 +44,18 @@ final case class LogisticREOutputSpec(
     measureIntervals: Option[LogisticREIntervalsRequest],
     profile: Option[Double],
     predictions: Option[(Boolean, String)],
-    fitted: Boolean
+    fitted: Boolean,
+    effects: Boolean = false,
+    profileFactors: Seq[String] = Seq.empty,
+    predictionFactors: Seq[String] = Seq.empty
 )
 
 final case class LogisticRERunSpec(
     input: InputSpec,
     spec: LogisticRESpec,
     options: LogisticREOptions,
-    outputs: LogisticREOutputSpec
+    outputs: LogisticREOutputSpec,
+    clusters: Seq[String] = Seq.empty
 )
 
 /** The logistic random-intercept model as JSON (spec 4b-1 §15, spec 4b-3 §3): `model` reads `columns` and `fit` for
@@ -103,7 +107,30 @@ object LogisticRERunSpec {
         problems += "model is required; a specification without one is a Cox specification, for pprof.spark.app.CoxJob"
     }
     p.unknown(root, "specification", Set("version", "model", "input", "columns", "fit", "outputs"))
-    val (spec, options) = modelFrom(node(root, "columns").orNull, node(root, "fit").orNull, p)
+    // `columns.clusters` (spec 4d-3 §2.2): read here, and hidden from the single-factor model's reader
+    val clusters: Seq[String] =
+      node(root, "columns").flatMap(c => Option(c.get("clusters"))).filterNot(_.isNull) match {
+        case Some(v) if v.isArray && v.size > 0 && v.elements().asScala.forall(_.isTextual) =>
+          v.elements().asScala.map(_.asText()).toSeq
+        case Some(_) =>
+          problems += "columns.clusters must be a non-empty list of column names"
+          Seq.empty
+        case None => Seq.empty
+      }
+    val columnsNode = node(root, "columns").map(_.deepCopy[JsonNode]()).orNull
+    Option(columnsNode).collect { case o: com.fasterxml.jackson.databind.node.ObjectNode =>
+      o.remove("clusters")
+    }
+    val (spec, options) = modelFrom(columnsNode, node(root, "fit").orNull, p)
+    val factors = if (clusters.nonEmpty) spec.provider +: clusters else Seq.empty
+    if (clusters.nonEmpty && !options.nagq1)
+      problems += "fit.stage2 false is not available with columns.clusters: the cluster fit is the Laplace fit"
+    if (
+      clusters.nonEmpty && (clusters.contains(
+        spec.provider
+      ) || clusters.distinct.size != clusters.size)
+    )
+      problems += "columns.clusters must differ from the provider and from each other"
     if (node(root, "columns").isEmpty) problems += "columns is required"
     val input = node(root, "input").orNull
     if (input == null) problems += "input is required"
@@ -134,9 +161,13 @@ object LogisticRERunSpec {
         "measureIntervals",
         "profile",
         "predictions",
-        "fitted"
+        "fitted",
+        "effects"
       )
     )
+    if (clusters.isEmpty && node(outputs, "effects").isDefined)
+      problems += "outputs.effects needs columns.clusters; a fit without them writes outputs.providers"
+    val effectsFlag = p.flag(outputs, "effects", "outputs", default = false)
     def levelOf(name: String): Option[Double] = node(outputs, name).map { n =>
       p.unknown(n, s"outputs.$name", Set("level"))
       p.level(n, "level", s"outputs.$name")
@@ -152,9 +183,11 @@ object LogisticRERunSpec {
         )
         if (node(item, "nullModel").isDefined) problems += s"$where.nullModel arrives with OI-87"
         val method = p.text(item, "method", where).getOrElse("wald")
-        if (method == "exact")
-          problems += s"$where.method exact needs a cluster factor (part 4d, OI-93)"
-        else if (!LogisticREInference.Methods.contains(method))
+        if (method == "exact" && clusters.isEmpty)
+          problems += s"$where.method exact needs a cluster factor (columns.clusters)"
+        else if (method == "exact" && clusters.size > 1)
+          problems += s"$where.method exact needs exactly one cluster factor; this fit has ${clusters.size}"
+        else if (method != "exact" && !LogisticREInference.Methods.contains(method))
           problems += s"$where.method must be one of ${LogisticREInference.Methods.mkString(", ")}, got $method"
         val critical = p.number(item, "critical", where)
         critical
@@ -196,13 +229,39 @@ object LogisticRERunSpec {
         p.level(m, "level", where)
       )
     }
-    val profile = levelOf("profile")
+    val profile = node(outputs, "profile").map { n =>
+      p.unknown(
+        n,
+        "outputs.profile",
+        if (clusters.nonEmpty) Set("level", "factors") else Set("level")
+      )
+      p.level(n, "level", "outputs.profile")
+    }
+    val profileFactors: Seq[String] =
+      if (clusters.isEmpty || profile.isEmpty) Seq.empty
+      else
+        node(outputs, "profile").flatMap(n => Option(n.get("factors"))).filterNot(_.isNull) match {
+          case Some(v) if v.isArray && v.elements().asScala.forall(_.isTextual) =>
+            val names = v.elements().asScala.map(_.asText()).toSeq
+            names
+              .filterNot(factors.contains)
+              .foreach(n => problems += s"outputs.profile.factors: $n is not a fitted factor")
+            names
+          case Some(_) =>
+            problems += "outputs.profile.factors must be a list of factor names"
+            Seq.empty
+          case None => factors
+        }
     if (profile.nonEmpty && !options.nagq1)
       problems += "outputs.profile needs the Laplace fit (fit.stage2 true), as pprof_py's profile_sigma"
     val predictions = node(outputs, "predictions").flatMap {
       case v if v.isBoolean => if (v.asBoolean()) Some((false, "response")) else None
       case v if v.isObject  =>
-        p.unknown(v, "outputs.predictions", Set("useRe", "type"))
+        p.unknown(
+          v,
+          "outputs.predictions",
+          if (clusters.nonEmpty) Set("useRe", "type", "reVars") else Set("useRe", "type")
+        )
         Some(
           (
             p.flag(v, "useRe", "outputs.predictions", default = false),
@@ -213,6 +272,21 @@ object LogisticRERunSpec {
         problems += "outputs.predictions must be true, false or an object with useRe and type"
         None
     }
+    val predictionFactors: Seq[String] =
+      node(outputs, "predictions").filter(_ => clusters.nonEmpty).toSeq.flatMap { v =>
+        Option(v.get("reVars")).filterNot(_.isNull) match {
+          case Some(r) if r.isArray && r.elements().asScala.forall(_.isTextual) =>
+            val names = r.elements().asScala.map(_.asText()).toSeq
+            names
+              .filterNot(factors.contains)
+              .foreach(n => problems += s"outputs.predictions.reVars: $n is not a fitted factor")
+            names
+          case Some(_) =>
+            problems += "outputs.predictions.reVars must be a list of factor names"
+            Seq.empty
+          case None => if (predictions.exists(_._1)) factors else Seq.empty
+        }
+      }
     val outputSpec = LogisticREOutputSpec(
       p.text(outputs, "path", "outputs", required = true).getOrElse(""),
       p.flag(outputs, "fit", "outputs", default = false),
@@ -231,7 +305,17 @@ object LogisticRERunSpec {
       throw new IllegalArgumentException(
         s"the run specification has problems: ${found.mkString("; ")}"
       )
-    LogisticRERunSpec(inputSpec, spec, options, outputSpec)
+    LogisticRERunSpec(
+      inputSpec,
+      spec,
+      options,
+      outputSpec.copy(
+        effects = effectsFlag,
+        profileFactors = profileFactors,
+        predictionFactors = predictionFactors
+      ),
+      clusters
+    )
   }
 
   /** The other models' jobs, which a logistic-re job names when given their specification. */

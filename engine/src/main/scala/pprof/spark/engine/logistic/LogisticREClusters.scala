@@ -87,6 +87,9 @@ final case class LogisticREClusterFit(
 ) {
   def estimates: Vector[Double] = coefficients.map(_.estimate)
   def standardErrors: Vector[Double] = coefficients.map(_.standardError)
+
+  /** The number of records the fit read. */
+  def rowCount: Long = rows.n.toLong
 }
 
 /** pprof_py's `LogisticRandomEffectModel(...).fit(..., cluster_vars=...)` (slice 4d-2) with its rows on the driver
