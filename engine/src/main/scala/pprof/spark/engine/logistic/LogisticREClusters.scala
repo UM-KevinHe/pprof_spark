@@ -102,7 +102,7 @@ object LogisticREClusters {
     if (df.schema(name).dataType == StringType) c else c.cast(LongType)
   }
 
-  private def validate(df: DataFrame, spec: LogisticREClusterSpec): (Long, Long) = {
+  private[logistic] def validate(df: DataFrame, spec: LogisticREClusterSpec): (Long, Long) = {
     val types = df.schema.fields.map(f => f.name -> f.dataType).toMap
     val numeric = (spec.outcome +: spec.features) ++ spec.offset
     val keys = spec.factors
@@ -160,7 +160,7 @@ object LogisticREClusters {
   }
 
   /** The rows on the driver, in canonical order (the row identifier, else the levels and values), as kernel rows. */
-  private def collectRows(
+  private[logistic] def collectRows(
       df: DataFrame,
       spec: LogisticREClusterSpec,
       options: LogisticREClusterOptions,

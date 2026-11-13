@@ -23,7 +23,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Rounds 76 to 81 | Cox and logistic tutorials; PROJECT_CONTEXT v2.7; distributed-correctness tests (OI-67, OI-71); the scale-test plan's draft; Databricks notebooks |
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
-| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2 complete (D-65, D-66; rounds 127 to 129); slice 4c-3 complete (D-67; rounds 131 to 133); part 4d's plan approved (D-68), slice 4d-1 complete (D-69, D-70; rounds 135 to 139); slice 4d-2 complete (D-71, D-72; rounds 139 to 144), on the driver path (OI-102); slice 4d-3's specification proposed in round 145 (D-74) |
+| Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2 complete (D-65, D-66; rounds 127 to 129); slice 4c-3 complete (D-67; rounds 131 to 133); part 4d's plan approved (D-68), slice 4d-1 complete (D-69, D-70; rounds 135 to 139); slice 4d-2 complete (D-71, D-72; rounds 139 to 144), on the driver path (OI-102); slice 4d-3's specification approved (D-74), its persistence in round 146 |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -205,9 +205,9 @@ as round 82 did:
      only), 4d-2 the logistic model's (with `exact`), 4d-3 persistence, jobs, Python and 4c's stage 2. 4d-1 is
      complete (D-69, D-70; rounds 135 to 139), its Python with 4d-3. 4d-2's specification (the logistic model's
      cluster factors) and fixtures are approved (D-71, D-72), and its kernel, fit, tests, measures, intervals and
-     profiles are in (rounds 141 to 144). 4d-3's specification is proposed (round 145, D-74): the cluster fits'
-     own kinds of persistence, the jobs' `columns.clusters`, Python's `cluster_vars` for both models, and 4c's
-     stage 2 from a logistic cluster fit. OI-98 (the nAGQ = 0 step on the driver)
+     profiles are in (rounds 141 to 144). 4d-3's specification is approved (D-74), and its persistence is in
+     (round 146); next the jobs' `columns.clusters`, then Python's `cluster_vars` for both models, then 4c's stage 2
+     from a logistic cluster fit with its fixture case. OI-98 (the nAGQ = 0 step on the driver)
      and OI-99 (Spark jobs per fit) wait for S1.
    - Then 4b (logistic), 4c (fixed effects with random clusters) and 4d (cluster terms).
 2. M1, alongside: `ScaleJob`'s measurements with Python access, the three-stage generator, S0's plan file and a
@@ -222,6 +222,23 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 146 (2026-11-05): slice 4d-3 persistence
+
+- The maintainer approved D-74 as proposed (2026-11-05).
+- `LinearREClusterFitIO` saves and loads the linear cluster fit bit for bit; its methods need no records.
+  `LogisticREClusterFitIO` saves the logistic cluster fit without its rows. `load` returns `LogisticREClusterSaved`,
+  and `attach` re-collects and checks the training data, then rebuilds the kernel's state. Spec 4d-3 §7 has the
+  details, among them `effects/<factor index>` inside a saved fit, so that column names never become paths.
+- `LinearREClusterFitIOSuite` (3) and `LogisticREClusterFitIOSuite` (3) passed on their first run:
+  - the round trips, with every method of the loaded or re-attached fit unchanged bit for bit, a profile included;
+  - the refusals.
+
+Evidence (assistant sandbox): engine and engine-test compile with the build's flags after scalafmt; both suites pass,
+6 of 6; `check-engine-api.sh` passes; the patch applies to a fresh clone of `main` with an identical tree, and
+scalafmt is clean on the build's modules.
+
+What to send back: the CI runs for rounds 144 to 146.
 
 ## Round 145 (2026-11-05): slice 4d-3 specification; X-050 approved
 

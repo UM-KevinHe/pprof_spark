@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-74: Slice 4d-3 specification (Proposed: awaiting the maintainer's approval)
+### D-74: Slice 4d-3 specification (Accepted: approved by the maintainer, 2026-11-05)
 
 `docs/spec/random-effects/cluster-terms-job.md`: persistence, the jobs, Python and 4c's stage 2 for the cluster-factor
 fits, with no new statistics.
@@ -115,6 +115,8 @@ fits, with no new statistics.
 - The random-cluster model's stage 2 from a logistic cluster fit, by pprof_py's `_values_from_stages` rules.
 - This amends D-68's "format version 2 of both random-effect fits": the cluster fits are separate types, so they get
   their own kinds, and the single-factor formats stay unchanged.
+
+Approved as proposed on 2026-11-05.
 
 ### D-73: X-050, the linear cluster fit's summary degrees of freedom (Accepted: approved by the maintainer, 2026-11-05)
 

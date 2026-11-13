@@ -1,6 +1,6 @@
 # Specification: cluster terms — persistence, jobs, Python and 4c's stage 2 (slice 4d-3)
 
-- Status: proposed with D-74 (round 145, 2026-11-05), awaiting the maintainer's approval.
+- Status: approved with D-74 (2026-11-05); persistence in round 146.
 - Plan: [cluster-terms-plan.md](cluster-terms-plan.md) (D-68), slice 4d-3. It builds on slices 4d-1 and 4d-2
   ([../linear/random-effect-clusters.md](../linear/random-effect-clusters.md),
   [../logistic/random-effect-clusters.md](../logistic/random-effect-clusters.md)), on 4a-3's and 4b-3's jobs, and on
@@ -113,3 +113,23 @@ the path of either saved fit, distinguished by the kind in its metadata.
 ## 6. Known discrepancies
 
 None new.
+
+## 7. Implementation notes (round 146, persistence; no statistical change)
+
+- `engine.linear.LinearREClusterFitIO` and `engine.logistic.LogisticREClusterFitIO` follow §1.
+  - Inside a saved fit, each factor's table is stored under `effects/<factor index>`, its name kept in the metadata,
+    so that a column name never becomes a path. The jobs' `effects/<factor>` outputs (§2) keep the names.
+  - The metadata records each factor's level count; `load` checks every table against it.
+  - The metadata write is the first, in `errorifexists` mode, so nothing is overwritten (ARCH-2).
+- `LogisticREClusterSaved` holds the saved fit: its tables and scalars, the level keys, and the kernel's arrays (the
+  modes u, the BLUPs and the posterior variances) in level order.
+  - `attach` re-validates the data, re-collects the rows on the driver in canonical order, and requires the same
+    rows, fingerprint and keys.
+  - It then rebuilds the kernel's state, so the full fit's inference runs unchanged. `LogisticREClusters`' validation
+    and collection are now package-visible for it.
+- Tests:
+  - `LinearREClusterFitIOSuite` (3): lrc-two and lrc-text round trips bit for bit, with the loaded fit's tables,
+    fitted values and predictions unchanged; the refusals.
+  - `LogisticREClusterFitIOSuite` (3): lgc-one and lgc-two saved, loaded and re-attached bit for bit, with the tests,
+    measures, option `alpha`, fitted values and, on lgc-one, the cluster factor's profile unchanged; the refusals,
+    other and changed data among them.
