@@ -51,8 +51,9 @@ class LogisticRandomEffect:
                  tol_pirls: float = 1e-8, tol_outer: float = 1e-7, optimizer_stage1: str = "bobyqa",
                  optimizer_stage2: str = "nelder-mead", verbose: bool = False,
                  cluster_vars: Optional[Sequence[str]] = None, blocks: Optional[dict] = None):
-        if cluster_vars:
-            raise NotImplementedError("cluster_vars (further random intercepts) arrive with part 4d (OI-93)")
+        self.cluster_vars = [cluster_vars] if isinstance(cluster_vars, str) else list(cluster_vars or [])
+        if self.cluster_vars and not stage2:
+            raise ValueError("stage2=False is not available with cluster_vars: the cluster fit is the Laplace fit")
         if not (sigma_upper > 0):
             raise ValueError("sigma_upper must be positive or math.inf")
         given = {"max_iter_pirls": max_iter_pirls, "tol_pirls": tol_pirls, "tol_outer": tol_outer,
@@ -69,7 +70,13 @@ class LogisticRandomEffect:
         self.columns = {k: v for k, v in columns.items() if v is not None}
         self.options = {k: v for k, v in options.items() if v is not None}
 
-    def fit(self, df: DataFrame) -> "LogisticRandomEffectModel":
+    def fit(self, df: DataFrame):
+        """The fitted model: `LogisticRandomEffectModel`, or `LogisticRandomEffectClusterModel` with `cluster_vars`."""
+        if self.cluster_vars:
+            from .clusters import LogisticRandomEffectClusterModel
+            columns = dict(self.columns, clusters=self.cluster_vars)
+            handle = api(df.sparkSession).logisticREClusterFit(df._jdf, json.dumps(columns), json.dumps(self.options))
+            return LogisticRandomEffectClusterModel(df.sparkSession, handle)
         handle = api(df.sparkSession).logisticREFit(df._jdf, json.dumps(self.columns), json.dumps(self.options))
         return LogisticRandomEffectModel(df.sparkSession, handle)
 

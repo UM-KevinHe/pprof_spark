@@ -261,3 +261,18 @@ fit.save("/fits/frc"); LogisticFERandomClusterModel.load(spark, "/fits/frc", df)
 
 Like pprof_py's, the methods take no data: the fit keeps its records. A model loaded without `df` gives its tables,
 scalars and `summary(stage1)`; its tests and measures raise until it is loaded with its training data.
+
+## Cluster factors (part 4d)
+
+```python
+from pprof_spark import LinearRandomEffect, LogisticRandomEffect, LogisticRandomEffectClusterModel
+
+linear = LinearRandomEffect("y", ["x1", "x2"], "provider", cluster_vars=["network"]).fit(df)
+linear.theta, linear.get_random_effects("network"), linear.summary(), linear.predict(df, re_vars=["network"])
+logistic = LogisticRandomEffect("y", ["x1", "x2"], "provider", cluster_vars="network").fit(df)
+logistic.test(test_method="exact"), logistic.profile_sigma("network")      # exact needs exactly one cluster factor
+logistic.save("/fits/lgc"); LogisticRandomEffectClusterModel.load(spark, "/fits/lgc", df)   # df re-attaches the rows
+```
+
+As pprof_py's, the linear model with cluster factors gives estimates only: its tests, measures and intervals raise. The
+logistic model's rows stay on the driver (OI-102), so its inference methods take no data.

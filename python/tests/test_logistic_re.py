@@ -77,8 +77,8 @@ def test_unused_settings_warn_and_options_map():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         LogisticRandomEffect("y", FEATURES, "provider")
-    with pytest.raises(NotImplementedError, match="OI-93"):
-        LogisticRandomEffect("y", FEATURES, "provider", cluster_vars=["c"])
+    with pytest.raises(ValueError, match="stage2"):
+        LogisticRandomEffect("y", FEATURES, "provider", cluster_vars=["c"], stage2=False)
     model = LogisticRandomEffect("y", FEATURES, "provider", stage2=False, sigma_upper=3.0)
     assert model.options == {"stage2": False, "includeIntercept": True, "sigmaUpper": 3.0, "maxIterations": 200}
 

@@ -32,15 +32,15 @@ class LinearRandomEffect:
     arguments: its `fit` roles as `features`, `offset`, `weights` and `include_intercept`, and its constructor's
     `reml`, `theta_upper` and `max_iter_outer`, which caps the search's evaluations. `tol_outer`, `max_iter_inner` and
     `optimizer` are accepted but not used, since pprof_spark's search runs to its own precision; a value other than
-    pprof_py's default gives a warning. `cluster_vars` waits for part 4d (OI-93); `blocks` is the job runner's."""
+    pprof_py's default gives a warning. `cluster_vars` adds crossed random intercepts (slice 4d-1) and makes `fit`
+    return `LinearRandomEffectClusterModel`; `blocks` is the job runner's."""
 
     def __init__(self, outcome: str, features: Sequence[str], provider: str, *, offset: Optional[str] = None,
                  weights: Optional[str] = None, row_id: Optional[str] = None, include_intercept: bool = True,
                  reml: bool = True, theta_upper: float = math.inf, max_iter_outer: int = 200,
                  tol_outer: float = 1e-8, max_iter_inner: int = 100, optimizer: str = "powell",
                  cluster_vars: Optional[Sequence[str]] = None, blocks: Optional[dict] = None):
-        if cluster_vars:
-            raise NotImplementedError("cluster_vars (further random intercepts) arrive with part 4d (OI-93)")
+        self.cluster_vars = [cluster_vars] if isinstance(cluster_vars, str) else list(cluster_vars or [])
         optimizer = str(optimizer).lower()
         if optimizer not in ("powell", "nelder-mead"):
             raise ValueError("optimizer must be 'powell' or 'nelder-mead'")
@@ -56,7 +56,13 @@ class LinearRandomEffect:
         self.columns = {k: v for k, v in columns.items() if v is not None}
         self.options = {k: v for k, v in options.items() if v is not None}
 
-    def fit(self, df: DataFrame) -> "LinearRandomEffectModel":
+    def fit(self, df: DataFrame):
+        """The fitted model: `LinearRandomEffectModel`, or `LinearRandomEffectClusterModel` with `cluster_vars`."""
+        if self.cluster_vars:
+            from .clusters import LinearRandomEffectClusterModel
+            columns = dict(self.columns, clusters=self.cluster_vars)
+            handle = api(df.sparkSession).linearREClusterFit(df._jdf, json.dumps(columns), json.dumps(self.options))
+            return LinearRandomEffectClusterModel(df.sparkSession, handle)
         handle = api(df.sparkSession).linearREFit(df._jdf, json.dumps(self.columns), json.dumps(self.options))
         return LinearRandomEffectModel(df.sparkSession, handle)
 

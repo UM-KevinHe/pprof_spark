@@ -1,6 +1,6 @@
 # Specification: cluster terms — persistence, jobs, Python and 4c's stage 2 (slice 4d-3)
 
-- Status: approved with D-74 (2026-11-05); persistence in round 146, the jobs in round 147.
+- Status: approved with D-74 (2026-11-05); persistence in round 146, the jobs in round 147, Python in round 148.
 - Plan: [cluster-terms-plan.md](cluster-terms-plan.md) (D-68), slice 4d-3. It builds on slices 4d-1 and 4d-2
   ([../linear/random-effect-clusters.md](../linear/random-effect-clusters.md),
   [../logistic/random-effect-clusters.md](../logistic/random-effect-clusters.md)), on 4a-3's and 4b-3's jobs, and on
@@ -155,3 +155,25 @@ None new.
 - Tests: `LinearREJobSuite` and `LogisticREJobSuite` each gain one test, run with `columns.clusters` and every
   output that applies. Each output must equal the library's on the saved fit (re-attached, for the logistic one) bit
   for bit, and the cluster rules must be refused with their messages. Both passed on the first run.
+
+## 9. Implementation notes (round 148, Python; no statistical change)
+
+- The facade (`PythonApi`) gains:
+  - for the linear model: `linearREClusterFit`, `Summary`, `Effects`, `Tests`, `FixedEffects`, `ConfInt`,
+    `Fitted`, `Predict`, `Save` and `Load`;
+  - for the logistic model: `logisticREClusterFit`, `Summary`, `SavedSummary`, `Effects`, `SavedEffects`,
+    `CovariateTests`, `Test`, `Measures`, `AlphaIntervals`, `Intervals`, `Profile`, `Fitted`, `Predict`, `Save`,
+    `Load` and `Attach`.
+  Their `columns` JSON takes `clusters`, and the logistic one refuses `stage2` = false.
+- `python/pprof_spark/clusters.py` holds `LinearRandomEffectClusterModel` and `LogisticRandomEffectClusterModel`, with
+  §3's methods. `LinearRandomEffect(..., cluster_vars=...)` and `LogisticRandomEffect(..., cluster_vars=...)` return
+  them from `fit`, and both wrappers accept one name or a list. The linear model's `test`, measures and intervals
+  raise pprof_py's error. A logistic model loaded without its data gives its tables and scalars, and raises elsewhere
+  until it is loaded with the data.
+- Found on the way: in Scala, Jackson's generic `ObjectNode.set` as a lambda's last expression is inferred to return
+  `Nothing`, and the cast fails at run time. The facade's new code uses `replace`, which is not generic.
+- `test_cluster_factors.py` (2 tests): lrc-two's linear fit against pprof_py (θ, β, the fixed-effects table's t, a
+  cluster factor's BLUPs, predictions with every factor equal to the fitted values, the refusal, save and load);
+  lgc-one's logistic fit against pprof_py (σ, β and the cluster factor's profile limits; the exact test, measures and
+  intervals run); save and load with and without the data; `exact` refused with two cluster factors.
+- The single-factor wrappers' tests that expected `cluster_vars` to raise now check its new behavior instead.

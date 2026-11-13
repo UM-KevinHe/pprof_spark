@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-05, round 147.
+Updated 2026-11-05, round 148.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -9,7 +9,7 @@ round 26; the 2a estimator in round 27; persistence and the slice review in roun
 scale test on his Databricks workspace once the whole package is done (D-28).
 
 **Phase 4, random-effect models (milestone M4): plan approved** (D-51, 2026-10-21, with X-037;
-`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2 complete in rounds 101 to 104; slice 4a-3 complete in rounds 105 to 107; part 4a's S1 smoke prepared in round 108 and not yet run, its gate review waiting with it (OI-97); slice 4b-1 complete in rounds 109 to 114 (D-57, D-58, D-59; CI green); slice 4b-2 complete in rounds 115 to 118 (D-60, D-61); slice 4b-3 complete in rounds 119 to 121 (D-62); part 4b's S1 smoke prepared in round 122 and not yet run, its gate review waiting with it (OI-100); slice 4c-1 complete in rounds 123 to 126 (D-63, D-64); slice 4c-2 complete in rounds 127 to 129 (D-65, D-66); slice 4c-3 complete in rounds 131 to 133 (D-67); part 4c's code is complete; part 4d's plan approved (D-68), slice 4d-1 complete in rounds 135 to 139 (D-69, D-70); its Python with 4d-3; slice 4d-2 complete in rounds 139 to 144 (D-71, D-72), on the driver path only (OI-102); slice 4d-3's specification approved (D-74), its persistence in round 146 and jobs in round 147. D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
+`docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2 complete in rounds 101 to 104; slice 4a-3 complete in rounds 105 to 107; part 4a's S1 smoke prepared in round 108 and not yet run, its gate review waiting with it (OI-97); slice 4b-1 complete in rounds 109 to 114 (D-57, D-58, D-59; CI green); slice 4b-2 complete in rounds 115 to 118 (D-60, D-61); slice 4b-3 complete in rounds 119 to 121 (D-62); part 4b's S1 smoke prepared in round 122 and not yet run, its gate review waiting with it (OI-100); slice 4c-1 complete in rounds 123 to 126 (D-63, D-64); slice 4c-2 complete in rounds 127 to 129 (D-65, D-66); slice 4c-3 complete in rounds 131 to 133 (D-67); part 4c's code is complete; part 4d's plan approved (D-68), slice 4d-1 complete in rounds 135 to 139 (D-69, D-70); its Python with 4d-3; slice 4d-2 complete in rounds 139 to 144 (D-71, D-72), on the driver path only (OI-102); slice 4d-3's specification approved (D-74), its persistence, jobs and Python in rounds 146 to 148. D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
 through round 100 as the maintainer reported.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
@@ -168,15 +168,16 @@ through round 100 as the maintainer reported.
 | 136 | D-69 approved; slice 4d-1's fixtures (`fixtures/linear-re-clusters`, seven cases) and calibration; D-70 proposed | Merged (37ea85b) |
 | 137 | D-70 approved; slice 4d-1's kernel `LinearREClusters` (elimination onto the cluster levels, the criterion, the search) and `LinearREClustersKernelSuite` | Merged (1b4561c) |
 | 138 | Slice 4d-1's engine: `LinearREClusters` (validation, one pass by provider, the fit, fitted values, predictions) and `LinearREClustersSuite`; slice 4d-1's estimation complete | Merged (6845908) |
-| 139 | Slice 4d-1's missing tests (D-59's optimality check; a fit without a row identifier); slice 4d-2's specification (`docs/spec/logistic/random-effect-clusters.md`, D-71 proposed) | Merged (a28a224) |
-| 140 | D-71 approved; slice 4d-2's fixtures (`fixtures/logistic-re-clusters`, six cases) and calibration; D-72 proposed | Merged (11535a0) |
-| 141 | D-72 approved; slice 4d-2's kernel: `CrossedSystem` and `LogisticREClusters` (PIRLS, both deviances, the two stages, posterior variances) and `LogisticREClustersKernelSuite` | Merged (90f19ee) |
-| 142 | Slice 4d-2's engine: `LogisticREClusters` (fit on the driver, `fitAt`, `summary`, every test method) and `LogisticREClustersSuite`; OI-102 | Merged (d2fa035) |
-| 143 | Slice 4d-2's measures, options `alpha` and `SM`, and every factor's σ profile; the lockstep test; slice 4d-2's estimation and inference complete | Merged (c3947e6) |
-| 144 | The specified outputs rounds 138 to 143 had missed: the linear cluster fit's `summary`, `fixedEffectsTable` and `confInt`; the logistic cluster fit's `fitted` and `predict`; their tests; X-050 and D-73 proposed | Merged (a1af003) |
-| 145 | D-73 approved (X-050 corrected); slice 4d-3's specification (`docs/spec/random-effects/cluster-terms-job.md`, D-74 proposed) | Merged (b63f9a8) |
-| 146 | D-74 approved; slice 4d-3's persistence: `LinearREClusterFitIO`, `LogisticREClusterFitIO` (load, attach) and their suites | Merged (e5c9484) |
-| 147 | Slice 4d-3's jobs: `columns.clusters` in `LinearREJob` and `LogisticREJob` (`effects`, factor-wise profiles and predictions, the cluster rules); their tests | Delivered as a patch |
+| 139 | Slice 4d-1's missing tests (D-59's optimality check; a fit without a row identifier); slice 4d-2's specification (`docs/spec/logistic/random-effect-clusters.md`, D-71 proposed) | Merged (a28a224); CI green |
+| 140 | D-71 approved; slice 4d-2's fixtures (`fixtures/logistic-re-clusters`, six cases) and calibration; D-72 proposed | Merged (11535a0); CI green |
+| 141 | D-72 approved; slice 4d-2's kernel: `CrossedSystem` and `LogisticREClusters` (PIRLS, both deviances, the two stages, posterior variances) and `LogisticREClustersKernelSuite` | Merged (90f19ee); CI green |
+| 142 | Slice 4d-2's engine: `LogisticREClusters` (fit on the driver, `fitAt`, `summary`, every test method) and `LogisticREClustersSuite`; OI-102 | Merged (d2fa035); CI green |
+| 143 | Slice 4d-2's measures, options `alpha` and `SM`, and every factor's σ profile; the lockstep test; slice 4d-2's estimation and inference complete | Merged (c3947e6); CI green |
+| 144 | The specified outputs rounds 138 to 143 had missed: the linear cluster fit's `summary`, `fixedEffectsTable` and `confInt`; the logistic cluster fit's `fitted` and `predict`; their tests; X-050 and D-73 proposed | Merged (a1af003); CI green |
+| 145 | D-73 approved (X-050 corrected); slice 4d-3's specification (`docs/spec/random-effects/cluster-terms-job.md`, D-74 proposed) | Merged (b63f9a8); CI green |
+| 146 | D-74 approved; slice 4d-3's persistence: `LinearREClusterFitIO`, `LogisticREClusterFitIO` (load, attach) and their suites | Merged (e5c9484); CI green |
+| 147 | Slice 4d-3's jobs: `columns.clusters` in `LinearREJob` and `LogisticREJob` (`effects`, factor-wise profiles and predictions, the cluster rules); their tests | Merged (9c254df) |
+| 148 | Slice 4d-3 Python: `cluster_vars` for both models (facade methods, `LinearRandomEffectClusterModel`, `LogisticRandomEffectClusterModel`), their tests; the guide | Delivered as a patch |
 
 ## Decisions and spikes
 

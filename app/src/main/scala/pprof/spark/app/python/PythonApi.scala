@@ -22,6 +22,13 @@ import pprof.spark.engine.logistic.{
   LogisticFERandomClusterOptions,
   LogisticFERandomClusterSource,
   LogisticFERandomClusterSpec,
+  LogisticRECoefficient,
+  LogisticREClusterFit,
+  LogisticREClusterFitIO,
+  LogisticREClusterOptions,
+  LogisticREClusterSaved,
+  LogisticREClusterSpec,
+  LogisticREClusters,
   LogisticRE,
   LogisticREFit,
   LogisticREFitIO,
@@ -37,6 +44,11 @@ import pprof.spark.engine.linear.{
   LinearOptions,
   LinearProviderTests,
   LinearRE,
+  LinearREClusterFit,
+  LinearREClusterFitIO,
+  LinearREClusterOptions,
+  LinearREClusterSpec,
+  LinearREClusters,
   LinearREFit,
   LinearREFitIO,
   LinearREInference,
@@ -1529,6 +1541,361 @@ object PythonApi {
 
   def feRandomClusterFitted(fit: LogisticFERandomClusterFit): DataFrame =
     LogisticFERandomCluster.fitted(fit)
+
+  // ---- cluster factors (slice 4d-3 §3) ----
+
+  private final case class ClusterColumns(
+      outcome: String,
+      features: Seq[String],
+      provider: String,
+      clusters: Seq[String],
+      offset: Option[String],
+      weights: Option[String],
+      rowId: Option[String]
+  )
+
+  private def clusterColumns(columnsJson: String, weights: Boolean): ClusterColumns = {
+    val c = new ObjectMapper().readTree(columnsJson)
+    val known =
+      Set("outcome", "features", "provider", "clusters", "offset", "rowId") ++ (if (weights)
+                                                                                  Set("weights")
+                                                                                else Set.empty)
+    val unknown = c.fieldNames().asScala.filterNot(known).toSeq
+    require(
+      unknown.isEmpty,
+      s"the model has problems: ${unknown.map(k => s"columns.$k is not a role of this model").mkString("; ")}"
+    )
+    def text(k: String): Option[String] = Option(c.get(k)).filterNot(_.isNull).map(_.asText())
+    def list(k: String): Seq[String] = Option(c.get(k))
+      .filterNot(_.isNull)
+      .map(_.elements().asScala.map(_.asText()).toSeq)
+      .getOrElse(Seq.empty)
+    require(
+      text("outcome").nonEmpty && text("provider").nonEmpty,
+      "the model has problems: columns.outcome and columns.provider are required"
+    )
+    ClusterColumns(
+      text("outcome").get,
+      list("features"),
+      text("provider").get,
+      list("clusters"),
+      text("offset"),
+      text("weights"),
+      text("rowId")
+    )
+  }
+
+  private def hexArray(mapper: ObjectMapper, values: Seq[Double]) = {
+    val a = mapper.createArrayNode(); values.foreach(v => a.add(java.lang.Double.toHexString(v))); a
+  }
+
+  /** The linear model with cluster factors (slice 4d-1) from the facade's `columns` and fit options. */
+  def linearREClusterFit(
+      df: DataFrame,
+      columnsJson: String,
+      optionsJson: String
+  ): LinearREClusterFit = {
+    val c = clusterColumns(columnsJson, weights = true)
+    val o = new ObjectMapper().readTree(
+      if (optionsJson == null || optionsJson.isEmpty) "{}" else optionsJson
+    )
+    val options = LinearREClusterOptions(
+      Option(o.get("reml")).forall(_.asBoolean()),
+      Option(o.get("includeIntercept")).forall(_.asBoolean()),
+      Option(o.get("thetaUpper"))
+        .filterNot(_.isNull)
+        .map(_.asDouble())
+        .getOrElse(Double.PositiveInfinity)
+    )
+    LinearREClusters.fit(
+      df,
+      LinearREClusterSpec(
+        c.outcome,
+        c.features,
+        c.provider,
+        c.clusters,
+        c.offset,
+        c.weights,
+        c.rowId
+      ),
+      options
+    )
+  }
+
+  def linearREClusterSummary(fit: LinearREClusterFit): String = {
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    val factors = root.putArray("factors"); fit.factors.foreach(f => factors.add(f))
+    root.replace("theta", hexArray(mapper, fit.theta))
+    root.put("sigma", java.lang.Double.toHexString(fit.sigma))
+    val coefficients = root.putArray("coefficients")
+    fit.coefficients.foreach { k =>
+      val n = coefficients.addObject()
+      n.put("feature", k.feature); n.put("estimate", java.lang.Double.toHexString(k.estimate))
+      n.put("standardError", java.lang.Double.toHexString(k.standardError))
+    }
+    root.put("criterion", fit.criterion)
+    root.put("rows", fit.rows)
+    root.replace("statistics", hexArray(mapper, Seq(fit.deviance, fit.loglik, fit.aic, fit.bic)))
+    root.put("converged", fit.search.converged)
+    val boundary = root.putArray("boundary"); fit.search.boundary.foreach(b => boundary.add(b))
+    mapper.writeValueAsString(root)
+  }
+
+  def linearREClusterEffects(fit: LinearREClusterFit, factor: String): DataFrame =
+    fit.effects(factor)
+
+  def linearREClusterTests(
+      fit: LinearREClusterFit,
+      level: Double,
+      nullValue: Double,
+      alternative: String
+  ): String = {
+    val mapper = new ObjectMapper()
+    val rows = mapper.createArrayNode()
+    LinearREClusters.summary(fit, level, nullValue, alternative).foreach { t =>
+      val n = rows.addObject()
+      n.put("feature", t.feature)
+      n.replace(
+        "values",
+        hexArray(mapper, Seq(t.estimate, t.standardError, t.statistic, t.pValue, t.lower, t.upper))
+      )
+    }
+    mapper.writeValueAsString(rows)
+  }
+
+  def linearREClusterFixedEffects(fit: LinearREClusterFit): String = {
+    val mapper = new ObjectMapper()
+    val rows = mapper.createArrayNode()
+    LinearREClusters.fixedEffectsTable(fit).foreach { t =>
+      val n = rows.addObject()
+      n.put("feature", t.feature)
+      n.replace(
+        "values",
+        hexArray(
+          mapper,
+          Seq(t.estimate, t.standardError, t.statistic, t.degreesOfFreedom, t.pValue)
+        )
+      )
+    }
+    mapper.writeValueAsString(rows)
+  }
+
+  def linearREClusterConfInt(fit: LinearREClusterFit, level: Double): String = {
+    val mapper = new ObjectMapper()
+    val rows = mapper.createArrayNode()
+    LinearREClusters.confInt(fit, level).foreach { case (feature, lo, hi) =>
+      val n = rows.addObject(); n.put("feature", feature);
+      n.replace("values", hexArray(mapper, Seq(lo, hi)))
+    }
+    mapper.writeValueAsString(rows)
+  }
+
+  def linearREClusterFitted(df: DataFrame, fit: LinearREClusterFit): DataFrame =
+    LinearREClusters.fitted(df, fit)
+
+  def linearREClusterPredict(
+      df: DataFrame,
+      fit: LinearREClusterFit,
+      reVarsJson: String
+  ): DataFrame =
+    LinearREClusters.predict(df, fit, stringList(reVarsJson, "reVars").getOrElse(Seq.empty))
+
+  def linearREClusterSave(spark: SparkSession, fit: LinearREClusterFit, path: String): Unit =
+    LinearREClusterFitIO.save(spark, fit, path)
+
+  def linearREClusterLoad(spark: SparkSession, path: String): LinearREClusterFit =
+    LinearREClusterFitIO.load(spark, path)
+
+  /** The logistic model with cluster factors (slice 4d-2): the Laplace fit, so `stage2` must be true. */
+  def logisticREClusterFit(
+      df: DataFrame,
+      columnsJson: String,
+      optionsJson: String
+  ): LogisticREClusterFit = {
+    val c = clusterColumns(columnsJson, weights = false)
+    val o = new ObjectMapper().readTree(
+      if (optionsJson == null || optionsJson.isEmpty) "{}" else optionsJson
+    )
+    require(
+      Option(o.get("stage2")).forall(_.asBoolean()),
+      "stage2 = False is not available with cluster_vars: the cluster fit is the Laplace fit"
+    )
+    val options = LogisticREClusterOptions(
+      Option(o.get("includeIntercept")).forall(_.asBoolean()),
+      Option(o.get("sigmaUpper"))
+        .filterNot(_.isNull)
+        .map(_.asDouble())
+        .getOrElse(Double.PositiveInfinity)
+    )
+    LogisticREClusters.fit(
+      df,
+      LogisticREClusterSpec(c.outcome, c.features, c.provider, c.clusters, c.offset, c.rowId),
+      options
+    )
+  }
+
+  private def logisticClusterSummary(
+      mapper: ObjectMapper,
+      factors: Seq[String],
+      sigma: Seq[Double],
+      coefficients: Seq[LogisticRECoefficient],
+      statistics: Seq[Double],
+      converged: Boolean,
+      boundary: Seq[String],
+      attached: Boolean
+  ): String = {
+    val root = mapper.createObjectNode()
+    val f = root.putArray("factors"); factors.foreach(x => f.add(x))
+    root.replace("sigma", hexArray(mapper, sigma))
+    val k = root.putArray("coefficients")
+    coefficients.foreach { c =>
+      val n = k.addObject()
+      n.put("feature", c.feature); n.put("estimate", java.lang.Double.toHexString(c.estimate))
+      n.put("standardError", java.lang.Double.toHexString(c.standardError))
+    }
+    root.replace("statistics", hexArray(mapper, statistics))
+    root.put("converged", converged)
+    val b = root.putArray("boundary"); boundary.foreach(x => b.add(x))
+    root.put("attached", attached)
+    mapper.writeValueAsString(root)
+  }
+
+  def logisticREClusterSummary(fit: LogisticREClusterFit): String =
+    logisticClusterSummary(
+      new ObjectMapper(),
+      fit.factors,
+      fit.sigma,
+      fit.coefficients,
+      Seq(fit.deviance, fit.loglik, fit.aic, fit.bic),
+      fit.converged,
+      fit.boundary,
+      attached = true
+    )
+
+  def logisticREClusterSavedSummary(saved: LogisticREClusterSaved): String =
+    logisticClusterSummary(
+      new ObjectMapper(),
+      saved.factors,
+      saved.sigma,
+      saved.coefficients,
+      Seq(saved.deviance, saved.loglik, saved.aic, saved.bic),
+      saved.converged,
+      saved.boundary,
+      attached = false
+    )
+
+  def logisticREClusterEffects(fit: LogisticREClusterFit, factor: String): DataFrame =
+    fit.effects(factor)
+
+  def logisticREClusterSavedEffects(saved: LogisticREClusterSaved, factor: String): DataFrame =
+    saved.effects(factor)
+
+  def logisticREClusterCovariateTests(fit: LogisticREClusterFit, level: Double): String = {
+    val mapper = new ObjectMapper()
+    val rows = mapper.createArrayNode()
+    LogisticREClusters.summary(fit, level).foreach { t =>
+      val n = rows.addObject()
+      n.put("feature", t.feature)
+      n.replace(
+        "values",
+        hexArray(mapper, Seq(t.estimate, t.standardError, t.statistic, t.pValue, t.lower, t.upper))
+      )
+    }
+    mapper.writeValueAsString(rows)
+  }
+
+  def logisticREClusterTest(
+      fit: LogisticREClusterFit,
+      method: String,
+      reference: String,
+      alternative: String,
+      level: Double,
+      critical: Double,
+      nResample: Int,
+      seed: Long
+  ): DataFrame =
+    LogisticREClusters.test(
+      fit,
+      method,
+      effectReference(reference),
+      alternative,
+      level,
+      if (critical.isNaN) None else Some(critical),
+      nResample,
+      seed
+    )
+
+  def logisticREClusterMeasures(
+      fit: LogisticREClusterFit,
+      kindsJson: String,
+      reference: String
+  ): java.util.Map[String, DataFrame] =
+    LogisticREClusters
+      .measures(
+        fit,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect")),
+        effectReference(reference)
+      )
+      .asJava
+
+  def logisticREClusterAlphaIntervals(fit: LogisticREClusterFit, level: Double): DataFrame =
+    LogisticREClusters.alphaIntervals(fit, level)
+
+  def logisticREClusterIntervals(
+      fit: LogisticREClusterFit,
+      kindsJson: String,
+      measuresJson: String,
+      reference: String,
+      alternative: String,
+      level: Double
+  ): java.util.Map[String, DataFrame] =
+    LogisticREClusters
+      .smIntervals(
+        fit,
+        stringList(kindsJson, "kinds").getOrElse(Seq("indirect")),
+        stringList(measuresJson, "measures").getOrElse(Seq("rate", "ratio")),
+        effectReference(reference),
+        alternative,
+        level
+      )
+      .asJava
+
+  def logisticREClusterProfile(fit: LogisticREClusterFit, factor: String, level: Double): String = {
+    val p = LogisticREClusters.profileSigma(fit, factor, level)
+    val node = new ObjectMapper().createObjectNode()
+    node.put("sigma", java.lang.Double.toHexString(p.sigma))
+    node.put("lower", java.lang.Double.toHexString(p.lower))
+    node.put("upper", java.lang.Double.toHexString(p.upper))
+    node.toString
+  }
+
+  def logisticREClusterFitted(df: DataFrame, fit: LogisticREClusterFit): DataFrame =
+    LogisticREClusters.fitted(df, fit)
+
+  def logisticREClusterPredict(
+      df: DataFrame,
+      fit: LogisticREClusterFit,
+      reVarsJson: String,
+      withOffset: Boolean,
+      kind: String
+  ): DataFrame =
+    LogisticREClusters.predict(
+      df,
+      fit,
+      stringList(reVarsJson, "reVars").getOrElse(Seq.empty),
+      withOffset,
+      kind
+    )
+
+  def logisticREClusterSave(spark: SparkSession, fit: LogisticREClusterFit, path: String): Unit =
+    LogisticREClusterFitIO.save(spark, fit, path)
+
+  def logisticREClusterLoad(spark: SparkSession, path: String): LogisticREClusterSaved =
+    LogisticREClusterFitIO.load(spark, path)
+
+  def logisticREClusterAttach(df: DataFrame, saved: LogisticREClusterSaved): LogisticREClusterFit =
+    LogisticREClusterFitIO.attach(df, saved)
 
   /** Saves the fit (spec 4c-3 §3); the path must not exist. */
   def feRandomClusterSave(

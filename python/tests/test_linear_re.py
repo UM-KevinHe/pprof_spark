@@ -88,8 +88,7 @@ def test_unused_optimizer_settings_warn_and_cluster_terms_wait():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         LinearRandomEffect("y", FEATURES, "provider", optimizer="Powell", max_iter_outer=50)
-    with pytest.raises(NotImplementedError, match="OI-93"):
-        LinearRandomEffect("y", FEATURES, "provider", cluster_vars=["hospital"])
+    assert LinearRandomEffect("y", FEATURES, "provider", cluster_vars="hospital").cluster_vars == ["hospital"]
     with pytest.raises(ValueError, match="optimizer"):
         LinearRandomEffect("y", FEATURES, "provider", optimizer="bfgs")
 
