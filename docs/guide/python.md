@@ -244,3 +244,20 @@ The added providers enter the reference effect, the direct measures, the tests o
 a mean null value), the provider tests, the provider table (`added` is true) and predictions. Their indirect
 measures are missing, since they have no rows in the data. A provider already in the fit is replaced instead.
 The model changes in place and is returned, and saved models keep the additions (logistic specification §8a).
+
+## Fixed provider effects with random clusters (slice 4c)
+
+```python
+from pprof_spark import LogisticFERandomCluster, LogisticFERandomClusterModel
+
+model = LogisticFERandomCluster("y", ["x1", "x2"], "provider", "cluster", observed="died", row_id="id",
+                                estimator="marginal")            # or "he2013", with convergence_criterion
+fit = model.fit(df, beta=beta, sigma=sigma, gamma_init=start)   # or fit(df, stage1=logistic_fit, stage2=three_stage_fit)
+fit.providers(), fit.clusters()                                  # gamma and held_at_bound; alpha_mean and alpha_var
+fit.test(), fit.calculate_confidence_intervals(option="gamma")   # exact tests by default
+fit.calculate_standardized_measures(stdz=["indirect", "direct"]), fit.fitted_values()
+fit.save("/fits/frc"); LogisticFERandomClusterModel.load(spark, "/fits/frc", df)   # df re-attaches the records
+```
+
+Like pprof_py's, the methods take no data: the fit keeps its records. A model loaded without `df` gives its tables,
+scalars and `summary(stage1)`; its tests and measures raise until it is loaded with its training data.

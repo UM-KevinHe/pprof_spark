@@ -83,3 +83,23 @@ def test_he2013_matches_pprof_py_at_its_defaults(spark):
                     sigma=float.fromhex(g["sigma"][0]), gamma_init=[float.fromhex(v) for v in g["start"]])
     assert fit.estimator == "he2013" and fit.iterations == d["iterations"] and fit.converged
     assert within(column(fit.providers(), "gamma"), d["gamma"], T_COEF)
+
+
+def test_save_and_load_with_and_without_the_data(spark, tmp_path):
+    from pprof_spark import LogisticFERandomClusterModel
+    fit, _ = given_fit(spark, "frc-base")
+    path = str(tmp_path / "fit")
+    fit.save(path)
+    with pytest.raises(Exception, match="exist"):
+        fit.save(path)
+    tables = LogisticFERandomClusterModel.load(spark, path)
+    assert (tables.n_providers, tables.sigma, tables.loglik) == (fit.n_providers, fit.sigma, fit.loglik)
+    assert column(tables.providers(), "gamma") == column(fit.providers(), "gamma")
+    assert column(tables.clusters(), "alpha_var", "cluster") == column(fit.clusters(), "alpha_var", "cluster")
+    with pytest.raises(RuntimeError, match="training data"):
+        tables.test()
+    attached = LogisticFERandomClusterModel.load(spark, path, read(spark, "frc-base"))
+    assert column(attached.test(), "z_raw") == column(fit.test(), "z_raw")
+    other = read(spark, "frc-text")
+    with pytest.raises(Exception, match="training data|differ"):
+        LogisticFERandomClusterModel.load(spark, path, other.withColumn("provider", other["id"] % 30 + 1))

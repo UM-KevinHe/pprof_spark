@@ -248,16 +248,25 @@ object LogisticFERandomCluster {
       level: Double = 0.95,
       nullValue: Double = 0.0,
       alternative: String = "two_sided"
+  ): Vector[LogisticTest] =
+    summaryOf(fit.spec.features, fit.beta, stage1.orElse(fit.stage1), level, nullValue, alternative)
+
+  /** `summary` from the β a fit used and its features, as a saved fit holds them (spec 4c-3 §6). */
+  def summaryOf(
+      features: Seq[String],
+      beta: Seq[Double],
+      stage1: Option[LogisticFit],
+      level: Double = 0.95,
+      nullValue: Double = 0.0,
+      alternative: String = "two_sided"
   ): Vector[LogisticTest] = {
-    val s1 = stage1
-      .orElse(fit.stage1)
-      .getOrElse(
-        throw new IllegalArgumentException(
-          "summary needs the stage 1 fit whose beta the model used (stage1)"
-        )
+    val s1 = stage1.getOrElse(
+      throw new IllegalArgumentException(
+        "summary needs the stage 1 fit whose beta the model used (stage1)"
       )
+    )
     val byName = s1.spec.features.zip(s1.estimates).toMap
-    val same = fit.spec.features.zip(fit.beta).forall { case (name, b) =>
+    val same = features.zip(beta).forall { case (name, b) =>
       byName.get(name).exists(v => math.abs(v - b) <= 1e-12 + 1e-10 * math.abs(b))
     }
     require(same, "stage1's beta differs from the beta this model was fit with")

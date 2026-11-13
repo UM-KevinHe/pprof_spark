@@ -1,6 +1,6 @@
 # Specification: fixed provider effects with random clusters — persistence, job runner and Python (slice 4c-3)
 
-- Status: approved with D-67 (2026-11-05); persistence and the job runner in round 132.
+- Status: approved with D-67 (2026-11-05); persistence and the job runner in round 132, Python in round 133.
 - References: slices 4c-1 and 4c-2 ([fe-random-cluster.md](fe-random-cluster.md),
   [fe-random-cluster-he2013.md](fe-random-cluster-he2013.md)). It follows the three-stage model's persistence, a saved
   fit plus `attach` (spec 2f-4 §5), and slice 4b-3's job ([random-effect-job.md](random-effect-job.md)). No new
@@ -141,3 +141,16 @@ None new.
    - `LogisticFERandomClusterJobSuite` (3): every output against the library; the stages source reproducing
      ts-synthetic's stage 3 bit for bit, with the summary; invalid specifications, the refusals and arguments.
    The guide is `docs/guide/fe-random-cluster-job.md`.
+
+## 10. Implementation notes (round 133, Python; no statistical change)
+
+- The facade gains:
+  - `feRandomClusterSave`, `feRandomClusterLoad` (a saved fit) and `feRandomClusterAttach`;
+  - for a saved fit without its records: `feRandomClusterSavedSummary`, `feRandomClusterSavedProviders`,
+    `feRandomClusterSavedClusters` and `feRandomClusterSavedCovariateTests`.
+  The engine's `summary` now rests on `summaryOf(features, beta, stage1, ...)`, which needs no records.
+- `LogisticFERandomClusterModel.save(path)` and `LogisticFERandomClusterModel.load(spark, path, df=None)`. A model
+  loaded without `df` answers `providers`, `clusters`, its scalars and `summary(stage1)`. Its tests, intervals,
+  measures and fitted values raise `RuntimeError`, which names the remedy: `load` with the data.
+- `test_fe_random_cluster.py` gains a test that saves, refuses to overwrite, loads without the data (the tables match,
+  and a test raises), loads with it (the Wald tests match), and refuses other data.

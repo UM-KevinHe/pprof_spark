@@ -17,6 +17,8 @@ import pprof.spark.app.{
 import pprof.spark.engine.logistic.{
   LogisticFERandomCluster,
   LogisticFERandomClusterFit,
+  LogisticFERandomClusterFitIO,
+  LogisticFERandomClusterSaved,
   LogisticFERandomClusterOptions,
   LogisticFERandomClusterSource,
   LogisticFERandomClusterSpec,
@@ -1527,6 +1529,98 @@ object PythonApi {
 
   def feRandomClusterFitted(fit: LogisticFERandomClusterFit): DataFrame =
     LogisticFERandomCluster.fitted(fit)
+
+  /** Saves the fit (spec 4c-3 §3); the path must not exist. */
+  def feRandomClusterSave(
+      spark: SparkSession,
+      fit: LogisticFERandomClusterFit,
+      path: String
+  ): Unit =
+    LogisticFERandomClusterFitIO.save(spark, fit, path)
+
+  /** Loads a saved fit without its records (spec 4c-3 §6). */
+  def feRandomClusterLoad(spark: SparkSession, path: String): LogisticFERandomClusterSaved =
+    LogisticFERandomClusterFitIO.load(spark, path)
+
+  /** The saved fit with `df`, its training data, re-attached and checked. */
+  def feRandomClusterAttach(
+      df: DataFrame,
+      saved: LogisticFERandomClusterSaved
+  ): LogisticFERandomClusterFit =
+    LogisticFERandomClusterFitIO.attach(df, saved)
+
+  /** A saved fit's summary JSON, as `feRandomClusterSummary` gives a fit's. */
+  def feRandomClusterSavedSummary(saved: LogisticFERandomClusterSaved): String = {
+    val mapper = new ObjectMapper()
+    val root = mapper.createObjectNode()
+    def hex(v: Double): String = java.lang.Double.toHexString(v)
+    val beta = root.putArray("beta")
+    saved.beta.foreach(b => beta.add(hex(b)))
+    root.put("sigma", hex(saved.sigma))
+    root.put("logLikelihood", hex(saved.stage3.loglik))
+    root.put("criterion", hex(saved.stage3.criterion))
+    root.put("iterations", saved.stage3.iterations)
+    root.put("converged", saved.stage3.converged)
+    root.put("providers", saved.stage3.providers.size)
+    root.put("clusters", saved.stage3.clusters.size)
+    root.put("withStage1", saved.withStage1)
+    root.put("estimator", saved.options.estimator)
+    val warnings = root.putArray("warnings")
+    saved.warnings.foreach(w => warnings.add(w))
+    mapper.writeValueAsString(root)
+  }
+
+  def feRandomClusterSavedProviders(
+      spark: SparkSession,
+      saved: LogisticFERandomClusterSaved
+  ): DataFrame =
+    keyed(
+      spark,
+      saved.stage3.providers,
+      Seq(
+        "gamma" -> saved.stage3.gamma,
+        "held_at_bound" -> saved.stage3.held.map(h => if (h) 1.0 else 0.0)
+      ),
+      saved.spec.provider
+    )
+
+  def feRandomClusterSavedClusters(
+      spark: SparkSession,
+      saved: LogisticFERandomClusterSaved
+  ): DataFrame =
+    keyed(
+      spark,
+      saved.stage3.clusters,
+      Seq("alpha_mean" -> saved.stage3.alphaMean, "alpha_var" -> saved.stage3.alphaVar),
+      saved.spec.cluster
+    )
+
+  /** A saved fit's `summary`: stage 1's Wald tests, `stage1` being the fit whose β the model used. */
+  def feRandomClusterSavedCovariateTests(
+      saved: LogisticFERandomClusterSaved,
+      stage1: LogisticFit,
+      level: Double,
+      nullValue: Double,
+      alternative: String
+  ): String = {
+    val mapper = new ObjectMapper()
+    val array = mapper.createArrayNode()
+    LogisticFERandomCluster
+      .summaryOf(saved.spec.features, saved.beta, Option(stage1), level, nullValue, alternative)
+      .foreach { t =>
+        val node = array.addObject()
+        node.put("feature", t.feature)
+        Seq(
+          "estimate" -> t.estimate,
+          "standardError" -> t.standardError,
+          "statistic" -> t.statistic,
+          "pValue" -> t.pValue,
+          "lower" -> t.lower,
+          "upper" -> t.upper
+        ).foreach { case (k, v) => node.put(k, java.lang.Double.toHexString(v)) }
+      }
+    mapper.writeValueAsString(array)
+  }
 
   def logisticRESave(spark: SparkSession, fit: LogisticREFit, path: String): Unit =
     LogisticREFitIO.save(spark, fit, path)

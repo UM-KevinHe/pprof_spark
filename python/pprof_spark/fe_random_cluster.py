@@ -61,11 +61,13 @@ class LogisticFERandomClusterModel:
     """A fitted random-cluster model: a handle to the JVM's fit, which keeps its records, with pprof_py's method
     names. The methods take no data: the fit holds its records, as pprof_py's model does."""
 
-    def __init__(self, spark, handle, stage1):
+    def __init__(self, spark, handle, stage1, saved=None):
         self._spark = spark
         self._handle = handle
         self._stage1 = stage1
-        s = json.loads(api(spark).feRandomClusterSummary(handle))
+        self._saved = saved
+        s = json.loads(api(spark).feRandomClusterSummary(handle) if handle is not None
+                       else api(spark).feRandomClusterSavedSummary(saved))
         self.beta = [_float(b) for b in s["beta"]]
         self.sigma = _float(s["sigma"])
         self.loglik = _float(s["logLikelihood"])
@@ -80,15 +82,40 @@ class LogisticFERandomClusterModel:
     def _frame(self, jdf) -> DataFrame:
         return DataFrame(jdf, self._spark)
 
+    def _records(self):
+        if self._handle is None:
+            raise RuntimeError("This fit was loaded without its training data; LogisticFERandomClusterModel.load(spark, "
+                               "path, df) re-attaches them, checked against the fit's rows and fingerprint.")
+        return self._handle
+
+    def save(self, path: str) -> None:
+        """Saves the fit (`LogisticFERandomClusterFitIO`, format version 1) without its records; the path must not
+        exist. A fit loaded without its data cannot be saved again."""
+        api(self._spark).feRandomClusterSave(self._spark._jsparkSession, self._records(), path)
+
+    @classmethod
+    def load(cls, spark, path: str, df: Optional[DataFrame] = None) -> "LogisticFERandomClusterModel":
+        """Loads a fit saved by `save` or by `LogisticFERandomClusterJob`. With `df`, its training data, the records
+        are re-attached and every method works; without it, the tables, scalars and `summary(stage1)` work."""
+        facade = api(spark)
+        saved = facade.feRandomClusterLoad(spark._jsparkSession, path)
+        if df is not None:
+            return cls(spark, facade.feRandomClusterAttach(df._jdf, saved), None)
+        return cls(spark, None, None, saved)
+
     def _frames(self, tables) -> Dict[str, DataFrame]:
         return {key: self._frame(tables.get(key)) for key in sorted(tables.keySet())}
 
     def providers(self) -> DataFrame:
         """One row per provider: its effect `gamma` and `held_at_bound`."""
+        if self._handle is None:
+            return self._frame(api(self._spark).feRandomClusterSavedProviders(self._spark._jsparkSession, self._saved))
         return self._frame(api(self._spark).feRandomClusterProviders(self._spark._jsparkSession, self._handle))
 
     def clusters(self) -> DataFrame:
         """One row per cluster: the posterior mean and variance of its effect."""
+        if self._handle is None:
+            return self._frame(api(self._spark).feRandomClusterSavedClusters(self._spark._jsparkSession, self._saved))
         return self._frame(api(self._spark).feRandomClusterClusters(self._spark._jsparkSession, self._handle))
 
     def summary(self, stage1=None, level: float = 0.95, null: float = 0.0,
@@ -96,8 +123,11 @@ class LogisticFERandomClusterModel:
         """pprof_py's `summary`: stage 1's Wald tests of β, which must be the β this model used."""
         stage1 = stage1 if stage1 is not None else self._stage1
         handle = None if stage1 is None else stage1._handle
-        rows = json.loads(api(self._spark).feRandomClusterCovariateTests(self._handle, handle, float(level), float(null),
-                                                                          alternative))
+        facade = api(self._spark)
+        rows = json.loads(facade.feRandomClusterCovariateTests(self._handle, handle, float(level), float(null), alternative)
+                          if self._handle is not None else
+                          facade.feRandomClusterSavedCovariateTests(self._saved, handle, float(level), float(null),
+                                                                    alternative))
         return [LogisticRETest(r["feature"], _float(r["estimate"]), _float(r["standardError"]), _float(r["statistic"]),
                                _float(r["pValue"]), _float(r["lower"]), _float(r["upper"])) for r in rows]
 
@@ -109,7 +139,7 @@ class LogisticFERandomClusterModel:
             raise NotImplementedError("null_model arrives with OI-87")
         names = json.dumps([str(p) for p in providers]) if providers else ""
         return self._frame(api(self._spark).feRandomClusterTest(
-            self._handle, test_method, str(reference), alternative, float(level),
+            self._records(), test_method, str(reference), alternative, float(level),
             float("nan") if critical is None else float(critical), names, int(n_resample), int(seed)))
 
     def calculate_confidence_intervals(self, providers=None, level: float = 0.95, option: str = "SM", stdz="indirect",
@@ -121,7 +151,7 @@ class LogisticFERandomClusterModel:
         kinds = [stdz] if isinstance(stdz, str) else list(stdz)
         measures = [measure] if isinstance(measure, str) else list(measure)
         tables = self._frames(api(self._spark).feRandomClusterIntervals(
-            self._handle, option, json.dumps(kinds), json.dumps(measures), alternative, float(level), test_method,
+            self._records(), option, json.dumps(kinds), json.dumps(measures), alternative, float(level), test_method,
             str(reference)))
         if providers:
             wanted = [str(p) for p in providers]
@@ -132,7 +162,7 @@ class LogisticFERandomClusterModel:
     def calculate_standardized_measures(self, providers=None, stdz="indirect", reference="median") -> Dict[str, DataFrame]:
         """pprof_py's `calculate_standardized_measures`: `indirect` and `direct` tables."""
         kinds = [stdz] if isinstance(stdz, str) else list(stdz)
-        tables = self._frames(api(self._spark).feRandomClusterMeasures(self._handle, json.dumps(kinds), str(reference)))
+        tables = self._frames(api(self._spark).feRandomClusterMeasures(self._records(), json.dumps(kinds), str(reference)))
         if providers:
             wanted = [str(p) for p in providers]
             key = tables[next(iter(tables))].columns[0]
@@ -141,4 +171,4 @@ class LogisticFERandomClusterModel:
 
     def fitted_values(self) -> DataFrame:
         """The records with `fitted`: expit(γ̂ + E[α | y] + xᵀβ)."""
-        return self._frame(api(self._spark).feRandomClusterFitted(self._handle))
+        return self._frame(api(self._spark).feRandomClusterFitted(self._records()))
