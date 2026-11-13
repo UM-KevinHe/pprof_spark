@@ -196,6 +196,8 @@ offset-bin moments of xβ, and the kernel iterates on cells, on the driver or on
 
 ### 4.4 Cluster terms (4d)
 
+Part 4d's own plan is [cluster-terms-plan.md](cluster-terms-plan.md) (D-68, proposed in round 134).
+
 Crossed intercepts make H non-diagonal. The linear model then needs provider × cluster sums of the weights and a
 sparse joint system, eliminated onto the smaller set of levels as stage 2 does (OI-59 for very large level sets).
 The logistic model needs the same elimination inside its row-level PIRLS, and diag(H⁻¹) for the posterior

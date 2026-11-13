@@ -103,6 +103,19 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-68: Part 4d plan, cluster terms (Proposed: awaiting the maintainer's approval)
+
+`docs/spec/random-effects/cluster-terms-plan.md`: crossed cluster factors in the random-effect models, as pprof_py's
+`cluster_vars` (OI-93). Round 134's probe agreed with lme4.
+- 4d-1: the linear model with cluster factors, estimation only. pprof_py refuses provider profiling on such a fit, so
+  pprof_spark gives θ per factor, β, σ, the BLUPs, `summary`, fitted values and predictions.
+- 4d-2: the logistic model with cluster factors: the two-stage Laplace fit with a σ per factor, and every method,
+  `exact` among them with one cluster factor.
+- 4d-3: persistence version 2, the jobs and Python; and the random-cluster model's stage 2 from such a logistic fit.
+- The core: the provider block eliminated onto the cluster levels, as the three-stage model's stage 2 does, from
+  provider × cluster cell sums.
+- Fixtures: new cases in `fixtures/linear-re` and `fixtures/logistic-re`, from pprof_py and lme4.
+
 ### D-67: Slice 4c-3 specification (Accepted: approved by the maintainer, 2026-11-05)
 
 `docs/spec/logistic/fe-random-cluster-job.md`: persistence, the job runner and Python save and load for the
