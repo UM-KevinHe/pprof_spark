@@ -32,7 +32,7 @@ OPTIONS = {
                 "max_iter_outer=20000, max_iter_pirls=200 (tight); fit(data, 'y', ['x1', 'x2'], 'provider', "
                 "cluster_vars=[...], offset_var)",
     "inference": "on the tightened fit: summary(); test with wald, poibin_exact, resampling (n_resample 20000, seed 7) "
-                 "and, with one cluster factor, exact, all at reference median; calculate_standardized_measures "
+                 "and, with one cluster factor, exact, all at pprof_py's default reference, 0; calculate_standardized_measures "
                  "(indirect and direct, median); calculate_confidence_intervals options alpha and SM (indirect and "
                  "direct ratios); profile_sigma(var) for every factor",
     "r": "glmer(y ~ x1 + x2 + (1 | provider) + (1 | c1) [+ (1 | c2)] [+ offset(o)], binomial, nAGQ = 1, bobyqa with "

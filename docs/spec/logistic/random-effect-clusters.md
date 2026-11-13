@@ -1,6 +1,6 @@
 # Specification: the logistic random-effect model with cluster factors (slice 4d-2)
 
-- Status: approved with D-71 (2026-11-05); fixtures and calibration in round 140 (D-72, approved); the kernel in round 141.
+- Status: approved with D-71 (2026-11-05); fixtures and calibration in round 140 (D-72, approved); the kernel in round 141, the engine's fit and tests in round 142.
 - Plan: [../random-effects/cluster-terms-plan.md](../random-effects/cluster-terms-plan.md) (D-68), slice 4d-2.
 - References: pprof_py v0.7.0 (`9320766`) `LogisticRandomEffectModel(...).fit(..., cluster_vars=...)`
   (`models/logistic/random_effect.py`; `inference/logistic/random_effect.py`: `test`, `_get_posterior_var`;
@@ -123,3 +123,27 @@ None expected.
 - `LogisticREClustersKernelSuite` builds every case's rows without Spark. All six cases passed on the first run:
   σ̂, β̂, every factor's BLUPs and posterior SEs (T-opt), and the log-likelihood (T-fn), against both pprof_py and
   glmer; D-59's optimality check against both optima.
+
+## 11. Implementation notes (round 142, the engine's fit and tests; no statistical change)
+
+- `engine.logistic.LogisticREClusters.fit(df, LogisticREClusterSpec, LogisticREClusterOptions)`:
+  - it validates, fingerprints and counts in one pass, then collects the rows to the driver in canonical order (the
+    row identifier, else the levels and values);
+  - it runs the kernel's two stages from the outcome's logit;
+  - its outputs are the coefficients, σ̂ by factor, each factor's table (key, `records`, `blup`, `variance`, `se`),
+    the deviances, AIC and BIC (p + factors parameters, as pprof_py's) and the boundary factors.
+  This is §3's driver path only. A fit whose rows exceed half the driver budget fails, naming OI-102, until the
+  passes over distributed blocks are written.
+- `fitAt` gives the same outputs at given (σ, β) through the kernel's new `at`, which `fit` now also ends with.
+- `summary` gives Wald z for β. `test` covers `wald`, `poibin_exact`, `resampling` and `exact` as §6 defines them,
+  with the clustered Poisson-binomial distributions of the three-stage model, `invertDecreasing` for the limits,
+  and the row mixture at the Monte Carlo floor. `reference` is 0 by default, as pprof_py's.
+- `LogisticREClustersSuite` (10 tests):
+  - three fits against pprof_py and glmer;
+  - every case in lockstep at pprof_py's tightened (σ, β): `summary` and every test method at D-72's classes;
+  - `exact` refused with two cluster factors;
+  - invariance bit for bit.
+  The lockstep's first run failed on every case because the engine's default reference was the median, where
+  pprof_py's is 0. The generator had also described the fixtures' tests as at the median; the description now says
+  0, and the fixture data are unchanged.
+- The measures, the intervals and the profile come next.

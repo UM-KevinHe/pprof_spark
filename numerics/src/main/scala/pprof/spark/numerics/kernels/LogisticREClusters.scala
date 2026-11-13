@@ -279,8 +279,28 @@ object LogisticREClusters {
       BoundedQuasiNewton.Options(gradientTolerance = 1e-9, maxIterations = maxIterations)
     )
     val sigma = clampSigma(stage2.x.take(k))
-    val betaHat = stage2.x.drop(k)
-    val m2 = laplace(rows, sigma, betaHat, lastU)
+    at(rows, sigma, stage2.x.drop(k), lastU).copy(
+      stage1Deviance = m1.deviance,
+      iterations = stage1.iterations + stage2.iterations,
+      evaluations = stage1.evaluations + stage2.evaluations,
+      projectedGradient = stage2.projectedGradient,
+      converged = stage2.converged
+    )
+  }
+
+  /** The fit's outputs at given (σ, β): the modes by PIRLS from `u0`, the BLUPs, the posterior variances σₖ²·diag(H⁻¹)
+    * and Var(β̂) from the β system conditional on the modes (X-043's rule); the search's fields empty.
+    */
+  def at(
+      rows: Rows,
+      sigma: Array[Double],
+      beta: Array[Double],
+      u0: Array[Double] = Array.empty
+  ): Fit = {
+    val k = rows.factors
+    val p = rows.p
+    val betaHat = beta.clone()
+    val m2 = laplace(rows, sigma, betaHat, if (u0.isEmpty) new Array[Double](rows.q) else u0)
     // posterior variances σₖ²·diag(H⁻¹) and Var(β̂) from the β system conditional on the modes (X-043's rule)
     val mu = m2.eta.map(expit)
     val w = mu.map(m => m * (1.0 - m))
@@ -327,11 +347,11 @@ object LogisticREClusters {
       covariance,
       m2.deviance,
       -0.5 * m2.deviance,
-      m1.deviance,
-      stage1.iterations + stage2.iterations,
-      stage1.evaluations + stage2.evaluations,
-      stage2.projectedGradient,
-      stage2.converged
+      Double.NaN,
+      0,
+      0,
+      Double.NaN,
+      true
     )
   }
 }

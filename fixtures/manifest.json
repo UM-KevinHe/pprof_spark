@@ -404,7 +404,7 @@
    "r_pprof": "R pprof 1.0.3's logis_re (glmer with the tightened control passed through), test.logis_re, confint.logis_re (option alpha; option SM for each alternative) and SM_output.logis_re, with computeDirectExp written in R; and lme4's profile of the tightened glmer fit at zeta steps of 0.02, with confint"
   },
   "logistic-re-clusters": {
-   "inference": "on the tightened fit: summary(); test with wald, poibin_exact, resampling (n_resample 20000, seed 7) and, with one cluster factor, exact, all at reference median; calculate_standardized_measures (indirect and direct, median); calculate_confidence_intervals options alpha and SM (indirect and direct ratios); profile_sigma(var) for every factor",
+   "inference": "on the tightened fit: summary(); test with wald, poibin_exact, resampling (n_resample 20000, seed 7) and, with one cluster factor, exact, all at pprof_py's default reference, 0; calculate_standardized_measures (indirect and direct, median); calculate_confidence_intervals options alpha and SM (indirect and direct ratios); profile_sigma(var) for every factor",
    "negative_controls": "the tightened fit with every outcome of the largest provider replaced by 1 - y",
    "pprof_py": "LogisticRandomEffectModel(verbose=False) at its defaults and with tol_outer=1e-10, tol_pirls=1e-13, max_iter_outer=20000, max_iter_pirls=200 (tight); fit(data, 'y', ['x1', 'x2'], 'provider', cluster_vars=[...], offset_var)",
    "r": "glmer(y ~ x1 + x2 + (1 | provider) + (1 | c1) [+ (1 | c2)] [+ offset(o)], binomial, nAGQ = 1, bobyqa with rhoend 1e-12, maxfun 1e6, tolPwrss 1e-13), in logistic_re_cluster_r.R"
