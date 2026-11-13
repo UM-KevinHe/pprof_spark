@@ -33,6 +33,7 @@ import linear_fixtures
 import linear_re_fixtures
 import logistic_re_fixtures
 import fe_random_cluster_fixtures
+import linear_re_cluster_fixtures
 import logistic_fixtures
 import three_stage_fixtures
 from pprof_py.algorithms.survival.cox_likelihood import cox_partial_likelihood
@@ -334,7 +335,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", default=os.path.join(ROOT, "fixtures"))
     parser.add_argument("--inputs", help="copy input.csv files from this fixture tree")
-    parser.add_argument("--family", choices=("all", "cox", "logistic", "three-stage", "linear", "linear-re", "logistic-re", "fe-random-cluster"), default="all",
+    parser.add_argument("--family", choices=("all", "cox", "logistic", "three-stage", "linear", "linear-re", "logistic-re", "fe-random-cluster", "linear-re-clusters"), default="all",
                         help="regenerate one family only; the manifest still covers every file")
     options = parser.parse_args()
     out = options.out
@@ -402,6 +403,9 @@ def main():
     frc_cases = ([case["id"] for case in fe_random_cluster_fixtures.CASES]
                  if options.family not in ("all", "fe-random-cluster")
                  else fe_random_cluster_fixtures.generate(out, options.inputs, lock, write_json))
+    lrc_cases = ([case["id"] for case in linear_re_cluster_fixtures.CASES]
+                 if options.family not in ("all", "linear-re-clusters")
+                 else linear_re_cluster_fixtures.generate(out, options.inputs, lock, write_json))
 
     files = {}
     for directory, _, names in os.walk(out):
@@ -415,7 +419,7 @@ def main():
         "formatVersion": FORMAT_VERSION,
         "generator": "reference/fixtures/generate.py",
         "cases": {"cox": cases, "logistic": logistic_cases, "three-stage": three_stage_cases, "linear": linear_cases,
-                  "linear-re": linear_re_cases, "logistic-re": logistic_re_cases, "fe-random-cluster": frc_cases},
+                  "linear-re": linear_re_cases, "logistic-re": logistic_re_cases, "fe-random-cluster": frc_cases, "linear-re-clusters": lrc_cases},
         "reference": {"pprof_py": {"version": installed, "commit": lock["pprof_py"]["commit"]},
                       "python": sys.version.split()[0],
                       "packages": {name: metadata.version(name) for name in packages},
@@ -431,12 +435,14 @@ def main():
                     "linear": linear_fixtures.OPTIONS,
                     "linear-re": linear_re_fixtures.OPTIONS,
                     "logistic-re": logistic_re_fixtures.OPTIONS,
-                    "fe-random-cluster": fe_random_cluster_fixtures.OPTIONS},
+                    "fe-random-cluster": fe_random_cluster_fixtures.OPTIONS,
+                    "linear-re-clusters": linear_re_cluster_fixtures.OPTIONS},
         "files": dict(sorted(files.items())),
     })
     print(f"wrote {len(files)} fixture files for {len(cases)} Cox, {len(logistic_cases)} logistic and "
           f"{len(three_stage_cases)} three-stage, {len(linear_cases)} linear, {len(linear_re_cases)} linear random-effect, "
-          f"{len(logistic_re_cases)} logistic random-effect and {len(frc_cases)} fixed-effect random-cluster cases "
+          f"{len(logistic_re_cases)} logistic random-effect, {len(frc_cases)} fixed-effect random-cluster and "
+          f"{len(lrc_cases)} linear cluster-factor cases "
           f"to {out}")
 
 

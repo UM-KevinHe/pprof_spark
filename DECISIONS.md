@@ -103,7 +103,26 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-69: Slice 4d-1 specification (Proposed: awaiting the maintainer's approval)
+### D-70: Slice 4d-1 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+
+1. Fixtures (round 136, `reference/fixtures/linear_re_cluster_fixtures.py` and `linear_re_cluster_r.R`): a new family,
+   `fixtures/linear-re-clusters`, rather than new cases in `fixtures/linear-re`, whose generator and files are built
+   around one factor. It has seven cases, each with 30 providers over 3,000 records: lrc-one, lrc-two (two cluster
+   factors), lrc-text, lrc-weights, lrc-offset, lrc-nested and lrc-boundary (a cluster factor at θ = 0). Each holds
+   pprof_py's REML and ML fits at its defaults and tightened, `lmer`'s REML and ML fits with tight tolerances, and a
+   negative control.
+2. `docs/parity/linear-re-clusters-calibration.md` passes every check:
+   - pprof_py's tightened optima and lme4's agree within 0.004 of T-opt in θ, the standard errors and the BLUPs, and
+     within 0.0023 of T-fn in the criterion;
+   - pprof_py's defaults stay within 0.0012 of T-opt of its tightened fits;
+   - the negative controls miss by at least 108.
+3. Classes for 4d-1's code:
+   - θ̂, β, σ̂, the standard errors, the BLUPs and the fitted values at T-opt against both references, with the
+     optimality check of D-59 (the gradient at T-opt's scale, or the bound);
+   - the criterion at T-fn against both, and at pprof_py's tightened θ against its objective (the kernel at fixed θ);
+   - a fit without cluster factors equal to 4a-1's bit for bit.
+
+### D-69: Slice 4d-1 specification (Accepted: approved by the maintainer, 2026-11-05)
 
 `docs/spec/linear/random-effect-clusters.md`: the linear random-effect model with crossed cluster factors, as
 pprof_py's `cluster_vars`, estimation only.
@@ -115,6 +134,8 @@ pprof_py's `cluster_vars`, estimation only.
 - Outputs: β and its tables, θ̂ and σ̂θ̂ per factor, every factor's BLUPs, fitted values, and predictions over the
   chosen factors. Provider profiling is refused, as pprof_py refuses it.
 - A fit without cluster factors stays 4a-1's bit for bit; fixtures come from pprof_py and `lmer`.
+
+Approved as proposed on 2026-11-05.
 
 ### D-68: Part 4d plan, cluster terms (Accepted: approved by the maintainer, 2026-11-05)
 

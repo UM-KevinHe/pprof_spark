@@ -1,0 +1,16 @@
+{
+ "cluster_vars": [
+  "c1"
+ ],
+ "clusters": [
+  8
+ ],
+ "features": [
+  "x1",
+  "x2"
+ ],
+ "id": "lrc-text",
+ "rows": 3000,
+ "seed": 73,
+ "text": true
+}

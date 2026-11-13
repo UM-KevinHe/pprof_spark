@@ -1,6 +1,6 @@
 # Specification: the linear random-effect model with cluster factors (slice 4d-1)
 
-- Status: proposed with D-69 (round 135, 2026-11-05), awaiting the maintainer's approval.
+- Status: approved with D-69 (2026-11-05); fixtures and calibration in round 136 (D-70, proposed).
 - Plan: [../random-effects/cluster-terms-plan.md](../random-effects/cluster-terms-plan.md) (D-68), slice 4d-1.
 - References: pprof_py v0.7.0 (`9320766`) `LinearRandomEffectModel(...).fit(..., cluster_vars=...)`
   (`models/linear/random_effect.py`: `_build_H_C`, `_solve_inner`, `_objective_from_state`, `predict`); lme4
@@ -90,3 +90,13 @@ covers the new columns. A cluster factor with one level is fitted, with its θ̂
 ## 8. Known discrepancies
 
 None expected.
+
+## 9. Fixture findings (round 136)
+
+- `fixtures/linear-re-clusters` holds seven cases (D-70). Regenerating them reproduces every file byte for byte.
+- pprof_py's tightened REML and ML optima and `lmer`'s agree:
+  - θ within 1·10⁻⁶ relative (0.004 of T-opt), β within 2·10⁻⁹ and σ within 3·10⁻⁹;
+  - the criteria within 2·10⁻¹¹ absolute;
+  - every factor's BLUPs at T-opt.
+  On lrc-boundary both put the cluster factor's θ at 0, lme4 reporting a singular fit.
+- pprof_py's default Powell search (tol 10⁻⁸) stops within 0.0012 of T-opt of its tightened optimum.
