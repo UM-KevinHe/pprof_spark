@@ -1,6 +1,6 @@
 # Specification: the logistic random-effect model with cluster factors (slice 4d-2)
 
-- Status: proposed with D-71 (round 139, 2026-11-05), awaiting the maintainer's approval.
+- Status: approved with D-71 (2026-11-05); fixtures and calibration in round 140 (D-72, proposed).
 - Plan: [../random-effects/cluster-terms-plan.md](../random-effects/cluster-terms-plan.md) (D-68), slice 4d-2.
 - References: pprof_py v0.7.0 (`9320766`) `LogisticRandomEffectModel(...).fit(..., cluster_vars=...)`
   (`models/logistic/random_effect.py`; `inference/logistic/random_effect.py`: `test`, `_get_posterior_var`;
@@ -92,3 +92,16 @@ Laplace deviance, minimizing over β and the other σ's, as 4b-2's profile does 
 ## 8. Known discrepancies
 
 None expected.
+
+## 9. Fixture findings (round 140)
+
+- `fixtures/logistic-re-clusters` holds six cases (D-72). Regenerating them reproduces every file byte for byte.
+- pprof_py's tightened Laplace fits and glmer's agree:
+  - σ within 4·10⁻⁶ relative and β within 6·10⁻⁷;
+  - the log-likelihoods within 10⁻⁹ absolute;
+  - every factor's BLUPs and posterior SEs at T-opt.
+  On lgc-boundary both put the cluster factor's σ at 0.
+- pprof_py's Laplace deviance is its `stage2_objective_`, −2 log-likelihood with every constant; glmer's
+  `deviance()` differs, so the comparisons use the log-likelihood.
+- pprof_py's stage 1 falls back from BOBYQA to Powell without nlopt, as in 4b's fixtures; its default fits still lie
+  within 0.005 of T-opt of the tightened ones.

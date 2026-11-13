@@ -103,7 +103,34 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-71: Slice 4d-2 specification (Proposed: awaiting the maintainer's approval)
+### D-72: Slice 4d-2 fixtures and tolerance classes (Proposed: awaiting the maintainer's approval)
+
+1. Fixtures (round 140, `reference/fixtures/logistic_re_cluster_fixtures.py` and `logistic_re_cluster_r.R`):
+   `fixtures/logistic-re-clusters` has six cases, each with 30 providers over 3,000 records: lgc-one, lgc-two,
+   lgc-text, lgc-offset, lgc-nested and lgc-boundary (a cluster factor at σ̂ = 0). Each holds pprof_py's Laplace fit
+   at its defaults and tightened. On the tightened fit it holds:
+   - the summary, the tests (`wald`, `poibin_exact`, `resampling`, and `exact` with one cluster factor);
+   - the measures, options `alpha` and `SM`, and every factor's profile limits.
+   It also holds glmer's tightened Laplace fit with posterior SEs, and a negative control. pprof_py falls back from
+   BOBYQA to Powell in stage 1, as in 4b's fixtures, because the pinned environment lacks nlopt; its warning is
+   recorded.
+2. `docs/parity/logistic-re-clusters-calibration.md` passes every check:
+   - pprof_py's and glmer's optima agree within 0.008 of T-opt in σ, β, the BLUPs and the posterior SEs, and within
+     0.63 of T-fn in the log-likelihood;
+   - the measures satisfy their identity;
+   - every factor's profile limits contain σ̂;
+   - pprof_py's defaults stay within 0.005 of T-opt of its tightened fits;
+   - the negative controls miss by at least 342.
+   glmer's `deviance()` is not pprof_py's Laplace deviance, so the log-likelihoods are compared.
+3. Classes for 4d-2's code:
+   - σ̂, β̂, the BLUPs and the posterior SEs at T-opt against both references, with D-59's optimality check;
+   - the log-likelihood at T-fn against both;
+   - lockstep at pprof_py's tightened (σ, β): the tests at T-test, T-p, T-flag and T-coef (X-024's allowance for
+     exact tails), `resampling` within 4.5 Monte Carlo standard errors, the measures and intervals at T-meas, and
+     the profile limits at T-opt;
+   - a fit without cluster factors equal to 4b's bit for bit.
+
+### D-71: Slice 4d-2 specification (Accepted: approved by the maintainer, 2026-11-05)
 
 `docs/spec/logistic/random-effect-clusters.md`: the logistic random-effect model with crossed cluster factors, as
 pprof_py's `cluster_vars`.
@@ -118,6 +145,8 @@ pprof_py's `cluster_vars`.
   - `profile_sigma(var)` for any factor.
 - A fit without cluster factors stays 4b's bit for bit.
 - Fixtures: a new family, `fixtures/logistic-re-clusters`, from pprof_py and `glmer`.
+
+Approved as proposed on 2026-11-05.
 
 ### D-70: Slice 4d-1 fixtures and tolerance classes (Accepted: approved by the maintainer, 2026-11-05)
 

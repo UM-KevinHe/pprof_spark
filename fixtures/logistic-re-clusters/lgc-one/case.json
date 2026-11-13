@@ -1,0 +1,15 @@
+{
+ "cluster_vars": [
+  "c1"
+ ],
+ "clusters": [
+  8
+ ],
+ "features": [
+  "x1",
+  "x2"
+ ],
+ "id": "lgc-one",
+ "rows": 3000,
+ "seed": 81
+}

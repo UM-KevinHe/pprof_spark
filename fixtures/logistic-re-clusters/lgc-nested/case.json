@@ -1,0 +1,16 @@
+{
+ "cluster_vars": [
+  "c1"
+ ],
+ "clusters": [
+  6
+ ],
+ "features": [
+  "x1",
+  "x2"
+ ],
+ "id": "lgc-nested",
+ "nested": true,
+ "rows": 3000,
+ "seed": 85
+}

@@ -1,0 +1,18 @@
+{
+ "cluster_sd": [
+  0.0
+ ],
+ "cluster_vars": [
+  "c1"
+ ],
+ "clusters": [
+  4
+ ],
+ "features": [
+  "x1",
+  "x2"
+ ],
+ "id": "lgc-boundary",
+ "rows": 3000,
+ "seed": 86
+}

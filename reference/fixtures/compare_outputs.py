@@ -27,6 +27,8 @@ def tolerance(family, key):
     1e-10, so the rest of the family is compared at 1e-8 relative. Every other family keeps T-part."""
     if family == "linear-re":
         return (2e-4, 1e-6) if ("default" in key or "rpprof" in key) else (1e-8, 0.0)
+    if family == "logistic-re-clusters":  # Monte Carlo moves with the platform; default fits stop at their tolerances
+        return (2e-2, 1e-3) if "resampling" in key else (2e-4, 1e-6) if "default" in key else (1e-8, 0.0)
     if family == "linear-re-clusters":  # the default fits stop at Powell's tolerance; the rest is deterministic
         return (2e-4, 1e-6) if "default" in key else (1e-8, 0.0)
     if family == "fe-random-cluster":  # Monte Carlo draws move with the platform; the default fit stops at tol 1e-5
@@ -57,7 +59,8 @@ def main(regenerated, committed):
                 ("linear-re", ("pprof_py.json", "r_lme4.json", "inference_pprof_py.json")),
                 ("logistic-re", ("pprof_py.json", "r_lme4.json", "inference_pprof_py.json")),
                 ("fe-random-cluster", ("pprof_py.json",)),
-                ("linear-re-clusters", ("pprof_py.json", "r_lme4.json")))
+                ("linear-re-clusters", ("pprof_py.json", "r_lme4.json")),
+                ("logistic-re-clusters", ("pprof_py.json", "r_lme4.json")))
     cases = [(f, c, n) for f, n in families for c in manifest["cases"].get(f, [])]
     # Family-level reference files (logistic/poibin-tails.json, slice 2c) have no input.csv.
     shared = [(f, None, tuple(sorted(n for n in os.listdir(os.path.join(committed, f)) if n.endswith(".json"))))
