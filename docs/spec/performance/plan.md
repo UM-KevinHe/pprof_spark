@@ -1,6 +1,6 @@
 # Performance phase plan: Cox and provider fixed-effect logistic regression at scale
 
-Status: **proposed** as D-75 (round 149, 2026-11-13). The plan follows the algorithmic feasibility study
+Status: **approved** as D-75 on 2026-11-13 (proposed in round 149). The plan follows the algorithmic feasibility study
 (`docs/reviews/algorithmic-feasibility-2026-11.md`, read at round 139) and a reading of the code at round 148
 (`303ae11`), recorded in §2. Phase 4 is paused while this phase runs (§8).
 
@@ -337,7 +337,7 @@ New fixtures are needed for:
 Regenerating the Cox and logistic families needs R's poibin, which the sandbox cannot install. Rounds that
 regenerate those families ask the maintainer to run `fixtures.yml`.
 
-## 7. Decisions requested (D-75)
+## 7. Decisions (D-75, approved 2026-11-13)
 
 1. The plan: steps 0 to 6 in this order, with their exit measurements and the departures of §3.
 2. The definition of golden runs (§6.1) and the re-baselining rule for summation order (§6.3).

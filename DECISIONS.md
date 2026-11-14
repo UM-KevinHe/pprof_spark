@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-75: Performance phase plan for Cox and logistic fixed effects (Proposed, round 149)
+### D-75: Performance phase plan for Cox and logistic fixed effects (Accepted: approved by the maintainer, 2026-11-13)
 
 `docs/spec/performance/plan.md`, following the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`).
 - The plan: step 0, a harness and a baseline of `main`; step 1, executor-side reduction in fixed groups, retiring block
@@ -121,6 +121,8 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
   same round. Changes of iterates are compared at convergence and registered as discrepancies.
 - Phase 4 is paused at round 148 (plan §8).
 - Profile-likelihood Newton is built as an option; making it the default is a later decision on step 5's measurements.
+
+Approved as proposed on 2026-11-13.
 
 ### D-74: Slice 4d-3 specification (Accepted: approved by the maintainer, 2026-11-05)
 

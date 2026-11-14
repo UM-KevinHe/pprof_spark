@@ -24,7 +24,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
 | Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2 complete (D-65, D-66; rounds 127 to 129); slice 4c-3 complete (D-67; rounds 131 to 133); part 4d's plan approved (D-68), slice 4d-1 complete (D-69, D-70; rounds 135 to 139); slice 4d-2 complete (D-71, D-72; rounds 139 to 144), on the driver path (OI-102); slice 4d-3's specification approved (D-74), its persistence, jobs and Python in rounds 146 to 148. **Paused on 2026-11-13 after round 148**, at a clean point (plan §8) |
-| Performance phase, Cox and logistic fixed effects | Plan proposed (D-75, round 149, `docs/spec/performance/plan.md`), from the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`). Steps 0 to 6: harness and baseline of `main`; executor-side reduction in fixed groups; chunked compensated accumulation; the Cox weighted-Gram information; Cox per-time aggregates; logistic profile-likelihood Newton; internal scaling. The 2026-11-13 scale runs used round 81's build, whose fixed 4 MB blocks explain each `DriverLimitExceededException` (OI-103) |
+| Performance phase, Cox and logistic fixed effects | Plan approved (D-75, 2026-11-13; round 149, `docs/spec/performance/plan.md`), from the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`). Steps 0 to 6: harness and baseline of `main`; executor-side reduction in fixed groups; chunked compensated accumulation; the Cox weighted-Gram information; Cox per-time aggregates; logistic profile-likelihood Newton; internal scaling. The 2026-11-13 scale runs used round 81's build, whose fixed 4 MB blocks explain each `DriverLimitExceededException` (OI-103). Step 0's harness in round 150 (`bench.perf`, `docs/parity/scale/perf-runbook.md`) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -185,7 +185,7 @@ JVM at a time; `/bin/sh` is dash; start background work with `setsid nohup`; the
 
 ### 8. Next
 
-**The performance phase comes first** (D-75 proposed, `docs/spec/performance/plan.md`). After its approval, step 0: the harness in `bench` (`perf.Generator`, `perf.Recorder`, `perf.PerfJob`), `GoldenRunsSuite` with its manifest, operation tags on the passes of both models, and the runbook with the `spark-submit` commands; the maintainer then runs the baseline of `main`. Steps 1 to 6 follow, each closed by its exit measurement, with step 0b inserted first if step 0 finds more than a quarter of a fit's wall time outside the Newton and SerBIN passes.
+**The performance phase comes first** (D-75, approved 2026-11-13, `docs/spec/performance/plan.md`). Step 0's harness, runbook and results page are in round 150 (`bench.perf`, `docs/parity/scale/perf-runbook.md`, `perf-results.md`); the maintainer runs the runbook's thirteen points on `main`. Round 151 adds `GoldenRunsSuite` with its manifest, the operation tags on the passes of both models (whose form the recorder's `operationTag` must then be checked against), and the sample export with a comparison script for pprof_py. Steps 1 to 6 follow, each closed by its exit measurement, with step 0b inserted first if step 0 finds more than a quarter of a fit's wall time outside the Newton and SerBIN passes.
 
 **Phase 4 is paused** after round 148. To resume, in order: slice 4d-3's stage 2 from a `LogisticREClusterFit` (spec 4d-3 §4, fixture case frc-stages-re); OI-102; the S1 runs and the gate reviews (OI-97, OI-100). The list below is Phase 4's sequence as it stood.
 
@@ -227,6 +227,31 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 150 (2026-11-13): D-75 approved; performance step 0, the harness
+
+- D-75 approved as proposed. Round 149 is on `main` as `67f31be`.
+- `bench.perf` holds the harness:
+  - `PerfDesign`, `PerfParameters` and `Generator`: the plan's two designs, with each row a pure function of the seed
+    and its identifier, written once to Parquet with a manifest and checksum, and verified when reused.
+  - `Recorder`: a listener attributing stages to SQL executions when they are submitted, so the build's and
+    validation's shuffles are now counted, unlike in round 149's prototype. It drops Spark's own session, execution
+    and broadcast job tags, keeping the engine's `pprof.` operation tags. It also samples the driver's heap and reads
+    the executors' heap peaks and the cached blocks.
+  - `PerfJob`: the `spark-submit` runner. It writes one line of JSON per run, checks recovery of the truth within
+    4.5 SE and, with `--check-partitions`, R0 on a refit, and reports a refused fit with its error.
+- `PerfJobSuite` has six tests: the generator for any partitioning; the correlated design's moments; a small point
+  per model with the truth and R0 checks; a fit refused by the budget; the arguments; the tags.
+- `docs/parity/scale/perf-runbook.md` lists thirteen baseline points and the build; `perf-results.md` keeps cluster
+  and sandbox measurements apart.
+- Correction: round 149's evidence log named `20b3350`, the rehearsal clone's commit, as the local commit. The local
+  commit was `a162ff0`. Both have the delivered tree `b29119e`.
+
+Evidence (assistant sandbox): bench and bench-test compile with the build's flags after scalafmt, and `PerfJobSuite`
+passes (6). The patch applies to a fresh clone of `main` with an identical tree, scalafmt is clean on the build's
+modules, and `check-engine-api.sh` passes with its self-test. No engine code changed.
+
+What to send back: the CI run for rounds 149 and 150, and the runbook's report lines as the points complete.
 
 ## Round 149 (2026-11-13): performance phase plan (D-75 proposed); Phase 4 paused
 
