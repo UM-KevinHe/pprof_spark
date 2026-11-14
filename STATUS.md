@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-13, round 150.
+Updated 2026-11-14, round 151.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -12,7 +12,7 @@ scale test on his Databricks workspace once the whole package is done (D-28).
 `docs/spec/random-effects/plan.md`); slice 4a-1's specification (D-52) and fixtures (D-53) approved; its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2 complete in rounds 101 to 104; slice 4a-3 complete in rounds 105 to 107; part 4a's S1 smoke prepared in round 108 and not yet run, its gate review waiting with it (OI-97); slice 4b-1 complete in rounds 109 to 114 (D-57, D-58, D-59; CI green); slice 4b-2 complete in rounds 115 to 118 (D-60, D-61); slice 4b-3 complete in rounds 119 to 121 (D-62); part 4b's S1 smoke prepared in round 122 and not yet run, its gate review waiting with it (OI-100); slice 4c-1 complete in rounds 123 to 126 (D-63, D-64); slice 4c-2 complete in rounds 127 to 129 (D-65, D-66); slice 4c-3 complete in rounds 131 to 133 (D-67); part 4c's code is complete; part 4d's plan approved (D-68), slice 4d-1 complete in rounds 135 to 139 (D-69, D-70); its Python with 4d-3; slice 4d-2 complete in rounds 139 to 144 (D-71, D-72), on the driver path only (OI-102); slice 4d-3's specification approved (D-74), its persistence, jobs and Python in rounds 146 to 148. D-50, amended in round 94, puts M4 before M2's inference parity. CI is green
 through round 100 as the maintainer reported.
 
-**Phase 4 paused on 2026-11-13 after round 148**, at a clean point. To resume: slice 4d-3's stage 2 from a logistic cluster fit (spec 4d-3 §4, fixture case frc-stages-re), then OI-102, then the S1 runs and gate reviews (OI-97, OI-100). **Performance phase for Cox and logistic fixed effects: plan approved** (D-75, 2026-11-13; round 149, `docs/spec/performance/plan.md`): steps 0 to 6, from a harness and a baseline of `main` to profile-likelihood Newton, each with an exit measurement on the standard cluster. The 2026-11-13 scale runs used round 81's build (OI-103). Step 0's harness is in round 150; the baseline of `main` waits for the maintainer's runs (`docs/parity/scale/perf-runbook.md`).
+**Phase 4 paused on 2026-11-13 after round 148**, at a clean point. To resume: slice 4d-3's stage 2 from a logistic cluster fit (spec 4d-3 §4, fixture case frc-stages-re), then OI-102, then the S1 runs and gate reviews (OI-97, OI-100). **Performance phase for Cox and logistic fixed effects: plan approved** (D-75, 2026-11-13; round 149, `docs/spec/performance/plan.md`): steps 0 to 6, from a harness and a baseline of `main` to profile-likelihood Newton, each with an exit measurement on the standard cluster. The 2026-11-13 scale runs used round 81's build (OI-103). Step 0's harness is in round 150; the baseline of `main` waits for the maintainer's runs (`docs/parity/scale/perf-runbook.md`), which `00_build` and `03_perf` make possible from the workspace since round 151.
 
 ## Phase 0 exit criteria (§4, as amended by D-11 and D-14)
 
@@ -181,7 +181,8 @@ through round 100 as the maintainer reported.
 | 147 | Slice 4d-3's jobs: `columns.clusters` in `LinearREJob` and `LogisticREJob` (`effects`, factor-wise profiles and predictions, the cluster rules); their tests | Merged (9c254df) |
 | 148 | Slice 4d-3 Python: `cluster_vars` for both models (facade methods, `LinearRandomEffectClusterModel`, `LogisticRandomEffectClusterModel`), their tests; the guide | Merged (303ae11) |
 | 149 | Performance phase plan (`docs/spec/performance/plan.md`, D-75 proposed); the algorithmic feasibility study, its evidence and probes in `docs/reviews/`; Phase 4 paused | Merged (67f31be) |
-| 150 | D-75 approved; performance step 0, part 1: the harness in `bench.perf` (`PerfDesign`, `Generator`, `Recorder`, `PerfJob`) and `PerfJobSuite`; the runbook (`docs/parity/scale/perf-runbook.md`) and the results page | Delivered as a patch |
+| 150 | D-75 approved; performance step 0, part 1: the harness in `bench.perf` (`PerfDesign`, `Generator`, `Recorder`, `PerfJob`) and `PerfJobSuite`; the runbook (`docs/parity/scale/perf-runbook.md`) and the results page | Merged (7635964) |
+| 151 | `00_build` packages bench; the notebook `03_perf` runs each baseline point from the workspace (`PerfJob.runLine`); the runbook and guide updated | Delivered as a patch |
 
 ## Decisions and spikes
 

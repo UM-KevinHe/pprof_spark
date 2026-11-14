@@ -2,14 +2,14 @@
 # MAGIC %md
 # MAGIC # pprof_spark · 00 · Build on this cluster
 # MAGIC
-# MAGIC Builds one commit of pprof_spark on this cluster's driver: the three JARs (`numerics`, `engine`, `app`)
-# MAGIC and the Python package. Nothing needs to be installed on your computer and nothing runs on GitHub. The
+# MAGIC Builds one commit of pprof_spark on this cluster's driver: four JARs (`numerics`, `engine`, `app`, and
+# MAGIC `bench` for `03_perf`) and the Python package. Nothing needs to be installed on your computer and nothing runs on GitHub. The
 # MAGIC build lands in a folder of workspace files, from which the cluster installs the JARs
 # MAGIC (`docs/guide/databricks.md`).
 # MAGIC
 # MAGIC 1. Set the widgets: the commit to build and, if you like, the builds folder.
 # MAGIC 2. Run all. The first build takes about ten minutes, mostly downloading dependencies.
-# MAGIC 3. Install the three JARs printed at the end as cluster libraries (Compute → your cluster → Libraries →
+# MAGIC 3. Install the four JARs printed at the end as cluster libraries (Compute → your cluster → Libraries →
 # MAGIC    Install new → Workspace), remove older `pprof-spark-` JARs, and restart the cluster.
 # MAGIC 4. Run `01_parity`.
 # MAGIC
@@ -40,7 +40,7 @@ import urllib.request
 # Any 1.x launcher works: the build pins its own sbt version in project/build.properties.
 SBT_VERSION = "1.12.15"
 SBT_URL = f"https://github.com/sbt/sbt/releases/download/v{SBT_VERSION}/sbt-{SBT_VERSION}.tgz"
-MODULES = ["numerics", "engine", "app"]
+MODULES = ["numerics", "engine", "app", "bench"]
 FIXTURE_FAMILIES = ["cox", "logistic", "linear"]
 
 commit = dbutils.widgets.get("commit").strip() or "main"
@@ -114,7 +114,8 @@ print(f"commit {sha}: {subject}")
 
 # MAGIC %md
 # MAGIC ## Compile and package
-# MAGIC `sbt numerics/package engine/package app/package`, as CI's Python job does. Tests are not run here: CI
+# MAGIC `sbt numerics/package engine/package app/package bench/package`: the first three as CI's Python job
+# MAGIC builds them, and the benchmarks' JAR for `03_perf`. Tests are not run here: CI
 # MAGIC runs them on every push, and `01_parity` checks the build on this cluster.
 
 # COMMAND ----------
@@ -130,7 +131,7 @@ sbt = os.path.join(work, "sbt", "bin", "sbt")
 os.chmod(sbt, 0o755)
 
 env = dict(os.environ, SBT_OPTS="-Xmx4g -Xss8m")
-run([sbt, "-batch", "-no-colors", "numerics/package", "engine/package", "app/package"], cwd=source, env=env)
+run([sbt, "-batch", "-no-colors"] + [f"{module}/package" for module in MODULES], cwd=source, env=env)
 
 jars = []
 for module in MODULES:
@@ -213,7 +214,7 @@ if s3_copy:
 
 # COMMAND ----------
 
-print("Install these three JARs as cluster libraries, then restart the cluster:")
+print(f"Install these {len(manifest['jars'])} JARs as cluster libraries, then restart the cluster:")
 for path in manifest["jars"]:
     print("  ", path)
 print(f"\nThen run 01_parity with build folder {destination}")

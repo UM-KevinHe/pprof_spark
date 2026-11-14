@@ -1,7 +1,7 @@
 # Performance step 0: the baseline of `main`
 
-- Status: prepared in round 150 (2026-11-13). The maintainer runs it on the standard cluster, and the results go to
-  `perf-results.md`.
+- Status: prepared in round 150 (2026-11-13); since round 151, each point runs from `databricks/03_perf.py`. The
+  maintainer runs it on the standard cluster, and the results go to `perf-results.md`.
 - Plan: `docs/spec/performance/plan.md`, step 0 (D-75, approved 2026-11-13).
 - Runner: `pprof.spark.bench.perf.PerfJob`, in the bench module. `PerfJobSuite` tests it on small points.
 
@@ -15,11 +15,22 @@ Every point runs on the standard cluster, the same cluster throughout:
 Each report records the executors, the total cores, the node types, Photon and adaptive execution as the cluster has
 them.
 
-## Building
+## Building and running on Databricks
 
-`databricks/00_build.py` packages numerics, engine and app. The runner also needs bench: in the same checkout, run
-`sbt bench/package`, or add `bench/package` to the notebook's sbt command. Three JARs are needed: numerics, engine and
-bench.
+Nothing needs to be built or run on your computer.
+
+1. Run `databricks/00_build.py` with the commit to measure. Since round 151 it builds four JARs: numerics, engine, app
+   and bench.
+2. Install the four JARs it prints as cluster libraries, uninstall older `pprof-spark-` JARs, and restart the cluster
+   (`docs/guide/databricks.md`, step 3).
+3. Run `databricks/03_perf.py` once per point:
+   - choose the point, 1 to 13 as in the table below, or `custom` with its arguments;
+   - set *Data folder* to an `s3://` folder the cluster can write to.
+
+   The notebook sets `--path` to a subfolder named after the point, where the data are written once and reused. It
+   calls `PerfJob.runLine` in the notebook's own session and prints the report line.
+
+With a terminal and sbt, the same runner can be submitted directly; give each point its own `--path`:
 
 ```bash
 spark-submit --class pprof.spark.bench.perf.PerfJob \
@@ -91,7 +102,7 @@ The points are the baseline of `main`. Paths are examples. The expectations come
 | 12 | logistic | 5e6 | 180 | 8000 | correlated | `--design correlated` | Fits |
 | 13 | cox | 2e6 | 180 | 8000 | simple | `--strata none` | One stratum in one task |
 
-Each point needs its own `--path`, for example `<storage>/pprof-spark/perf/<model>-n<rows>-p<features>[-correlated]`.
+`03_perf` gives each point its own data folder.
 Generating a point costs one write; points 9 and 10 generate 100M rows. `--check-partitions` doubles a point's fit
 time, so it is asked for at points 1 to 4 only.
 

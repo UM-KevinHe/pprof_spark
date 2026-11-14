@@ -142,4 +142,17 @@ class PerfJobSuite extends SparkSuite {
       Some("pprof.cox.evaluate")
     )
   }
+
+  test(
+    "runLine, the notebook's entry point: the report returned, and written with the plans under the point"
+  ) {
+    val path = Files.createTempDirectory("pprof-perf-line").resolve("point").toString
+    val line = s"--model logistic --path $path --rows 3000 --providers 30 --features 3 --plans true"
+    val text = PerfJob.runLine(spark, s"  $line ")
+    assert(new ObjectMapper().readTree(text).get("fit").get("succeeded").asBoolean(), text)
+    val reports = new java.io.File(s"$path/reports").listFiles().toVector
+    assertEquals(reports.size, 1)
+    assertEquals(spark.read.text(s"${reports.head.getPath}/report").head().getString(0), text)
+    assert(spark.read.text(s"${reports.head.getPath}/plans").count() > 0L)
+  }
 }

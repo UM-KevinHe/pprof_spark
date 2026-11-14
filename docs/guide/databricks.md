@@ -7,9 +7,10 @@ workspace files, from which the cluster installs the JARs.
 
 | Notebook | What it does | Time |
 |---|---|---|
-| [`00_build`](../../databricks/00_build.py) | Clones a commit on the driver, builds the three JARs with sbt and the Python package, and copies them, with the fixtures and tolerances, to a build folder | About 10 minutes the first time |
+| [`00_build`](../../databricks/00_build.py) | Clones a commit on the driver, builds the four JARs with sbt (numerics, engine, app, and bench for `03_perf`) and the Python package, and copies them, with the fixtures and tolerances, to a build folder | About 10 minutes the first time |
 | [`01_parity`](../../databricks/01_parity.py) | Checks that the installed JARs are that build, fits every Cox, logistic and linear fixture through the PySpark wrappers, compares with pprof_py and R, and checks bitwise reproducibility (R0) under other partitioning | A few minutes |
 | [`02_scale`](../../databricks/02_scale.py) | Generates a synthetic data set of a chosen size, fits one model, times each phase, and checks recovery of the true coefficients | Depends on the size |
+| [`03_perf`](../../databricks/03_perf.py) | Runs one point of the performance baseline (`docs/parity/scale/perf-runbook.md`) and prints its report: times, bytes to the driver and shuffle bytes by call site, memory peaks, and the truth and R0 checks | Depends on the point |
 
 ## Requirements
 
@@ -36,14 +37,14 @@ workspace files, from which the cluster installs the JARs.
 
    | Content | Used by |
    |---|---|
-   | `pprof-spark-numerics_2.13-…jar`, `pprof-spark-engine_2.13-…jar`, `pprof-spark-app_2.13-…jar` | The cluster, as libraries |
+   | `pprof-spark-numerics_2.13-…jar`, `pprof-spark-engine_2.13-…jar`, `pprof-spark-app_2.13-…jar`, `pprof-spark-bench_2.13-…jar` | The cluster, as libraries; bench for `03_perf` |
    | `python/pprof_spark/` | `01_parity` and `02_scale`, which import it from here so the Python always matches the JARs |
    | `pprof_spark-…whl` | Anyone who prefers `%pip install --no-deps <wheel>` (without `--no-deps`, pip would replace the runtime's own PySpark) |
    | `fixtures/` (Cox, logistic, linear) and `tolerances.conf` | `01_parity` |
    | `manifest.json` | Every notebook: the commit, the build time, the files and their SHA-256 |
 
 3. **Install the JARs:** Compute → your cluster → Libraries → Install new → Workspace, once for each of
-   the three JAR paths `00_build` prints. Uninstall the previous build's `pprof-spark-` JARs, then restart
+   the four JAR paths `00_build` prints. Uninstall the previous build's `pprof-spark-` JARs, then restart
    the cluster; a JAR replaced without a restart is not picked up. Alternatively, set the widget *Install
    on this cluster* to `yes` before running `00_build`, then restart.
    Keep the JARs in workspace files (or at an `s3://` address, widget *Optional s3:// folder*): libraries
@@ -89,7 +90,7 @@ Build elsewhere and upload the result. The repository has a `.devcontainer`, so 
 (within a personal account's free monthly hours; it is blocked, not billed, when they run out and no
 payment method is set) can run `sbt numerics/package engine/package app/package` and
 `python -m pip wheel --no-deps --wheel-dir dist ./python`. Then create
-`/Workspace/Users/<you>/pprof_spark_builds/<commit>/` by hand with the layout of step 2: the three JARs, the
+`/Workspace/Users/<you>/pprof_spark_builds/<commit>/` by hand with the layout of step 2: the four JARs, the
 wheel, `python/pprof_spark/`, `fixtures/{cox,logistic,linear}`, `testkit/src/main/resources/tolerances.conf`,
 and a `manifest.json` with at least `commit` (the full SHA), `subject` and `built_at`.
 

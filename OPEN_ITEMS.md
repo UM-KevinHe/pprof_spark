@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-11-13, round 150. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-11-14, round 151. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -108,7 +108,7 @@ decision is approved.
 | OI-100 | Part 4b (logistic random effects) is complete in code and parity-checked in the sandbox, but its S1 smoke (`docs/parity/scale/s1-logistic-re.md`, round 122) has not run, and its gate review waits for that run, as part 4a's (OI-97) | The maintainer's `spark-submit` run of `S1LogisticRE`, then the gate review |
 | OI-101 | The he2013 estimator (slice 4c-2) brings every cell's sums at all Gauss–Hermite nodes to the driver each iteration (cells × `nNodes` doubles); a fit beyond the driver budget fails | Evidence at scale that the budget suffices, or the E-step's cluster sums reduced on the executors |
 | OI-102 | The logistic cluster-factor fit (slice 4d-2) holds its rows on the driver; a fit whose rows exceed half the driver budget fails | PIRLS passes over distributed blocks, from cell sums each iteration (spec 4d-2 §3) |
-| OI-103 | The scale runs reported on 2026-11-13 used round 81's build (`b670dbb`). Its fixed 4 MB blocks account, by arithmetic, for each `DriverLimitExceededException`; `main` grows blocks instead (round 83) and is expected to fail the guard only at 100M rows and 180 features (performance plan §2.1 and §2.2) | Step 0's baseline of `main`: the runbook's points (`docs/parity/scale/perf-runbook.md`, round 150) |
+| OI-103 | The scale runs reported on 2026-11-13 used round 81's build (`b670dbb`). Its fixed 4 MB blocks account, by arithmetic, for each `DriverLimitExceededException`; `main` grows blocks instead (round 83) and is expected to fail the guard only at 100M rows and 180 features (performance plan §2.1 and §2.2) | Step 0's baseline of `main`: the runbook's points, run with `databricks/03_perf.py` (`docs/parity/scale/perf-runbook.md`, rounds 150 and 151) |
 | OI-104 | `CoxStratum.add` zeroes the Efron buffer `tied2` (p(p+1)/2 doubles) at every distinct time, Breslow fits included | Performance step 2, bit-preserving |
 | OI-105 | Every logistic pass builds a γ table on the driver and broadcast-joins it to the cached blocks (`withGamma`), copying each block once more per pass | Measured in step 0; removed by step 5's profile method, or replaced if SerBIN stays the default |
 | OI-106 | Unexplained: a 30-worker Cox run at 5M rows and 100 features (round 81) was slower than one pprof_py thread. By arithmetic an evaluation costs about 80 CPU-seconds spread over the cluster against about 26 s on one pprof_py thread; a one-core profile puts three quarters of the fit's CPU in the Newton passes (plan §2.5) | Step 0's attribution by call site on the cluster |

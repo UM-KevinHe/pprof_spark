@@ -60,9 +60,14 @@ object PerfJob {
       matrices: Vector[Double]
   )
 
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit =
+    println(runArgs(SparkSession.builder().appName("pprof-spark perf").getOrCreate(), args))
+
+  /** Runs one point from `--name value` arguments in an existing session, writes its report (and, with `--plans
+    * true`, its plans) under `--report`, by default `<path>/reports/<time>`, and returns the report line.
+    */
+  def runArgs(spark: SparkSession, args: Array[String]): String = {
     val options = arguments(args)
-    val spark = SparkSession.builder().appName("pprof-spark perf").getOrCreate()
     val path = options("path").stripSuffix("/")
     val result = run(spark, options)
     val target = options.getOrElse("report", s"$path/reports/${System.currentTimeMillis}")
@@ -77,8 +82,13 @@ object PerfJob {
         .coalesce(1)
         .write
         .text(s"$target/plans")
-    println(result.report)
+    result.report
   }
+
+  /** [[runArgs]] with the arguments on one line, separated by spaces: the entry point `databricks/03_perf.py` calls
+    * through py4j. Values cannot contain spaces.
+    */
+  def runLine(spark: SparkSession, line: String): String = runArgs(spark, line.trim.split("\\s+"))
 
   /** `--name value` pairs; `--model` and `--path` are required. */
   def arguments(args: Array[String]): Map[String, String] = {
