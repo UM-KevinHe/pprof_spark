@@ -16,6 +16,17 @@ object CoxFixtures {
   val Stratified: Seq[String] =
     Seq("rc-stratified", "rc-stratified-weights-offset", "lt-stratified", "lt-weights-offset")
 
+  /** Every Cox fixture case, as `CoxPHSuite` and `GoldenRunsSuite` fit them. */
+  val Cases: Seq[String] =
+    Seq(
+      "tiny-ties",
+      "rc-unstratified",
+      "rc-stratified",
+      "rc-stratified-weights-offset",
+      "lt-stratified",
+      "lt-weights-offset"
+    )
+
   val Methods: Seq[Ties] = Seq(Ties.Breslow, Ties.Efron)
 
   def tight(ties: Ties): CoxOptions = CoxOptions(ties = ties, eps = 1e-11, maxIterations = 100)

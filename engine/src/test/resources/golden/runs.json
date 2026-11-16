@@ -1,0 +1,594 @@
+{
+  "format" : 1,
+  "description" : "NUM-2's golden runs (docs/spec/performance/plan.md §6.1): IEEE-754 bits in hexadecimal",
+  "runs" : {
+    "cox/lt-stratified/breslow/default" : {
+      "doubles" : {
+        "covariance" : ["3f64a8b75dc8a73f","bf25bfdc13b7ae10","3f1c53096e865a5e","3f60fcf26331e448","bef683cdb5cbde1c","3f610e2a1a3d4bd4"],
+        "estimates" : ["3fdd6b551efc1637","bfc84a45ec53b679","3f97a42b0fa8ff43"],
+        "information" : ["4078f7f3cd612e81","403fc162c18478d6","c03467d315325c09","407e4cbdd6f3a123","400ad08a896b5d14","407e169a24b46492"],
+        "loglik" : ["c09174acac424fbf"],
+        "standard_errors" : ["3fa9b62f71cf2fbf","3fa750ccc71646c0","3fa75c9a84c2a4a2"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/lt-stratified/breslow/tight" : {
+      "doubles" : {
+        "covariance" : ["3f64a8b75dc8d01f","bf25bfdc13b88f70","3f1c53096e87f7a4","3f60fcf26331fd28","bef683cdb5cf299c","3f610e2a1a3d4ae6"],
+        "estimates" : ["3fdd6b551efd4664","bfc84a45ec5660bd","3f97a42b0fb30792"],
+        "information" : ["4078f7f3cd6100cd","403fc162c1855092","c03467d315335739","407e4cbdd6f377ab","400ad08a896fe862","407e169a24b4682b"],
+        "loglik" : ["c09174acac424fbf"],
+        "standard_errors" : ["3fa9b62f71cf492f","3fa750ccc71657d2","3fa75c9a84c2a3ff"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
+    "cox/lt-stratified/efron/default" : {
+      "doubles" : {
+        "covariance" : ["3f64cf0482de2bcd","bf257df37c4b23e7","3f1e3cad22293c30","3f60f294c02dbb63","bee97bcf927227a6","3f610c42da96e966"],
+        "estimates" : ["3fdeeae7b82bf33f","bfc9308ef9221bd0","3f96441a32357fe5"],
+        "information" : ["4078cb1958e802ca","403f5041bc7ba58d","c035cdf60c9e0749","407e5dc732403cdc","3ff19f6c9866c536","407e1be56ede468a"],
+        "loglik" : ["c09126742e80a9fe"],
+        "standard_errors" : ["3fa9cdfa09fdb664","3fa749aeac2e66ac","3fa75b4cc6688817"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/lt-stratified/efron/tight" : {
+      "doubles" : {
+        "covariance" : ["3f64cf0482de2bcd","bf257df37c4b23e7","3f1e3cad22293c30","3f60f294c02dbb63","bee97bcf927227a6","3f610c42da96e966"],
+        "estimates" : ["3fdeeae7b82bf33f","bfc9308ef9221bd0","3f96441a32357fe5"],
+        "information" : ["4078cb1958e802ca","403f5041bc7ba58d","c035cdf60c9e0749","407e5dc732403cdc","3ff19f6c9866c536","407e1be56ede468a"],
+        "loglik" : ["c09126742e80a9fe"],
+        "standard_errors" : ["3fa9cdfa09fdb664","3fa749aeac2e66ac","3fa75b4cc6688817"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/lt-weights-offset/breslow/default" : {
+      "doubles" : {
+        "covariance" : ["3f600afe4ab091e8","3f11b7105988789d","bf20445c9ef534bf","3f5b448eea7663c9","bf1b9194e6f9c891","3f5d6c6d738eda1d"],
+        "estimates" : ["3fdae88b2edd9b06","bfb4e571bcf50cd8","3fc036d9f9c67255"],
+        "information" : ["40800ba06a4421c9","c032ace7008a78c7","404131e1f0138f12","4082de20cabf4ab3","40410870338574fe","408189a2b558f7f6"],
+        "loglik" : ["c0999bb984205c87"],
+        "standard_errors" : ["3fa6a863125afdbc","3fa4e32edce0b0e3","3fa5b288224e334e"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/lt-weights-offset/breslow/tight" : {
+      "doubles" : {
+        "covariance" : ["3f600afe4ab0f703","3f11b71059898f52","bf20445c9ef6abf1","3f5b448eea7692fe","bf1b9194e6fb20fa","3f5d6c6d738eddbd"],
+        "estimates" : ["3fdae88b2ee28b0d","bfb4e571bcf1ebfe","3fc036d9f9c3e2f9"],
+        "information" : ["40800ba06a43bfd0","c032ace7008ae17e","404131e1f014afef","4082de20cabf2c0f","4041087033862089","408189a2b558fa2d"],
+        "loglik" : ["c0999bb984205c87"],
+        "standard_errors" : ["3fa6a863125b4521","3fa4e32edce0c2f8","3fa5b288224e34a4"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
+    "cox/lt-weights-offset/efron/default" : {
+      "doubles" : {
+        "covariance" : ["3f601a375c5698a0","3f138e6bb4958975","bf20a10a33320282","3f5b687efe3fba91","bf201cf6ed019f24","3f5dbea18551ad37"],
+        "estimates" : ["3fdc1d94e6dca5ab","bfb5333a5c1a9c85","3fc13b616a9a0943"],
+        "information" : ["407ffbbc7061f3de","c0344b36bf2925e1","4041318b77d9db5e","4082cc932a1e0442","4043a89108f81ff6","40815f18c0a68cb8"],
+        "loglik" : ["c09932ce45b031f6"],
+        "standard_errors" : ["3fa6b3207acb88d6","3fa4f0ee04bea28b","3fa5d0c231ebb764"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/lt-weights-offset/efron/tight" : {
+      "doubles" : {
+        "covariance" : ["3f601a375c57d0ee","3f138e6bb4993c45","bf20a10a3336b5fa","3f5b687efe4052b9","bf201cf6ed03eae0","3f5dbea18551c9f7"],
+        "estimates" : ["3fdc1d94e6eb8ed1","bfb5333a5c123db9","3fc13b616a92588b"],
+        "information" : ["407ffbbc705f9c09","c0344b36bf2a78d1","4041318b77dd64ea","4082cc932a1da394","4043a89108fa4bf9","40815f18c0a68ab4"],
+        "loglik" : ["c09932ce45b031f6"],
+        "standard_errors" : ["3fa6b3207acc64f8","3fa4f0ee04bedcac","3fa5d0c231ebc1ef"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
+    "cox/rc-stratified-weights-offset/breslow/default" : {
+      "doubles" : {
+        "covariance" : ["3f5d73020ec608e7","bf2df7d27d18b976","bef3475fd371ce98","3f5a7bee266e6188","3f1798a3b4e923b3","3f5cec9c41d7b2c5"],
+        "estimates" : ["3fde4f72d37650da","bfd12265109c7e85","3f9c9b5cbb036b19"],
+        "information" : ["4081b45e0573a487","4054021c2bf75ab2","3ffd1d36fd0510ca","4083bd9ed1e63fd2","c03f600db5028281","4081c08246f16aa9"],
+        "loglik" : ["c095905f70ecabdc"],
+        "standard_errors" : ["3fa5b4f5204aaefc","3fa495c7ffdeb9ce","3fa58333f33cf3a8"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/rc-stratified-weights-offset/breslow/tight" : {
+      "doubles" : {
+        "covariance" : ["3f5d73020edead9e","bf2df7d27d581574","bef3475fd2815c8c","3f5a7bee267ad52c","3f1798a3b4e458bc","3f5cec9c41e0468f"],
+        "estimates" : ["3fde4f72d3d66faa","bfd1226510d675df","3f9c9b5cbc92d353"],
+        "information" : ["4081b45e0565c243","4054021c2c09bc15","3ffd1d36f7ea44c0","4083bd9ed1ddfee0","c03f600db4eed399","4081c08246ec13b0"],
+        "loglik" : ["c095905f70ecabdc"],
+        "standard_errors" : ["3fa5b4f52053c40b","3fa495c7ffe3909f","3fa58333f3402438"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
+    "cox/rc-stratified-weights-offset/efron/default" : {
+      "doubles" : {
+        "covariance" : ["3f5d945d6af4f19d","bf2fa1b31fcd98c5","beff817573bf7c47","3f5a93099d9977a7","3f16a959079aaa7a","3f5d0ac3e3e0497a"],
+        "estimates" : ["3fdf64f44b4e62e0","bfd1c4fb0861278a","3f97592c9c2bf16d"],
+        "information" : ["4081a983ec4a83f3","4054f3403d2b8546","4015f935798d6393","4083b486e95d5ffb","c03d54d9d5bf3890","4081ad5e4dc01efc"],
+        "loglik" : ["c095313ed0cb22c9"],
+        "standard_errors" : ["3fa5c13ccee118ce","3fa49ec0fa15e8a7","3fa58e67c8ca4f0a"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/rc-stratified-weights-offset/efron/tight" : {
+      "doubles" : {
+        "covariance" : ["3f5d945d6b0cd0d8","bf2fa1b3200feb63","beff817572e44255","3f5a93099da639b2","3f16a9590791d358","3f5d0ac3e3e8eb5f"],
+        "estimates" : ["3fdf64f44ba9a56f","bfd1c4fb089e896e","3f97592c9dbbf895"],
+        "information" : ["4081a983ec3d41ef","4054f3403d3ed344","4015f9357856c1ee","4083b486e955079f","c03d54d9d5a60ecb","4081ad5e4dbabfe1"],
+        "loglik" : ["c095313ed0cb22c9"],
+        "standard_errors" : ["3fa5c13ccee9e01d","3fa49ec0fa1adbc8","3fa58e67c8cd832e"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
+    "cox/rc-stratified/breslow/default" : {
+      "doubles" : {
+        "covariance" : ["3f65658e9c258826","bf07fbf9168d5a80","bf0a40b06e49fa2a","3f6244a183838772","3edb2107276c4527","3f601e8233349960"],
+        "estimates" : ["3fdc6f9621be00bb","bfc3cd6201429aae","3fa76c7db724fd24"],
+        "information" : ["4077f2fb0030792b","401f5482a4fcba71","4023737756b9246a","407c098bacd0017a","bff46795b5d416ba","407fc775fdafeb1a"],
+        "loglik" : ["c08e3f9ca00846eb"],
+        "standard_errors" : ["3faa2aaae75bf9d6","3fa82d95b7cc13d4","3fa6b626ccd9baf2"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/rc-stratified/breslow/tight" : {
+      "doubles" : {
+        "covariance" : ["3f65658e9c2856fc","bf07fbf916d58001","bf0a40b06e4d0ded","3f6244a18384a8f9","3edb210727a78398","3f601e823334ea2f"],
+        "estimates" : ["3fdc6f9621d07a4e","bfc3cd62015fe2f8","3fa76c7db71359b8"],
+        "information" : ["4077f2fb002d6197","401f5482a5551208","4023737756b8458b","407c098bacce545a","bff46795b5fc6f9c","407fc775fdaf4c5a"],
+        "loglik" : ["c08e3f9ca00846eb"],
+        "standard_errors" : ["3faa2aaae75db161","3fa82d95b7ccd36d","3fa6b626ccd9f3e0"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
+    "cox/rc-stratified/efron/default" : {
+      "doubles" : {
+        "covariance" : ["3f658f086130b4ab","bf0f37028caae693","bf03efde55961702","3f625f612ca86ead","3ec37baaf5d99127","3f60124b7c1d8bb6"],
+        "estimates" : ["3fdd622496228320","bfc4a21c084676d2","3fa9b1c88cffd466"],
+        "information" : ["4077c51ec5299dd1","40242d62f6cf487e","401d707cf6b320d2","407be266d190f081","bfd549d71185ef87","407fdddc9e418ff2"],
+        "loglik" : ["c08dd509d2644a4d"],
+        "standard_errors" : ["3faa43fb0daafc72","3fa83f42be35849d","3fa6ad8a6f3d0516"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/rc-stratified/efron/tight" : {
+      "doubles" : {
+        "covariance" : ["3f658f086134c4a3","bf0f37028d152d19","bf03efde55955eb0","3f625f612caa1ad8","3ec37baaf6520323","3f60124b7c1e05c3"],
+        "estimates" : ["3fdd6224963caf7f","bfc4a21c0870c521","3fa9b1c88ceb568c"],
+        "information" : ["4077c51ec5253a82","40242d62f70e6083","401d707cf6ab4d4f","407be266d18e82bc","bfd549d7122ca712","407fdddc9e409d57"],
+        "loglik" : ["c08dd509d2644a4d"],
+        "standard_errors" : ["3faa43fb0dad75f5","3fa83f42be369f26","3fa6ad8a6f3d5b32"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
+    "cox/rc-unstratified/breslow/default" : {
+      "doubles" : {
+        "covariance" : ["3f6889f5b55e3fda","bf2b7e780239d7d1","3f3476f08f987e1d","3f6491ce813e0590","bf1738bb29763ca6","3f6561168cec9e7e"],
+        "estimates" : ["3fe0b5336c55de8f","bfcb1ce58f6f7d50","3fc5f6e8a5031a42"],
+        "information" : ["40753defd8eb9e23","403afd8adcffeeef","c043e006f3744fa6","40790e11bffd60a9","4024c150fc86ec48","4078448a1bd56a54"],
+        "loglik" : ["c097bae0daec447c"],
+        "standard_errors" : ["3fac05b065f7ffac","3fa9a7e9dd30c609","3faa27ef35750663"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/rc-unstratified/breslow/tight" : {
+      "doubles" : {
+        "covariance" : ["3f6889f5b5614ddd","bf2b7e780249466f","3f3476f08f9c3590","3f6491ce813f2e43","bf1738bb2983a01f","3f6561168ceceb96"],
+        "estimates" : ["3fe0b5336c661062","bfcb1ce58f759ec3","3fc5f6e8a50327f7"],
+        "information" : ["40753defd8e923b3","403afd8add0a2f81","c043e006f374e9df","40790e11bffc1f89","4024c150fc915508","4078448a1bd52907"],
+        "loglik" : ["c097bae0daec447c"],
+        "standard_errors" : ["3fac05b065f9be2f","3fa9a7e9dd317f11","3faa27ef3575358c"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
+    "cox/rc-unstratified/efron/default" : {
+      "doubles" : {
+        "covariance" : ["3f68b927cf6d5fbd","bf2e3b8ba287a6e6","3f35d867c9d69254","3f64a4b6f9a8c068","bf17ea6780d96ac1","3f657df062678b7c"],
+        "estimates" : ["3fe170a0d5a2728f","bfcc615ab08131ea","3fc726da8aad243a"],
+        "information" : ["407523b3499fe98b","403d70b7dd9e6686","c044f9a43fbb9b1d","4078fe5735489fb0","402454bc1096a5d6","40782d9786ecd79c"],
+        "loglik" : ["c097822b8c3d4b63"],
+        "standard_errors" : ["3fac209612971425","3fa9b3b1dc272e87","3faa398f4ab86ff5"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/rc-unstratified/efron/tight" : {
+      "doubles" : {
+        "covariance" : ["3f68b927cf71a03d","bf2e3b8ba29b6ecc","3f35d867c9db0773","3f64a4b6f9aa6fc2","bf17ea6780ef9ad9","3f657df06267848d"],
+        "estimates" : ["3fe170a0d5b99c66","bfcc615ab0821cdf","3fc726da8aa31dbe"],
+        "information" : ["407523b3499c7c5e","403d70b7dda9cedd","c044f9a43fbbdc55","4078fe573546cd6f","402454bc10aa0632","40782d9786ecfc7b"],
+        "loglik" : ["c097822b8c3d4b63"],
+        "standard_errors" : ["3fac209612997f55","3fa9b3b1dc283b0e","3faa398f4ab86bba"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
+    "cox/synthetic-a" : {
+      "doubles" : {
+        "covariance" : ["3f597e05c130593d","3f06c3daeb023e9f","3f1e29ba136d5882","3f5c8a10d12bf5c5","bef0a3997e94c517","3f5e3b5a4f5e2a5d"],
+        "estimates" : ["3fda0c2fe279558b","bfd2029db753fecb","3fc847b077da067e"],
+        "information" : ["4084313c4c9e5e4a","c03079a8ab65d428","c044379927366397","4081f466ddba9bd5","4017df90e361f190","40810424689c9c5a"],
+        "loglik" : ["c0a1388441639c4f"],
+        "standard_errors" : ["3fa43229cb05b795","3fa55e6f08343643","3fa5fe4f520f123d"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/synthetic-b" : {
+      "doubles" : {
+        "covariance" : ["3f536a2d196e2af5","3f09075092e37843","3f208c65127b390e","3f0b965b2cb557e9","3f54886ec29cd7ae","bf256b06ed73e2bc","3f24069ea8cbd921","3f782f94d90fd63a","3f0d5bc7b200887d","3f72033349992721"],
+        "estimates" : ["3fd1f4dab9f51818","3fdf519b446a7420","bfd69844d3ba241e","3fce98f4e0c5d936"],
+        "information" : ["408a7d4a5f933789","c040d97631117539","c032f96e0dd37a4a","c02175d745fa1da6","40892d3f6fd52657","403747d1b0c3d0b9","c03be2559c40690a","40654dcc3f5b66fe","c00604177876e252","406c90305c5f99a9"],
+        "loglik" : ["c0a7686b42eacec4"],
+        "standard_errors" : ["3fa19ff76bc2fb2b","3fa22014a388ecb8","3fb3abf14c41335b","3fb0f9f8f2f6b6ed"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/tiny-ties/breslow/default" : {
+      "doubles" : {
+        "covariance" : ["3fdbb0cdd0e0175b"],
+        "estimates" : ["bfc5f42257679790"],
+        "information" : ["40027d70c67336f9"],
+        "loglik" : ["c022c3ca264c162c"],
+        "standard_errors" : ["3fe50c7b75521742"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/tiny-ties/breslow/tight" : {
+      "doubles" : {
+        "covariance" : ["3fdbb0cdd0e0175b"],
+        "estimates" : ["bfc5f42257679790"],
+        "information" : ["40027d70c67336f9"],
+        "loglik" : ["c022c3ca264c162c"],
+        "standard_errors" : ["3fe50c7b75521742"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/tiny-ties/efron/default" : {
+      "doubles" : {
+        "covariance" : ["3fdc82aef7855006"],
+        "estimates" : ["bfc65cd2cbeee660"],
+        "information" : ["4001f5539f541da1"],
+        "loglik" : ["c021ec002c41ff03"],
+        "standard_errors" : ["3fe55bab569eeec9"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/tiny-ties/efron/tight" : {
+      "doubles" : {
+        "covariance" : ["3fdc82aef7855006"],
+        "estimates" : ["bfc65cd2cbeee660"],
+        "information" : ["4001f5539f541da1"],
+        "loglik" : ["c021ec002c41ff03"],
+        "standard_errors" : ["3fe55bab569eeec9"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "logistic/lfe-base/default" : {
+      "doubles" : {
+        "covariance" : ["3f74f5c3dca6e035","bf38e5b18188d461","3f4eb16bbbcea158","3f735a1ae1819553","3f3927c9e543ca6a","3f940c17a30ec1d5"],
+        "estimates" : ["3fdffdd38f575ccf","bfce6faf1f5738b2","3febcaa07f103c88"],
+        "gamma" : ["bfe035e7bbfe22b1","3fadf3c565ec3ebc","bfefeaf39377ffb5","bff40c2c543376d8","bfec45cec6ce5442","bfd605977af6183b","bfe66e4d90f3019c","bfcbe8e19ec44e4f","bfa48e058ce3b155","bfd2a75300c5e027","3f978853200d6f84","bfe844fb9b78e833","3fcbe7f83a9685df","bfd8a8b4037d2ffc","3fd0ae5ad29c076d","bfe907a08f1fe79b","bfb952fce4c56293","3fd4ec810e9d1447","bfc4e8151dfe1e80","bff424772741209f","bfdd75264d32a21a","bff4648c750ad806","bfd3d7fef0a01292","3fe9a25157af06bd","bff9c4752abc2583","bfe8c29acccb069a","bfd2afe9175d4c8f","bfc879e13440a643","bfed62980f943b17","bfddebcd2bf24f1f"],
+        "loglik" : ["c084c1a6d41d3692"],
+        "standard_errors" : ["3fb25016a7fbfa7a","3fb198aa72c6288b","3fc1e8df33c748c2"],
+        "var_case_mix" : ["3fdae279e7a05758","3fceb4f1cb1699bd","3fc8b5856d6ba47a","3fc3d36dd50cd992","3fbed5a3d5158f6e","3fb8693d0f9b2662","3fb5c7b5e907eb80","3fb32fa45f91f170","3fd144fb37b018ac","3fc7e114d369026e","3fc2f6a56d4e302f","3fbf2675bca52a73","3fbb967f862a4b30","3fb57df5e14daf3e","3fb5252a0c212b9f","3fd21cc03f29e614","3fc98434b9237ea0","3fc3772e613d6e97","3fbe65e9f693a5be","3fbec116e523de65","3fb66a24656b8fbf","3fb774b9428f7077","3fd3f6b5673098cc","3fcf7606bbe71659","3fc87303b1dda117","3fc02d62040c6f9b","3fbac066480f1114","3fb75bfc52ac804c","3fb5d81269733ac0","3fd52100c909815e"],
+        "var_gamma" : ["3fdb095f84127056","3fceda8a69ae59ca","3fc948638a8d72d4","3fc46f9a28fa4107","3fbfc89ba2d98e76","3fb94d0aceffdfae","3fb64f770795f7e3","3fb3e4b1bd84140f","3fd143f0de6c7450","3fc83e1241ba7681","3fc391c740d38a59","3fbfec49dcc3edbc","3fbc26518911f440","3fb652646acd848c","3fb573fc3653031a","3fd2511393638f1a","3fc9f059c8c4be16","3fc3924aa0f3c21e","3fbea72a550818ca","3fbfb1e5eb5b58a3","3fb75cd3e6121e0e","3fb8a09eb8033e38","3fd3fa7a267d9f21","3fcf8b728879ecb5","3fc965abb2d3257b","3fc09350d34f1e91","3fbaac916be845d7","3fb877afd51459fe","3fb63a0526f98c82","3fd56bb1bbc8e655"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [5]
+      }
+    },
+    "logistic/lfe-base/tight" : {
+      "doubles" : {
+        "covariance" : ["3f74f5c3dca6e035","bf38e5b18188d461","3f4eb16bbbcea158","3f735a1ae1819553","3f3927c9e543ca69","3f940c17a30ec1d5"],
+        "estimates" : ["3fdffdd38f575ccf","bfce6faf1f5738b2","3febcaa07f103c89"],
+        "gamma" : ["bfe035e7bbfe22b3","3fadf3c565ec3ebe","bfefeaf39377ffb6","bff40c2c543376d7","bfec45cec6ce5443","bfd605977af6183b","bfe66e4d90f3019c","bfcbe8e19ec44e4f","bfa48e058ce3b14f","bfd2a75300c5e025","3f978853200d6f7c","bfe844fb9b78e833","3fcbe7f83a9685dd","bfd8a8b4037d2ffd","3fd0ae5ad29c076c","bfe907a08f1fe79a","bfb952fce4c56296","3fd4ec810e9d1447","bfc4e8151dfe1e83","bff424772741209f","bfdd75264d32a21b","bff4648c750ad807","bfd3d7fef0a01292","3fe9a25157af06be","bff9c4752abc2583","bfe8c29acccb069a","bfd2afe9175d4c91","bfc879e13440a644","bfed62980f943b17","bfddebcd2bf24f20"],
+        "loglik" : ["c084c1a6d41d3692"],
+        "standard_errors" : ["3fb25016a7fbfa7a","3fb198aa72c6288b","3fc1e8df33c748c2"],
+        "var_case_mix" : ["3fdae279e7a05759","3fceb4f1cb1699bd","3fc8b5856d6ba47a","3fc3d36dd50cd992","3fbed5a3d5158f6e","3fb8693d0f9b2663","3fb5c7b5e907eb80","3fb32fa45f91f170","3fd144fb37b018ac","3fc7e114d369026e","3fc2f6a56d4e302f","3fbf2675bca52a73","3fbb967f862a4b30","3fb57df5e14daf3e","3fb5252a0c212b9f","3fd21cc03f29e614","3fc98434b9237ea0","3fc3772e613d6e98","3fbe65e9f693a5be","3fbec116e523de65","3fb66a24656b8fbf","3fb774b9428f7079","3fd3f6b5673098cc","3fcf7606bbe7165b","3fc87303b1dda117","3fc02d62040c6f9b","3fbac066480f1114","3fb75bfc52ac804c","3fb5d81269733ac0","3fd52100c909815f"],
+        "var_gamma" : ["3fdb095f84127057","3fceda8a69ae59ca","3fc948638a8d72d4","3fc46f9a28fa4107","3fbfc89ba2d98e76","3fb94d0aceffdfaf","3fb64f770795f7e3","3fb3e4b1bd84140f","3fd143f0de6c7450","3fc83e1241ba7681","3fc391c740d38a59","3fbfec49dcc3edbc","3fbc26518911f440","3fb652646acd848c","3fb573fc3653031a","3fd2511393638f1a","3fc9f059c8c4be16","3fc3924aa0f3c21f","3fbea72a550818ca","3fbfb1e5eb5b58a3","3fb75cd3e6121e0e","3fb8a09eb8033e3a","3fd3fa7a267d9f21","3fcf8b728879ecb7","3fc965abb2d3257b","3fc09350d34f1e91","3fbaac916be845d7","3fb877afd51459fe","3fb63a0526f98c82","3fd56bb1bbc8e656"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [6]
+      }
+    },
+    "logistic/lfe-binomial/default" : {
+      "doubles" : {
+        "covariance" : ["3f45e60814f28253","bef5b32be3768077","3f160a0d8b5e564f","3f4810c9e39b4c4d","bf142b845d5af5d7","3f6624f43f167752"],
+        "estimates" : ["3fdef5e40f2ab6cc","bfd433b942c75dc8","3fec965f85775bc8"],
+        "gamma" : ["3fcbcc195b9588e1","3fd8411c5edeeb7a","bfd1759add0052e8","bfe045ef3e9dfad1","bfe16f6f198f652e","bfe951d9ef426c11","bff465858a3b6f8a","3fcb81e8abab7bd7","bff074e382823497","bfbeefd4e399bf16","bfe69dc739ce21cb","bfea4d43ac613495","bfb0a2dd3352f6d7","bff1d8d14de722d4","bfcab3efb3a2b341","3f8b34fc25893e8d","bff68b4a56d57bf5","bfe0eea5d50050c6","bfe4f0895de8c14a","3fe4b7255d667085","bff33c2098638f89","bff065527b58898a","bfbbcfd1d3213ec1","bff70ddc665dcd93","bfc5ca921d972736","bfd80b7ce744e41e","3fd5f2dc851e15f1","bff29b812aa395e8","bff0558d0251dece","bfccb29775390639"],
+        "loglik" : ["c0b25722d5f031ca"],
+        "standard_errors" : ["3f9a78c519d08a11","3f9bc02a9a2b0069","3faa9eb1fe7ab8d6"],
+        "var_case_mix" : ["3fa9c00e173d1822","3fa4460a819d5276","3f9b463bab1bd10f","3f95729cd451e42c","3f92a149f7232294","3f91e76368a4068f","3f91715115fb3684","3f8e23b7d42e9bba","3f8b289f86e49e3e","3f8416d4fb2c523b","3fa0aa1aa88ec1da","3f9e44af66bc904e","3f977cd338b9cff2","3f9c1786d775a74c","3f95cfe2fccb121e","3f905009491c2a1d","3f93cb925676f3d2","3f8c317bf7e8482d","3f8693920553f4b6","3f8de7ac380c9bc4","3fa6c67efd848e37","3fa0f593fde9dfdf","3f9d8124c96a6bdb","3f99eef27dd0b519","3f94ed9692fceb2e","3f8eb55b75a67af6","3f8f4d4adbedc303","3f90c0aad4edd1b5","3f8cc32252acccff","3f870012d54249d7"],
+        "var_gamma" : ["3fa9c431167c55a4","3fa45b3a681ba0c3","3f9b9370d9772abe","3f960f879c964a50","3f930716a1ef956e","3f929ea2a2fe6ac6","3f924ef1e129838a","3f8ec4acc3871805","3f8c64fb9058cb1a","3f845442c1f9227e","3fa103b6d33e76ec","3f9ec2f6b7ffabe5","3f97c2f4155ed0fd","3f9cec38e5b7e097","3f95f97f20268ed4","3f90d54fc7750249","3f94e32f05bd183b","3f8d54c238b646bf","3f8785a1a064d8ac","3f8e3104ccc86689","3fa71d08efe5d7fb","3fa16185117a44a1","3f9dbf5cffef4fff","3f9afe3ba8f9bf8b","3f951f3ec9dc5e58","3f8fb009b97ba383","3f8fb2cafaf661f6","3f91aa0f6f649601","3f8dfbd261030044","3f87cb72aaf9ac53"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [5]
+      }
+    },
+    "logistic/lfe-binomial/tight" : {
+      "doubles" : {
+        "covariance" : ["3f45e60814f28253","bef5b32be3768076","3f160a0d8b5e564f","3f4810c9e39b4c4d","bf142b845d5af5d8","3f6624f43f167752"],
+        "estimates" : ["3fdef5e40f2ab6cc","bfd433b942c75dc8","3fec965f85775bc8"],
+        "gamma" : ["3fcbcc195b9588e3","3fd8411c5edeeb7b","bfd1759add0052ec","bfe045ef3e9dfad2","bfe16f6f198f652e","bfe951d9ef426c11","bff465858a3b6f8a","3fcb81e8abab7bd5","bff074e382823497","bfbeefd4e399bf15","bfe69dc739ce21cb","bfea4d43ac613495","bfb0a2dd3352f6df","bff1d8d14de722d4","bfcab3efb3a2b33d","3f8b34fc25893e42","bff68b4a56d57bf5","bfe0eea5d50050c5","bfe4f0895de8c149","3fe4b7255d667084","bff33c2098638f89","bff065527b58898a","bfbbcfd1d3213ec1","bff70ddc665dcd93","bfc5ca921d972738","bfd80b7ce744e41e","3fd5f2dc851e15f2","bff29b812aa395e8","bff0558d0251dece","bfccb2977539063e"],
+        "loglik" : ["c0b25722d5f031ca"],
+        "standard_errors" : ["3f9a78c519d08a11","3f9bc02a9a2b0069","3faa9eb1fe7ab8d6"],
+        "var_case_mix" : ["3fa9c00e173d1822","3fa4460a819d5276","3f9b463bab1bd10f","3f95729cd451e42c","3f92a149f7232294","3f91e76368a4068f","3f91715115fb3684","3f8e23b7d42e9bba","3f8b289f86e49e3e","3f8416d4fb2c523b","3fa0aa1aa88ec1da","3f9e44af66bc904e","3f977cd338b9cff2","3f9c1786d775a74c","3f95cfe2fccb121e","3f905009491c2a1d","3f93cb925676f3d2","3f8c317bf7e8482d","3f8693920553f4b6","3f8de7ac380c9bc4","3fa6c67efd848e37","3fa0f593fde9dfdf","3f9d8124c96a6bdb","3f99eef27dd0b519","3f94ed9692fceb2e","3f8eb55b75a67af6","3f8f4d4adbedc303","3f90c0aad4edd1b5","3f8cc32252acccff","3f870012d54249d7"],
+        "var_gamma" : ["3fa9c431167c55a4","3fa45b3a681ba0c3","3f9b9370d9772abe","3f960f879c964a50","3f930716a1ef956e","3f929ea2a2fe6ac6","3f924ef1e129838a","3f8ec4acc3871805","3f8c64fb9058cb1a","3f845442c1f9227e","3fa103b6d33e76ec","3f9ec2f6b7ffabe5","3f97c2f4155ed0fd","3f9cec38e5b7e097","3f95f97f20268ed4","3f90d54fc7750249","3f94e32f05bd183b","3f8d54c238b646bf","3f8785a1a064d8ac","3f8e3104ccc86689","3fa71d08efe5d7fb","3fa16185117a44a1","3f9dbf5cffef4fff","3f9afe3ba8f9bf8b","3f951f3ec9dc5e58","3f8fb009b97ba383","3f8fb2cafaf661f6","3f91aa0f6f649601","3f8dfbd261030044","3f87cb72aaf9ac53"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [6]
+      }
+    },
+    "logistic/lfe-clustered/default" : {
+      "doubles" : {
+        "covariance" : ["3f729276edb85802","bf1f8c0dc39ed8aa","3f49361969b44e61","3f71bdc87f534f20","bf4364d5d18596d2","3f93ae1fc12b9707"],
+        "estimates" : ["3fdb5a8b798a5a1b","bfd2dfc06dbc7b33","3fe83f2d23470e50"],
+        "gamma" : ["bff7be0207fa6423","bfeeb7ce8ee4b49d","3fa9d57c63850170","bff13bbd26c50d7c","3fe0230f53ed5698","bff059b49f2afdd8","bff7278eaf46af91","bfddf82f33a6bea5","bff6fc9c8c0e5796","bff677b6be461ab0","bff4a6d1a40f0500","3fd22b14c5e10289","c000d24bc3da79e3","bfb0f3e445176b42","3f969d1b0713c627","bfd64e599e655cf3","bfb78095d1f2ce7c","bfe5374dafc5a172","bff58336d53e4d22","bfd0cb69632d0ba7","3fbc8e842c65215f","3f4af046cd5873fc","bfc9da723684fb11","bfea64f6d846bda8","3fe10839fb429e8e","bfd5cd112a6ff38f","bfd700da9426d53c","bfe0ec18de4a28ed","3fceddadc43ea9c5","bfdec15efe263f67"],
+        "loglik" : ["c084b8942942f236"],
+        "standard_errors" : ["3fb13cf7d0fd767f","3fb0d922de98b197","3fc1beb41facf22c"],
+        "var_case_mix" : ["3fdc03857be82fdf","3fd06e3d18486117","3fc6e2f89bebfdca","3fc39f42e6e4dfff","3fbfe44af82ad407","3fb972dad09b7618","3fbb94c6be68100c","3fb31ea7f456633f","3fd43f159936becb","3fca044496a03c89","3fc3a0a2c3bdfafd","3fbf5a7279b8b45b","3fc38afa61232c48","3fb5e30b10c3b800","3fb36be6a30357e7","3fd1c8217be956b2","3fc87e09ff9c8ac6","3fc2b99b7af21e64","3fc263ef1c47fb18","3fba305d0a5eb8de","3fb6a7048ef35c35","3fb37fe5c27cbaab","3fd2bbde76e0c324","3fc9d82c02a01070","3fc5d6b666125b55","3fbfda3f9a91ffff","3fba65447e25cd82","3fb696af71d1a3d8","3fb5992931a956b3","3fd3975ad9e8725f"],
+        "var_gamma" : ["3fdc8f4114c846ca","3fd0f04f7a9d8dbd","3fc753bde782613e","3fc3e2481231474f","3fbffe9790d5cb9c","3fba46eb0daeecde","3fbce0166b28b033","3fb385e8fa6de46e","3fd4817509b1f658","3fcaf16ac87da544","3fc4a85022a348f3","3fbfac773d90dcd5","3fc476ded3820cfc","3fb6454a28b3292c","3fb3d4bc2b42f8cd","3fd215e197dc609f","3fc8cbaf4976c390","3fc31e38b114ce1d","3fc30f8d902bd2f9","3fbab22c78ea901c","3fb73b33d7195052","3fb3fe0afbd904db","3fd2f3b78bad2452","3fcacfb0bd32863c","3fc5d748e5d5d7dc","3fc08925817356d2","3fbb9be85c2decdd","3fb779fff0cc82dc","3fb60043a1b5fc2e","3fd3c3571c247a7a"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [5]
+      }
+    },
+    "logistic/lfe-clustered/tight" : {
+      "doubles" : {
+        "covariance" : ["3f729276edb85804","bf1f8c0dc39ed8af","3f49361969b44e66","3f71bdc87f534f20","bf4364d5d18596d4","3f93ae1fc12b9709"],
+        "estimates" : ["3fdb5a8b798a5a1c","bfd2dfc06dbc7b33","3fe83f2d23470e50"],
+        "gamma" : ["bff7be0207fa6423","bfeeb7ce8ee4b49d","3fa9d57c63850172","bff13bbd26c50d7c","3fe0230f53ed5698","bff059b49f2afdd8","bff7278eaf46af91","bfddf82f33a6bea6","bff6fc9c8c0e5797","bff677b6be461ab0","bff4a6d1a40f0500","3fd22b14c5e1028a","c000d24bc3da79e3","bfb0f3e445176b43","3f969d1b0713c62e","bfd64e599e655cf6","bfb78095d1f2ce7b","bfe5374dafc5a172","bff58336d53e4d22","bfd0cb69632d0ba7","3fbc8e842c652159","3f4af046cd587532","bfc9da723684fb10","bfea64f6d846bda9","3fe10839fb429e8e","bfd5cd112a6ff390","bfd700da9426d53b","bfe0ec18de4a28ed","3fceddadc43ea9c6","bfdec15efe263f68"],
+        "loglik" : ["c084b8942942f236"],
+        "standard_errors" : ["3fb13cf7d0fd7680","3fb0d922de98b197","3fc1beb41facf22d"],
+        "var_case_mix" : ["3fdc03857be82fdf","3fd06e3d18486117","3fc6e2f89bebfdca","3fc39f42e6e4dfff","3fbfe44af82ad407","3fb972dad09b7618","3fbb94c6be68100c","3fb31ea7f456633f","3fd43f159936becc","3fca044496a03c89","3fc3a0a2c3bdfafd","3fbf5a7279b8b45b","3fc38afa61232c48","3fb5e30b10c3b800","3fb36be6a30357e7","3fd1c8217be956b2","3fc87e09ff9c8ac6","3fc2b99b7af21e64","3fc263ef1c47fb18","3fba305d0a5eb8de","3fb6a7048ef35c35","3fb37fe5c27cbaab","3fd2bbde76e0c324","3fc9d82c02a01070","3fc5d6b666125b55","3fbfda3f9a91ffff","3fba65447e25cd82","3fb696af71d1a3d8","3fb5992931a956b3","3fd3975ad9e8725f"],
+        "var_gamma" : ["3fdc8f4114c846ca","3fd0f04f7a9d8dbd","3fc753bde782613e","3fc3e2481231474f","3fbffe9790d5cb9c","3fba46eb0daeecde","3fbce0166b28b033","3fb385e8fa6de46f","3fd4817509b1f659","3fcaf16ac87da544","3fc4a85022a348f3","3fbfac773d90dcd6","3fc476ded3820cfd","3fb6454a28b3292d","3fb3d4bc2b42f8cd","3fd215e197dc609f","3fc8cbaf4976c390","3fc31e38b114ce1d","3fc30f8d902bd2f9","3fbab22c78ea901c","3fb73b33d7195052","3fb3fe0afbd904db","3fd2f3b78bad2452","3fcacfb0bd32863c","3fc5d748e5d5d7dc","3fc08925817356d2","3fbb9be85c2decdd","3fb779fff0cc82dd","3fb60043a1b5fc2e","3fd3c3571c247a7a"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [6]
+      }
+    },
+    "logistic/lfe-degenerate/default" : {
+      "doubles" : {
+        "covariance" : ["3f86db89812d5e02","bf4eb30d34b3dc12","3f53ca830bb2d999","3f85c3ab26711e42","bf46addbaf7289f2","3fa4a1a8c0f823e0"],
+        "estimates" : ["3fe1ae5540313481","bfd0e1d0157b514f","3fe92790dc8d9d73"],
+        "gamma" : ["bfebfa253aac36d8","3ff52de891478869","3fbf56b972bd799c","bff02665f3bf2692","bff086494a4b1161","3fdc047a4960b109","3faf6f53002b60d8","bff2bb9ca0dc3bf5","bffea7e3b6738b2d","bfe35d08ba5d2205","bff62d9beca57e9e","bfceded68b7a40ce","3fcbe4a5cd8ec34d","bfcdab5405674918","bfed8b066dfe4f09","bfebb08625a655d2","3ff304ac6b71dee2","3f97e00c6d6ade87","3fefe0f37fb0e18b","bffe5976b670ea09","c024d8a5f2e9dd92","4023275a0d16226e"],
+        "loglik" : ["c073bedd58be552b"],
+        "standard_errors" : ["3fbb0b916062c210","3fba63f7e8031310","3fc9b1cad70eea51"],
+        "var_case_mix" : ["3fde37760144e7da","3fde933b3c8dc1eb","3fcca43177c6d9b2","3fc76c8818b8ac4d","3fc3c544e15230f7","3fc1dc36afc93aa4","3fbcd2512db940d9","3fbc0757c06ab40e","3fe47b5e24c8224e","3fd1e4176cbe5de3","3fce5a9e5d6a6e92","3fc5e9abb94ddb15","3fc3b18e7416e13d","3fbfda86554b76b8","3fbc96acb7997745","3fb9cd42332d0e0e","3fe59f069b2c1447","3fd24a62c4a94c6b","3fd0b67a30a74381","3fce94743663186e","409202df51644c4a","4092ef06ea71fd28"],
+        "var_gamma" : ["3fde38aa1bcc6962","3fdeb45ebbe8948d","3fcd9bda9d8a832f","3fc841a259199342","3fc53084301be69a","3fc2ae68fcb1a3e1","3fbe34a09b0757ee","3fbed972c21a5b30","3fe4c7bf6c48d125","3fd2613b32eff162","3fd0537b4d686d37","3fc681698fb0f4eb","3fc41f6c2c0d4cb3","3fc0c39a7071a634","3fbef3cffe2066a0","3fbc2ade50d69632","3fe5af53e711b0df","3fd278c48f7d50f2","3fd07379b1d54477","3fd0024b4bbb36da","409202e96ec883aa","4092ef077ddeab8e"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+        "converged" : [1],
+        "iterations" : [10]
+      }
+    },
+    "logistic/lfe-degenerate/tight" : {
+      "doubles" : {
+        "covariance" : ["3f86db89812d5e6a","bf4eb30d34b3dd16","3f53ca830bb2dc3b","3f85c3ab26711e71","bf46addbaf728ac7","3fa4a1a8c0f82417"],
+        "estimates" : ["3fe1ae554031356e","bfd0e1d0157b514d","3fe92790dc8d9eb7"],
+        "gamma" : ["bfebfa253aac3729","3ff52de891478854","3fbf56b972bd7712","bff02665f3bf26c8","bff086494a4b11b1","3fdc047a4960b02c","3faf6f53002b5c8f","bff2bb9ca0dc3c51","bffea7e3b6738b9b","bfe35d08ba5d2271","bff62d9beca57f2b","bfceded68b7a41f6","3fcbe4a5cd8ec27c","bfcdab5405674a67","bfed8b066dfe4fd1","bfebb08625a65678","3ff304ac6b71decd","3f97e00c6d6ad65e","3fefe0f37fb0e197","bffe5976b670ea78","c024d8a5f2e9dd97","4023275a0d162269"],
+        "loglik" : ["c073bedd58be552b"],
+        "standard_errors" : ["3fbb0b916062c24e","3fba63f7e803132d","3fc9b1cad70eea73"],
+        "var_case_mix" : ["3fde37760144e838","3fde933b3c8dc24c","3fcca43177c6d9f9","3fc76c8818b8ac70","3fc3c544e1523119","3fc1dc36afc93ac8","3fbcd2512db9411f","3fbc0757c06ab454","3fe47b5e24c8226d","3fd1e4176cbe5e04","3fce5a9e5d6a6eca","3fc5e9abb94ddb43","3fc3b18e7416e171","3fbfda86554b76fa","3fbc96acb799776d","3fb9cd42332d0e4d","3fe59f069b2c1477","3fd24a62c4a94c9d","3fd0b67a30a743a0","3fce94743663189c","409202df51644b94","4092ef06ea71fd28"],
+        "var_gamma" : ["3fde38aa1bcc69c1","3fdeb45ebbe894eb","3fcd9bda9d8a8376","3fc841a259199368","3fc53084301be6c2","3fc2ae68fcb1a406","3fbe34a09b075833","3fbed972c21a5b82","3fe4c7bf6c48d146","3fd2613b32eff184","3fd0537b4d686d58","3fc681698fb0f519","3fc41f6c2c0d4ce4","3fc0c39a7071a655","3fbef3cffe2066d1","3fbc2ade50d69679","3fe5af53e711b10d","3fd278c48f7d5125","3fd07379b1d54493","3fd0024b4bbb36f5","409202e96ec882f4","4092ef077ddeab8e"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+        "converged" : [1],
+        "iterations" : [11]
+      }
+    },
+    "logistic/lfe-many/default" : {
+      "doubles" : {
+        "covariance" : ["3f38197fa77cd5e0","befba47fd9f43f46","3f10db601b2bf9c9","3f3758103f61ede8","bf00c9ab9caab74f","3f572aa12198a6d4"],
+        "estimates" : ["3fdf808a955302bc","bfd516e181bab37c","3feb10657a762a27"],
+        "gamma" : ["bfefda0516887bb7","bfe9d80b2d083713","bfe10ed9b2b41621","bfd088062e46ed39","3fe5939876ce9d14","bff6dc793fdd357b","bfa5c331318a50e1","bfeca1bec14bd3d9","bfd4287cf07a89e3","bfc6d51da1788af2","bfdd2ad22145675f","bffba9fa9c6ce137","bfeeb190a7786726","bfc93adc20ffd4f0","bfdab87c02fb1255","3fc6e267cc8c733a","bffa304454227f82","bfc8db8dbf24ec10","bffd11b16d870994","bfe9f4051dd39676","bfe114a20888a8c5","bfe82d31b03559e0","bfeafef462fb8261","3fc648cc3d7b8a9b","bff3c1ec0ffb2e22","bfcf1439cb042b5e","bfe3ab83f08eb51b","3fc7c69d124bf747","3fcc7a6b7334add2","bfd6d0e59ea17910","3fa93f661bd378a2","bff8986abf6ef829","bfe1d0c736e6d67b","bfeb7276f0ac6e38","bfc9ba9853fc0dbe","bfef264fe6379b9c","3fce84dafd2514f1","bfe8e9e33454e940","bfdd2a7790378e54","bfec4b9cdedf567b","bfd4d3ab76bcfe12","bff5df185a9217c2","bff119bc5e60afe5","bfa0dd08bfb791aa","bfff6847cbef902f","3f7c8a13d2b7edc9","bff09fa9cffc8c4e","bff45a0f06020a94","3fab9a0b32d34373","bff56dab43a478f4","bfd7b80167c275e0","3fc8e8d1f3190c83","bfed1ab3625207ef","bfe3fd8753cb155d","bfc6f4c47705e662","bfdef8bb7dfbae60","bff690b01e2bbf93","bfd059fba4942819","bff05ca0fafa5d5a","bff4216e6bd1092c","bf913880aff68523","3fea762ba2e8097f","bfe5e0ee54638620","bfe03c214a259bd0","bfe2936a0124b7ea","c0045a5381d8ce2f","bfdca83dee3baa40","3fc5b4b7c72dccca","bfc95c72bfcc266c","bfe7d0a499804436","bfefec077944c2f0","bff2931b07b29edd","3ff38516cb2d82a2","c0010da41c83e6ae","bff903e73bc9871d","bff1337ef49a1a40","bfb95cc03a0a330a","bfcc79fe4ae7173d","bfe5225c30112635","bff9f36c505d31c5","3fcc4171e4b44469","bff65c092af66ce6","bfe9251c6db76400","bfdc3ac544b7a1fe","bfff24e4ad662614","bfe36f5654eba03b","3fe3e1f977798c21","bfe69272d9685b96","bfea9e5a336570a2","bfdde4b71fefc26c","bfea59c8e5ed7cb3","bfdae418d22be2d2","3fe66c88261b91c2","bfb6800c525e8544","bfd4c7eb7478f820","bfc4767859b1083b","bfb7cce4d386817b","bfe66e33de0be5e2","bffc83b210e01fbb","bff456986dd3a081","3f8aad5ca950e26b","bfdc084f5f8e11c9","bfee341fab58f2b7","bfef3f968d964573","bff07d177a2fe107","3fe18ddbf50a498d","3fd06ef4283138c4","3fd73de45a01f610","bfe3075821377adb","bfdd1aa82ed629ed","bff6ed97b4649b39","bfebc04031aa8eed","3fb3e43d33770593","bff9c51e798056cf","bfe7246d391c9b56","bfb3f9155b5aa74d","bfe35d0bd135d480","bfca5341c10bc223","bfe06da3d3ffd23e","bff1965f63231c4b","bfe72f10b7fdac11","3fd85cb821c97469","bff2d55d12112d5b","c001fa83290a0bdf","bfd5a1e3d1f4fac2","bfca7842729a6bcd","3f81ab8ee58f40ec","bfef0c6104c7a7ab","3fe20ee32db5800d","bfe2a0dd8283f9ed","bfeaf0bd60b7f5a1","bfeed6be8cc5e31a","bfe13cbfe7057b06","bfe9433abd98284e","bff9c73f0f7c787f","3fc08e53c162ddc0","bfe96cd72847c8d9","3fc767f7ac565ee9","bfe04642553c3736","bfdc55e8ea573c94","bfd7a5364cc16698","3fb8cb48bacccfdc","bffed7f391e3e8d3","c001e672c291cbed","bff3d6beb4a8d607","bfd87f53b52ef3cf","3fc7c17a1b0e621c","3fd5cffd425979aa","bff6ab0208628471","bff3bb7e0ea32fa4","bff2e3e0afb90f0e","bfeffeb57dc077cd","3fe6a1989bc88709","bff0be93aaf5863d","3fdf7c59a033c6fb","bfe2daaad68309e8","bfed7bec3b8e9822","3fde4224ca5c0ed1","bfe1e72843fc35a0","bfdfa8051a51496b","bfe6a2d5d2403718","bfece2ee9445bc70","bfed4d4761c7df16","bf873ee7e4151a78","3fc3c0b27b6d4394","3faf9f43703f2f3b","bff14427f8025ea3","bfd9c08eb99cdfd9","bfd3a726071216cd","3f9ba6e2e5397a03","bfe0d8f75a9a5147","bfe27f6ee9215089","3ff21c246f46468d","bfe5b2ec26965bc5","bfc052f5aacc1cb3","bff5601603610dfa","bfe23c71093d9ecb","bff310f4767d929d","3fe5c78e571f0d3f","3fd7b56fcced4eef","bfce56fd2aaaedcf","c003ccb3e1251281","bfdeb6e96d16457b","bfe9e65cd45f0039","bfdf3cd6d6047156","3ff1ea4127a35e70","bfe4cceb5c6f0827","3fc7e11d96c0657c","bffae1f3c4f466bf","3fe7377214fc2d41","bfe095d966cfc87a","3fd9b7206e47d82f","3feb42ecc6bac24f","3fde8e78cd8731f4","bfdb7242656e3527","3fb9f02bec966b36","bfdbbe56d1a2006c","bfdc1aec51d256fa","bfda73fc16c31630","bfdf8f429ba0c44d","bfd89cfef1eed336","3fda6555c662fb0d","bfe700e9a4e45471","bfd8c7c3ca278ac7","3fc6127f5671010b","bfe93e286bf8031f","bfe457c51c3f5bb5","bfd470f100dc2c18","bfdb1b199590876c","bfb7e6459a21bbc8","bfdd6859c4c85ea0","bfe634660b55d857","bff3fbe965208be5","bfe19a2ee3db8833","bff93b17aebdf1d5","3fd394c79ac59296","bfe1a04c66270bd7","bfd3ed23c6169218","bfa9e3f59db95799","bfd1832f4f01b222","bfc8fcbd69207eb5","bfc92447c333e9c2","bff01129112cd266","bfd97a1d3d27b1f9","bfe45631c521fce7","bfdfd099706e4c2d","bff2674bb4f96d24","bff5b6fcd58806e4","bff14af67e642351","bfa7a27cdeb3a62d","3fd49c46527c3ccc","bfdf015265696869","bff54a865b27003f","bff313a553d7b766","bfee812f6bd934a9","bff1543bb1378abe","bfedcabd65e4472c","bfec93d026ae4a48","bfe9f8b14bed0825","bfe67f5d4623150a","3f98459e0400844a","bfeb6f1c02a6800d","bfd2e65566f6a9fa","bfe7af41d00c31b5","bfd075520bf47a56","3fb6c4469720a275","bff68c6732827001","bfe1a897e356888e","3fd27c5a0336832d","bfed4468bbe2079f","bff6c954994d2090","bfb897e4860901b0","bfe79877d1506b79","bff3cb9dcc924100","bfe907d839e87ec6","bfdcae840efd88f3","bfeee2bfb120a45f","3fec06d9c1a6f95f","bff411e61237485e","bff4b914099647ff","bfc8cf8e52169f8d","bff741c3e18bd38c","c001bfe1540b405d","bf93b0c3bc9653cf","bfc9a3d1b0d6173b","bfea3189dccc66a3","3fdc97a9bbfc2b13","3fc8c8f7af538fce","bfda125ef50edbb1","bff9e98626c7402b","bfeafd9d780b4e23","bff33577953a4753","3fda0478c25e46c4","bff0b530342963fe","3fc3cb09b8f9af8f","bff5288a88df71fe","3fb9c1ce2a0a8b6e","bfb40054d0cf70de","bfe8963334250bd9","bfe48983e00d7c39","3fb97afd4df7e316","bfe1ff5a6b7fa379","bff2b1c1af65f133","bfe2b2a993efac91","3fc80f9b27fa2382","bfb5af0416d5a8a2","bfd665f8046a2f57","bfc900f1aa0cbf62","bfe14e041705938c","bfea01cb879a79de","bfd5db316a110b74","bfe8fc0428f2f490","bfe87cd82e768be2","3fc3ec9e5953c512","bfb7ef5fb80f28e1","3fe9951a61a092a6","3fa03613397ab165","bfca64f691dc4179","bff30f98606ea983","bfdef5c446733d98","3fa5639530481f57","3fd21e7c38424ccf","3f9979467049aa04","bfaac8854b24dcd0","bfee20a4c506dcc2","bfe2983fef32fd74","bfa407dd202c4f35","bfe43b730ed71d9b","bff6357451b41420","bfd40a7127b51205","bff0b77b38a7be0f","3fbec5fecda83863","3fb7d0c81c24b51b","bfc2aa84d23161b0","bfda1711a186c5ab","bfee808cbc76f7b7","bffa510a73e56e58","bf96ddc9d612c78e","bfdf4155f8f90dc8","bfb6a61e92f1b41f","bfe374f04346a504","3fae2467747ae3a8","bfe79ef6e1cc4c44","3fea952db915367c","3fe112f65baccd69","bfec13aef42a53a1","3fe555fc74bfcaaa","3fb998d14d93ed72","bfe3a9fc102b4a6e","bfe06cde6ccf241f","bfaff4d7a5c96320","bf9e3d2e9d7f4aea","bfd6d40d1717ec26","3fda4630a947b12a","bff33ba35d8c643d","3fd1a3c84a4d2818","bfe843326d8c3bdf","bfd4f9e8e5955bc4","bfda408f10392d85","3fd5ebc565753e40","bfb44375f8b021fd","3fd4bb97801e62ad","bff974cf93c5797b","3fd4568d2f54e24a","bff6fa378eba3a2e","bfc9e0448afd6554","bff852e211e288e8","bff2982782f55015","bfe242e6af3565d0","bfe84a6926e7d0d1","bff5a7bfe9fe9a54","bfea8c0f86f531cd","3fa64a97d826780e","3fc8b98614ef78ed","bfc177df73fdbeef","3fd297e27a83132c","3ff083a3d311f044","3fc78b462c1ec2b0","bff13174d10a861c","bfb3ea7d1e2d385a","bfbccec8195bd824","bfe04f25ac911e10","3fd022b321cb62a3","bfe3c8ac2d913446","bfc1e09eaf22517a","bfe464c198cce6e9","3fdc8876288ba750","bff4cc64bee3e37a","bffdb78c963a1855","bfe5e7b6d9b58218","3fd12a5cad42a99c","bfc1ae53b2cd6c39","bff9e70d08f7ff97","bfd34c3a98a8e3b6","bfee07dc5a624bc7","bfb26db4f0856fdc","bfe439b28a34cb9f","bfc300f84dfb52df","bfeaf2808551b885","bfd5629c9d1c3229","bff015738eab66c4","3fd31d64d9fc9768","3fddd0963555ab10","bfe6fafcf37b38ac","bfc81d5d210e39d2","bfe7c3a24f73f633","3fc00540e58a7aa2","bfffcc589758fae3","3ff435aa84162452","bfd97fd530159d4a","bfe61fd4343e4b50","bfe9eb1e5200f4c0","bfa181a0a5724381","bfe76bd941ac9615","bfec4f6f501a5b66","bff92ffb149366a0","3f9de61c72b0af3d","bfefd21db67cd419","c00050dad0e87fc1","bfe852329a5f9610","bfe2d63d4fefc188","bfe1017eed11a020","bf93aab01a5eed5a","3fd18dd07204fbf9","3fdb955e824a30a0","bfc68c489d38d1fd","bfe4f58477b74d68","3fd6f67d30b8b49e","bfe76fbdd9c3097c","bfd57a3eb6915a50","bfee88b63bff7da4","bfd2a640abbb0a67","bff027826af640e2","bfdb831b236d11d3","bff6712ccc5d7297","bfd7fde8f5e9cfd2","bf6394a7874d46e4","3fd47ce482f08c16","bfe9eece012b469f","bfd02b89b92cf58b","bfa37307c4d4557b","3fb9f59b23fd05e9","bffa37d09c3d4e7b","bfe0dd6dc4e47107","bff28154e16d30cd","bfe9a9fa1abe059a","bfee49f2cad790bf","bfe4cf524ad9e1a6","bfe6916a22efca7b","bfd0da77affb693a","bfe1903775a439b3","bfcca81875256b3a","bff523e996247809","bfd191adb4b4f675","bfca6fa77d55dc6e","bfe49d67b56e0611","bfee15925002dd12","bff01980278839fc","bfbbdfb78895688a","3fde98771a6c0d58","bff0a957e8fbd028","3fdb5c5ba8d703c2","3fcac4a8d97cbd54","bfdd1cedcda4ff53","3fd940fea7618959","bfe7922ad933d3bc","bff727f5763bcff5","bfcf2cdfb070c190","bfe3a54d4bd4aa28","c00351c880dcea5a","3fde5867e538e0a2","3fe74c222f125197","3ff1be8d37da5774","3fed5072cfdd80db","c002709d30f2df7a","bff50bbd5d82aa05","bfe8592baa084c22","bff64459eaeb7cac","bff4c54fec01b60d","bfb3d8007abcb997","bfa994c83a8eed50","bfe013e4ca3edaf7","bfd34d7b0c54d8fb","bfeaf6138022cf34","bffadc9802fdebcc","bfdbc036ad7898db","3f795fb0a4720719","bfe064b34d68ec6f","bfff0d3027750c09","bfdcb4cea2ab730a","bffc323565867c6c","bfc5dabebefdc6db","bff19dc0d1341d3d","bfd843d332ef271b","bfd16dd9ef86407f","3fe0f80f5cd84695","bfe983c2dfc5db22","bfd88c70b5af439e","3fe217beb8eb5377","bfde8c1fb1bc9e64","bfdf136ca73102f2","bfe43e8155b37d5c","3ff098dfa025bbb1","bff31e83b035c289","bfe9b3937dcb385c","bfe7b5bdc679f7be","bfde27762a91e230","bfb6347d52648450","bfe403a5b020969b","bfecffc6107477d0","bfb026070ea3eaf2","bfe4470df07d404e","bfed2ac1c141be43","bfd92259239c641a","bfd8111fb893f74d","3fa34e437c8602f3","bfc8e1b12cbd814f","bfd1f2ac6639179b","bfe262f462fb944d","bfee3a5196f20983"],
+        "loglik" : ["c0c1848820813034"],
+        "standard_errors" : ["3f93a2f43904657c","3f9353852ab6eac4","3fa340ad576189b4"],
+        "var_case_mix" : ["3fcdf936938186d0","3fcaef6fac271d2e","3fca71b9420bbb46","3fc9e3261ee081bc","3fcf779f9dc0d2ea","3fcb9fcb6bf9ec4b","3fc682092252893d","3fc582f0c238029a","3fc3be22f6e4e85e","3fc48f6ad3fbcc12","3fc2bcbdddc81c0c","3fc99415a54467c3","3fc2e4c90008c0f6","3fc27383c2dea432","3fc056a2b21f3714","3fc19951cdc6fef1","3fc362779b8ae8bd","3fbeb98fbab90c00","3fc3468fe9f7ccdd","3fbe362738464df8","3fcbc436efbfc6c7","3fcd2a3f4d9dc041","3fcada136e9648dd","3fc902aa8f283f2d","3fcbcc7f139d530e","3fc7519f4119dab3","3fc6b63822441397","3fc6b3f330182395","3fc790597f1ea574","3fc3475520c9572a","3fc37a4e5ee7b0b1","3fc7df3744cc738e","3fc2724483969872","3fc3067dfdfa6ab5","3fc16855232fc660","3fc23c4b8a54372f","3fc0e1ecd828f1c3","3fc00ebbfcde13db","3fbde9bad4a65102","3fbd7077dc464ffe","3fcde2e7a5abfc5b","3fcd5a412cf070a2","3fcb585bc6355b37","3fca4da41c458b24","3fd011eb34321c44","3fc6a5e6316f2962","3fc7bf43243ef1da","3fc72f43b5b69ea9","3fc60afc064d166d","3fc58acf94b9ab99","3fc3fd6ecfafcd91","3fc43e7db3c78035","3fc4fb92ee8aa102","3fc1447c7b972991","3fc1b0cf4d6f5cc3","3fc0f7b97e60126b","3fc258cd73887c36","3fbdbe62dc42f700","3fbeb0bbc658c1a4","3fc0b2a7d568197b","3fcc946cd73844f0","3fd2b70bcda57bb3","3fcb0d07cad7f6f5","3fc8c55151d1d0cd","3fc85cd7d65a19c9","3fd3f6b9bae5ad73","3fc590eafb6011c7","3fc4a48cb3d812e4","3fc48c344930fece","3fc37d0e89034e52","3fc472c29b17937c","3fc233bff911ebe9","3fcad3fbafa3dcbe","3fcb8693c7c82ff4","3fc833bd27db4acd","3fc2ca805227ffd7","3fc0076b328091f4","3fbeab0b91df6bc0","3fbf0f18455cbec3","3fc142fe543d3f1c","3fcc7f11b1b80597","3fcf1be7eafe161e","3fcb78beeb38e44a","3fc8aacde942ddfa","3fd1b139f7654a9f","3fc7046db6fce9e9","3fc8df3383daee8a","3fc58ac0861083e6","3fc4ae142233ffa6","3fc42e811af2154c","3fc2f2a618bf9b9f","3fc32685b9c417ee","3fc44c1f51432295","3fc163713d66e9ac","3fc11575db0467c4","3fc069c668ec0bb8","3fc03332220f1b80","3fbf25d459f2166e","3fc3d41b172ad489","3fbda4c3adf59e36","3fcd72f02085de5b","3fcb632640227f49","3fcd32b898ee120e","3fc900f3efd114ee","3fc919da4cd022ef","3fccb3dee223b48e","3fc9da0b09b42da5","3fc68a46e89f96f2","3fc57b26eba81ff2","3fc3a123b995bd26","3fc800a7171ef7b4","3fc2bdb161eeb232","3fc234d1327c3f2c","3fc4ee63fd122304","3fc13ed426f11d04","3fc0d224370087e6","3fbfb8c505f9faec","3fc00ee0d4bdd360","3fbdb4d407fd418b","3fbf8712abc94405","3fcd32b2474ca382","3fcb9928bb2440d3","3fcd4f53f4c2c2ee","3fd96f111c88395e","3fc6b9d6011e1d74","3fc88b1c385440a9","3fc70157ef8c8986","3fc5464e950b321a","3fc76fa159d5209b","3fc36b54b03d7af9","3fc462787d77f353","3fc2e5e94f60da30","3fc25616bb9e5895","3fc12f5b15bc451d","3fc4d39540b84a2b","3fc1298931daa4d6","3fc088dc1c89e9f5","3fc097115d5a0f79","3fbef29e851e4e33","3fbcb1619fe9180b","3fcc0ed20b122d82","3fca603b4a94993e","3fd51ee3844e1974","3fd4b8c0e2684e5f","3fca60d976b6cbaa","3fc63cfdd8ffa763","3fc6b178343b77b8","3fc65d37bc53eeca","3fc7009c611fe721","3fc65a933129652b","3fc4fac597d3906e","3fc431b091733f06","3fc472e4ef603577","3fc2188304c43f8d","3fc4220814701e41","3fc03918529bd81c","3fc06b1852edea86","3fc071164e03c3b7","3fbe1c3d1df92c00","3fbe1395c922e51e","3fcc94f996482e18","3fcc28d01522f714","3fca547f29772a8a","3fc98ae835e9e8ad","3fc988c994fcefe9","3fc91c9e31cc26d7","3fc7bf03e7235ade","3fc50e8c459c3c6b","3fc534a0c6fb3dbb","3fc441d63dac7096","3fc33ec734c0dc64","3fc261d9d4841b52","3fcbb14311fa1ad0","3fc249a8831f3385","3fc078129ff34b58","3fc26976df28b4d8","3fc04445d198b1ff","3fc07bac87b879cd","3fc306f15785bdff","3fc0712e56305929","3fcce783420d14e3","3fda92dd6c766f08","3fcb47f609163327","3fca99d106d2cb03","3fc79aebd057cb97","3fd13cd8336edbd7","3fc5bb88c31646a8","3fc7072615244aa9","3fc8293d74dff05a","3fc6b2a7563f1633","3fc2ab484a3c25f4","3fc30d289f32dca5","3fc7b98da6d7c0ca","3fc2e871633955f8","3fc07ceeca7f04e7","3fc0f99172bee4d3","3fc0495aca3d9d9d","3fbe4bfb139fbb52","3fbe16f8201a51c2","3fbd14e7a9aca6e4","3fcb7abc605bc295","3fcbbb95a7d671b4","3fcad16b930a8fd5","3fc810052b1c1dd5","3fcacc5dbc0e2f5d","3fc7eb9b553870a7","3fc5b08ddbca81cf","3fc4396dac3ff33d","3fc4b2a9ffcbcc98","3fc397a688b87ba8","3fc40846a1589494","3fc38e3e440228a4","3fc465dd00f02142","3fc25d9c55b3853f","3fc5ff4e00e1582a","3fc1e7309a1226b1","3fbe79f65ae61e35","3fbfdf2a6920c99e","3fbf089ba6c837eb","3fbc9a10afca7e82","3fcc69c7e750fcb1","3fcbd8e2ea31962f","3fcb5472365e0681","3fc816b294bf7995","3fc76759229bd1aa","3fc84c5edeeefa80","3fc6a197be0cfa23","3fc9852b3aa78abe","3fc60cefb0748bc8","3fc3b242048e3bf0","3fc509edcf9d87da","3fc259d5af1ca93e","3fc33589090eae3b","3fc3c8062273aa3d","3fc1f2a0be062c37","3fc24d4de946a4c1","3fc11d9427666386","3fc0b5d49b5c610c","3fbff6db0953eb6a","3fbd6ad9ab1d1df0","3fcdb30b234b3c5d","3fcb8b31d76defc2","3fca5336ee8a4513","3fc8a328db04e43c","3fc85c3776b63f4a","3fc872597225d5c2","3fcc49d267999258","3fc4ac5015a7c7a9","3fc8d672bcadf9b8","3fc4852f01512947","3fc4e390ccb333d4","3fc2c0944b12feaf","3fc1c5de1874312c","3fc40d7c72c4d74e","3fc08000e5366a23","3fc0637db7a7be55","3fc19bc1f4e80ae1","3fc1d3208f6b7dcf","3fc042aded585acf","3fbf3ad697048c5d","3fccce43fd392477","3fcf258b0d11b6cc","3fd56b954797164c","3fc9ceb9a6ba0fd8","3fc8d81301a9c6be","3fc888f3650e330e","3fcab2fc3ea313ce","3fc6346ac9cfa645","3fc4bb37bc58dca7","3fc60f35cfa82560","3fc2fb06d0b694f8","3fc58519ff2d036e","3fc3b369a57a25f7","3fc2234899f3f630","3fc09b36616ed547","3fc3a887621bde14","3fbf6bd7b8b0a497","3fbfe85adc34f8b4","3fbe2c38b6211cde","3fbe60a85797d432","3fcdf104414eedc1","3fcbf0dbfc4143c6","3fced1035433ed97","3fc86dd35fae9d3b","3fca30a053d3822e","3fc6c8ddae094e3b","3fc5aa66223ff39d","3fc4ebcd963b6c44","3fc4a548e484a37f","3fc4078682a8cc4f","3fc280e993db6ffb","3fc2bc7d34f21a7c","3fc2516499871787","3fc284fd85ee8022","3fc0fca0fea9cde1","3fc541f6a6956eaa","3fc06c710d26f1fe","3fbfe914e2c7bee6","3fc0cf2ae30fc732","3fbeef217ad6a8ea","3fcc161bb4f49cb9","3fce73c21ae086b4","3fcaa4d2d4d74565","3fca8fa6200319e1","3fc80de5a0a4c348","3fc8795c35acb91f","3fc6fbda7049685c","3fc4fe3aa46dba84","3fc73f877f75e6a5","3fc3e5a6bca7d496","3fc3dde969d184bc","3fc333d9013e282c","3fc2409421797530","3fc103bb69f97e88","3fc077d3240916c2","3fc0eee26355faf0","3fc2671035939524","3fc000b6e73607b5","3fbda9b77041258f","3fbcdb75e4840a56","3fcc3b06253e13a9","3fcb1ec23bfbc3ac","3fc9f92c37910644","3fcd65de911509c1","3fcbe8dcb906de8b","3fc8666f9b29c5cf","3fc86cdc7026b1b0","3fc4f914c02697b8","3fc4f0c09d35c3fe","3fc338f1edd5cefa","3fc364fd22323b80","3fc27c8a1eb351a8","3fc1d01835cf6c73","3fc3560f2140b4e1","3fc271f74d4aef10","3fc1acc199f7447f","3fbf09b413b4e5bf","3fbf42eaa56c8830","3fbe59124660a1a7","3fbf5d571013d9de","3fccb9d0ee56af98","3fce79ffa838ba97","3fcfcd92dbb90af2","3fcc22eac78fcfd2","3fcb703542caeb01","3fc685f5e7cb1c8f","3fc94a99199f5900","3fc5730cac656de7","3fc45f7754b0b7f1","3fc47bc28a37d619","3fc517ce3fc5006b","3fc2f876367f29cd","3fc27a78fe069ec9","3fc29effb05bca37","3fc0632568409eb8","3fc0a02c47942a94","3fc4b8abe7418971","3fc038a16b09291f","3fc0a56b2ece5988","3fbde8547cbd47c4","3fcdd3dc196337b8","3fcbe718dc55ad91","3fcc905e41539a14","3fc8936df089adb3","3fc8423c97bac3de","3fc7d4c19bef7c04","3fc99b3374d6d5f0","3fca9557a40e4344","3fca335dbc9f8659","3fc3d6371aaeb855","3fc3b0674d893d1b","3fc2832e50019b4d","3fc6ad1a7486678f","3fc0d7e43d720672","3fc0f7fc81d61a66","3fc09b316cdf584b","3fc09081d7638379","3fbe9b16aa38f7bb","3fbe758e859aa0ed","3fbdb0bf5882b50e","3fccee995de0fd28","3fcc51abba7cc141","3fcd7a103d489c16","3fc8f9ba35cbb4c7","3fc7a515f93d2088","3fc87986a0c39cf9","3fc7ec75f1f22076","3fcae924b7b94a86","3fcc9d975a1a6bdb","3fc4274071fcbe4b","3fc4529a827714dc","3fc21d18a786235a","3fc2a399a3b99ea1","3fc2028491eda04b","3fc1d4578e97f6a4","3fc2a1ea588e1df6","3fbf42e4e411072e","3fc085d238acbddd","3fc7025cdf79a532","3fbf46f877f39662","3fccba3f6e17f55c","3fcd2df98e845208","3fcc4d5db98bc8a6","3fcad668f29b095d","3fc9153ea9eb8564","3fc71c9119f5cb91","3fc5bf0ee5e1f076","3fc8094f7639bfb6","3fc558e7027ffcb8","3fc3d7ac7feeeb53","3fc4a3b8830410c1","3fc3163d9bc87393","3fc489d28e9d8ff8","3fc1c83600b17a95","3fc287152339f772","3fc0345366373cf2","3fbfbf4d76cb3ccb","3fc13495d33c1a4b","3fbe37f5e7e6891c","3fbd1a60651775c7","3fcd37be31239f0b","3fcda4c86121a934","3fcfb1b5da4d45c8","3fc94eb64fb30122","3fc9918ef098dc5f","3fc757f255e6daa7","3fc6cf658c38a5be","3fc4b371f488a4af","3fc59091bcbfcaa0","3fc3e6cd314dd8cf","3fc3d24f7355687f","3fc37d7b7a6bb0dd","3fc33b56f9ed9a0d","3fc119e5e8c90944","3fc29394400d1f9a","3fc00fcbac1772cc","3fbfd208f14716a3","3fc04fdab90cf4dc","3fbe5d843130e5c2","3fc07ab4e84ccf09","3fccd1c0ff337b96","3fccd3c8d7ad0e65","3fcb0e289b57a0f3","3fc8e078caa800ae","3fcade768695d778","3fc974792628746b","3fca4e72a1cad64d","3fc55984d7921812","3fc45fc5ef11331f","3fd06e7769cc4102","3fc4be6ade84afcb","3fc6a724de40b53e","3fc53cda07a7d57c","3fc57e0a97e43f54","3fcb972acae47120","3fc24e3b02eefe68","3fc06e04d48c30e5","3fc1f1d034351912","3fc0785eb4cda1d6","3fbce1bfc10460a1","3fcc62fba9c8c319","3fcb481ff26a8134","3fc91726a1e48254","3fc8e929c1c6be7c","3fd140a4d7d9220f","3fc66889c3b0ee38","3fc79bbf5af3320a","3fc51b29f2267a1b","3fcda114525b43db","3fc2d5f2e15a90f6","3fc855a4130ef2f8","3fc398a2b817a12c","3fc25048f21f628d","3fc1bd0c5ce4b76a","3fc0862a76493195","3fc18b91de7240f5","3fbfd44932bb6889","3fbf504720d6c250","3fc1c71d7c2098e7","3fbcb9d2d18a0df8","3fce1e5f8bb58aba","3fcd622c458e246c","3fd1b9b299211d02","3fcb517c9c86dbe2","3fc8ecb871a6a057","3fc6c54adec6346c","3fc576bf5dffd362","3fc58df43e41b09e","3fc441144b6423e2","3fc52f22855a54dc","3fc3aa0f14b8e4c3","3fc18925b9b1a275","3fc408c4678db994","3fc154036b35d9c1","3fc0c95aa070998b","3fc094b71d0fab08","3fbff27cca6141e6","3fbee1b86541a5a6","3fbfa242980054d7","3fbe14b54980978e"],
+        "var_gamma" : ["3fce054b552cb074","3fcafd080eaf98e2","3fca70825bad08cf","3fc9eebb661c2bd9","3fcf82d05901646b","3fcba8f0bdfb8168","3fc6854949d5c8a8","3fc58b0ba712f5a4","3fc3c37ae214ea23","3fc498292283c417","3fc2c2f63c44aa45","3fc99cbc11ae681c","3fc2f41a262ddcec","3fc27bab6bb802e2","3fc061fe474f03fa","3fc19c70cf44b396","3fc374958caec4ae","3fbec436b1c9abde","3fc357303c8afcad","3fbe48bbd0c60a83","3fcbcc138ac96888","3fcd385e90255398","3fcae1c74453fe9e","3fc905fac3ecb39d","3fcbdcb54a97f195","3fc75af78d729c6a","3fc6ba5a408aa1cf","3fc6c24f07edd2e7","3fc79a3231517e8b","3fc3521306957144","3fc37b8ce7108c64","3fc7ecb13e1bfafc","3fc27bccb9551db3","3fc314442741ccfe","3fc16d948cfe5ce3","3fc2405c576b754f","3fc0e5938ec25a66","3fc015b19e2c39c4","3fbdf8a7d83a939a","3fbd8d74c74e65ec","3fcde8161d30ef7b","3fcd6e21617829dc","3fcb65465c0f9063","3fca4d1671fb2d2d","3fd01f2fecf8384c","3fc6a5e0c99285b4","3fc7c2398c453aed","3fc73e359cfc0b44","3fc60fd3f91b2e8e","3fc599f8c095fdac","3fc40964576038ed","3fc449846346871a","3fc5040466ad10d2","3fc149262758524c","3fc1ba68896a3bbd","3fc104740d548b63","3fc2632d5350617f","3fbdc7190de52803","3fbed173c2590e34","3fc0bd49fc23bb21","3fcc94f2b3260513","3fd2b8287a2672d3","3fcb158818e33016","3fc8cfbe69cd9619","3fc85f09347a21dc","3fd401bf203babaf","3fc5998316749997","3fc4a2b61fcacd2a","3fc49083fbe2c89a","3fc384f1eab70602","3fc47fdd5defd4b0","3fc2472af9349f45","3fcad25727cc7d05","3fcb95124d94c116","3fc837f9a5d5b17c","3fc2d09c493254a9","3fc00d817703ecd0","3fbeb8fc59c83efc","3fbf2417daffa2e0","3fc157566805a5cb","3fcc7cdcccaa0f64","3fcf2b2aa74d1ed0","3fcb832f881c107c","3fc8b9160f24a4ef","3fd1b91e75b74c46","3fc70733c7fcfb9b","3fc8da049fed0091","3fc5952429653332","3fc4b9b9031679ac","3fc436d84de681b8","3fc301c3fd6bc494","3fc330a5a001fe01","3fc44c9dbaa7b6eb","3fc16ca829fa1b56","3fc11a64088a6374","3fc07696b40c1813","3fc03981101594ef","3fbf347a62d29979","3fc3df9d2ae36902","3fbdc112d9935f19","3fcd79f43b1b79c8","3fcb69e089da3cb3","3fcd3c7da11c8d0a","3fc907e48ae7a568","3fc92708ccfe9ee0","3fccb82e43a74091","3fc9e257fb519642","3fc689385b40899f","3fc57d77b2bf3b36","3fc3ac44522991e8","3fc805854f9fdf7c","3fc2c97513c86bf3","3fc2386f956e6de2","3fc4fc71566b45ab","3fc148eb3e663508","3fc0d9237730b173","3fbfcef8bd7d14b3","3fc01c02d4efe1bb","3fbdc439385c7c4f","3fbf9cd013f7672b","3fcd42bdbced4499","3fcb94bfe332dc6c","3fcd57d1048df62d","3fd9733e930b93b5","3fc6c05b6cef085b","3fc8996ef2c43dcb","3fc7044e80df2c4b","3fc54e3655f15bfe","3fc772667aba86a6","3fc3756695c9a015","3fc46e0d35d62aa0","3fc2f304aa697667","3fc25dcbe4157033","3fc1391790a78dfa","3fc4e2f2a23ef26c","3fc12c9f852ec311","3fc094707b4bbdec","3fc09d85ba806c1c","3fbf05c08a2aed0f","3fbcc48281ceb1c9","3fcc15c12bb56f88","3fca5cdba0d1ac73","3fd524996fdc2f2a","3fd4c1f458f55a9c","3fca6b9cdffae76e","3fc63fac041c3155","3fc6b79be3178b87","3fc660888d67265e","3fc7105c144ac241","3fc66666d2407377","3fc508d2e9669315","3fc43c95fdafe000","3fc47523ae75b47d","3fc2263825600e8d","3fc4289277038fac","3fc042d3aa5279f8","3fc074c1a7fe5b45","3fc0718a64506156","3fbe353473386746","3fbe1acf084d7dd4","3fcc9dbbae626e00","3fcc31b96c6a6b9e","3fca66d5bd1f25ed","3fc98ed0f1ccd436","3fc9931251c34ee8","3fc9239825767507","3fc7c7931071f9f0","3fc516caadb15399","3fc53dd98b555acc","3fc444b3d3ced0e1","3fc34b4f2d741aff","3fc271b4ee2c4365","3fcbb6db29afe28b","3fc256a2f7fc6a7c","3fc07bbf26387cdd","3fc2770a253ff713","3fc04eb26c07bc02","3fc088d9e1289fd6","3fc30d1d254093a1","3fc07413d71054ff","3fccec30bd3c5de1","3fda9b7cdb2c154f","3fcb50979aeea1dc","3fcaa7e9859d5257","3fc7a23ca92f3725","3fd13c423911139c","3fc5c4a1df99aaac","3fc70bda01e21241","3fc8379d86180c77","3fc6b19398984f95","3fc2b4c9ed3ce7c5","3fc3129c2797199f","3fc7ba15bb2aafd0","3fc2e9be6baa93d2","3fc088a0fd93423e","3fc1023fdb736348","3fc05062b9408338","3fbe576560e9c9a7","3fbe2e85e64f931e","3fbd295b537457dd","3fcb80bc0b49e9d9","3fcbb9cbeff979ca","3fcade8688c0b656","3fc8199dff17bec8","3fcad5677c4c8468","3fc7edc696f7758c","3fc5c202feeb1c11","3fc442c462b81dd7","3fc4b6e2fa6e9d76","3fc39e8b8939c371","3fc411d89bf74cfe","3fc392894404a83f","3fc47209232b6127","3fc261e3113f57a4","3fc60c1671270063","3fc1ed99a0ab8d2c","3fbe9acd8312ada2","3fbff0a7705334eb","3fbf14524f40b036","3fbcaadbb075fb9e","3fcc7074ebda60a5","3fcbe096a3a66a5c","3fcb5abb246d399e","3fc81fa86bd38de3","3fc770fb6d1cfbd9","3fc84f088ddaf871","3fc6af9e78a2a33f","3fc993194053233e","3fc6181db1b4f0dd","3fc3b63ccb79ded2","3fc50f8286906fbe","3fc261e15a463572","3fc340869bf25d74","3fc3d3aa86598669","3fc1f8ecba2e05f6","3fc251d5de1116d9","3fc126d73fcd2e71","3fc0bff057cbc3ee","3fc00090c3206db7","3fbd7b349500c308","3fcdb854411e9fd6","3fcb97bfb740df24","3fca5a3d20916d1d","3fc8b2e324e80821","3fc86487c4bce910","3fc876afdf7d0152","3fcc4efe6e5ecb4b","3fc4b68bc532c249","3fc8dfef8c771e50","3fc48f9d06ed2a8d","3fc4f34e625c9953","3fc2c79ab0f87ffb","3fc1d1a723819d1a","3fc41c85fab54760","3fc08b9bd02140d5","3fc068487350a08d","3fc1aa6c39086f24","3fc1d0ab28117654","3fc0521b0ef5009c","3fbf4fcc5874c765","3fccd522c320d599","3fcf331f4bc9c38b","3fd57360e890b9e5","3fc9d2d72c8ec058","3fc8e088bee8f382","3fc8892b7c6f2a9e","3fcabe0c60496454","3fc639a4e64cdb38","3fc4c13c681759e9","3fc620bfecfadf04","3fc2fea32274418d","3fc590e683a6fdf9","3fc3b5e26eef1c3c","3fc22949fa6e7fc2","3fc09a86c125b4db","3fc3b20122f19d67","3fbf719d674512c1","3fbfe8f7f9c14964","3fbe47f8d30a693b","3fbe737f4db7f371","3fcdf999cb700153","3fcbf8ef98cc5ee5","3fced87f559c7d21","3fc875cbdca47070","3fca36d5cc48d23d","3fc6ca4bee68f55d","3fc5b108820fbf18","3fc4efb1df513155","3fc4ae9d82aedf35","3fc40f55ba04617b","3fc2883af394a9a2","3fc2c92aa495d72d","3fc260112133a9d2","3fc28955638042fe","3fc102c121ced148","3fc54459d1d776f2","3fc0706e1beae7ba","3fbffd2d50da7fcd","3fc0dbcbcd317e86","3fbef35cdfad0ba4","3fcc18f56e359a8f","3fce7cc8c0386b6c","3fcaaefb2c5d5305","3fca9aae39caeef2","3fc8178ade3cb5be","3fc883c8f9922923","3fc6fcc98d608139","3fc501cf56f26bdd","3fc74c8a8ecf8bf5","3fc3e8aa67710b93","3fc3e921deba8ef4","3fc33918bedd2dbd","3fc241b71f2f5508","3fc108200be85d77","3fc083190ed1d1b6","3fc0fdbbc6c958ed","3fc27873aaae0707","3fc0073b9a7cbfaa","3fbdb192a6e0ee05","3fbcdb3c01fc5d00","3fcc47090a5de739","3fcb21e965769b95","3fca0896c17f333a","3fcd614100ded845","3fcbf1354007d88c","3fc86dcbba70c56f","3fc86dcfec4be36e","3fc5010ebaf6cd76","3fc4fd428de63686","3fc34185cf2960af","3fc36855d3b771e8","3fc27b85f4fca6a5","3fc1d8d90f060919","3fc35b3339317129","3fc27d5dde897e6f","3fc1b23265a399be","3fbf233b67e357d8","3fbf551b07ce0a1f","3fbe6f63a5b133e4","3fbf6395f635d4ec","3fccc1a917f6d19a","3fce7e255a5b5b90","3fcfddbf1812cee6","3fcc26fedbecfe88","3fcb7be4cf16a624","3fc68fe2b8e93c7b","3fc95fc93d24e72b","3fc580adf078bb3f","3fc4685e9a25f7a9","3fc4869b8e62cfb3","3fc523eec68ed77e","3fc30474eceaa17e","3fc27d8243efccba","3fc2a1eacbb45909","3fc06aa241bd103f","3fc0a000d132cc2b","3fc4b67784e0404d","3fc03c21b605362b","3fc0b50cdc7d864d","3fbdf6701e8023d5","3fcdd669e7440ffb","3fcbf38aa19d2374","3fcc941ce4f9df08","3fc89be38ebad23e","3fc8461048173205","3fc7d3b020066b92","3fc9a27dd9b20dcc","3fca9ebae146af9c","3fca4318c7cbd959","3fc3daf7a5a7dfdd","3fc3b32af31354ee","3fc28b994a09d952","3fc6bb014d7dd6a1","3fc0dbe8a1d7201d","3fc104b6dbb1e119","3fc0a3491f0558d4","3fc09d2a881e75ba","3fbea7dcecfae8a4","3fbe87d11a13eec9","3fbdbbfe3c5fe83a","3fcd01d1ce01417f","3fcc53456a42b130","3fcd7cdc3cba6164","3fc902d3cbf129bc","3fc7a593e5b15364","3fc880943c18440a","3fc7f2db2ab7a705","3fcafa9efe25ab55","3fcca25e987671b1","3fc4343d282cb6eb","3fc45c78eccd1f1d","3fc2290f43016aec","3fc2a72f6f486d35","3fc2094c90d06845","3fc1df245369fa03","3fc2b40263a59689","3fbf4e7cd8dc7ab6","3fc091ba14ebd6c3","3fc714432b8edf24","3fbf67a4a9aa2b4a","3fccbf566ff7f79e","3fcd37b6bd0a8b02","3fcc57c4707aae7f","3fcadc165c094b25","3fc91de51ac90acb","3fc7298a7001f152","3fc5ca47ab14d6c3","3fc81310d61989c5","3fc55b3eebe980f6","3fc3e58b3d434680","3fc4afd83fb2c5fd","3fc3209267246820","3fc4912abcdffb36","3fc1d35e2c96a61d","3fc29ad0eb273e56","3fc03d34267ea0fe","3fbfcdf4f8e85723","3fc139132efc5869","3fbe51831dd7534c","3fbd253a7a1ef17e","3fcd3f5044350964","3fcdaa8f50d70ed9","3fcfbd33e7cfa095","3fc95fd6a59f9107","3fc99690a2ae3a63","3fc76596ef40910c","3fc6df373dd15435","3fc4b92c61a4a350","3fc5977e3cfdfde1","3fc3eff241502016","3fc3d8d179918218","3fc3886bd48ba2e6","3fc34def7c2ed211","3fc11fc7711b32dc","3fc29e2422142869","3fc0194bb864a246","3fbfe4dde0a1a23c","3fc056f5a55b78e3","3fbe723935f51d86","3fc078f829450e6a","3fcce1c81d4973f8","3fccd1d4dd7afb3e","3fcb19de74f88502","3fc8e4bc2da571b4","3fcae07bec6cbcc8","3fc97641168f8d6a","3fca5f9c1481ab27","3fc5601fbef6c59a","3fc469ca0d8648fe","3fd0791fb99d545e","3fc4bc80d870abc2","3fc6a96c00dd491c","3fc53636fc4d8e92","3fc57c85535e99b4","3fcba921bf46c8a6","3fc25c67887be1c4","3fc07722f3c30f9f","3fc1fc657480db33","3fc0842a5f2153a8","3fbce2fbc6fba89a","3fcc68d3e12c8862","3fcb50dec7760ae8","3fc9194280621723","3fc8f6f997b5bfcd","3fd143590b3430af","3fc6721928a1101d","3fc7a6c75d7be923","3fc52c66fdccc9ef","3fcdb3a2afb30e6e","3fc2d88940561df3","3fc866effaf86bb9","3fc39f871c83f254","3fc25bdc531fea97","3fc1c80124656c14","3fc08dc17934e282","3fc18bf479933c97","3fbfe0dfe29b02e8","3fbf583c24d611f9","3fc1c80bc5fcef48","3fbcd1442dee0c98","3fce29c56ea3b429","3fcd67ba5bf1b279","3fd1bbbb1b91f017","3fcb5ead6ac1f977","3fc8f8421faa9485","3fc6d589277d42f0","3fc581ac672c5545","3fc58fc3c5506c16","3fc443da40ee5562","3fc535dd17d439a6","3fc3b1be4cf4737b","3fc194759e6cb4f8","3fc412d6e7b875f3","3fc15a479a1bd154","3fc0cdf83c28a0a9","3fc0972bab5f3e47","3fbff52399b4384a","3fbeeeae9e072d82","3fbfc0ae634de744","3fbe31db5a2b0f0e"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [5]
+      }
+    },
+    "logistic/lfe-many/tight" : {
+      "doubles" : {
+        "covariance" : ["3f38197fa77cd5e5","befba47fd9f43f45","3f10db601b2bf9d0","3f3758103f61edef","bf00c9ab9caab759","3f572aa12198a6d8"],
+        "estimates" : ["3fdf808a955302be","bfd516e181bab37e","3feb10657a762a2a"],
+        "gamma" : ["bfefda0516887bb9","bfe9d80b2d083715","bfe10ed9b2b41621","bfd088062e46ed3e","3fe5939876ce9d14","bff6dc793fdd357c","bfa5c331318a50e8","bfeca1bec14bd3db","bfd4287cf07a89e4","bfc6d51da1788af9","bfdd2ad221456761","bffba9fa9c6ce138","bfeeb190a7786729","bfc93adc20ffd4f5","bfdab87c02fb1259","3fc6e267cc8c7336","bffa304454227f83","bfc8db8dbf24ec15","bffd11b16d870996","bfe9f4051dd39678","bfe114a20888a8c6","bfe82d31b03559e2","bfeafef462fb8263","3fc648cc3d7b8a98","bff3c1ec0ffb2e23","bfcf1439cb042b62","bfe3ab83f08eb51b","3fc7c69d124bf742","3fcc7a6b7334adcf","bfd6d0e59ea17914","3fa93f661bd37891","bff8986abf6ef82a","bfe1d0c736e6d67c","bfeb7276f0ac6e3a","bfc9ba9853fc0dc2","bfef264fe6379b9d","3fce84dafd2514ef","bfe8e9e33454e942","bfdd2a7790378e58","bfec4b9cdedf567d","bfd4d3ab76bcfe16","bff5df185a9217c3","bff119bc5e60afe6","bfa0dd08bfb791bd","bfff6847cbef9031","3f7c8a13d2b7ed00","bff09fa9cffc8c4e","bff45a0f06020a96","3fab9a0b32d34359","bff56dab43a478f6","bfd7b80167c275e2","3fc8e8d1f3190c81","bfed1ab3625207f1","bfe3fd8753cb155e","bfc6f4c47705e666","bfdef8bb7dfbae64","bff690b01e2bbf94","bfd059fba494281d","bff05ca0fafa5d5b","bff4216e6bd1092d","bf913880aff68509","3fea762ba2e8097d","bfe5e0ee54638622","bfe03c214a259bd3","bfe2936a0124b7eb","c0045a5381d8ce42","bfdca83dee3baa42","3fc5b4b7c72dccc9","bfc95c72bfcc2671","bfe7d0a499804438","bfefec077944c2f2","bff2931b07b29ede","3ff38516cb2d82a2","c0010da41c83e6b0","bff903e73bc9871e","bff1337ef49a1a41","bfb95cc03a0a3317","bfcc79fe4ae71743","bfe5225c30112637","bff9f36c505d31c7","3fcc4171e4b4446b","bff65c092af66ce7","bfe9251c6db76402","bfdc3ac544b7a202","bfff24e4ad662616","bfe36f5654eba03c","3fe3e1f977798c21","bfe69272d9685b99","bfea9e5a336570a5","bfdde4b71fefc26f","bfea59c8e5ed7cb6","bfdae418d22be2d8","3fe66c88261b91c3","bfb6800c525e8554","bfd4c7eb7478f822","bfc4767859b10842","bfb7cce4d3868180","bfe66e33de0be5e3","bffc83b210e01fbd","bff456986dd3a082","3f8aad5ca950e260","bfdc084f5f8e11cc","bfee341fab58f2b9","bfef3f968d964575","bff07d177a2fe108","3fe18ddbf50a498d","3fd06ef4283138bf","3fd73de45a01f60f","bfe3075821377adb","bfdd1aa82ed629f0","bff6ed97b4649b39","bfebc04031aa8eee","3fb3e43d33770592","bff9c51e798056d0","bfe7246d391c9b58","bfb3f9155b5aa75b","bfe35d0bd135d481","bfca5341c10bc229","bfe06da3d3ffd240","bff1965f63231c4c","bfe72f10b7fdac14","3fd85cb821c97468","bff2d55d12112d5b","c001fa83290a1418","bfd5a1e3d1f4fac5","bfca7842729a6bd2","3f81ab8ee58f40a3","bfef0c6104c7a7ac","3fe20ee32db5800c","bfe2a0dd8283f9ef","bfeaf0bd60b7f5a2","bfeed6be8cc5e31d","bfe13cbfe7057b07","bfe9433abd982850","bff9c73f0f7c7880","3fc08e53c162ddba","bfe96cd72847c8db","3fc767f7ac565ee3","bfe04642553c3737","bfdc55e8ea573c96","bfd7a5364cc1669a","3fb8cb48bacccfdd","bffed7f391e3e8d7","c001e672c291cbf1","bff3d6beb4a8d608","bfd87f53b52ef3d0","3fc7c17a1b0e621d","3fd5cffd425979a8","bff6ab0208628473","bff3bb7e0ea32fa5","bff2e3e0afb90f0f","bfeffeb57dc077ce","3fe6a1989bc88709","bff0be93aaf5863e","3fdf7c59a033c6f9","bfe2daaad68309e9","bfed7bec3b8e9823","3fde4224ca5c0ed3","bfe1e72843fc35a3","bfdfa8051a51496d","bfe6a2d5d240371a","bfece2ee9445bc72","bfed4d4761c7df18","bf873ee7e4151add","3fc3c0b27b6d438f","3faf9f43703f2f25","bff14427f8025ea3","bfd9c08eb99cdfdc","bfd3a726071216d0","3f9ba6e2e53979e0","bfe0d8f75a9a514a","bfe27f6ee921508a","3ff21c246f46468e","bfe5b2ec26965bc6","bfc052f5aacc1cb7","bff5601603610dfb","bfe23c71093d9ecc","bff310f4767d929e","3fe5c78e571f0d3e","3fd7b56fcced4eee","bfce56fd2aaaedd0","c003ccb3e12515a4","bfdeb6e96d16457d","bfe9e65cd45f003a","bfdf3cd6d6047158","3ff1ea4127a35e6f","bfe4cceb5c6f0828","3fc7e11d96c0657a","bffae1f3c4f466c0","3fe7377214fc2d40","bfe095d966cfc87c","3fd9b7206e47d82e","3feb42ecc6bac24d","3fde8e78cd8731f4","bfdb7242656e352a","3fb9f02bec966b27","bfdbbe56d1a2006d","bfdc1aec51d256fe","bfda73fc16c31633","bfdf8f429ba0c451","bfd89cfef1eed338","3fda6555c662fb0e","bfe700e9a4e45474","bfd8c7c3ca278acc","3fc6127f56710103","bfe93e286bf80321","bfe457c51c3f5bb7","bfd470f100dc2c1a","bfdb1b1995908771","bfb7e6459a21bbd0","bfdd6859c4c85ea2","bfe634660b55d857","bff3fbe965208be6","bfe19a2ee3db8834","bff93b17aebdf1d6","3fd394c79ac59292","bfe1a04c66270bda","bfd3ed23c616921b","bfa9e3f59db957a9","bfd1832f4f01b226","bfc8fcbd69207eb8","bfc92447c333e9ce","bff01129112cd267","bfd97a1d3d27b1fd","bfe45631c521fce8","bfdfd099706e4c2e","bff2674bb4f96d25","bff5b6fcd58806e5","bff14af67e642352","bfa7a27cdeb3a63a","3fd49c46527c3cc8","bfdf01526569686c","bff54a865b270040","bff313a553d7b767","bfee812f6bd934aa","bff1543bb1378abe","bfedcabd65e4472e","bfec93d026ae4a4a","bfe9f8b14bed0826","bfe67f5d4623150c","3f98459e04008429","bfeb6f1c02a6800e","bfd2e65566f6a9fe","bfe7af41d00c31b8","bfd075520bf47a59","3fb6c4469720a26d","bff68c6732827002","bfe1a897e3568890","3fd27c5a0336832a","bfed4468bbe207a1","bff6c954994d2092","bfb897e4860901b3","bfe79877d1506b7b","bff3cb9dcc924101","bfe907d839e87ec7","bfdcae840efd88f6","bfeee2bfb120a460","3fec06d9c1a6f95f","bff411e61237485f","bff4b91409964800","bfc8cf8e52169f91","bff741c3e18bd38e","c001bfe1540b4062","bf93b0c3bc96541f","bfc9a3d1b0d61741","bfea3189dccc66a4","3fdc97a9bbfc2b12","3fc8c8f7af538fc8","bfda125ef50edbb5","bff9e98626c7402c","bfeafd9d780b4e24","bff33577953a4754","3fda0478c25e46c1","bff0b530342963ff","3fc3cb09b8f9af8b","bff5288a88df71fe","3fb9c1ce2a0a8b6a","bfb40054d0cf70e1","bfe8963334250bdc","bfe48983e00d7c3b","3fb97afd4df7e30c","bfe1ff5a6b7fa37b","bff2b1c1af65f134","bfe2b2a993efac93","3fc80f9b27fa2379","bfb5af0416d5a8ab","bfd665f8046a2f58","bfc900f1aa0cbf66","bfe14e041705938e","bfea01cb879a79df","bfd5db316a110b77","bfe8fc0428f2f492","bfe87cd82e768be4","3fc3ec9e5953c50e","bfb7ef5fb80f28ef","3fe9951a61a092a5","3fa03613397ab14f","bfca64f691dc4180","bff30f98606ea985","bfdef5c446733d99","3fa5639530481f59","3fd21e7c38424cca","3f9979467049a9e3","bfaac8854b24dce2","bfee20a4c506dcc3","bfe2983fef32fd76","bfa407dd202c4f41","bfe43b730ed71d9b","bff6357451b41421","bfd40a7127b51208","bff0b77b38a7be10","3fbec5fecda8385d","3fb7d0c81c24b51a","bfc2aa84d23161b3","bfda1711a186c5ae","bfee808cbc76f7b9","bffa510a73e56e5a","bf96ddc9d612c7a6","bfdf4155f8f90dc9","bfb6a61e92f1b427","bfe374f04346a505","3fae2467747ae39b","bfe79ef6e1cc4c46","3fea952db915367d","3fe112f65baccd6a","bfec13aef42a53a2","3fe555fc74bfcaab","3fb998d14d93ed73","bfe3a9fc102b4a6f","bfe06cde6ccf2422","bfaff4d7a5c96325","bf9e3d2e9d7f4ad5","bfd6d40d1717ec2c","3fda4630a947b127","bff33ba35d8c643e","3fd1a3c84a4d2815","bfe843326d8c3be1","bfd4f9e8e5955bc7","bfda408f10392d88","3fd5ebc565753e3e","bfb44375f8b02204","3fd4bb97801e62ac","bff974cf93c5797c","3fd4568d2f54e249","bff6fa378eba3a30","bfc9e0448afd655a","bff852e211e288e9","bff2982782f55016","bfe242e6af3565d2","bfe84a6926e7d0d3","bff5a7bfe9fe9a55","bfea8c0f86f531ce","3fa64a97d826780a","3fc8b98614ef78e5","bfc177df73fdbef3","3fd297e27a83132a","3ff083a3d311f043","3fc78b462c1ec2ac","bff13174d10a861d","bfb3ea7d1e2d3867","bfbccec8195bd82b","bfe04f25ac911e12","3fd022b321cb62a2","bfe3c8ac2d913447","bfc1e09eaf225181","bfe464c198cce6e8","3fdc8876288ba74e","bff4cc64bee3e37b","bffdb78c963a1856","bfe5e7b6d9b58218","3fd12a5cad42a99b","bfc1ae53b2cd6c3d","bff9e70d08f7ff99","bfd34c3a98a8e3b9","bfee07dc5a624bc9","bfb26db4f0856feb","bfe439b28a34cba1","bfc300f84dfb52e4","bfeaf2808551b886","bfd5629c9d1c322c","bff015738eab66c6","3fd31d64d9fc9768","3fddd0963555ab0e","bfe6fafcf37b38ae","bfc81d5d210e39d7","bfe7c3a24f73f634","3fc00540e58a7a9c","bfffcc589758fae4","3ff435aa84162451","bfd97fd530159d4d","bfe61fd4343e4b52","bfe9eb1e5200f4c1","bfa181a0a5724393","bfe76bd941ac9617","bfec4f6f501a5b68","bff92ffb149366a1","3f9de61c72b0af12","bfefd21db67cd41b","c00050dad0e87fc2","bfe852329a5f9613","bfe2d63d4fefc18a","bfe1017eed11a020","bf93aab01a5eed77","3fd18dd07204fbf7","3fdb955e824a30a0","bfc68c489d38d208","bfe4f58477b74d69","3fd6f67d30b8b49b","bfe76fbdd9c3097d","bfd57a3eb6915a52","bfee88b63bff7da5","bfd2a640abbb0a69","bff027826af640e3","bfdb831b236d11d5","bff6712ccc5d7298","bfd7fde8f5e9cfd6","bf6394a7874d484a","3fd47ce482f08c13","bfe9eece012b46a2","bfd02b89b92cf58d","bfa37307c4d45585","3fb9f59b23fd05e3","bffa37d09c3d4e7c","bfe0dd6dc4e4710a","bff28154e16d30ce","bfe9a9fa1abe059c","bfee49f2cad790c1","bfe4cf524ad9e1a7","bfe6916a22efca7c","bfd0da77affb693d","bfe1903775a439b4","bfcca81875256b3f","bff523e99624780a","bfd191adb4b4f678","bfca6fa77d55dc76","bfe49d67b56e0612","bfee15925002dd14","bff01980278839fd","bfbbdfb788956894","3fde98771a6c0d57","bff0a957e8fbd02a","3fdb5c5ba8d703c0","3fcac4a8d97cbd52","bfdd1cedcda4ff56","3fd940fea7618955","bfe7922ad933d3be","bff727f5763bcff6","bfcf2cdfb070c194","bfe3a54d4bd4aa2a","c00351c880dcea5e","3fde5867e538e0a2","3fe74c222f125196","3ff1be8d37da5774","3fed5072cfdd80da","c002709d30f2df7d","bff50bbd5d82aa07","bfe8592baa084c24","bff64459eaeb7cad","bff4c54fec01b60f","bfb3d8007abcb99d","bfa994c83a8eed57","bfe013e4ca3edaf9","bfd34d7b0c54d8fa","bfeaf6138022cf36","bffadc9802fdebcc","bfdbc036ad7898de","3f795fb0a47205ea","bfe064b34d68ec71","bfff0d3027750c0a","bfdcb4cea2ab730d","bffc323565867c6d","bfc5dabebefdc6e2","bff19dc0d1341d3e","bfd843d332ef271f","bfd16dd9ef864081","3fe0f80f5cd84694","bfe983c2dfc5db25","bfd88c70b5af43a0","3fe217beb8eb5376","bfde8c1fb1bc9e68","bfdf136ca73102fa","bfe43e8155b37d5d","3ff098dfa025bbb1","bff31e83b035c28b","bfe9b3937dcb385e","bfe7b5bdc679f7c1","bfde27762a91e234","bfb6347d52648457","bfe403a5b020969c","bfecffc6107477d1","bfb026070ea3eaf8","bfe4470df07d4051","bfed2ac1c141be45","bfd92259239c641d","bfd8111fb893f750","3fa34e437c8602df","bfc8e1b12cbd814f","bfd1f2ac6639179d","bfe262f462fb944f","bfee3a5196f20985"],
+        "loglik" : ["c0c1848820813034"],
+        "standard_errors" : ["3f93a2f43904657f","3f9353852ab6eac7","3fa340ad576189b6"],
+        "var_case_mix" : ["3fcdf936938186d0","3fcaef6fac271d2e","3fca71b9420bbb47","3fc9e3261ee081bc","3fcf779f9dc0d2ec","3fcb9fcb6bf9ec4b","3fc682092252893d","3fc582f0c238029a","3fc3be22f6e4e85f","3fc48f6ad3fbcc12","3fc2bcbdddc81c0c","3fc99415a54467c4","3fc2e4c90008c0f6","3fc27383c2dea432","3fc056a2b21f3714","3fc19951cdc6fef1","3fc362779b8ae8bd","3fbeb98fbab90c00","3fc3468fe9f7ccdd","3fbe362738464df9","3fcbc436efbfc6c7","3fcd2a3f4d9dc041","3fcada136e9648df","3fc902aa8f283f2d","3fcbcc7f139d530f","3fc7519f4119dab4","3fc6b63822441397","3fc6b3f330182396","3fc790597f1ea574","3fc3475520c9572a","3fc37a4e5ee7b0b2","3fc7df3744cc738e","3fc2724483969873","3fc3067dfdfa6ab5","3fc16855232fc661","3fc23c4b8a54372f","3fc0e1ecd828f1c3","3fc00ebbfcde13dc","3fbde9bad4a65102","3fbd7077dc464ffe","3fcde2e7a5abfc5b","3fcd5a412cf070a2","3fcb585bc6355b38","3fca4da41c458b26","3fd011eb34321c44","3fc6a5e6316f2963","3fc7bf43243ef1da","3fc72f43b5b69eaa","3fc60afc064d166d","3fc58acf94b9ab99","3fc3fd6ecfafcd91","3fc43e7db3c78035","3fc4fb92ee8aa103","3fc1447c7b972991","3fc1b0cf4d6f5cc3","3fc0f7b97e60126c","3fc258cd73887c37","3fbdbe62dc42f700","3fbeb0bbc658c1a4","3fc0b2a7d568197b","3fcc946cd73844f0","3fd2b70bcda57bb3","3fcb0d07cad7f6f6","3fc8c55151d1d0cd","3fc85cd7d65a19c9","3fd3f6b9bae5ad8f","3fc590eafb6011c7","3fc4a48cb3d812e5","3fc48c344930fece","3fc37d0e89034e52","3fc472c29b17937d","3fc233bff911ebe9","3fcad3fbafa3dcbe","3fcb8693c7c82ff7","3fc833bd27db4acd","3fc2ca805227ffd8","3fc0076b328091f5","3fbeab0b91df6bc0","3fbf0f18455cbec3","3fc142fe543d3f1c","3fcc7f11b1b80599","3fcf1be7eafe161e","3fcb78beeb38e44a","3fc8aacde942ddfa","3fd1b139f7654aa1","3fc7046db6fce9e9","3fc8df3383daee8a","3fc58ac0861083e6","3fc4ae142233ffa6","3fc42e811af2154d","3fc2f2a618bf9ba0","3fc32685b9c417ee","3fc44c1f51432295","3fc163713d66e9ac","3fc11575db0467c4","3fc069c668ec0bb8","3fc03332220f1b80","3fbf25d459f21670","3fc3d41b172ad48a","3fbda4c3adf59e36","3fcd72f02085de5b","3fcb632640227f49","3fcd32b898ee120e","3fc900f3efd114ee","3fc919da4cd022ef","3fccb3dee223b490","3fc9da0b09b42da5","3fc68a46e89f96f2","3fc57b26eba81ff2","3fc3a123b995bd27","3fc800a7171ef7b4","3fc2bdb161eeb232","3fc234d1327c3f2c","3fc4ee63fd122304","3fc13ed426f11d04","3fc0d224370087e6","3fbfb8c505f9faec","3fc00ee0d4bdd360","3fbdb4d407fd418b","3fbf8712abc94407","3fcd32b2474ca383","3fcb9928bb2440d3","3fcd4f53f4c2c2ee","3fd96f111c884b52","3fc6b9d6011e1d74","3fc88b1c385440a9","3fc70157ef8c8986","3fc5464e950b321a","3fc76fa159d5209c","3fc36b54b03d7afa","3fc462787d77f353","3fc2e5e94f60da30","3fc25616bb9e5895","3fc12f5b15bc451e","3fc4d39540b84a2b","3fc1298931daa4d6","3fc088dc1c89e9f5","3fc097115d5a0f79","3fbef29e851e4e35","3fbcb1619fe9180b","3fcc0ed20b122d83","3fca603b4a94993e","3fd51ee3844e1977","3fd4b8c0e2684e64","3fca60d976b6cbaa","3fc63cfdd8ffa764","3fc6b178343b77b8","3fc65d37bc53eeca","3fc7009c611fe722","3fc65a933129652b","3fc4fac597d3906e","3fc431b091733f06","3fc472e4ef603577","3fc2188304c43f8d","3fc4220814701e41","3fc03918529bd81c","3fc06b1852edea86","3fc071164e03c3b7","3fbe1c3d1df92c00","3fbe1395c922e51e","3fcc94f996482e1a","3fcc28d01522f715","3fca547f29772a8b","3fc98ae835e9e8ad","3fc988c994fcefeb","3fc91c9e31cc26d8","3fc7bf03e7235add","3fc50e8c459c3c6c","3fc534a0c6fb3dbb","3fc441d63dac7097","3fc33ec734c0dc64","3fc261d9d4841b53","3fcbb14311fa1ad3","3fc249a8831f3386","3fc078129ff34b58","3fc26976df28b4d9","3fc04445d198b200","3fc07bac87b879cd","3fc306f15785bdff","3fc0712e5630592a","3fcce783420d14e3","3fda92dd6c767595","3fcb47f609163327","3fca99d106d2cb03","3fc79aebd057cb97","3fd13cd8336edbd7","3fc5bb88c31646a9","3fc7072615244aa9","3fc8293d74dff05a","3fc6b2a7563f1633","3fc2ab484a3c25f4","3fc30d289f32dca5","3fc7b98da6d7c0ca","3fc2e871633955f8","3fc07ceeca7f04e7","3fc0f99172bee4d3","3fc0495aca3d9d9d","3fbe4bfb139fbb52","3fbe16f8201a51c4","3fbd14e7a9aca6e6","3fcb7abc605bc295","3fcbbb95a7d671b6","3fcad16b930a8fd7","3fc810052b1c1dd6","3fcacc5dbc0e2f5d","3fc7eb9b553870a7","3fc5b08ddbca81d0","3fc4396dac3ff33d","3fc4b2a9ffcbcc99","3fc397a688b87ba8","3fc40846a1589495","3fc38e3e440228a5","3fc465dd00f02142","3fc25d9c55b3853f","3fc5ff4e00e1582a","3fc1e7309a1226b1","3fbe79f65ae61e35","3fbfdf2a6920c99e","3fbf089ba6c837ed","3fbc9a10afca7e82","3fcc69c7e750fcb1","3fcbd8e2ea31962f","3fcb5472365e0681","3fc816b294bf7995","3fc76759229bd1aa","3fc84c5edeeefa80","3fc6a197be0cfa23","3fc9852b3aa78abe","3fc60cefb0748bc8","3fc3b242048e3bf0","3fc509edcf9d87da","3fc259d5af1ca93f","3fc33589090eae3b","3fc3c8062273aa3e","3fc1f2a0be062c37","3fc24d4de946a4c1","3fc11d9427666386","3fc0b5d49b5c610c","3fbff6db0953eb6a","3fbd6ad9ab1d1df0","3fcdb30b234b3c5d","3fcb8b31d76defc2","3fca5336ee8a4514","3fc8a328db04e43c","3fc85c3776b63f4b","3fc872597225d5c2","3fcc49d26799925a","3fc4ac5015a7c7a9","3fc8d672bcadf9b9","3fc4852f01512948","3fc4e390ccb333d5","3fc2c0944b12feaf","3fc1c5de1874312c","3fc40d7c72c4d74e","3fc08000e5366a24","3fc0637db7a7be55","3fc19bc1f4e80ae2","3fc1d3208f6b7dcf","3fc042aded585acf","3fbf3ad697048c5d","3fccce43fd392479","3fcf258b0d11b6cc","3fd56b9547971652","3fc9ceb9a6ba0fd8","3fc8d81301a9c6be","3fc888f3650e330f","3fcab2fc3ea313cf","3fc6346ac9cfa646","3fc4bb37bc58dca7","3fc60f35cfa82560","3fc2fb06d0b694f8","3fc58519ff2d036f","3fc3b369a57a25f7","3fc2234899f3f630","3fc09b36616ed548","3fc3a887621bde14","3fbf6bd7b8b0a497","3fbfe85adc34f8b4","3fbe2c38b6211cde","3fbe60a85797d434","3fcdf104414eedc3","3fcbf0dbfc4143c6","3fced1035433ed97","3fc86dd35fae9d3c","3fca30a053d3822e","3fc6c8ddae094e3b","3fc5aa66223ff39d","3fc4ebcd963b6c44","3fc4a548e484a37f","3fc4078682a8cc4f","3fc280e993db6ffb","3fc2bc7d34f21a7c","3fc2516499871788","3fc284fd85ee8022","3fc0fca0fea9cde1","3fc541f6a6956eaa","3fc06c710d26f1fe","3fbfe914e2c7bee6","3fc0cf2ae30fc732","3fbeef217ad6a8ea","3fcc161bb4f49cb9","3fce73c21ae086b4","3fcaa4d2d4d74565","3fca8fa6200319e1","3fc80de5a0a4c348","3fc8795c35acb91f","3fc6fbda7049685c","3fc4fe3aa46dba84","3fc73f877f75e6a5","3fc3e5a6bca7d497","3fc3dde969d184bc","3fc333d9013e282c","3fc2409421797530","3fc103bb69f97e89","3fc077d3240916c2","3fc0eee26355faf1","3fc2671035939524","3fc000b6e73607b6","3fbda9b77041258f","3fbcdb75e4840a58","3fcc3b06253e13aa","3fcb1ec23bfbc3ac","3fc9f92c37910644","3fcd65de911509c1","3fcbe8dcb906de8d","3fc8666f9b29c5d0","3fc86cdc7026b1b0","3fc4f914c02697b9","3fc4f0c09d35c3fe","3fc338f1edd5cefa","3fc364fd22323b80","3fc27c8a1eb351a8","3fc1d01835cf6c73","3fc3560f2140b4e1","3fc271f74d4aef10","3fc1acc199f7447f","3fbf09b413b4e5c0","3fbf42eaa56c8830","3fbe59124660a1a7","3fbf5d571013d9de","3fccb9d0ee56af98","3fce79ffa838ba97","3fcfcd92dbb90af4","3fcc22eac78fcfd2","3fcb703542caeb03","3fc685f5e7cb1c8f","3fc94a99199f5900","3fc5730cac656de8","3fc45f7754b0b7f1","3fc47bc28a37d61a","3fc517ce3fc5006b","3fc2f876367f29cd","3fc27a78fe069eca","3fc29effb05bca37","3fc0632568409eb8","3fc0a02c47942a94","3fc4b8abe7418971","3fc038a16b092920","3fc0a56b2ece5988","3fbde8547cbd47c4","3fcdd3dc196337b8","3fcbe718dc55ad91","3fcc905e41539a16","3fc8936df089adb3","3fc8423c97bac3de","3fc7d4c19bef7c04","3fc99b3374d6d5f0","3fca9557a40e4344","3fca335dbc9f865a","3fc3d6371aaeb855","3fc3b0674d893d1b","3fc2832e50019b4d","3fc6ad1a74866790","3fc0d7e43d720672","3fc0f7fc81d61a66","3fc09b316cdf584b","3fc09081d7638379","3fbe9b16aa38f7bd","3fbe758e859aa0ed","3fbdb0bf5882b50e","3fccee995de0fd28","3fcc51abba7cc141","3fcd7a103d489c16","3fc8f9ba35cbb4c7","3fc7a515f93d2088","3fc87986a0c39cf9","3fc7ec75f1f22076","3fcae924b7b94a86","3fcc9d975a1a6bdb","3fc4274071fcbe4b","3fc4529a827714dd","3fc21d18a786235a","3fc2a399a3b99ea2","3fc2028491eda04c","3fc1d4578e97f6a4","3fc2a1ea588e1df6","3fbf42e4e411072e","3fc085d238acbddd","3fc7025cdf79a532","3fbf46f877f39662","3fccba3f6e17f55c","3fcd2df98e845208","3fcc4d5db98bc8a6","3fcad668f29b095e","3fc9153ea9eb8566","3fc71c9119f5cb91","3fc5bf0ee5e1f077","3fc8094f7639bfb6","3fc558e7027ffcb8","3fc3d7ac7feeeb53","3fc4a3b8830410c1","3fc3163d9bc87394","3fc489d28e9d8ff9","3fc1c83600b17a95","3fc287152339f772","3fc0345366373cf2","3fbfbf4d76cb3ccb","3fc13495d33c1a4b","3fbe37f5e7e6891e","3fbd1a60651775c9","3fcd37be31239f0c","3fcda4c86121a934","3fcfb1b5da4d45c8","3fc94eb64fb30122","3fc9918ef098dc5f","3fc757f255e6daa7","3fc6cf658c38a5be","3fc4b371f488a4af","3fc59091bcbfcaa0","3fc3e6cd314dd8cf","3fc3d24f7355687f","3fc37d7b7a6bb0de","3fc33b56f9ed9a0d","3fc119e5e8c90944","3fc29394400d1f9a","3fc00fcbac1772cc","3fbfd208f14716a3","3fc04fdab90cf4dc","3fbe5d843130e5c2","3fc07ab4e84ccf09","3fccd1c0ff337b96","3fccd3c8d7ad0e65","3fcb0e289b57a0f3","3fc8e078caa800af","3fcade768695d778","3fc974792628746b","3fca4e72a1cad64e","3fc55984d7921812","3fc45fc5ef113320","3fd06e7769cc4106","3fc4be6ade84afcc","3fc6a724de40b53f","3fc53cda07a7d57c","3fc57e0a97e43f54","3fcb972acae47126","3fc24e3b02eefe69","3fc06e04d48c30e5","3fc1f1d034351912","3fc0785eb4cda1d7","3fbce1bfc10460a1","3fcc62fba9c8c319","3fcb481ff26a8134","3fc91726a1e48254","3fc8e929c1c6be7c","3fd140a4d7d9220f","3fc66889c3b0ee39","3fc79bbf5af3320b","3fc51b29f2267a1c","3fcda114525b43db","3fc2d5f2e15a90f6","3fc855a4130ef2f8","3fc398a2b817a12c","3fc25048f21f628d","3fc1bd0c5ce4b76a","3fc0862a76493195","3fc18b91de7240f5","3fbfd44932bb688b","3fbf504720d6c250","3fc1c71d7c2098e7","3fbcb9d2d18a0df9","3fce1e5f8bb58aba","3fcd622c458e246c","3fd1b9b299211d02","3fcb517c9c86dbe4","3fc8ecb871a6a059","3fc6c54adec6346c","3fc576bf5dffd362","3fc58df43e41b09f","3fc441144b6423e3","3fc52f22855a54dd","3fc3aa0f14b8e4c3","3fc18925b9b1a276","3fc408c4678db995","3fc154036b35d9c2","3fc0c95aa070998c","3fc094b71d0fab09","3fbff27cca6141e8","3fbee1b86541a5a6","3fbfa242980054d9","3fbe14b54980978e"],
+        "var_gamma" : ["3fce054b552cb074","3fcafd080eaf98e2","3fca70825bad08d0","3fc9eebb661c2bd9","3fcf82d05901646d","3fcba8f0bdfb8168","3fc6854949d5c8a8","3fc58b0ba712f5a4","3fc3c37ae214ea24","3fc498292283c417","3fc2c2f63c44aa45","3fc99cbc11ae681d","3fc2f41a262ddcec","3fc27bab6bb802e2","3fc061fe474f03fa","3fc19c70cf44b396","3fc374958caec4ae","3fbec436b1c9abde","3fc357303c8afcad","3fbe48bbd0c60a84","3fcbcc138ac96888","3fcd385e90255398","3fcae1c74453fea0","3fc905fac3ecb39d","3fcbdcb54a97f196","3fc75af78d729c6b","3fc6ba5a408aa1cf","3fc6c24f07edd2e8","3fc79a3231517e8b","3fc3521306957144","3fc37b8ce7108c65","3fc7ecb13e1bfafc","3fc27bccb9551db4","3fc314442741ccfe","3fc16d948cfe5ce4","3fc2405c576b754f","3fc0e5938ec25a66","3fc015b19e2c39c5","3fbdf8a7d83a939a","3fbd8d74c74e65ec","3fcde8161d30ef7b","3fcd6e21617829dc","3fcb65465c0f9064","3fca4d1671fb2d2f","3fd01f2fecf8384c","3fc6a5e0c99285b5","3fc7c2398c453aed","3fc73e359cfc0b45","3fc60fd3f91b2e8e","3fc599f8c095fdac","3fc40964576038ed","3fc449846346871a","3fc5040466ad10d3","3fc149262758524c","3fc1ba68896a3bbd","3fc104740d548b64","3fc2632d53506180","3fbdc7190de52803","3fbed173c2590e34","3fc0bd49fc23bb21","3fcc94f2b3260513","3fd2b8287a2672d3","3fcb158818e33017","3fc8cfbe69cd9619","3fc85f09347a21dc","3fd401bf203babcb","3fc5998316749997","3fc4a2b61fcacd2b","3fc49083fbe2c89a","3fc384f1eab70602","3fc47fdd5defd4b1","3fc2472af9349f45","3fcad25727cc7d05","3fcb95124d94c119","3fc837f9a5d5b17c","3fc2d09c493254aa","3fc00d817703ecd1","3fbeb8fc59c83efc","3fbf2417daffa2e0","3fc157566805a5cb","3fcc7cdcccaa0f66","3fcf2b2aa74d1ed0","3fcb832f881c107c","3fc8b9160f24a4ef","3fd1b91e75b74c48","3fc70733c7fcfb9b","3fc8da049fed0091","3fc5952429653332","3fc4b9b9031679ac","3fc436d84de681b9","3fc301c3fd6bc495","3fc330a5a001fe01","3fc44c9dbaa7b6eb","3fc16ca829fa1b56","3fc11a64088a6374","3fc07696b40c1813","3fc03981101594ef","3fbf347a62d2997b","3fc3df9d2ae36903","3fbdc112d9935f1a","3fcd79f43b1b79c8","3fcb69e089da3cb3","3fcd3c7da11c8d0a","3fc907e48ae7a568","3fc92708ccfe9ee0","3fccb82e43a74093","3fc9e257fb519642","3fc689385b40899f","3fc57d77b2bf3b36","3fc3ac44522991e9","3fc805854f9fdf7c","3fc2c97513c86bf3","3fc2386f956e6de2","3fc4fc71566b45ab","3fc148eb3e663508","3fc0d9237730b173","3fbfcef8bd7d14b3","3fc01c02d4efe1bb","3fbdc439385c7c4f","3fbf9cd013f7672d","3fcd42bdbced449a","3fcb94bfe332dc6c","3fcd57d1048df62d","3fd9733e930ba5aa","3fc6c05b6cef085b","3fc8996ef2c43dcb","3fc7044e80df2c4b","3fc54e3655f15bfe","3fc772667aba86a6","3fc3756695c9a016","3fc46e0d35d62aa0","3fc2f304aa697667","3fc25dcbe4157033","3fc1391790a78dfb","3fc4e2f2a23ef26c","3fc12c9f852ec311","3fc094707b4bbdec","3fc09d85ba806c1c","3fbf05c08a2aed11","3fbcc48281ceb1c9","3fcc15c12bb56f89","3fca5cdba0d1ac73","3fd524996fdc2f2d","3fd4c1f458f55aa1","3fca6b9cdffae76e","3fc63fac041c3156","3fc6b79be3178b87","3fc660888d67265e","3fc7105c144ac242","3fc66666d2407377","3fc508d2e9669315","3fc43c95fdafe000","3fc47523ae75b47d","3fc2263825600e8d","3fc4289277038fac","3fc042d3aa5279f8","3fc074c1a7fe5b45","3fc0718a64506156","3fbe353473386746","3fbe1acf084d7dd4","3fcc9dbbae626e02","3fcc31b96c6a6b9f","3fca66d5bd1f25ee","3fc98ed0f1ccd436","3fc9931251c34eea","3fc9239825767508","3fc7c7931071f9ef","3fc516caadb1539a","3fc53dd98b555acc","3fc444b3d3ced0e2","3fc34b4f2d741aff","3fc271b4ee2c4366","3fcbb6db29afe28e","3fc256a2f7fc6a7d","3fc07bbf26387cdd","3fc2770a253ff714","3fc04eb26c07bc03","3fc088d9e1289fd6","3fc30d1d254093a1","3fc07413d7105500","3fccec30bd3c5de1","3fda9b7cdb2c1bdc","3fcb50979aeea1dc","3fcaa7e9859d5257","3fc7a23ca92f3725","3fd13c423911139c","3fc5c4a1df99aaad","3fc70bda01e21241","3fc8379d86180c77","3fc6b19398984f95","3fc2b4c9ed3ce7c5","3fc3129c2797199f","3fc7ba15bb2aafd0","3fc2e9be6baa93d2","3fc088a0fd93423e","3fc1023fdb736348","3fc05062b9408338","3fbe576560e9c9a7","3fbe2e85e64f9320","3fbd295b537457df","3fcb80bc0b49e9d9","3fcbb9cbeff979cc","3fcade8688c0b658","3fc8199dff17bec9","3fcad5677c4c8468","3fc7edc696f7758c","3fc5c202feeb1c12","3fc442c462b81dd7","3fc4b6e2fa6e9d77","3fc39e8b8939c371","3fc411d89bf74cff","3fc392894404a840","3fc47209232b6127","3fc261e3113f57a4","3fc60c1671270063","3fc1ed99a0ab8d2c","3fbe9acd8312ada2","3fbff0a7705334eb","3fbf14524f40b038","3fbcaadbb075fb9e","3fcc7074ebda60a5","3fcbe096a3a66a5c","3fcb5abb246d399e","3fc81fa86bd38de3","3fc770fb6d1cfbd9","3fc84f088ddaf871","3fc6af9e78a2a33f","3fc993194053233e","3fc6181db1b4f0dd","3fc3b63ccb79ded2","3fc50f8286906fbe","3fc261e15a463573","3fc340869bf25d74","3fc3d3aa8659866a","3fc1f8ecba2e05f6","3fc251d5de1116d9","3fc126d73fcd2e71","3fc0bff057cbc3ee","3fc00090c3206db7","3fbd7b349500c308","3fcdb854411e9fd6","3fcb97bfb740df24","3fca5a3d20916d1e","3fc8b2e324e80821","3fc86487c4bce911","3fc876afdf7d0152","3fcc4efe6e5ecb4d","3fc4b68bc532c249","3fc8dfef8c771e51","3fc48f9d06ed2a8e","3fc4f34e625c9954","3fc2c79ab0f87ffb","3fc1d1a723819d1a","3fc41c85fab54761","3fc08b9bd02140d6","3fc068487350a08d","3fc1aa6c39086f25","3fc1d0ab28117654","3fc0521b0ef5009c","3fbf4fcc5874c765","3fccd522c320d59b","3fcf331f4bc9c38b","3fd57360e890b9eb","3fc9d2d72c8ec058","3fc8e088bee8f382","3fc8892b7c6f2a9f","3fcabe0c60496455","3fc639a4e64cdb39","3fc4c13c681759e9","3fc620bfecfadf04","3fc2fea32274418d","3fc590e683a6fdfa","3fc3b5e26eef1c3c","3fc22949fa6e7fc2","3fc09a86c125b4dc","3fc3b20122f19d67","3fbf719d674512c1","3fbfe8f7f9c14964","3fbe47f8d30a693b","3fbe737f4db7f373","3fcdf999cb700155","3fcbf8ef98cc5ee5","3fced87f559c7d21","3fc875cbdca47071","3fca36d5cc48d23d","3fc6ca4bee68f55d","3fc5b108820fbf18","3fc4efb1df513155","3fc4ae9d82aedf35","3fc40f55ba04617b","3fc2883af394a9a2","3fc2c92aa495d72d","3fc260112133a9d4","3fc28955638042fe","3fc102c121ced148","3fc54459d1d776f2","3fc0706e1beae7ba","3fbffd2d50da7fcd","3fc0dbcbcd317e86","3fbef35cdfad0ba4","3fcc18f56e359a8f","3fce7cc8c0386b6c","3fcaaefb2c5d5305","3fca9aae39caeef2","3fc8178ade3cb5be","3fc883c8f9922923","3fc6fcc98d608139","3fc501cf56f26bdd","3fc74c8a8ecf8bf5","3fc3e8aa67710b94","3fc3e921deba8ef4","3fc33918bedd2dbd","3fc241b71f2f5508","3fc108200be85d78","3fc083190ed1d1b6","3fc0fdbbc6c958ee","3fc27873aaae0707","3fc0073b9a7cbfab","3fbdb192a6e0ee05","3fbcdb3c01fc5d02","3fcc47090a5de73a","3fcb21e965769b95","3fca0896c17f333a","3fcd614100ded845","3fcbf1354007d88e","3fc86dcbba70c570","3fc86dcfec4be36e","3fc5010ebaf6cd77","3fc4fd428de63686","3fc34185cf2960af","3fc36855d3b771e8","3fc27b85f4fca6a5","3fc1d8d90f060919","3fc35b3339317129","3fc27d5dde897e6f","3fc1b23265a399be","3fbf233b67e357d9","3fbf551b07ce0a1f","3fbe6f63a5b133e4","3fbf6395f635d4ec","3fccc1a917f6d19a","3fce7e255a5b5b90","3fcfddbf1812cee8","3fcc26fedbecfe88","3fcb7be4cf16a626","3fc68fe2b8e93c7b","3fc95fc93d24e72b","3fc580adf078bb40","3fc4685e9a25f7a9","3fc4869b8e62cfb4","3fc523eec68ed77e","3fc30474eceaa17e","3fc27d8243efccbb","3fc2a1eacbb45909","3fc06aa241bd103f","3fc0a000d132cc2b","3fc4b67784e0404d","3fc03c21b605362c","3fc0b50cdc7d864d","3fbdf6701e8023d5","3fcdd669e7440ffb","3fcbf38aa19d2374","3fcc941ce4f9df0a","3fc89be38ebad23e","3fc8461048173205","3fc7d3b020066b92","3fc9a27dd9b20dcc","3fca9ebae146af9c","3fca4318c7cbd95a","3fc3daf7a5a7dfdd","3fc3b32af31354ee","3fc28b994a09d952","3fc6bb014d7dd6a2","3fc0dbe8a1d7201d","3fc104b6dbb1e119","3fc0a3491f0558d4","3fc09d2a881e75ba","3fbea7dcecfae8a6","3fbe87d11a13eec9","3fbdbbfe3c5fe83a","3fcd01d1ce01417f","3fcc53456a42b130","3fcd7cdc3cba6164","3fc902d3cbf129bc","3fc7a593e5b15364","3fc880943c18440a","3fc7f2db2ab7a705","3fcafa9efe25ab55","3fcca25e987671b1","3fc4343d282cb6eb","3fc45c78eccd1f1e","3fc2290f43016aec","3fc2a72f6f486d36","3fc2094c90d06846","3fc1df245369fa03","3fc2b40263a59689","3fbf4e7cd8dc7ab6","3fc091ba14ebd6c3","3fc714432b8edf24","3fbf67a4a9aa2b4a","3fccbf566ff7f79e","3fcd37b6bd0a8b02","3fcc57c4707aae7f","3fcadc165c094b26","3fc91de51ac90acd","3fc7298a7001f152","3fc5ca47ab14d6c3","3fc81310d61989c5","3fc55b3eebe980f6","3fc3e58b3d434680","3fc4afd83fb2c5fd","3fc3209267246821","3fc4912abcdffb37","3fc1d35e2c96a61d","3fc29ad0eb273e56","3fc03d34267ea0fe","3fbfcdf4f8e85723","3fc139132efc5869","3fbe51831dd7534e","3fbd253a7a1ef180","3fcd3f5044350965","3fcdaa8f50d70ed9","3fcfbd33e7cfa095","3fc95fd6a59f9107","3fc99690a2ae3a63","3fc76596ef40910c","3fc6df373dd15435","3fc4b92c61a4a350","3fc5977e3cfdfde1","3fc3eff241502016","3fc3d8d179918218","3fc3886bd48ba2e7","3fc34def7c2ed211","3fc11fc7711b32dc","3fc29e2422142869","3fc0194bb864a246","3fbfe4dde0a1a23c","3fc056f5a55b78e3","3fbe723935f51d86","3fc078f829450e6a","3fcce1c81d4973f8","3fccd1d4dd7afb3e","3fcb19de74f88502","3fc8e4bc2da571b5","3fcae07bec6cbcc8","3fc97641168f8d6a","3fca5f9c1481ab28","3fc5601fbef6c59a","3fc469ca0d8648ff","3fd0791fb99d5462","3fc4bc80d870abc3","3fc6a96c00dd491d","3fc53636fc4d8e92","3fc57c85535e99b4","3fcba921bf46c8ac","3fc25c67887be1c5","3fc07722f3c30f9f","3fc1fc657480db33","3fc0842a5f2153a9","3fbce2fbc6fba89a","3fcc68d3e12c8862","3fcb50dec7760ae8","3fc9194280621723","3fc8f6f997b5bfcd","3fd143590b3430af","3fc6721928a1101e","3fc7a6c75d7be924","3fc52c66fdccc9f0","3fcdb3a2afb30e6e","3fc2d88940561df3","3fc866effaf86bb9","3fc39f871c83f254","3fc25bdc531fea97","3fc1c80124656c14","3fc08dc17934e282","3fc18bf479933c97","3fbfe0dfe29b02ea","3fbf583c24d611f9","3fc1c80bc5fcef48","3fbcd1442dee0c99","3fce29c56ea3b429","3fcd67ba5bf1b279","3fd1bbbb1b91f017","3fcb5ead6ac1f979","3fc8f8421faa9487","3fc6d589277d42f0","3fc581ac672c5545","3fc58fc3c5506c17","3fc443da40ee5563","3fc535dd17d439a7","3fc3b1be4cf4737b","3fc194759e6cb4f9","3fc412d6e7b875f4","3fc15a479a1bd155","3fc0cdf83c28a0aa","3fc0972bab5f3e48","3fbff52399b4384c","3fbeeeae9e072d82","3fbfc0ae634de746","3fbe31db5a2b0f0e"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [6]
+      }
+    },
+    "logistic/lfe-shifted/default" : {
+      "doubles" : {
+        "covariance" : ["3f74f5c3dca6e034","bf38e5b18188d45a","3f4eb16bbbcea150","3f735a1ae1819553","3f3927c9e543ca74","3f940c17a30ec1d5"],
+        "estimates" : ["3fdffdd38f575ccc","bfce6faf1f5738ac","3febcaa07f103c87"],
+        "gamma" : ["c0405114c89a516e","c04008c03850ddd4","c0408fe8f7f838e3","c040b09e8c4bf49b","c040815464c59235","c0403c4858a04514","c04069f65fee24ea","c0402c260b491d32","c0401560ab0d91d0","c040358bcfabe4a4","c0400d4c1f465736","c040715118183c85","c03fe8aa62df84bc","c040418e91b15344","c03fddc0e80a41aa","c040745babe6d882","c0401ce6a81cbb95","c03fccc84f1a3d76","c04025253ec85702","c040b160e2e461e9","c0404b277644be28","c040b3618d52afa4","c04037ed278b9909","c03f5367c8973991","c040de60d3003a10","c040734794dd84fe","c040359cfbd9137d","c04028b70ade998a","c04085c789e8a9d0","c0404c14c4023d82"],
+        "loglik" : ["c084c1a6d41d3692"],
+        "standard_errors" : ["3fb25016a7fbfa7a","3fb198aa72c6288b","3fc1e8df33c748c2"],
+        "var_case_mix" : ["3fdae279e7a05752","3fceb4f1cb1699c0","3fc8b5856d6ba47b","3fc3d36dd50cd99a","3fbed5a3d5158f6c","3fb8693d0f9b2662","3fb5c7b5e907eb7b","3fb32fa45f91f16f","3fd144fb37b018ad","3fc7e114d369026d","3fc2f6a56d4e302e","3fbf2675bca52a78","3fbb967f862a4b2d","3fb57df5e14daf3d","3fb5252a0c212b9f","3fd21cc03f29e613","3fc98434b9237e9f","3fc3772e613d6e99","3fbe65e9f693a5bd","3fbec116e523de6c","3fb66a24656b8fbe","3fb774b9428f7078","3fd3f6b5673098cb","3fcf7606bbe71666","3fc87303b1dda118","3fc02d62040c6f9a","3fbac066480f1115","3fb75bfc52ac804c","3fb5d81269733abe","3fd52100c909815c"],
+        "var_gamma" : ["4032a1dc4a062505","4032610c47c77eb3","40328df997ff7235","4032892d435e62a5","403280ece34656a8","40326b9448800c93","40327e68d0693196","40324bd489e4fe95","40326ca50f8cf3fa","40329453c0c63b0f","403259023ba46db8","403259d2ea88dc97","403250c157dd5ee8","40326cced1cdeb56","40323371fd6f8662","4032bebd5a60eaf7","40326f4c1228cb25","40324b2c2e773a02","4032406ca3538bab","40327ad0a69b443c","403273e78bcc6488","403261c9cbf9cffc","403292445131ebd9","40324a3b794d8e94","4032b052af40f744","40328a3b34f32e35","403257c5625c6618","40324791e98d1767","4032705ec4ef6abc","403297e9d5ce5bba"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [5]
+      }
+    },
+    "logistic/lfe-shifted/tight" : {
+      "doubles" : {
+        "covariance" : ["3f74f5c3dca6e035","bf38e5b18188d460","3f4eb16bbbcea15c","3f735a1ae1819553","3f3927c9e543ca6a","3f940c17a30ec1d5"],
+        "estimates" : ["3fdffdd38f575cd2","bfce6faf1f5738b5","3febcaa07f103c8a"],
+        "gamma" : ["c0405114c89a5172","c04008c03850ddd8","c0408fe8f7f838e6","c040b09e8c4bf49e","c040815464c59238","c0403c4858a04518","c04069f65fee24ee","c0402c260b491d36","c0401560ab0d91d4","c040358bcfabe4a7","c0400d4c1f465739","c040715118183c88","c03fe8aa62df84c3","c040418e91b15347","c03fddc0e80a41b1","c040745babe6d886","c0401ce6a81cbb98","c03fccc84f1a3d7d","c04025253ec85706","c040b160e2e461ec","c0404b277644be2b","c040b3618d52afa7","c04037ed278b990c","c03f5367c8973999","c040de60d3003a13","c040734794dd8502","c040359cfbd91380","c04028b70ade998e","c04085c789e8a9d4","c0404c14c4023d85"],
+        "loglik" : ["c084c1a6d41d3692"],
+        "standard_errors" : ["3fb25016a7fbfa7a","3fb198aa72c6288b","3fc1e8df33c748c2"],
+        "var_case_mix" : ["3fdae279e7a05759","3fceb4f1cb1699b9","3fc8b5856d6ba47b","3fc3d36dd50cd994","3fbed5a3d5158f68","3fb8693d0f9b2662","3fb5c7b5e907eb80","3fb32fa45f91f16f","3fd144fb37b018ac","3fc7e114d3690270","3fc2f6a56d4e3031","3fbf2675bca52a71","3fbb967f862a4b30","3fb57df5e14daf3e","3fb5252a0c212b9e","3fd21cc03f29e616","3fc98434b9237ea4","3fc3772e613d6e98","3fbe65e9f693a5bd","3fbec116e523de63","3fb66a24656b8fbe","3fb774b9428f706f","3fd3f6b5673098c9","3fcf7606bbe71652","3fc87303b1dda10d","3fc02d62040c6f9c","3fbac066480f1115","3fb75bfc52ac804b","3fb5d81269733ac6","3fd52100c909815d"],
+        "var_gamma" : ["4032a1dc4a062507","4032610c47c77eb4","40328df997ff7236","4032892d435e62a6","403280ece34656a9","40326b9448800c95","40327e68d0693197","40324bd489e4fe95","40326ca50f8cf3f9","40329453c0c63b10","403259023ba46db8","403259d2ea88dc98","403250c157dd5ee9","40326cced1cdeb57","40323371fd6f8662","4032bebd5a60eaf8","40326f4c1228cb25","40324b2c2e773a04","4032406ca3538bac","40327ad0a69b443d","403273e78bcc6489","403261c9cbf9cfff","403292445131ebda","40324a3b794d8e94","4032b052af40f742","40328a3b34f32e35","403257c5625c6619","40324791e98d1769","4032705ec4ef6abd","403297e9d5ce5bbc"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [6]
+      }
+    },
+    "logistic/synthetic-a" : {
+      "doubles" : {
+        "covariance" : ["3f4a27fd0175c0aa","bf0fe1f35559b805","3f044a1c50998227","3f47a521af2a47ea","bee25f9e65170edc","3f48ad69c1e5d55c"],
+        "estimates" : ["3fe09a5602b7b315","bfd3b4f08cc54dec","3fcafdf3de4bb8fe"],
+        "gamma" : ["3fa894731dc07f12","bfc1321681962309","bfbdeb2b0df69ce3","bff5694c599f4db3","bfcd4688be6b628d","bff0863922c808c3","bfde67ed5039b435","bffc886ce3ed5b7d","bff5abecf5211e5f","bfe9924476a6878b","bff1559c3297fdbf","3ff48fc4ba43941b","bfcc99afbbf4756b","bfde592f8ecf009b","3fe3bce9c510acf1","3feab47d3af55237","3ff003ee5d93b493","bfe4f527b5ed5cd1","3fff0e57befb34f7","3fee344d7823bde5","bfe3a12310726408","bffeafb291b3005e","bfeaf625200ba4dd","bfdf85722bef09f5","bff98462073d2f34","bfceffce2da616b0","bfdde6aad56b8fea","bfe7592c5935751f","bfe4f77575404975","bfe634305ba8f106"],
+        "loglik" : ["c0b00cf1e22a9cbd"],
+        "standard_errors" : ["3f9cee513b9beaf6","3f9b81d25fc68c69","3f9c19e74ed3d209"],
+        "var_case_mix" : ["3f941b29a17a4ce8","3f92d6ea0fd81657","3f926256279167ae","3f99be9ede7e0e77","3f92301503176970","3f96c1ab9468cb4c","3f93dd7502a17d74","3fa05c67043c2911","3f99ecb71b3dbc78","3f960a97a56de827","3f9831495052b771","3f9826c8610d9abf","3f91fd7dad406e13","3f948ed492b6ab07","3f939e95c670cc13","3f94752be954ac3b","3f95c8510d96f5b9","3f97aaef49392e80","3fa24df2f721b85a","3f95850869d218ff","3f96ad12a7bf86e4","3fa268b107b6497a","3f9533e167cdd443","3f92765b466557f0","3fa13f704838da03","3f930d0ebfe91704","3f92f886fe045006","3f94cc9dabf4ea27","3f937c6ab68e970e","3f94da67f766851a"],
+        "var_gamma" : ["3f94199d34cc5170","3f92d55620339b59","3f9261a2501c2189","3f99bec571a20848","3f922ffb26ebf9fc","3f96bf43e702fe17","3f93dd0d782e4be9","3fa05c2aab1ae05a","3f99ec158dc1fcab","3f9609c4166230cb","3f982f25e51a7222","3f98291d5bad74b7","3f91ff845df926f0","3f9491c75983e18d","3f93a2e8a403e8b1","3f9474b681f854ac","3f95ca29107b6f42","3f97ac403fa99330","3fa24e4f849f1e47","3f95866ad7632fe8","3f96ac11235daccf","3fa2689b4a796412","3f9531ac65fc57de","3f9275ab24580c2e","3fa13eaa985caa38","3f930cbf366caad4","3f92f8a056bfcce3","3f94cc13d0efd7d5","3f9379eb6d2bc96b","3f94d98c04422699"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [6]
+      }
+    },
+    "logistic/synthetic-b" : {
+      "doubles" : {
+        "covariance" : ["3f5f02f0ca3660e3","bf30809440d0eaea","3f1f5a1f279181d8","3f221a79f2290829","3f7ea7d6f1b1a077","bf1bd7274e9d4b26","bf1ecf3cf4ba33e6","3f5cd1441fb50dfe","bf18482c2f524074","3f84ee1cef0971d5"],
+        "estimates" : ["3fdcf771f117d3eb","bfe3c34750da30a0","3fcfd71f2255117c","3fdabc4ec31c1ebf"],
+        "gamma" : ["3fe5fa98a6e04778","3f81364cba5de681","bfe8b6c4701598bf","c000c975435455fb","bfdfe9e2c67862cf","3fd57125c92aa308","3fa3530134aa865f","c024b2e5147dbac0","bfe8583163295c15","bfd6d452fc5ce70e","bfe05ef7b6f7ec98","bfd5e4f22311c8f3","bff135058a076478","bfdcd464dab809a5","bff5232b7b8e3c78","bfdf492d7ec8ce6f","3fde2a859f8cd645","bfb64a119a2b8f73","3fc999f3f405379c","bfe3de1f02821396","bfe0b128bbd9e460","bfee34cff92e4785","bfeabd472e1a259a","3fd681e1df74ba4c","3fce8308437d72d6","3fbc67b3eb358d07","3fd8b0397d033ebd","bfe200fdc70533b6","bfd5ae21771a32a8","3fcbc1152adae64c","bff0ee265a6f4011","bfedeaff089f279d","3fd55eabb0657e18","3fd6da6a1514d0b4","bfed869125e0b95e","bfa6d073f541f2c4","bfd5cd3da53bd4da","3fe14177fa8b38c7","3fce1ce578713430","bff867c8e8339815","3fc71a94774d4946","bfc38154931048b8","bff54b27395ca990","bff189cf67887508","3fb13c00088469be","bff9fb37524d14cb","bff1acae7e904e26","bfde02538738aa68","3fceace3fe99b599","3fc8f16ae5034bbc"],
+        "loglik" : ["c09b3ba8f90e7c76"],
+        "standard_errors" : ["3fa6467267fc86d9","3fb625a255fbf5e1","3fa579065b425fd9","3fb9e13aac7d93d5"],
+        "var_case_mix" : ["3fb3733b94ab80e8","3fb3149688a5a70d","3fb6570e8a3a4823","3fc9133e010d65f9","3fb4bd7f4d5f1528","3fb36f529454ad51","3fb286589a62d8b1","407feee884678b3a","3fb57004a4830174","3fb348461131a2cf","3fb3f05c1d8398d3","3fb36720c9584989","3fb861834109db7c","3fb43e03e0d6c090","3fbc12ad7fbb8918","3fb4b12c93ce12c6","3fb3f1ef3f6fbc24","3fb273b203be5240","3fb2ad88b681cc40","3fb4dccdb333be1e","3fb48e7629ad011b","3fb7ae5cf5fbfdb8","3fb68859227bc865","3fb2e58662ca9ef0","3fb269a8b1206a7a","3fb2429094c4a80e","3fb2bb83dab0ba34","3fb48dfbd5eeff3f","3fb3679e9c2bd653","3fb24ef9f9d75d4c","3fb9b6849889fa6d","3fb770125de8ab52","3fb2ee399f986d69","3fb26dc8d670588b","3fb66ea8d9066193","3fb3123042bf5a2e","3fb39f92ed25e499","3fb338998a7a881e","3fb2eadeb1c746dc","3fc0034a17a208d2","3fb2a87d94ddbb02","3fb2bbfcd771e8ef","3fbc503991258a8c","3fbafd080176db35","3fb29f6c09c7fed0","3fc17185f1643319","3fba3d6f715f1b5d","3fb41f0e25349fdb","3fb299749e948e3e","3fb2cb45181365d4"],
+        "var_gamma" : ["3fb40e2adbfaed28","3fb381768c7ffbe8","3fb6997e683a8b9a","3fc929223d52a5e7","3fb509c7cb0a4e5e","3fb39fff11131365","3fb2ea8e0a597abf","407feeeb38f5c0aa","3fb5bd6b21192873","3fb37ed4f9e5e30d","3fb420089d1ecaa8","3fb39de5f22a67af","3fb8a73db7618ad4","3fb4b6b650457b84","3fbc4e2a5cc7ae44","3fb537d011dec870","3fb4601c7a5be367","3fb2f5d866c31fe2","3fb2ffac82931113","3fb52334faf800f8","3fb4fc84c2df08a1","3fb82d47b5c53e51","3fb6d7bfe7333f34","3fb361815987c215","3fb2c2b8c1b2f127","3fb28c2ab4309cbf","3fb31c89eb84741c","3fb51865120d0d9b","3fb3ce3508bc9c56","3fb28d20e56eb89c","3fb9d316c2e3bf80","3fb7e4d1dccc64f9","3fb34ceccf5d8971","3fb2dead697f98ee","3fb696be5053b306","3fb3544e42278c84","3fb3e7c85dab4d0c","3fb3aa21a8782557","3fb388adc27faee9","3fc02cb60c92020d","3fb32d3a7751c921","3fb32fa4718ed8bc","3fbc8e5b6b568d7b","3fbb66acfb2e1228","3fb2fc0db8ab0fe6","3fc1a6407770b622","3fba9347c119471d","3fb47241f56ec90d","3fb2daaa7dacf220","3fb2e2bbf099ff02"]
+      },
+      "integers" : {
+        "at_bound" : [0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        "converged" : [1],
+        "iterations" : [10]
+      }
+    }
+  }
+}

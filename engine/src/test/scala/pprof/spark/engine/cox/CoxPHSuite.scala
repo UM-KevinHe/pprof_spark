@@ -5,7 +5,7 @@ import scala.jdk.CollectionConverters._
 import com.fasterxml.jackson.databind.JsonNode
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.functions.{col, lit, when}
-import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StructField, StructType}
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StructField, StructType}
 
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.data.{InputProblem, InvalidInputException}
@@ -17,64 +17,15 @@ import pprof.spark.testkit.{Fixtures, SparkSuite, Tolerances}
   */
 class CoxPHSuite extends SparkSuite {
 
-  private val cases =
-    Seq(
-      "tiny-ties",
-      "rc-unstratified",
-      "rc-stratified",
-      "rc-stratified-weights-offset",
-      "lt-stratified",
-      "lt-weights-offset"
-    )
-  private val methods = Seq[Ties](Ties.Breslow, Ties.Efron)
+  private val cases = CoxFixtures.Cases
+  private val methods = CoxFixtures.Methods
 
   private def tight(ties: Ties) = CoxOptions(ties = ties, eps = 1e-11, maxIterations = 100)
 
-  private def info(name: String): JsonNode = Fixtures.json(s"cox/$name/case.json")
-
-  private def flag(name: String, key: String): Boolean =
-    Option(info(name).get(key)).exists(_.asBoolean)
-
-  private def features(name: String): Seq[String] = {
-    val node = info(name).get("features")
-    (0 until node.size).map(i => node.get(i).asText())
-  }
-
-  private def spec(name: String): CoxSpec =
-    CoxSpec(
-      "time",
-      "event",
-      features(name),
-      if (flag(name, "stratified")) Some("stratum") else None,
-      Some("id"),
-      if (flag(name, "weighted")) Some("weight") else None,
-      if (flag(name, "offset")) Some("offset") else None,
-      if (flag(name, "truncated")) Some("entry") else None
-    )
-
-  private def frame(name: String, reverse: Boolean = false): DataFrame = {
-    val table = Fixtures.csv(s"cox/$name/input.csv")
-    val extra = if (table.columns.contains("entry")) Seq("entry") else Seq.empty
-    val names = Seq("id", "stratum", "time", "event", "weight", "offset") ++ extra ++ features(name)
-    val index = names.map(table.columns.indexOf(_))
-    val rows = table.rows.map { r =>
-      Row.fromSeq(
-        Seq[Any](r(index(0)).toLong, r(index(1)).toLong, r(index(2)), r(index(3)).toInt) ++
-          index.drop(4).map(r(_))
-      )
-    }
-    val schema = StructType(
-      Seq(
-        StructField("id", LongType, nullable = false),
-        StructField("stratum", LongType, nullable = false),
-        StructField("time", DoubleType, nullable = false),
-        StructField("event", IntegerType, nullable = false),
-        StructField("weight", DoubleType, nullable = false),
-        StructField("offset", DoubleType, nullable = false)
-      ) ++ (extra ++ features(name)).map(StructField(_, DoubleType, nullable = false))
-    )
-    spark.createDataFrame((if (reverse) rows.reverse else rows).asJava, schema)
-  }
+  private def features(name: String): Seq[String] = CoxFixtures.features(name)
+  private def spec(name: String): CoxSpec = CoxFixtures.spec(name)
+  private def frame(name: String, reverse: Boolean = false): DataFrame =
+    CoxFixtures.frame(spark, name, reverse)
 
   private def reference(name: String, source: String, ties: Ties): JsonNode =
     Fixtures.json(s"cox/$name/$source.json").get(ties.name)

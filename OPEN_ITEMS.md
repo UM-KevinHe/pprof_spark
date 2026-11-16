@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-11-16, round 154. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-11-16, round 155. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -112,7 +112,7 @@ decision is approved.
 | OI-104 | `CoxStratum.add` zeroes the Efron buffer `tied2` (p(p+1)/2 doubles) at every distinct time, Breslow fits included | Performance step 2, bit-preserving |
 | OI-105 | Every logistic pass builds a γ table on the driver and broadcast-joins it to the cached blocks (`withGamma`), copying each block once more per pass | Measured in step 0; removed by step 5's profile method, or replaced if SerBIN stays the default |
 | OI-106 | Unexplained: a 30-worker Cox run at 5M rows and 100 features (round 81) was slower than one pprof_py thread. By arithmetic an evaluation costs about 80 CPU-seconds spread over the cluster against about 26 s on one pprof_py thread; a one-core profile puts three quarters of the fit's CPU in the Newton passes (plan §2.5) | Not reproduced on `main`: `02_scale` fitted Cox at 5M rows and 100 features in 44 s on 24 cores (2026-11-16). Per-call-site attribution comes with the rerun of points 1 and 2 (OI-110) |
-| OI-107 | NUM-2 relies on golden runs that were never listed | Defined in performance plan §6.1 (D-75); `GoldenRunsSuite` and its manifest in step 0 |
+| OI-107 | NUM-2 relies on golden runs that were never listed | Closed (round 155): `GoldenRunsSuite` and `golden/runs.json`, 40 runs (plan §6.1) |
 | OI-108 | PROJECT_CONTEXT §6.13's operation tags or job descriptions were never built, so Spark jobs cannot be attributed to model operations | Step 0: `SparkSession.addTag` on every pass of both models (Connect-compatible) |
 | OI-109 | Cox and logistic validation run one aggregate mixing `countDistinct` on the row identifier with about 2p + 10 counts, which Spark plans by grouping every count on the row identifier (confirmed with `explain`): n keys of 2p + 10 counters, shuffled. In a one-core profile it took 35% of a logistic fit's wall time | Measured in step 0; then the duplicate check split from the counts (step 0b), which changes no floating-point result |
 | OI-110 | On Databricks, every job is described by the running cell's code, so the first `03_perf` reports put all of a fit's executions under one call site | Round 152 sets the job description and call-site properties aside during a run and restores them (tested with a simulated notebook); to confirm on the next cluster run |

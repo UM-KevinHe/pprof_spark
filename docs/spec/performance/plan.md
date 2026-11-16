@@ -291,7 +291,12 @@ For each run, `GoldenRunsSuite` records the bit patterns of the log-likelihood, 
 Schur complement, the covariance, the provider effects and variances, and the iteration and halving counts. These
 go into a committed manifest, and the suite fails on any difference.
 
-A negative control perturbs one recorded value by one ulp and checks that the comparison fails. CI runs the suite on
+A negative control perturbs one recorded value by one ulp and checks that the comparison fails.
+
+Built in round 155: `GoldenRunsSuite` (engine tests) and its manifest, `engine/src/test/resources/golden/runs.json`.
+The manifest holds 40 runs: the 6 Cox cases × 2 tie methods × default and tight options, the 6 logistic cases ×
+default and tight, and the 4 synthetic cases. The suite rewrites the manifest when the environment variable
+`PPROF_GOLDEN_WRITE` names its path. CI runs the suite on
 both JDKs and under Spark Connect. If R2 turns out not to be bitwise there, the suite keeps one manifest per platform
 and the finding is recorded.
 
@@ -312,7 +317,7 @@ all four of the following:
      log and approved.
 3. **R0 for the new code.** Bits are identical across partition counts and repeated runs, with the one-ulp
    negative control.
-4. **Re-baselining.** The new manifest replaces the old in the same commit, and the evidence log reports the
+4. **Re-baselining.** The new manifest, written with `PPROF_GOLDEN_WRITE`, replaces the old in the same commit, and the evidence log reports the
    largest difference for each quantity.
 
 A change of iterates, as in step 5, is compared at convergence:

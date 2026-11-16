@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-16, round 154.
+Updated 2026-11-16, round 155.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -185,7 +185,8 @@ through round 100 as the maintainer reported.
 | 151 | `00_build` packages bench; the notebook `03_perf` runs each baseline point from the workspace (`PerfJob.runLine`); the runbook and guide updated | Merged (d0b9bd5) |
 | 152 | Performance harness after the first cluster runs: executions keep their call sites under a notebook, the executors' heap peak without the driver, the driver's live heap, executors at the end, no master address or paths in reports; `02_scale` refuses a row from a previous fit; first cluster results recorded | Merged (a9fd3c2) |
 | 153 | D-76 proposed (measure on the production cluster as it is: autoscaling, Runtime 17.3 with Photon; exits on CPU per row, bytes and memory; Spark 4.0 supported); the recorder integrates core-seconds and records executor range and cache memory and disk; `03_perf` shows CPU per row; the engine suites pass on Spark 4.0.0 | Merged (546d737) |
-| 154 | D-76 approved and implemented: CI's Python job also runs on PySpark 4.0.0; the package requires `pyspark>=4.0,<4.2`; D-02 amended; the plan, README and guides updated | Delivered as a patch |
+| 154 | D-76 approved and implemented: CI's Python job also runs on PySpark 4.0.0; the package requires `pyspark>=4.0,<4.2`; D-02 amended; the plan, README and guides updated | Merged (7da13d2) |
+| 155 | Performance step 0: `GoldenRunsSuite` and its manifest of 40 golden runs (NUM-2, plan §6.1), with an R0 check of the multi-block runs and a one-ulp negative control; `CoxPHSuite` uses `CoxFixtures` | Delivered as a patch |
 
 ## Decisions and spikes
 
