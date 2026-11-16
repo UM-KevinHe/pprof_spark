@@ -13,7 +13,7 @@ force.
 | ID | Decision | Status | Outcome or recommendation |
 |---|---|---|---|
 | D-01 | Supported compute tiers for v1 | Approved (delegated), 2026-10-06 | Classic Spark only; `engine` kept Connect-compatible (PLAT-2) and tested under Spark Connect (T8) |
-| D-02 | Target and secondary runtimes | Approved (delegated), 2026-10-06 | Spark 4.1.0, Scala 2.13.16, Java 17 bytecode: one JAR for open-source Spark 4.1.x and Databricks Runtime 18 LTS; tested on open-source Spark only (D-14) |
+| D-02 | Target and secondary runtimes | Approved (delegated), 2026-10-06 | Spark 4.1.0, Scala 2.13.16, Java 17 bytecode: one JAR for open-source Spark 4.1.x and Databricks Runtime 18 LTS; tested on open-source Spark only (D-14); amended by D-76 (2026-11-16): Spark 4.0.x and Databricks Runtime 17.3 LTS are supported too, and CI runs the JARs on PySpark 4.0.0 |
 | D-03 | Python access in v1 | Superseded by D-31, 2026-10-07 | Was: none in v1; revisit after Phase 1d. Round 25 first recorded the maintainer's "Continue" as no change; he then chose py4j wrappers (D-31) |
 | D-04 | Design envelope and performance targets | Approved (delegated), 2026-10-06 | §2.3 ranges as planning assumptions; targets set after the first benchmarks; OI-02 resolved before large-p work |
 | D-05 | pprof_py pin and reference versions | Approved (delegated), 2026-10-05 | pprof_py v0.7.0, commit 9320766 (see below) |
@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Proposed, round 153)
+### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Accepted: approved by the maintainer, 2026-11-16)
 
 The maintainer cannot change the cluster's autoscaling or runtime (2026-11-16). The cluster runs Databricks Runtime
 17.3 LTS with Photon (Spark 4.0.0), autoscales, and gives its JVM executors about 2.2 GB of heap.
@@ -128,6 +128,9 @@ The maintainer cannot change the cluster's autoscaling or runtime (2026-11-16). 
   sandbox, the 4.1-compiled classes pass `CoxPHSuite` (89), `LogisticFESuite` (6) and `PerfJobSuite` (8) on Spark
   4.0.0's jars (round 153).
 
+Approved as proposed on 2026-11-16. Implemented in round 154: the CI leg on PySpark 4.0.0, the Python package's
+requirement widened to `pyspark>=4.0,<4.2`, and the plan and guides updated.
+
 ### D-75: Performance phase plan for Cox and logistic fixed effects (Accepted: approved by the maintainer, 2026-11-13)
 
 `docs/spec/performance/plan.md`, following the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`).
@@ -147,7 +150,8 @@ The maintainer cannot change the cluster's autoscaling or runtime (2026-11-16). 
 - Phase 4 is paused at round 148 (plan §8).
 - Profile-likelihood Newton is built as an option; making it the default is a later decision on step 5's measurements.
 
-Approved as proposed on 2026-11-13.
+Approved as proposed on 2026-11-13. Amended by D-76 (2026-11-16): the exits are measured on the production cluster as
+it is and judged on CPU per row, bytes and memory.
 
 ### D-74: Slice 4d-3 specification (Accepted: approved by the maintainer, 2026-11-05)
 

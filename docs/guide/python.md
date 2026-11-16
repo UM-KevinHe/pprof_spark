@@ -6,7 +6,7 @@ passes arguments and results, so a fit from Python equals the Scala library's bi
 
 ## Requirements
 
-- A **Classic** PySpark 4.1 session with the pprof_spark JARs (`numerics`, `engine`, `app`) on its
+- A **Classic** PySpark 4.0 or 4.1 session with the pprof_spark JARs (`numerics`, `engine`, `app`) on its
   classpath, for example through `spark.jars`. On Databricks: classic compute in dedicated access
   mode with the JARs installed as libraries; standard (shared) access mode is expected to refuse
   py4j calls into library classes (to be checked on the maintainer's workspace, OI-53).

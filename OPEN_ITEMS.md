@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-11-16, round 153. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-11-16, round 154. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -117,4 +117,4 @@ decision is approved.
 | OI-109 | Cox and logistic validation run one aggregate mixing `countDistinct` on the row identifier with about 2p + 10 counts, which Spark plans by grouping every count on the row identifier (confirmed with `explain`): n keys of 2p + 10 counters, shuffled. In a one-core profile it took 35% of a logistic fit's wall time | Measured in step 0; then the duplicate check split from the counts (step 0b), which changes no floating-point result |
 | OI-110 | On Databricks, every job is described by the running cell's code, so the first `03_perf` reports put all of a fit's executions under one call site | Round 152 sets the job description and call-site properties aside during a run and restores them (tested with a simulated notebook); to confirm on the next cluster run |
 | OI-111 | `02_scale` appended a row from the previous run's fit when a fit did not complete: three rows on 2026-11-16, one of them an apparent failure to recover the truth at 200 features | Round 152 makes the notebook refuse such a row; why those three fits did not complete is not known |
-| OI-112 | Photon clusters leave the JVM executors a small heap (2.2 GB on 16 GB workers in the 2026-11-16 runs), while pprof_spark's passes run in the JVM; those runs also autoscaled and used Runtime 17.3 (Spark 4.0) rather than 18 | The maintainer cannot change autoscaling or the runtime (2026-11-16). D-76 (proposed): measure on that cluster with exits on CPU per row, bytes and memory; support Spark 4.0 and Runtime 17.3 (the engine's suites pass on Spark 4.0.0's jars), with a CI job on pyspark 4.0.0 after approval |
+| OI-112 | Photon clusters leave the JVM executors a small heap (2.2 GB on 16 GB workers in the 2026-11-16 runs), while pprof_spark's passes run in the JVM; those runs also autoscaled and used Runtime 17.3 (Spark 4.0) rather than 18 | Decided by D-76 (2026-11-16): the cluster as it is, exits on CPU per row, bytes and memory; Spark 4.0 and Runtime 17.3 supported, with CI's Python job on PySpark 4.0.0 (round 154) |

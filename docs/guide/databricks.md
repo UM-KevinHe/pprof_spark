@@ -14,9 +14,9 @@ workspace files, from which the cluster installs the JARs.
 
 ## Requirements
 
-- **Classic compute in dedicated (single-user) access mode**, on Databricks Runtime 18 (Apache Spark
-  4.1). The Python wrappers call the JARs through py4j, which standard access mode blocks and Spark Connect
-  and serverless compute do not offer ([python.md](python.md), ADR-0009).
+- **Classic compute in dedicated (single-user) access mode**, on Databricks Runtime 17.3 LTS or 18 (Apache
+  Spark 4.0 or 4.1). The Python wrappers call the JARs through py4j, which standard access mode
+  blocks and Spark Connect and serverless compute do not offer ([python.md](python.md), ADR-0009).
 - **Outbound access from the cluster to github.com and repo1.maven.org**, for `00_build` only: it
   downloads sbt from GitHub and the project's dependencies from Maven Central. The notebook checks both
   before it starts.

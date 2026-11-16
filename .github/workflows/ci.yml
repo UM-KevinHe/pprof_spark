@@ -109,11 +109,16 @@ jobs:
           if-no-files-found: warn
 
   python:
-    # The py4j wrappers (ADR-0009): their tests run in PySpark 4.1.0, local Classic mode, against
-    # the JARs this commit builds.
-    name: Python wrappers (PySpark Classic)
+    # The py4j wrappers (ADR-0009): their tests run in local Classic mode against the JARs this
+    # commit builds for Spark 4.1, on PySpark 4.1.0 and on 4.0.0, the Spark of Databricks Runtime
+    # 17.3 LTS (D-76), so that a use of an API missing from 4.0 fails here.
+    name: Python wrappers (PySpark ${{ matrix.pyspark }} Classic)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        pyspark: ["4.1.0", "4.0.0"]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -129,8 +134,10 @@ jobs:
         shell: bash
         run: |
           python3 -m venv .venv
-          .venv/bin/pip install pyspark==4.1.0 pytest==8.4.2
+          .venv/bin/pip install pyspark==${{ matrix.pyspark }} pytest==8.4.2
           .venv/bin/pip install -e python
+          # The package's requirement must leave the chosen PySpark in place.
+          .venv/bin/python -c "import pyspark; assert pyspark.__version__ == '${{ matrix.pyspark }}', pyspark.__version__"
           # Absolute paths: the tests run from python/, and Spark resolves relative spark.jars entries
           # against the JVM's working directory (rounds 30 to 56 failed this way).
           export PPROF_SPARK_JARS=$(ls "$PWD"/numerics/target/scala-2.13/pprof-spark-numerics_2.13-*.jar \

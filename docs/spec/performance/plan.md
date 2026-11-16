@@ -1,6 +1,6 @@
 # Performance phase plan: Cox and provider fixed-effect logistic regression at scale
 
-Status: **approved** as D-75 on 2026-11-13 (proposed in round 149). The plan follows the algorithmic feasibility study
+Status: **approved** as D-75 on 2026-11-13 (proposed in round 149), and amended by D-76 on 2026-11-16. The plan follows the algorithmic feasibility study
 (`docs/reviews/algorithmic-feasibility-2026-11.md`, read at round 139) and a reading of the code at round 148
 (`303ae11`), recorded in §2. Phase 4 is paused while this phase runs (§8).
 
@@ -13,8 +13,8 @@ No cluster measurement of the current `main` exists yet.
 
 ## 1. Goal and constraints
 
-`CoxPH` and `LogisticFE` must fit tens of millions of rows at about 180 features on the standard cluster: a 32 GB
-driver and 30 workers of 32 GB. A larger driver must not be required.
+`CoxPH` and `LogisticFE` must fit tens of millions of rows at about 180 features on the production cluster as it is (D-76): Databricks Runtime 17.3 LTS with Photon, autoscaling, and JVM executors
+with about 2.2 GB of heap; Spark 4.0 and 4.1 are both supported. A driver larger than 32 GB must not be required.
 
 Kept unchanged:
 - **Cox:** Breslow and Efron ties, strata, start-stop data and left truncation, weights, offsets, and the
@@ -25,7 +25,7 @@ Kept unchanged:
 - **Architecture:** ARCH-2, so engine code uses Dataset operations only, with no RDD and no `SparkContext`, and
   passes `scripts/check-engine-api.sh`; Spark Connect compatibility.
 
-The phase ends when both models fit 100 million rows at 180 features and 8,000 providers on the standard cluster.
+The phase ends when both models fit 100 million rows at 180 features and 8,000 providers on the production cluster.
 The bytes collected to the driver per pass must not depend on n, and the three checks of §6.4 must pass at every
 grid point that is run.
 
@@ -173,7 +173,7 @@ reports any executor time it cannot attribute.
 |---|---|---|---|---|
 | 0 | Harness, data generators, golden manifest, operation tags; baseline of `main` | None: tags change no bit | Per call site: wall time, CPU, passes, bytes to the driver per pass, driver heap peak, shuffle bytes, executor memory; both models at 5M and 20M rows | 2 |
 | 0b | Only if step 0 calls for it (§3, item 4) | Bit-preserving | Those call sites' share of wall time | 0 to 2 |
-| 1 | Executor-side reduction in fixed groups; block growth retired | Bit-preserving where G = 1; summation order elsewhere (§6.3) | Bytes to the driver per pass flat from 5M to 100M rows; 100M rows at 180 features fits; R0 across partition counts | 2 |
+| 1 | Executor-side reduction in fixed groups; block growth retired | Bit-preserving where G = 1; summation order elsewhere (§6.3) | Bytes to the driver per pass flat from 5M to 100M rows; 100M rows at 180 features fits; R0 across partition counts; peak task memory and the share of GC at 50M rows (D-76) | 2 |
 | 2 | Chunked compensated accumulation: Cox S₂ and per-time terms; logistic pass A, variance and co-moment passes; the Breslow buffer | Summation order | CPU per row per pass against step 0; the re-baselining evidence (§6.3) | 2 |
 | 3 | Cox weighted-Gram information with Efron ties, entry times, weights and offsets: specification, fixtures, build; ℓ-only halvings | Summation order | Cox CPU per row; parity at the three levels | 3 |
 | 4 | Cox per-time aggregates for unstratified fits and oversized strata on gridded times: specification, fixtures, build | Summation order | An unstratified 20M-row fit using every worker; agreement with the stratum sweep within T-fn | 3 |
@@ -262,8 +262,7 @@ Step 1 addresses OI-02 and part of OI-30.
 
 ## 5. Benchmark grid
 
-The full grid crosses rows {5, 20, 50, 100} million, features {50, 100, 180} and providers {800, 8,000, 80,000}, on
-the standard cluster with a fixed worker count. It runs once, at the end of the phase.
+The full grid crosses rows {5, 20, 50, 100} million, features {50, 100, 180} and providers {800, 8,000, 80,000}, on the production cluster as it is (D-76). It runs once, at the end of the phase.
 
 Each step's exit runs a core set:
 - the sweep in n at 180 features and 8,000 providers;
@@ -272,7 +271,9 @@ Each step's exit runs a core set:
 - the correlated design at 20M rows.
 
 pprof_py runs on the 32 GB driver up to 5M rows at 180 features. By arithmetic, `X` and a second n×p array take about
-14 GB there. Each run records what step 0's recorder collects.
+14 GB there. Each run records what step 0's recorder collects. Steps compare on CPU per row per pass, bytes to the driver per
+pass, shuffle bytes, memory peaks and the share of GC; wall time is read beside the core-seconds the cluster offered,
+since autoscaling changes the cores (D-76).
 
 An estimate is never entered in `perf-results.md`. Measurements from the cluster and from the sandbox are kept in
 separate tables.
@@ -359,16 +360,7 @@ Phase 4 paused at a clean point on 2026-11-13, after round 148. Nothing is half-
 - The linear fixed-effect model, which can adopt step 1's reduction later.
 - The random-effect models' scale items (OI-101, OI-102).
 
-## 10. Amendment proposed as D-76 (round 153)
+## 10. Amendments
 
-The maintainer cannot change the cluster's autoscaling or runtime. The proposal, folded into §1, §4 and §5 once
-approved:
-- **Environment.** The exits of §4 are measured on the production cluster as it is: Runtime 17.3 LTS with Photon,
-  autoscaling, and JVM executors with about 2.2 GB of heap.
-- **Measures.** Exits rest on CPU per row per pass, bytes to the driver per pass, shuffle bytes, memory peaks, the
-  share of GC and the three checks. Wall time is read beside the core-seconds offered and the utilization, which the
-  recorder now integrates.
-- **Memory.** Step 1's exit adds peak task memory and the share of GC at 50M rows, within a few hundred megabytes per
-  task.
-- **Runtimes.** Spark 4.0 and Runtime 17.3 are supported beside 4.1 and 18, with a CI job running the JARs on pyspark
-  4.0.0.
+- D-76 (approved 2026-11-16): measuring on the production cluster as it is, and supporting Spark 4.0. Folded into
+  §1, §4 and §5.

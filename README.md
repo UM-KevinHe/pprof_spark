@@ -47,8 +47,8 @@ every feature stays `Experimental` until the package-level scale test (D-28).
 ## Building
 
 The build targets Apache Spark 4.1 with Scala 2.13.16 and Java 17 bytecode, so the same JAR runs
-on open-source Spark 4.1.x and on Databricks Runtime 18 LTS. CI runs everything, including the
-engine suites under Spark Connect. Anywhere with JDK 17+ and sbt (Codespaces, for example):
+on open-source Spark 4.0.x and 4.1.x and on Databricks Runtime 17.3 LTS and 18 LTS (D-76). CI runs
+everything, including the engine suites under Spark Connect. Anywhere with JDK 17+ and sbt (Codespaces, for example):
 
 ```
 sbt ci                                  # formatting check, compile, all tests
