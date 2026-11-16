@@ -12,8 +12,12 @@ Every point runs on the standard cluster, the same cluster throughout:
 - Databricks Runtime 18 with a Classic Spark 4.1 session, not serverless;
 - no autoscaling.
 
-Each report records the executors, the total cores, the node types, Photon and adaptive execution as the cluster has
-them.
+Each report records the executors (at the start and at the end of the fit), the total cores, the node types, Photon
+and adaptive execution as the cluster has them. It records no storage path and no master address.
+
+The first runs (2026-11-16) were on a small autoscaling cluster with Photon. Photon left each JVM executor 2.2 GB of
+heap on a 16 GB worker, while pprof_spark's passes run in the JVM. The baseline's configuration (Photon, autoscaling,
+runtime) is open (OI-112).
 
 ## Building and running on Databricks
 

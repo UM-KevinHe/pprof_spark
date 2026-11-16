@@ -157,6 +157,7 @@ previous_partitions = spark.conf.get(key)
 if shuffle_partitions:
     spark.conf.set(key, shuffle_partitions)
 persisted = None
+fit = None  # a fit that does not complete must not leave the previous run's fit for the cells below
 try:
     if data_path:
         location = f"{data_path.rstrip('/')}/{model_name}-n{n}-m{m}-p{p}-seed{seed}"
@@ -181,6 +182,8 @@ finally:
 
 # COMMAND ----------
 
+if fit is None or len(fit.coefficients) != p:
+    raise RuntimeError("this run's fit did not complete, so no results row is written")
 z = [(c.estimate - beta) / c.standard_error for c, beta in zip(fit.coefficients, TRUTH)]
 max_abs_z = max(abs(v) for v in z)
 row = {

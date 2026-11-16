@@ -46,6 +46,18 @@ object PerfJob {
     "report"
   )
 
+  /** Options that name storage locations, which the report leaves out. */
+  private val Private: Set[String] = Set("path", "report")
+
+  /** The local properties by which a notebook describes every job with the running cell's code. They are set aside
+    * during a run, so that Spark describes each SQL execution by its call site in pprof_spark, and then restored.
+    */
+  private val Described: Seq[String] =
+    Seq("spark.job.description", "callSite.short", "callSite.long")
+
+  private def executors(spark: SparkSession): Int =
+    math.max(0, spark.sparkContext.getExecutorMemoryStatus.size - 1)
+
   /** The report line, and the physical plans by call site when `--plans true`. */
   final case class Result(report: String, plans: String)
 
@@ -200,7 +212,9 @@ object PerfJob {
       .put("seed", d.seed)
       .put("stratified", d.stratified)
     val supplied = root.putObject("options")
-    options.toSeq.sorted.foreach { case (k, v) => supplied.put(k, v) }
+    options.toSeq.sorted.filterNot { case (k, _) => Private(k) }.foreach { case (k, v) =>
+      supplied.put(k, v)
+    }
     val prepared =
       Generator.prepare(spark, d, path, verify = options.get("verify").forall(_ == "true"))
     val data = root
@@ -215,11 +229,18 @@ object PerfJob {
         .fold(prepared.data)(k => prepared.data.repartition(k.toInt, col("id")))
     val truth = new PerfParameters(d).beta
     val recorder = Recorder.attach(spark)
+    val context = spark.sparkContext
+    val described = Described.map(key => key -> context.getLocalProperty(key))
+    described.foreach { case (key, _) => context.setLocalProperty(key, null) }
     try {
       val from = recorder.mark()
       val (first, seconds) = timed(fit(input, d, options))
       val window = recorder.summary(from)
-      val node = root.putObject("fit").put("seconds", seconds).put("succeeded", first.isRight)
+      val node = root
+        .putObject("fit")
+        .put("seconds", seconds)
+        .put("succeeded", first.isRight)
+        .put("executors_at_end", executors(spark))
       first match {
         case Left(error) => node.put("error", error)
         case Right(o)    =>
@@ -249,16 +270,19 @@ object PerfJob {
         if (!options.get("plans").contains("true")) ""
         else window.sites.map(s => s"== ${s.site} [${s.tags}]\n${s.plan}").mkString("\n\n")
       Result(mapper.writeValueAsString(root), plans)
-    } finally recorder.detach()
+    } finally {
+      described.foreach { case (key, value) => context.setLocalProperty(key, value) }
+      recorder.detach()
+    }
   }
 
   private def cluster(spark: SparkSession, node: ObjectNode): Unit = {
     val context = spark.sparkContext
-    node.put("executors", math.max(0, context.getExecutorMemoryStatus.size - 1))
+    node.put("executors", executors(spark))
+    node.put("master", context.master.takeWhile(c => c != ':' && c != '['))
     node.put("default_parallelism", context.defaultParallelism)
     node.put("driver_max_heap_bytes", Runtime.getRuntime.maxMemory)
     Seq(
-      "spark.master",
       "spark.executor.memory",
       "spark.executor.cores",
       "spark.driver.memory",
@@ -303,6 +327,7 @@ object PerfJob {
     node
       .put("driver_heap_peak_bytes", w.driverHeapPeakBytes)
       .put("driver_heap_pool_peak_bytes", w.driverHeapPoolPeakBytes)
+      .put("driver_heap_after_gc_peak_bytes", w.driverHeapAfterGcPeakBytes)
       .put("driver_max_heap_bytes", w.driverMaxHeapBytes)
       .put("executor_heap_peak_bytes", w.executorHeapPeakBytes)
       .put("cached_peak_bytes", w.cachedPeakBytes)

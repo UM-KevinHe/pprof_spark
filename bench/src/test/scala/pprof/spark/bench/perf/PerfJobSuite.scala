@@ -155,4 +155,54 @@ class PerfJobSuite extends SparkSuite {
     assertEquals(spark.read.text(s"${reports.head.getPath}/report").head().getString(0), text)
     assert(spark.read.text(s"${reports.head.getPath}/plans").count() > 0L)
   }
+
+  test(
+    "a notebook's job descriptions are set aside during a run, so executions keep their call sites, then restored"
+  ) {
+    val path = Files.createTempDirectory("pprof-perf-notebook").resolve("point").toString
+    val context = spark.sparkContext
+    val cell = "started = time.time()\nreport = runner.runLine(spark._jsparkSession, ...)"
+    context.setJobDescription(cell)
+    context.setLocalProperty("callSite.short", "cell 7")
+    context.setLocalProperty("callSite.long", "cell 7, line 2")
+    try {
+      val options =
+        Map(
+          "model" -> "cox",
+          "path" -> path,
+          "rows" -> "2000",
+          "providers" -> "20",
+          "features" -> "3",
+          "verify" -> "false"
+        )
+      val report = new ObjectMapper().readTree(PerfJob.run(spark, options).report)
+      val sites = report
+        .get("fit")
+        .get("recording")
+        .get("sites")
+        .elements()
+        .asScala
+        .map(_.get("site").asText())
+        .toVector
+      assert(sites.exists(_.contains("CoxPH.scala")), sites.mkString("; "))
+      assert(
+        !sites.exists(s => s.contains("runLine") || s.contains("cell 7")),
+        sites.mkString("; ")
+      )
+      assertEquals(context.getLocalProperty("spark.job.description"), cell)
+      assertEquals(context.getLocalProperty("callSite.short"), "cell 7")
+      assertEquals(context.getLocalProperty("callSite.long"), "cell 7, line 2")
+      assert(
+        !report
+          .get("cluster")
+          .has("spark.master") && report.get("cluster").get("master").asText() == "local"
+      )
+      assert(!report.get("options").has("path"), report.get("options").toString)
+      assert(report.get("fit").get("recording").has("driver_heap_after_gc_peak_bytes"))
+    } finally {
+      context.setJobDescription(null)
+      context.setLocalProperty("callSite.short", null)
+      context.setLocalProperty("callSite.long", null)
+    }
+  }
 }

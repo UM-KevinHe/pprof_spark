@@ -68,6 +68,7 @@ final case class WindowSummary(
     unattributedRunMs: Long,
     driverHeapPeakBytes: Long,
     driverHeapPoolPeakBytes: Long,
+    driverHeapAfterGcPeakBytes: Long,
     driverMaxHeapBytes: Long,
     executorHeapPeakBytes: Long,
     cachedPeakBytes: Long
@@ -75,7 +76,8 @@ final case class WindowSummary(
 
 /** What step 0 of the performance plan records, by SQL execution (plan §4): wall, executor run, CPU and GC time,
   * task results (the bytes sent to the driver), shuffle bytes, spills, peak task memory and single-task stages; the
-  * driver's heap peak, by sampling and by its pools; the executors' heap peaks from their heartbeats; and the peak of
+  * driver's heap peak, by sampling, by its pools and after collections (the live set); the executors' heap peaks from
+  * their heartbeats, the driver's excluded; and the peak of
   * cached RDD blocks. Stages are attributed when they are submitted, from their own properties, so that the map stages
   * adaptive execution runs as jobs of their own are counted; executor time without an execution is kept apart.
   * Classic Spark only: `bench` code, never engine code (ARCH-2).
@@ -92,6 +94,7 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
   private var cached = 0L
   private var cachedPeak = 0L
   @volatile private var heapPeak = 0L
+  @volatile private var liveHeapPeak = 0L
   @volatile private var running = true
   private val heapPools =
     ManagementFactory.getMemoryPoolMXBeans.asScala.filter(_.getType == MemoryType.HEAP).toVector
@@ -100,6 +103,8 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
       while (running) {
         val used = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage.getUsed
         if (used > heapPeak) heapPeak = used
+        val live = heapPools.map(pool => Option(pool.getCollectionUsage).fold(0L)(_.getUsed)).sum
+        if (live > liveHeapPeak) liveHeapPeak = live
         Thread.sleep(50L)
       },
     "pprof-perf-heap"
@@ -168,7 +173,7 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
   override def onExecutorMetricsUpdate(event: SparkListenerExecutorMetricsUpdate): Unit =
     synchronized {
       events.incrementAndGet()
-      event.executorUpdates.values.foreach { metrics =>
+      if (event.execId != "driver") event.executorUpdates.values.foreach { metrics =>
         val heap = metrics.getMetricValue("JVMHeapMemory")
         executorHeap(event.execId) = math.max(executorHeap.getOrElse(event.execId, 0L), heap)
       }
@@ -209,6 +214,7 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
       unattributedRunMs = 0L
       heapPools.foreach(_.resetPeakUsage())
       heapPeak = 0L
+      liveHeapPeak = 0L
       if (executions.isEmpty) 0L else executions.keys.max + 1L
     }
   }
@@ -249,6 +255,7 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
         unattributedRunMs,
         heapPeak,
         heapPools.map(_.getPeakUsage.getUsed).sum,
+        liveHeapPeak,
         Runtime.getRuntime.maxMemory,
         if (executorHeap.isEmpty) 0L else executorHeap.values.max,
         cachedPeak
