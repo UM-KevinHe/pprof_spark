@@ -24,6 +24,7 @@ import org.apache.spark.sql.types.{
 }
 
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
+import pprof.spark.engine.backend.Operations._
 
 /** Column roles of a Cox fit (Cox specification §4 and addendum §3): exit time, event indicator and
   * features, and optionally strata, a row identifier, case weights and offsets. Every subject enters
@@ -102,7 +103,7 @@ object CoxValidation {
     // Unique aliases: two counts can share an expression (events, and events with positive weight
     // when there are no weights), and Spark Connect rejects duplicate column names.
     val aggregates = valueCounts(types, spec).zipWithIndex.map { case (c, i) => c.as(s"count_$i") }
-    val counts = df.agg(aggregates.head, aggregates.tail: _*).collect().head
+    val counts = df.agg(aggregates.head, aggregates.tail: _*).collectAs("cox.validate").head
     var position = 0
     def next(): Long = {
       val value = counts.getLong(position)
@@ -146,7 +147,8 @@ object CoxValidation {
       }
       if (nulls.forall(_._2 == 0L) && distinctHashes < rows) {
         // Rare: tell repeated keys from a 64-bit collision with one more count.
-        val keys = df.select(spec.rowKey.map(Validation.column): _*).distinct().count()
+        val keys =
+          df.select(spec.rowKey.map(Validation.column): _*).distinct().countAs("cox.validate")
         problems += InputProblem.DuplicateRowKeys(
           spec.rowKey,
           rows - keys,

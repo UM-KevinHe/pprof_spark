@@ -23,6 +23,7 @@ import org.apache.spark.sql.types.{
   ShortType,
   StringType
 }
+import pprof.spark.engine.backend.Operations._
 
 /** One reason why an input failed validation. Messages name columns and counts, never values
   * (NN-7, §12).
@@ -141,7 +142,7 @@ object Validation {
     if (structural.nonEmpty) throw new InvalidInputException(structural)
 
     val aggregates = valueCounts(types, spec)
-    val counts = df.agg(aggregates.head, aggregates.tail: _*).collect().head
+    val counts = df.agg(aggregates.head, aggregates.tail: _*).collectAs("input.validate").head
     val rows = counts.getLong(0)
     val problems = Vector.newBuilder[InputProblem]
     val groupNulls = counts.getLong(1)

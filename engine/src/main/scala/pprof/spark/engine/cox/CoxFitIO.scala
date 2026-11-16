@@ -16,6 +16,7 @@ import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
 import pprof.spark.numerics.IterationRecord
+import pprof.spark.engine.backend.Operations._
 
 /** Saves and loads [[CoxFit]] as a self-describing directory (§6.10, PERS-1 to PERS-3). `metadata`
   * holds one JSON record with every double stored as its 64-bit pattern, so a loaded fit is bitwise
@@ -207,7 +208,7 @@ object CoxFitIO {
   }
 
   private def metadata(spark: SparkSession, path: String): Row = {
-    val records = spark.read.schema(MetadataSchema).json(s"$path/metadata").collect()
+    val records = spark.read.schema(MetadataSchema).json(s"$path/metadata").collectAs("cox.io")
     require(
       records.length == 1,
       s"expected one metadata record under $path, found ${records.length}"

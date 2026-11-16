@@ -19,6 +19,7 @@ import pprof.spark.numerics.{
   Normal
 }
 import pprof.spark.numerics.kernels.Moments
+import pprof.spark.engine.backend.Operations._
 
 /** The tie method (§7.2 and addendum §2). Breslow is the default (D-06). */
 sealed abstract class Ties(val name: String) extends Product with Serializable
@@ -302,7 +303,7 @@ object CoxPH {
           col("survival")
         )
         .persist(fit.options.blocks.resolvedStorageLevel)
-      table.count()
+      table.countAs("cox.baseline")
       table
     }
 
@@ -347,7 +348,7 @@ object CoxPH {
             .select(fit.spec.rowKey.map(Validation.column) ++ values: _*)
       }
       val table = keyed.persist(fit.options.blocks.resolvedStorageLevel)
-      table.count()
+      table.countAs("cox.residuals")
       table
     }
   }
@@ -395,7 +396,7 @@ object CoxPH {
     try {
       val summaries = workingSet.blocks
         .map((block: CoxBlock) => CoxKernel.summary(block))(Encoders.product[CoxBlockSummary])
-        .collect()
+        .collectAs("cox.summarize")
         .sortBy(_.blockId)
       val rows = summaries.iterator.map(_.rows).sum
       val events = summaries.iterator.map(_.events).sum
@@ -441,7 +442,7 @@ object CoxPH {
           .map((block: CoxBlock) => CoxKernel.robustPerRow(block, b, c, efron))(
             Encoders.product[CoxRobustPartial]
           )
-          .collect()
+          .collectAs("cox.robust")
       else
         prepared.workingSet.blocks
           .flatMap((block: CoxBlock) => CoxKernel.weightedScores(block, b, c, efron))(
@@ -459,7 +460,7 @@ object CoxPH {
           )(
             Encoders.product[CoxRobustPartial]
           )
-          .collect()
+          .collectAs("cox.robust")
     val ordered = partials.sortBy(_.key).toSeq
     (
       OrderedReduction.reduce(ordered.map(x => x.key -> x.outer), Moments.packedLength(p)),
@@ -505,7 +506,7 @@ object CoxPH {
     val efron = ties == Ties.Efron
     val partials = prepared.workingSet.blocks
       .map((block: CoxBlock) => CoxKernel.partial(block, b, c, efron))(Encoders.product[CoxPartial])
-      .collect()
+      .collectAs("cox.evaluate")
       .sortBy(_.blockId)
       .toSeq
     val value = new NeumaierSum

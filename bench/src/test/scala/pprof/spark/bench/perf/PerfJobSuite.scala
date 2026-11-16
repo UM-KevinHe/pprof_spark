@@ -81,8 +81,8 @@ class PerfJobSuite extends SparkSuite {
       assert(report.get("checks").get("truth").get("passed").asBoolean(), result.report)
       assert(report.get("checks").get("partitions").get("identical").asBoolean(), result.report)
       val sites = fit.get("recording").get("sites").elements().asScala.toVector
-      val source = if (model == "cox") "CoxPH.scala" else "LogisticFE.scala"
-      val passes = sites.filter(_.get("site").asText().contains(source))
+      val operation = if (model == "cox") "pprof.cox.evaluate" else "pprof.logistic.pass-a"
+      val passes = sites.filter(_.get("tags").asText().contains(operation))
       assert(
         passes.exists(s => s.get("executions").asInt() >= 2 && s.get("result_bytes").asLong() > 0L),
         result.report
@@ -197,7 +197,15 @@ class PerfJobSuite extends SparkSuite {
         .asScala
         .map(_.get("site").asText())
         .toVector
-      assert(sites.exists(_.contains("CoxPH.scala")), sites.mkString("; "))
+      assert(sites.forall(_.matches("""\w+ at \w+\.scala:\d+""")), sites.mkString("; "))
+      val tags = report
+        .get("fit")
+        .get("recording")
+        .get("sites")
+        .elements()
+        .asScala
+        .map(_.get("tags").asText())
+      assert(tags.exists(_.contains("pprof.cox.evaluate")), tags.mkString("; "))
       assert(
         !sites.exists(s => s.contains("runLine") || s.contains("cell 7")),
         sites.mkString("; ")

@@ -7,6 +7,7 @@ import pprof.spark.engine.backend.PlanFrames
 import pprof.spark.engine.data.Validation
 import pprof.spark.engine.layout.LayoutPlan
 import pprof.spark.numerics.kernels.{LogisticFE => Kernel}
+import pprof.spark.engine.backend.Operations._
 
 /** One input row placed in its block (§6.6). */
 final case class LogisticRow(
@@ -212,7 +213,7 @@ object LogisticWorkingSet {
       )
       .persist(storageLevel)
     try {
-      val built = blocks.count()
+      val built = blocks.countAs("logistic.build")
       if (built != plan.blockCount)
         throw new IllegalStateException(s"built $built blocks; the plan has ${plan.blockCount}")
       new LogisticWorkingSet(blocks, plan)

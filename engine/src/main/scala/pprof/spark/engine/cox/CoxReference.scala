@@ -4,6 +4,7 @@ import org.apache.spark.sql.{Dataset, Encoders}
 
 import pprof.spark.engine.backend.OrderedReduction
 import pprof.spark.numerics.NeumaierSum
+import pprof.spark.engine.backend.Operations._
 
 /** The point a baseline hazard refers to (Phase 1b specification §2a, issue C1, D-49). */
 sealed abstract class BaselineReference(val name: String) extends Product with Serializable
@@ -96,7 +97,9 @@ object CoxReference {
   /** The reference point of a working set, its block sums reduced in block order (DIST-6). */
   def point(blocks: Dataset[CoxBlock], p: Int, entryTimes: Boolean): CoxReferencePoint = {
     val parts =
-      blocks.map((b: CoxBlock) => partial(b))(Encoders.product[CoxReferencePartial]).collect()
+      blocks
+        .map((b: CoxBlock) => partial(b))(Encoders.product[CoxReferencePartial])
+        .collectAs("cox.reference")
     val s = OrderedReduction.reduce(parts.toSeq.map(q => q.blockId -> q.values), 3 + 3 * p)
     val rows = s(0)
     val weight = s(1)

@@ -7,6 +7,7 @@ import org.apache.spark.storage.StorageLevel
 import pprof.spark.engine.backend.PlanFrames
 import pprof.spark.engine.data.Validation
 import pprof.spark.engine.layout.LayoutPlan
+import pprof.spark.engine.backend.Operations._
 
 /** One input row placed in its block (§6.6). */
 final case class CoxRow(
@@ -211,7 +212,7 @@ object CoxWorkingSet {
       )
       .persist(storageLevel)
     try {
-      val built = blocks.count()
+      val built = blocks.countAs("cox.build")
       if (built != plan.blockCount)
         throw new IllegalStateException(s"built $built blocks; the plan has ${plan.blockCount}")
       new CoxWorkingSet(blocks, plan)

@@ -92,8 +92,8 @@ print(f"finished in {time.time() - started:.0f} s; the report is also under {dat
 
 # MAGIC %md
 # MAGIC ## The report
-# MAGIC The fit's outcome and checks, then its call sites, slowest first. A call site is a SQL execution's
-# MAGIC description, such as `collect at CoxPH.scala:507`. `result_bytes` is what tasks sent to the driver, and
+# MAGIC The fit's outcome and checks, then its operations, slowest first. Each row is a SQL execution's description
+# MAGIC and the operation tag of its jobs, such as `pprof.cox.evaluate` for Cox's Newton passes. `result_bytes` is what tasks sent to the driver, and
 # MAGIC `max_result_bytes_per_execution` the largest single pass. Send back the line printed at the end.
 
 # COMMAND ----------
@@ -113,7 +113,7 @@ print(
     f"executors {recording['executors_min']} to {recording['executors_max']}"
 )
 columns = [
-    "site", "executions", "wall_ms", "cpu_ms", "cpu_us_per_row", "gc_ms", "tasks", "result_bytes",
+    "tags", "site", "executions", "wall_ms", "cpu_ms", "cpu_us_per_row", "gc_ms", "tasks", "result_bytes",
     "max_result_bytes_per_execution", "shuffle_write_bytes", "spilled_bytes", "single_task_stages",
 ]
 display(sites[columns])

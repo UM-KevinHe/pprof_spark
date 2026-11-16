@@ -6,6 +6,7 @@ import org.apache.spark.sql.functions.{broadcast, col, lit}
 import pprof.spark.engine.backend.PlanFrames
 import pprof.spark.engine.data.Validation
 import pprof.spark.numerics.kernels.{CoxMeasures => MeasureKernels}
+import pprof.spark.engine.backend.Operations._
 
 /** The standardization of a provider's events (Phase 1d specification §1). */
 sealed abstract class Standardization(val name: String) extends Product with Serializable
@@ -49,7 +50,7 @@ object CoxMeasures {
       val blocks = prepared.workingSet.blocks
       val maxEta = blocks
         .map((block: CoxBlock) => CoxKernel.maxEta(block, beta))(Encoders.scalaDouble)
-        .collect()
+        .collectAs("cox.measures")
         .max
       val limit = fit.options.blocks.maxGroupsOnDriver
       val totals = blocks
@@ -63,7 +64,7 @@ object CoxMeasures {
           Encoders.product[CoxTimeTotal]
         )
         .limit(limit + 1)
-        .collect()
+        .collectAs("cox.measures")
         .sortBy(_.time)
       if (totals.length > limit)
         throw new IllegalArgumentException(
@@ -107,9 +108,9 @@ object CoxMeasures {
       }.toMap
       results.values.foreach { t =>
         t.persist(fit.options.blocks.resolvedStorageLevel)
-        t.count()
+        t.countAs("cox.measures")
       }
-      val unexpected = rows.filter((r: CoxProviderRow) => r.expected == 0.0).count()
+      val unexpected = rows.filter((r: CoxProviderRow) => r.expected == 0.0).countAs("cox.measures")
       if (unexpected > 0)
         log.warn(
           s"$unexpected providers have no expected events, so their indirect ratio is infinite or undefined"

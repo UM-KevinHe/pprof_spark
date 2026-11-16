@@ -158,7 +158,7 @@ reports any executor time it cannot attribute.
    shuffle (§4). G = 1 whenever today's plan fits the budget without growth. The study classes step 1 as "same
    bits"; that holds only where G = 1. G = 1 covers every golden run; elsewhere the order of summation changes.
 3. **Engine passes are tagged by operation.** Tags use `SparkSession.addTag`, which spark-sql-api declares and Spark
-   Connect supports. PROJECT_CONTEXT §6.13 asks for this, and it was never built. The harness attributes time by
+   Connect supports. Built in round 156 (`backend.Operations`). PROJECT_CONTEXT §6.13 asks for this, and it was never built. The harness attributes time by
    tag and SQL execution identifier, not by line numbers, which every change moves.
 4. **A step 0b, if needed.** If step 0 attributes more than a quarter of a fit's wall time to call sites outside the
    Newton and SerBIN passes, those sites are fixed before step 1. The likely ones are validation (OI-109), the working-set build and the summaries.

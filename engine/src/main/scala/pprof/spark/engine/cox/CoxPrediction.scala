@@ -6,6 +6,7 @@ import org.apache.spark.sql.functions.{broadcast, coalesce, col, exp, last, leas
 import org.apache.spark.sql.types.{DataType, DoubleType, LongType, NumericType, StringType}
 
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
+import pprof.spark.engine.backend.Operations._
 
 /** Predictions from a Cox fit as DataFrame columns (Phase 1b specification §3 and §5): the linear
   * predictor xᵀβ̂ + o (uncentered), the relative hazard exp(min(η, 700)) as pprof_py's `safe_exp`,
@@ -115,7 +116,7 @@ object CoxPrediction {
         countWhere(Validation.nonFinite(value, types(name))).as(s"nonfinite_$i")
       )
     }
-    val row = df.agg(counts.head, counts.tail: _*).collect().head
+    val row = df.agg(counts.head, counts.tail: _*).collectAs("cox.predict").head
     val problems = Vector.newBuilder[InputProblem]
     numeric.zipWithIndex.foreach { case (name, i) =>
       val nulls = row.getLong(2 * i)
@@ -125,7 +126,9 @@ object CoxPrediction {
     baseline.foreach { case (table, keyType) =>
       val known = table.select(col("stratum").as(Key)).distinct()
       val unknown =
-        df.select(key(fit, keyType).as(Key)).join(broadcast(known), Seq(Key), "left_anti").count()
+        df.select(key(fit, keyType).as(Key))
+          .join(broadcast(known), Seq(Key), "left_anti")
+          .countAs("cox.predict")
       if (unknown > 0)
         problems += InputProblem.UnknownStrata(fit.spec.strata.getOrElse("stratum"), unknown)
     }

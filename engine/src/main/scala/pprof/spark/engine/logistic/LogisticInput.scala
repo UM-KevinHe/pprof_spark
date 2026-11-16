@@ -21,6 +21,7 @@ import org.apache.spark.sql.types.{
   StringType
 }
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
+import pprof.spark.engine.backend.Operations._
 
 /** Validated logistic input in the engine's internal form (Phase 2a specification §4). */
 final case class LogisticInput(
@@ -44,7 +45,7 @@ object LogisticValidation {
     val structural = schemaProblems(types, spec)
     if (structural.nonEmpty) throw new InvalidInputException(structural)
     val aggregates = valueCounts(types, spec).zipWithIndex.map { case (c, i) => c.as(s"count_$i") }
-    val counts = df.agg(aggregates.head, aggregates.tail: _*).collect().head
+    val counts = df.agg(aggregates.head, aggregates.tail: _*).collectAs("logistic.validate").head
     var position = 0
     def next(): Long = {
       val value = counts.getLong(position)

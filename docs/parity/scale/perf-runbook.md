@@ -77,7 +77,9 @@ A fit that fails, such as one the driver budget refuses, is reported with its er
 | `fit.recording` | Executor time no execution claims; the driver's heap peak, sampled every 50 ms and by its pools; the executors' heap peak from their heartbeats; the peak of cached blocks |
 | `checks` | `truth`, and `partitions` with `--check-partitions` |
 
-Each call site is a SQL execution's description, such as `collect at CoxPH.scala:507`. Its entry holds:
+Each entry is a SQL execution's description with the operation tag of its jobs, such as `pprof.cox.evaluate` for
+Cox's Newton passes or `pprof.logistic.pass-a` for SerBIN's first pass. Since round 156 every action of both models
+runs under such a tag (`Operations`), and the description itself names the tagging helper's line. Each entry holds:
 - executions, tasks and single-task stages;
 - wall time, executor run time, CPU time and GC time;
 - task-result bytes, the bytes sent to the driver, in total and for the largest execution;

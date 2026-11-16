@@ -9,6 +9,7 @@ import org.apache.spark.storage.StorageLevel
 
 import pprof.spark.engine.data.{ValidatedInput, Validation}
 import pprof.spark.engine.layout.{GroupKey, LayoutPlan}
+import pprof.spark.engine.backend.Operations._
 
 /** The materialized working set of a computation: its logical blocks, persisted with an explicit
   * storage level (§6.5, §10.3). Call [[release]] in a `finally` block.
@@ -45,7 +46,7 @@ object WorkingSet {
       )
       .persist(storageLevel)
     try {
-      val built = blocks.count()
+      val built = blocks.countAs("layout.build")
       if (built != plan.blockCount)
         throw new IllegalStateException(s"built $built blocks; the plan has ${plan.blockCount}")
       new WorkingSet(blocks, plan)

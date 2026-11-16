@@ -30,6 +30,7 @@ import pprof.spark.numerics.{
   SerbinPasses
 }
 import pprof.spark.numerics.kernels.{Fingerprint, Moments, LogisticFE => Kernel}
+import pprof.spark.engine.backend.Operations._
 
 /** The logistic fixed-effect provider model, fitted by SerBIN on ProviderLocal blocks (Phase 2a
   * specification, docs/spec/logistic/fixed-effect-estimation.md). Executors compute the block
@@ -99,7 +100,7 @@ object LogisticFE {
     try {
       val summaries = workingSet.blocks
         .map((block: LogisticBlock) => summarize(block))(Encoders.product[LogisticSummary])
-        .collect()
+        .collectAs("logistic.summarize")
         .sortBy(_.blockId)
       val rows = summaries.iterator.map(_.rows).sum
       if (rows != plan.rowCount)
@@ -162,7 +163,7 @@ object LogisticFE {
             Kernel.loglik(block.rows, block.gamma, beta)
           )
         )(Encoders.product[LogisticVariancePartial])
-        .collect()
+        .collectAs("logistic.variance")
         .sortBy(_.blockId)
       val factor = Cholesky.factor(
         OrderedReduction
@@ -183,7 +184,7 @@ object LogisticFE {
           val v = Kernel.providerVariances(block.rows, block.gamma, beta, covariance, xbar)
           LogisticProviderPartial(block.blockId, v.varGamma, v.varCaseMix)
         }(Encoders.product[LogisticProviderPartial])
-        .collect()
+        .collectAs("logistic.provider-variance")
         .foreach { part =>
           val ids = providersOfBlock(part.blockId)
           ids.indices.foreach { i =>
@@ -198,7 +199,7 @@ object LogisticFE {
             val meat = Kernel.robustMeat(block.rows, block.gamma, beta)
             LogisticMeatPartial(block.blockId, meat.packed, meat.clusters)
           }(Encoders.product[LogisticMeatPartial])
-          .collect()
+          .collectAs("logistic.robust")
           .sortBy(_.blockId)
         val meat = OrderedReduction.reduce(
           meatParts.toSeq.map(m => m.blockId -> m.packed),
@@ -212,7 +213,7 @@ object LogisticFE {
             val v = Kernel.robustProviders(block.rows, block.gamma, beta, meat, covariance, xbar)
             LogisticRobustPartial(block.blockId, v.caseMix, v.fixedBeta)
           }(Encoders.product[LogisticRobustPartial])
-          .collect()
+          .collectAs("logistic.robust")
           .foreach { part =>
             val ids = providersOfBlock(part.blockId)
             ids.indices.foreach { i =>
@@ -455,7 +456,7 @@ object LogisticFE {
     try {
       val fingerprint = workingSet.blocks
         .map((block: LogisticBlock) => summarize(block))(Encoders.product[LogisticSummary])
-        .collect()
+        .collectAs("logistic.summarize")
         .iterator
         .map(_.fingerprint)
         .sum
@@ -498,7 +499,7 @@ object LogisticFE {
                     Kernel.loglik(block.rows, block.gamma, reducedBeta)
                   )
                 )(Encoders.product[LogisticLoglikPartial])
-                .collect()
+                .collectAs("logistic.tests")
                 .sortBy(_.blockId)
                 .foreach(part => sum.add(part.loglik))
               2.0 * (fit.loglik - sum.value)
@@ -512,7 +513,7 @@ object LogisticFE {
                   val t = Kernel.scoreTerms(block.rows, block.gamma, full)
                   LogisticScorePartial(block.blockId, t.packed, t.score)
                 }(Encoders.product[LogisticScorePartial])
-                .collect()
+                .collectAs("logistic.tests")
                 .sortBy(_.blockId)
                 .toSeq
               val factor = Cholesky.factor(
@@ -573,7 +574,7 @@ object LogisticFE {
       try
         workingSet.blocks
           .map((block: LogisticBlock) => summarize(block))(Encoders.product[LogisticSummary])
-          .collect()
+          .collectAs("logistic.summarize")
           .iterator
           .map(_.fingerprint)
           .sum
@@ -628,7 +629,7 @@ object LogisticFE {
       (if (text) provider.cast(StringType) else provider.cast(LongType)) === col(keyColumn),
       "left"
     )
-    val unknown = joined.filter(col(gammaColumn).isNull).count()
+    val unknown = joined.filter(col(gammaColumn).isNull).countAs("logistic.predict")
     if (unknown > 0L)
       throw new InvalidInputException(
         Seq(InputProblem.UnknownProviders(fit.spec.provider, unknown))
@@ -656,7 +657,7 @@ object LogisticFE {
       .mapPartitions((scores: Iterator[LogisticScore]) => Iterator(aucPartial(scores)))(
         Encoders.product[LogisticAucPartial]
       )
-      .collect()
+      .collectAs("logistic.auc")
     var negativesBefore = 0L
     var twiceNumerator = 0L
     var positives = 0L
@@ -805,7 +806,7 @@ object LogisticFE {
           val s = Kernel.schur(block.rows, block.gamma, b)
           LogisticSchurPartial(block.blockId, s.packed, s.rhs, s.scoreTerm, s.loglik)
         }(Encoders.product[LogisticSchurPartial])
-        .collect()
+        .collectAs("logistic.pass-a")
         .sortBy(_.blockId)
         .toSeq
       val term = new NeumaierSum
@@ -837,7 +838,7 @@ object LogisticFE {
           val t = Kernel.trial(block.rows, block.gamma, b, d, v)
           LogisticTrialPartial(block.blockId, t.deltaGamma, t.loglik)
         }(Encoders.product[LogisticTrialPartial])
-        .collect()
+        .collectAs("logistic.pass-b")
         .sortBy(_.blockId)
       val deltaGamma = new Array[Double](gamma.length)
       parts.foreach { part =>

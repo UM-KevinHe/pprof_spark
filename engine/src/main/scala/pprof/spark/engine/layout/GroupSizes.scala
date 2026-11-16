@@ -4,6 +4,7 @@ import org.apache.spark.sql.DataFrame
 
 import pprof.spark.engine.backend.{BlockOptions, DriverLimitExceededException}
 import pprof.spark.engine.data.{ValidatedInput, Validation}
+import pprof.spark.engine.backend.Operations._
 
 object GroupSizes {
 
@@ -16,7 +17,8 @@ object GroupSizes {
   /** The same for any validated frame that carries [[Validation.GroupColumn]]. */
   def collectGroupSizes(frame: DataFrame, options: BlockOptions): Vector[(GroupKey, Long)] = {
     val limit = math.min(options.maxGroupsOnDriver.toLong + 1, Int.MaxValue.toLong).toInt
-    val rows = frame.groupBy(Validation.GroupColumn).count().limit(limit).collect()
+    val rows =
+      frame.groupBy(Validation.GroupColumn).count().limit(limit).collectAs("layout.group-sizes")
     if (rows.length > options.maxGroupsOnDriver)
       throw new DriverLimitExceededException(
         s"the input has more than ${options.maxGroupsOnDriver} groups, the limit set by " +
