@@ -13,8 +13,8 @@
 # MAGIC 3. Choose a point, 1 to 13 as in the runbook, and run all. Or choose `custom` and give its arguments.
 # MAGIC 4. Send back the report line printed at the end.
 # MAGIC
-# MAGIC Requirements: dedicated (single-user) compute, as for `01_parity`. For the baseline, use the standard
-# MAGIC cluster: a 32 GB driver and 30 workers of 32 GB, without autoscaling.
+# MAGIC Requirements: dedicated (single-user) compute, as for `01_parity`. Autoscaling is fine: the report records the
+# MAGIC cores the cluster offered during the fit, and points compare on CPU per row (D-76).
 
 # COMMAND ----------
 
@@ -104,9 +104,17 @@ print({key: fit.get(key) for key in ["succeeded", "error", "seconds", "iteration
 print("checks:", json.dumps(parsed["checks"]))
 recording = fit["recording"]
 print({key: recording[key] for key in recording if key != "sites"})
+rows = parsed["point"]["n"]
+sites = pd.DataFrame(recording["sites"])
+sites["cpu_us_per_row"] = sites["cpu_ms"] * 1000.0 / rows
+print(
+    f"CPU per row: {sites['cpu_ms'].sum() * 1000.0 / rows:.1f} µs; "
+    f"{recording['core_seconds_available']:.0f} core-seconds available, utilization {recording['utilization']:.2f}; "
+    f"executors {recording['executors_min']} to {recording['executors_max']}"
+)
 columns = [
-    "site", "executions", "wall_ms", "cpu_ms", "gc_ms", "tasks", "result_bytes",
+    "site", "executions", "wall_ms", "cpu_ms", "cpu_us_per_row", "gc_ms", "tasks", "result_bytes",
     "max_result_bytes_per_execution", "shuffle_write_bytes", "spilled_bytes", "single_task_stages",
 ]
-display(pd.DataFrame(recording["sites"])[columns])
+display(sites[columns])
 print(report)

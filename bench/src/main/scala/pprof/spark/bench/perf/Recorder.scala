@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
+import scala.util.control.NonFatal
 
 import org.apache.spark.scheduler.{
   SparkListener,
@@ -71,7 +72,12 @@ final case class WindowSummary(
     driverHeapAfterGcPeakBytes: Long,
     driverMaxHeapBytes: Long,
     executorHeapPeakBytes: Long,
-    cachedPeakBytes: Long
+    cachedPeakBytes: Long,
+    cachedMemoryPeakBytes: Long,
+    cachedDiskPeakBytes: Long,
+    coreSecondsAvailable: Double,
+    executorsMin: Int,
+    executorsMax: Int
 )
 
 /** What step 0 of the performance plan records, by SQL execution (plan §4): wall, executor run, CPU and GC time,
@@ -90,23 +96,66 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
   private var unattributedCpuNs = 0L
   private var unattributedRunMs = 0L
   private val executorHeap = mutable.HashMap.empty[String, Long]
-  private val cachedBlocks = mutable.HashMap.empty[(String, String), Long]
-  private var cached = 0L
+  private val cachedBlocks = mutable.HashMap.empty[(String, String), (Long, Long)]
+  private var cachedMemory = 0L
+  private var cachedDisk = 0L
   private var cachedPeak = 0L
+  private var cachedMemoryPeak = 0L
+  private var cachedDiskPeak = 0L
   @volatile private var heapPeak = 0L
   @volatile private var liveHeapPeak = 0L
   @volatile private var running = true
   private val heapPools =
     ManagementFactory.getMemoryPoolMXBeans.asScala.filter(_.getType == MemoryType.HEAP).toVector
+  private val coreLock = new Object
+  private var coreNanos = 0.0
+  private var lastCoreSample = System.nanoTime()
+  private var lastCores = spark.sparkContext.defaultParallelism
+  private var executorsMin = Int.MaxValue
+  private var executorsMax = 0
+
+  /** Integrates over time the cores the cluster offers, Spark's default parallelism (its registered cores unless
+    * `spark.default.parallelism` is set), and tracks the executors' count: autoscaling changes both during a fit.
+    */
+  private def sampleCores(): Unit =
+    try {
+      val context = spark.sparkContext
+      val cores = context.defaultParallelism
+      val executors = math.max(0, context.getExecutorMemoryStatus.size - 1)
+      val now = System.nanoTime()
+      coreLock.synchronized {
+        coreNanos += (now - lastCoreSample).toDouble * lastCores
+        lastCoreSample = now
+        lastCores = cores
+        executorsMin = math.min(executorsMin, executors)
+        executorsMax = math.max(executorsMax, executors)
+      }
+    } catch { case NonFatal(_) => () }
+
+  private def resetCores(): Unit = {
+    coreLock.synchronized {
+      coreNanos = 0.0
+      lastCoreSample = System.nanoTime()
+      lastCores = spark.sparkContext.defaultParallelism
+      executorsMin = Int.MaxValue
+      executorsMax = 0
+    }
+    sampleCores()
+  }
+
   private val sampler = new Thread(
-    () =>
+    () => {
+      var tick = 0L
       while (running) {
         val used = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage.getUsed
         if (used > heapPeak) heapPeak = used
         val live = heapPools.map(pool => Option(pool.getCollectionUsage).fold(0L)(_.getUsed)).sum
         if (live > liveHeapPeak) liveHeapPeak = live
+        if (tick % 10 == 0) sampleCores()
+        tick += 1
         Thread.sleep(50L)
-      },
+      }
+    },
     "pprof-perf-heap"
   )
 
@@ -184,10 +233,15 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
     val info = event.blockUpdatedInfo
     if (info.blockId.isRDD) {
       val key = (info.blockManagerId.executorId, info.blockId.name)
-      val size = if (info.storageLevel.isValid) info.memSize + info.diskSize else 0L
-      cached += size - cachedBlocks.getOrElse(key, 0L)
-      if (size == 0L) cachedBlocks.remove(key) else cachedBlocks(key) = size
-      cachedPeak = math.max(cachedPeak, cached)
+      val (memory, disk) =
+        if (info.storageLevel.isValid) (info.memSize, info.diskSize) else (0L, 0L)
+      val (oldMemory, oldDisk) = cachedBlocks.getOrElse(key, (0L, 0L))
+      cachedMemory += memory - oldMemory
+      cachedDisk += disk - oldDisk
+      if (memory + disk == 0L) cachedBlocks.remove(key) else cachedBlocks(key) = (memory, disk)
+      cachedPeak = math.max(cachedPeak, cachedMemory + cachedDisk)
+      cachedMemoryPeak = math.max(cachedMemoryPeak, cachedMemory)
+      cachedDiskPeak = math.max(cachedDiskPeak, cachedDisk)
     }
   }
 
@@ -208,7 +262,10 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
     settle()
     synchronized {
       executorHeap.clear()
-      cachedPeak = cached
+      cachedPeak = cachedMemory + cachedDisk
+      cachedMemoryPeak = cachedMemory
+      cachedDiskPeak = cachedDisk
+      resetCores()
       unattributedTasks = 0L
       unattributedCpuNs = 0L
       unattributedRunMs = 0L
@@ -222,6 +279,10 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
   /** The window that began at execution `from`, by call site, slowest first. */
   def summary(from: Long): WindowSummary = {
     settle()
+    sampleCores()
+    val (coreSeconds, executorsLow, executorsHigh) = coreLock.synchronized {
+      (coreNanos / 1e9, if (executorsMin == Int.MaxValue) 0 else executorsMin, executorsMax)
+    }
     synchronized {
       val window = executions.values.filter(_.id >= from).toVector
       val sites = window
@@ -258,7 +319,12 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
         liveHeapPeak,
         Runtime.getRuntime.maxMemory,
         if (executorHeap.isEmpty) 0L else executorHeap.values.max,
-        cachedPeak
+        cachedPeak,
+        cachedMemoryPeak,
+        cachedDiskPeak,
+        coreSeconds,
+        executorsLow,
+        executorsHigh
       )
     }
   }

@@ -88,6 +88,19 @@ class PerfJobSuite extends SparkSuite {
         result.report
       )
       assert(sites.exists(_.get("shuffle_write_bytes").asLong() > 0L), result.report)
+      val recording = fit.get("recording")
+      val utilization = recording.get("utilization").asDouble()
+      assert(recording.get("core_seconds_available").asDouble() > 0.0, result.report)
+      assert(utilization > 0.0 && utilization <= 1.25, result.report)
+      assert(
+        recording.get("executors_max").asInt() >= recording.get("executors_min").asInt(),
+        result.report
+      )
+      assert(
+        recording.get("cached_memory_peak_bytes").asLong() + recording
+          .get("cached_disk_peak_bytes")
+          .asLong() > 0L
+      )
       assert(result.plans.contains("HashAggregate"), result.plans.take(400))
       val again = new ObjectMapper().readTree(
         PerfJob.run(spark, options - "check-partitions" - "plans").report

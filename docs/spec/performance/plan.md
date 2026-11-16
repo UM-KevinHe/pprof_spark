@@ -358,3 +358,17 @@ Phase 4 paused at a clean point on 2026-11-13, after round 148. Nothing is half-
 - A wide-model mode, unless step 6 decides otherwise.
 - The linear fixed-effect model, which can adopt step 1's reduction later.
 - The random-effect models' scale items (OI-101, OI-102).
+
+## 10. Amendment proposed as D-76 (round 153)
+
+The maintainer cannot change the cluster's autoscaling or runtime. The proposal, folded into §1, §4 and §5 once
+approved:
+- **Environment.** The exits of §4 are measured on the production cluster as it is: Runtime 17.3 LTS with Photon,
+  autoscaling, and JVM executors with about 2.2 GB of heap.
+- **Measures.** Exits rest on CPU per row per pass, bytes to the driver per pass, shuffle bytes, memory peaks, the
+  share of GC and the three checks. Wall time is read beside the core-seconds offered and the utilization, which the
+  recorder now integrates.
+- **Memory.** Step 1's exit adds peak task memory and the share of GC at 50M rows, within a few hundred megabytes per
+  task.
+- **Runtimes.** Spark 4.0 and Runtime 17.3 are supported beside 4.1 and 18, with a CI job running the JARs on pyspark
+  4.0.0.

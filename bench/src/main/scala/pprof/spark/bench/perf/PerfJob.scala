@@ -299,6 +299,7 @@ object PerfJob {
   }
 
   private def recording(node: ObjectNode, w: WindowSummary): Unit = {
+    val run = w.sites.map(_.runMs).sum + w.unattributedRunMs
     val sites = node.putArray("sites")
     w.sites.foreach { s =>
       sites
@@ -331,5 +332,14 @@ object PerfJob {
       .put("driver_max_heap_bytes", w.driverMaxHeapBytes)
       .put("executor_heap_peak_bytes", w.executorHeapPeakBytes)
       .put("cached_peak_bytes", w.cachedPeakBytes)
+      .put("cached_memory_peak_bytes", w.cachedMemoryPeakBytes)
+      .put("cached_disk_peak_bytes", w.cachedDiskPeakBytes)
+      .put("core_seconds_available", w.coreSecondsAvailable)
+      .put(
+        "utilization",
+        if (w.coreSecondsAvailable > 0.0) run / 1000.0 / w.coreSecondsAvailable else 0.0
+      )
+      .put("executors_min", w.executorsMin)
+      .put("executors_max", w.executorsMax)
   }
 }

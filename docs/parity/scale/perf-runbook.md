@@ -7,17 +7,17 @@
 
 ## The cluster
 
-Every point runs on the standard cluster, the same cluster throughout:
-- a 32 GB driver and 30 workers of 32 GB;
-- Databricks Runtime 18 with a Classic Spark 4.1 session, not serverless;
-- no autoscaling.
+The production cluster as it is (D-76, proposed): Databricks Runtime 17.3 LTS with Photon, autoscaling. The maintainer
+cannot change either, and dedicated (single-user) access mode is required.
 
-Each report records the executors (at the start and at the end of the fit), the total cores, the node types, Photon
-and adaptive execution as the cluster has them. It records no storage path and no master address.
+Each report records:
+- the executors, at the start and end of the fit and their range during it;
+- the cores the cluster offered over the fit (core-seconds) and the utilization;
+- the cache's peak, in memory and on disk;
+- the node types, Photon and adaptive execution.
 
-The first runs (2026-11-16) were on a small autoscaling cluster with Photon. Photon left each JVM executor 2.2 GB of
-heap on a 16 GB worker, while pprof_spark's passes run in the JVM. The baseline's configuration (Photon, autoscaling,
-runtime) is open (OI-112).
+It records no storage path and no master address. Steps are compared on CPU per row, bytes to the driver, shuffle
+bytes and memory peaks; wall time is read beside the core-seconds offered.
 
 ## Building and running on Databricks
 

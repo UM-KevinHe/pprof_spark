@@ -103,6 +103,31 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Proposed, round 153)
+
+The maintainer cannot change the cluster's autoscaling or runtime (2026-11-16). The cluster runs Databricks Runtime
+17.3 LTS with Photon (Spark 4.0.0), autoscales, and gives its JVM executors about 2.2 GB of heap.
+- **Where exits are measured.** D-75's exit measurements are taken on that cluster as it is.
+- **What exits are judged on.** Autoscaling changes the cores between runs and during them, so a step's exit rests
+  on measures that do not depend on them:
+  - CPU per row per pass;
+  - bytes to the driver per pass, and shuffle bytes;
+  - the driver's and the tasks' memory peaks, and the share of GC;
+  - the three checks of plan §6.4.
+
+  Wall time is reported beside the core-seconds the cluster offered during the fit and the utilization, and is never
+  compared on its own.
+- **Memory.** With 2.2 GB heaps shared by four tasks, a task's working memory during a pass must stay within a few
+  hundred megabytes. Step 1's fixed-size blocks, with block growth retired, are therefore also the memory fix, and
+  step 1's exit adds peak task memory and the share of GC at 50M rows.
+- **Runtimes, amending D-02.** Spark 4.0.x and Databricks Runtime 17.3 LTS are supported beside 4.1.x and Runtime 18.
+  - The JARs stay compiled against 4.1.0.
+  - CI's Python job also runs them on pyspark 4.0.0, so an API missing from 4.0 fails CI.
+
+  Evidence: the maintainer's `01_parity` passes all 155 comparisons on Runtime 17.3 with round 151's build. In the
+  sandbox, the 4.1-compiled classes pass `CoxPHSuite` (89), `LogisticFESuite` (6) and `PerfJobSuite` (8) on Spark
+  4.0.0's jars (round 153).
+
 ### D-75: Performance phase plan for Cox and logistic fixed effects (Accepted: approved by the maintainer, 2026-11-13)
 
 `docs/spec/performance/plan.md`, following the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`).
