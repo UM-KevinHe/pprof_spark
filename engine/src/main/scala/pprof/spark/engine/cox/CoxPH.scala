@@ -3,9 +3,9 @@ package pprof.spark.engine.cox
 import org.apache.spark.sql.{DataFrame, Encoders}
 import org.apache.spark.sql.functions.{broadcast, col}
 
-import pprof.spark.engine.backend.{BlockOptions, DriverGuards, OrderedReduction, PlanFrames}
+import pprof.spark.engine.backend.{BlockOptions, OrderedReduction, PlanFrames}
 import pprof.spark.engine.data.Validation
-import pprof.spark.engine.layout.{BudgetedLayout, GroupSizes, LayoutPlan}
+import pprof.spark.engine.layout.{GroupFold, GroupSizes, LayoutPlan, ReductionGroups}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
 import pprof.spark.numerics.{
@@ -369,11 +369,10 @@ object CoxPH {
   ): A = {
     val input = CoxValidation.validate(df, spec)
     val p = spec.features.size
-    val plan = BudgetedLayout.plan(
+    // Blocks stay at the target size; their partials are reduced in groups (docs/spec/performance/step1-reduction.md).
+    val plan = LayoutPlan.create(
       GroupSizes.collectGroupSizes(input.frame, options.blocks),
-      options.blocks,
-      p + 2,
-      8L * (2L + p + Moments.packedLength(p))
+      options.blocks.targetRowsPerBlock(p + 2)
     )
     val rowBytes = 8L * (p + 4)
     plan.placements
@@ -387,15 +386,16 @@ object CoxPH {
             "have the memory"
         )
       }
-    DriverGuards.requireWithinBudget(
-      s"${plan.blockCount} block partials",
-      plan.blockCount.toLong * 8L * (2L + p + Moments.packedLength(p)),
-      options.blocks
-    )
-    val workingSet = CoxWorkingSet.build(input, plan, options.blocks.resolvedStorageLevel)
+    val groups =
+      ReductionGroups.plan(plan.blockCount, 8L * (2L + p + Moments.packedLength(p)), options.blocks)
+    val workingSet = CoxWorkingSet.build(input, plan, groups, options.blocks.resolvedStorageLevel)
     try {
       val summaries = workingSet.blocks
-        .map((block: CoxBlock) => CoxKernel.summary(block))(Encoders.product[CoxBlockSummary])
+        .mapPartitions((blocks: Iterator[CoxBlock]) =>
+          GroupFold(blocks, (block: CoxBlock) => block.blockId, groups)(new SummarySum(p))(
+            (sum, block) => sum.add(CoxKernel.summary(block))
+          ).map { case (group, sum) => sum.summary(group) }
+        )(Encoders.product[CoxBlockSummary])
         .collectAs("cox.summarize")
         .sortBy(_.blockId)
       val rows = summaries.iterator.map(_.rows).sum
@@ -436,12 +436,17 @@ object CoxPH {
     val b = beta.clone()
     val c = prepared.center.clone()
     val efron = ties == Ties.Efron
+    val groups = prepared.workingSet.groups
     val partials =
       if (!clustered)
         prepared.workingSet.blocks
-          .map((block: CoxBlock) => CoxKernel.robustPerRow(block, b, c, efron))(
-            Encoders.product[CoxRobustPartial]
-          )
+          .mapPartitions((blocks: Iterator[CoxBlock]) =>
+            GroupFold(blocks, (block: CoxBlock) => block.blockId, groups)(
+              new RobustSum(p)
+            )((sum, block) => sum.add(CoxKernel.robustPerRow(block, b, c, efron))).map {
+              case (group, sum) => sum.partial(group)
+            }
+          )(Encoders.product[CoxRobustPartial])
           .collectAs("cox.robust")
       else
         prepared.workingSet.blocks
@@ -504,8 +509,15 @@ object CoxPH {
     val b = beta.clone()
     val c = prepared.center.clone()
     val efron = ties == Ties.Efron
+    val groups = prepared.workingSet.groups
     val partials = prepared.workingSet.blocks
-      .map((block: CoxBlock) => CoxKernel.partial(block, b, c, efron))(Encoders.product[CoxPartial])
+      .mapPartitions((blocks: Iterator[CoxBlock]) =>
+        GroupFold(blocks, (block: CoxBlock) => block.blockId, groups)(
+          new EvaluationSum(p)
+        )((sum, block) => sum.add(CoxKernel.partial(block, b, c, efron))).map { case (group, sum) =>
+          sum.partial(group)
+        }
+      )(Encoders.product[CoxPartial])
       .collectAs("cox.evaluate")
       .sortBy(_.blockId)
       .toSeq

@@ -75,4 +75,20 @@ class ReductionGroupsSuite extends SparkSuite {
       )
     }
   }
+
+  test(
+    "GroupFold folds each group's blocks in block order, and fails on a block or a group out of order"
+  ) {
+    val groups = ReductionGroups(blocks = 7, blocksPerGroup = 3)
+    val folded = GroupFold((0 until 7).iterator, (b: Int) => b, groups)(Vector.newBuilder[Int])(
+      (acc, b) => acc += b
+    ).map { case (g, acc) => g -> acc.result() }.toVector
+    assertEquals(folded, Vector(0 -> Vector(0, 1, 2), 1 -> Vector(3, 4, 5), 2 -> Vector(6)))
+    intercept[IllegalStateException](
+      GroupFold(Iterator(0, 2, 1), (b: Int) => b, groups)(0)((_, _) => ()).toVector
+    )
+    intercept[IllegalStateException](
+      GroupFold(Iterator(3, 4, 0), (b: Int) => b, groups)(0)((_, _) => ()).toVector
+    )
+  }
 }

@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-17, round 158.
+Updated 2026-11-17, round 159.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -189,7 +189,8 @@ through round 100 as the maintainer reported.
 | 155 | Performance step 0: `GoldenRunsSuite` and its manifest of 40 golden runs (NUM-2, plan §6.1), with an R0 check of the multi-block runs and a one-ulp negative control; `CoxPHSuite` uses `CoxFixtures` | Merged (a9b0640) |
 | 156 | Operation tags on every action of the Cox and logistic fits and the shared validation and layout code (`backend.Operations`, OI-108), with `OperationTagsSuite`; the golden runs unchanged; `PerfJobSuite`, `03_perf` and the runbook identify passes by tag | Merged (7a14624) |
 | 157 | Points 1 to 4 recorded by operation (both 20M points fail in the build, OI-115); step 0b: Cox and logistic validation run their distinct counts as jobs of their own (OI-109), with `DuplicateRowsSuite` | Merged (3c6cc34) |
-| 158 | Performance step 1, part 1: the design (`docs/spec/performance/step1-reduction.md`); `layout.ReductionGroups` and `layout.PartitionKeys` with `ReductionGroupsSuite` (not yet wired into the fits) | Delivered as a patch |
+| 158 | Performance step 1, part 1: the design (`docs/spec/performance/step1-reduction.md`); `layout.ReductionGroups` and `layout.PartitionKeys` with `ReductionGroupsSuite` (not yet wired into the fits) | Merged (ccfe075) |
+| 159 | Performance step 1, part 2: Cox blocks stay at the target size and are built one group per partition; its evaluation, summary and robust passes fold per group on the executors (`GroupFold`); growth retired for Cox; the golden runs unchanged | Delivered as a patch |
 
 ## Decisions and spikes
 

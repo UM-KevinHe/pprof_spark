@@ -164,26 +164,30 @@ class CoxLayoutSuite extends SparkSuite {
   }
 
   test(
-    "blocks grow until the partials fit the driver budget, and later calls find the same plan (L5)"
+    "beyond the driver budget, blocks keep their size, partials are reduced in groups, bit-identically for any " +
+      "partitioning, and later calls find the same plan (step 1, L5)"
   ) {
     val name = "rc-stratified"
     val p = features(name).size
     val partial = 8L * (2L + p + p * (p + 1) / 2)
     val requested = CoxOptions(blocks = manyBlocks)
     val before = CoxPH.fit(frame(spark, name), spec(name), requested)
-    val budget = before.layout.blockCount * partial - 1L
-    val grown = CoxPH.fit(
-      frame(spark, name),
-      spec(name),
-      requested.copy(blocks = manyBlocks.copy(driverBudgetBytes = budget))
+    assert(before.layout.blockCount >= 4, s"${before.layout}")
+    val options = requested.copy(blocks =
+      manyBlocks.copy(driverBudgetBytes = (before.layout.blockCount / 3) * partial)
     )
-    assert(grown.converged, grown.message)
-    assert(grown.layout.blockCount * partial <= budget, s"${grown.layout}")
-    assert(grown.layout.targetRowsPerBlock > before.layout.targetRowsPerBlock, s"${grown.layout}")
+    val grouped = CoxPH.fit(frame(spark, name), spec(name), options)
+    assert(grouped.converged, grouped.message)
+    assertEquals(grouped.layout.targetRowsPerBlock, before.layout.targetRowsPerBlock)
+    assertEquals(grouped.layout.blockCount, before.layout.blockCount)
     assert(
       Tolerances("T-part.parameters")
-        .worstRatio(grown.estimates.toArray, before.estimates.toArray) <= 1.0
+        .worstRatio(grouped.estimates.toArray, before.estimates.toArray) <= 1.0
     )
-    assert(CoxPH.baseline(frame(spark, name), grown).count() > 0L)
+    def outputs(fit: CoxFit) =
+      bits(fit.estimates ++ fit.information ++ fit.covariance :+ fit.logLikelihood)
+    val again = CoxPH.fit(frame(spark, name, reverse = true).repartition(7), spec(name), options)
+    assertEquals(outputs(again), outputs(grouped))
+    assert(CoxPH.baseline(frame(spark, name), grouped).count() > 0L)
   }
 }

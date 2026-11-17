@@ -84,3 +84,43 @@ object PartitionKeys {
     }
   }
 }
+
+/** Folds a partition's blocks per reduction group, in block order (step1-reduction.md §4): blocks arrive sorted by
+  * block identifier, and each group's accumulator receives its blocks in that order. A block or a group out of
+  * order fails the pass rather than change the order of summation.
+  */
+object GroupFold {
+
+  def apply[T, A](blocks: Iterator[T], blockId: T => Int, groups: ReductionGroups)(empty: => A)(
+      add: (A, T) => Unit
+  ): Iterator[(Int, A)] = {
+    val source = blocks.buffered
+    new Iterator[(Int, A)] {
+      private var lastBlock = -1
+      private var lastGroup = -1
+
+      def hasNext: Boolean = source.hasNext
+
+      def next(): (Int, A) = {
+        val group = groups.groupOf(blockId(source.head))
+        if (group <= lastGroup)
+          throw new IllegalStateException(
+            s"group $group after group $lastGroup: blocks out of order"
+          )
+        lastGroup = group
+        val accumulator = empty
+        while (source.hasNext && groups.groupOf(blockId(source.head)) == group) {
+          val block = source.next()
+          val id = blockId(block)
+          if (id <= lastBlock)
+            throw new IllegalStateException(
+              s"block $id after block $lastBlock: blocks out of order"
+            )
+          lastBlock = id
+          add(accumulator, block)
+        }
+        (group, accumulator)
+      }
+    }
+  }
+}

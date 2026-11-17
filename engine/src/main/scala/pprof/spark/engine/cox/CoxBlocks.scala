@@ -1,12 +1,15 @@
 package pprof.spark.engine.cox
 
-import org.apache.spark.sql.{Dataset, Encoders}
+import scala.jdk.CollectionConverters._
+
+import org.apache.spark.sql.{Dataset, Encoders, Row}
 import org.apache.spark.sql.functions.{broadcast, col}
+import org.apache.spark.sql.types.{IntegerType, LongType, StructField, StructType}
 import org.apache.spark.storage.StorageLevel
 
 import pprof.spark.engine.backend.PlanFrames
 import pprof.spark.engine.data.Validation
-import pprof.spark.engine.layout.LayoutPlan
+import pprof.spark.engine.layout.{LayoutPlan, PartitionKeys, ReductionGroups}
 import pprof.spark.engine.backend.Operations._
 
 /** One input row placed in its block (§6.6). */
@@ -154,6 +157,26 @@ object CoxBlockBuilder {
     )
   }
 
+  /** The blocks of rows sorted by block identifier, built one block at a time (step1-reduction.md §3). */
+  def buildAll(rows: Iterator[CoxRow], p: Int): Iterator[CoxBlock] = {
+    val source = rows.buffered
+    new Iterator[CoxBlock] {
+      private var last = -1
+
+      def hasNext: Boolean = source.hasNext
+
+      def next(): CoxBlock = {
+        val id = source.head.blockId
+        if (id <= last)
+          throw new IllegalStateException(s"block $id after block $last: rows out of block order")
+        last = id
+        val block = scala.collection.mutable.ArrayBuffer.empty[CoxRow]
+        while (source.hasNext && source.head.blockId == id) block += source.next()
+        build(id, block.iterator, p)
+      }
+    }
+  }
+
   private def normalize(row: CoxRow): CoxRow =
     row.copy(
       time = row.time + 0.0,
@@ -175,7 +198,11 @@ object CoxBlockBuilder {
 }
 
 /** The persisted Cox working set (§6.7). */
-final class CoxWorkingSet private (val blocks: Dataset[CoxBlock], val plan: LayoutPlan) {
+final class CoxWorkingSet private (
+    val blocks: Dataset[CoxBlock],
+    val plan: LayoutPlan,
+    val groups: ReductionGroups
+) {
   def release(): Unit = {
     blocks.unpersist(blocking = false)
     ()
@@ -184,15 +211,36 @@ final class CoxWorkingSet private (val blocks: Dataset[CoxBlock], val plan: Layo
 
 object CoxWorkingSet {
 
-  /** Joins the plan to the rows, builds one block per plan block with one shuffle, and persists
-    * the blocks at `storageLevel`.
+  private val PartitionKeyColumn = "__pprof_partition_key"
+
+  /** Joins the plan to the rows and, with one shuffle, places each reduction group in a partition of its own, its
+    * rows sorted by block; builds the blocks one at a time and persists them at `storageLevel`
+    * (step1-reduction.md §3).
     */
-  def build(input: CoxInput, plan: LayoutPlan, storageLevel: StorageLevel): CoxWorkingSet = {
+  def build(
+      input: CoxInput,
+      plan: LayoutPlan,
+      groups: ReductionGroups,
+      storageLevel: StorageLevel
+  ): CoxWorkingSet = {
     val p = input.spec.features.size
-    val placements = PlanFrames.placements(input.frame.sparkSession, plan, input.strataKeyIsText)
+    val spark = input.frame.sparkSession
+    val placements = PlanFrames.placements(spark, plan, input.strataKeyIsText)
+    val keys = PartitionKeys.forPartitions(spark, groups.groups)
+    val blockKeys = spark.createDataFrame(
+      (0 until plan.blockCount).map(b => Row(b, keys(groups.groupOf(b)))).asJava,
+      StructType(
+        Seq(
+          StructField(PlanFrames.BlockIdColumn, IntegerType, nullable = false),
+          StructField(PartitionKeyColumn, LongType, nullable = false)
+        )
+      )
+    )
     val placed = input.frame
       .join(broadcast(placements), Seq(Validation.GroupColumn))
+      .join(broadcast(blockKeys), Seq(PlanFrames.BlockIdColumn))
       .select(
+        col(PartitionKeyColumn),
         col(PlanFrames.BlockIdColumn).as("blockId"),
         col(PlanFrames.GroupIndexColumn).as("groupIndex"),
         col(Validation.RowIdColumn).as("rowId"),
@@ -204,10 +252,12 @@ object CoxWorkingSet {
         col(CoxValidation.ClusterColumn).as("cluster"),
         col(Validation.FeaturesColumn).as("x")
       )
-      .as[CoxRow](Encoders.product[CoxRow])
     val blocks = placed
-      .groupByKey((row: CoxRow) => row.blockId)(Encoders.scalaInt)
-      .mapGroups((blockId: Int, rows: Iterator[CoxRow]) => CoxBlockBuilder.build(blockId, rows, p))(
+      .repartition(groups.groups, col(PartitionKeyColumn))
+      .sortWithinPartitions(col("blockId"))
+      .drop(PartitionKeyColumn)
+      .as[CoxRow](Encoders.product[CoxRow])
+      .mapPartitions((rows: Iterator[CoxRow]) => CoxBlockBuilder.buildAll(rows, p))(
         Encoders.product[CoxBlock]
       )
       .persist(storageLevel)
@@ -215,7 +265,7 @@ object CoxWorkingSet {
       val built = blocks.countAs("cox.build")
       if (built != plan.blockCount)
         throw new IllegalStateException(s"built $built blocks; the plan has ${plan.blockCount}")
-      new CoxWorkingSet(blocks, plan)
+      new CoxWorkingSet(blocks, plan, groups)
     } catch {
       case e: Throwable =>
         blocks.unpersist(blocking = false)
