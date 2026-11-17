@@ -15,9 +15,16 @@ import org.apache.spark.sql.types.{
   StructType
 }
 import org.slf4j.LoggerFactory
-import pprof.spark.engine.backend.{DriverGuards, DriverLimitExceededException, OrderedReduction}
+import pprof.spark.engine.backend.{DriverLimitExceededException, OrderedReduction}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
-import pprof.spark.engine.layout.{BudgetedLayout, GroupKey, GroupSizes}
+import pprof.spark.engine.layout.{
+  BudgetedLayout,
+  GroupFold,
+  GroupKey,
+  GroupSizes,
+  LayoutPlan,
+  ReductionGroups
+}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
 import pprof.spark.numerics.{
@@ -81,13 +88,10 @@ object LogisticFE {
         s"${fitted.size} providers exceed maxProvidersOnDriver = ${options.maxProvidersOnDriver}; " +
           "the provider effects are held on the driver (Phase 2a specification §11, OI-50)"
       )
-    val plan =
-      BudgetedLayout.plan(fitted, options.blocks, p + 2, 8L * (Moments.packedLength(p) + p + 2L))
-    DriverGuards.requireWithinBudget(
-      s"${plan.blockCount} block partials",
-      plan.blockCount.toLong * 8L * (Moments.packedLength(p) + p + 2L),
-      options.blocks
-    )
+    // Blocks stay at the target size; their partials are reduced in groups (docs/spec/performance/step1-reduction.md).
+    val plan = LayoutPlan.create(fitted, options.blocks.targetRowsPerBlock(p + 2))
+    val groups =
+      ReductionGroups.plan(plan.blockCount, 8L * (Moments.packedLength(p) + p + 2L), options.blocks)
     val m = plan.groupCount
     val keys = new Array[GroupKey](m)
     plan.placements.foreach(g => keys(g.groupIndex) = g.key)
@@ -96,10 +100,15 @@ object LogisticFE {
       plan.placements.sortBy(_.groupIndex).foreach(g => lists(g.blockId) += g.groupIndex)
       lists.map(_.result())
     }
-    val workingSet = LogisticWorkingSet.build(input, plan, options.blocks.resolvedStorageLevel)
+    val workingSet =
+      LogisticWorkingSet.build(input, plan, groups, options.blocks.resolvedStorageLevel)
     try {
       val summaries = workingSet.blocks
-        .map((block: LogisticBlock) => summarize(block))(Encoders.product[LogisticSummary])
+        .mapPartitions((blocks: Iterator[LogisticBlock]) =>
+          GroupFold(blocks, (block: LogisticBlock) => block.blockId, groups)(new SummaryGroup(p))(
+            (sum, block) => sum.add(summarize(block))
+          ).map { case (group, sum) => sum.summary(group) }
+        )(Encoders.product[LogisticSummary])
         .collectAs("logistic.summarize")
         .sortBy(_.blockId)
       val rows = summaries.iterator.map(_.rows).sum
@@ -111,11 +120,15 @@ object LogisticFE {
       val providerEvents = new Array[Double](m)
       val providerTrials = new Array[Double](m)
       summaries.foreach { s =>
-        val ids = providersOfBlock(s.blockId)
-        ids.indices.foreach { i =>
-          records(ids(i)) = s.records(i)
-          providerEvents(ids(i)) = s.providerEvents(i)
-          providerTrials(ids(i)) = s.providerTrials(i)
+        var offset = 0
+        groups.blocksOf(s.blockId).foreach { b =>
+          val ids = providersOfBlock(b)
+          ids.indices.foreach { i =>
+            records(ids(i)) = s.records(offset + i)
+            providerEvents(ids(i)) = s.providerEvents(offset + i)
+            providerTrials(ids(i)) = s.providerTrials(offset + i)
+          }
+          offset += ids.length
         }
       }
       val events = summaries.iterator.map(_.events).sum
@@ -138,7 +151,7 @@ object LogisticFE {
         j <- i + 1 until p
         if math.abs(correlations(Moments.packedIndex(i, j, p))) > options.correlationThreshold
       } yield s"(${spec.features(i)}, ${spec.features(j)})"
-      val passes = new SparkPasses(workingSet.blocks, providersOfBlock, p)
+      val passes = new SparkPasses(workingSet.blocks, providersOfBlock, p, workingSet.groups)
       val result =
         try
           Serbin.fit(
@@ -156,12 +169,17 @@ object LogisticFE {
       val beta = result.beta
       val variance = passes
         .withGamma(gamma)
-        .map((block: LogisticBlock) =>
-          LogisticVariancePartial(
-            block.blockId,
-            Kernel.varianceSchur(block.rows, block.gamma, beta),
-            Kernel.loglik(block.rows, block.gamma, beta)
-          )
+        .mapPartitions((blocks: Iterator[LogisticBlock]) =>
+          GroupFold(blocks, (block: LogisticBlock) => block.blockId, groups)(new VarianceSum(p))(
+            (sum, block) =>
+              sum.add(
+                LogisticVariancePartial(
+                  block.blockId,
+                  Kernel.varianceSchur(block.rows, block.gamma, beta),
+                  Kernel.loglik(block.rows, block.gamma, beta)
+                )
+              )
+          ).map { case (group, sum) => sum.partial(group) }
         )(Encoders.product[LogisticVariancePartial])
         .collectAs("logistic.variance")
         .sortBy(_.blockId)
@@ -195,10 +213,13 @@ object LogisticFE {
       val robust = spec.cluster.map { _ =>
         val meatParts = passes
           .withGamma(gamma)
-          .map { (block: LogisticBlock) =>
-            val meat = Kernel.robustMeat(block.rows, block.gamma, beta)
-            LogisticMeatPartial(block.blockId, meat.packed, meat.clusters)
-          }(Encoders.product[LogisticMeatPartial])
+          .mapPartitions((blocks: Iterator[LogisticBlock]) =>
+            GroupFold(blocks, (block: LogisticBlock) => block.blockId, groups)(new MeatSum(p)) {
+              (sum, block) =>
+                val meat = Kernel.robustMeat(block.rows, block.gamma, beta)
+                sum.add(LogisticMeatPartial(block.blockId, meat.packed, meat.clusters))
+            }.map { case (group, sum) => sum.partial(group) }
+          )(Encoders.product[LogisticMeatPartial])
           .collectAs("logistic.robust")
           .sortBy(_.blockId)
         val meat = OrderedReduction.reduce(
@@ -452,7 +473,13 @@ object LogisticFE {
       plan.placements.sortBy(_.groupIndex).foreach(g => lists(g.blockId) += g.groupIndex)
       lists.map(_.result())
     }
-    val workingSet = LogisticWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel)
+    val workingSet = LogisticWorkingSet.build(
+      input,
+      plan,
+      ReductionGroups
+        .plan(plan.blockCount, 8L * (Moments.packedLength(p) + p + 2L), fit.options.blocks),
+      fit.options.blocks.resolvedStorageLevel
+    )
     try {
       val fingerprint = workingSet.blocks
         .map((block: LogisticBlock) => summarize(block))(Encoders.product[LogisticSummary])
@@ -473,7 +500,7 @@ object LogisticFE {
           .map((block: LogisticBlock) => dropColumn(block, j))(Encoders.product[LogisticBlock])
           .persist(fit.options.blocks.resolvedStorageLevel)
         try {
-          val passes = new SparkPasses(reduced, providersOfBlock, p - 1)
+          val passes = new SparkPasses(reduced, providersOfBlock, p - 1, workingSet.groups)
           val refit =
             try
               Serbin.fit(
@@ -507,7 +534,7 @@ object LogisticFE {
               val full = Array.tabulate(p)(k =>
                 if (k < j) refit.beta(k) else if (k == j) 0.0 else refit.beta(k - 1)
               )
-              val parts = new SparkPasses(workingSet.blocks, providersOfBlock, p)
+              val parts = new SparkPasses(workingSet.blocks, providersOfBlock, p, workingSet.groups)
                 .withGamma(refit.gamma)
                 .map { (block: LogisticBlock) =>
                   val t = Kernel.scoreTerms(block.rows, block.gamma, full)
@@ -569,7 +596,13 @@ object LogisticFE {
       plan.placements.sortBy(_.groupIndex).foreach(g => lists(g.blockId) += g.groupIndex)
       lists.map(_.result())
     }
-    val workingSet = LogisticWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel)
+    val workingSet = LogisticWorkingSet.build(
+      input,
+      plan,
+      ReductionGroups
+        .plan(plan.blockCount, 8L * (Moments.packedLength(p) + p + 2L), fit.options.blocks),
+      fit.options.blocks.resolvedStorageLevel
+    )
     val fingerprint =
       try
         workingSet.blocks
@@ -598,7 +631,9 @@ object LogisticFE {
       providersOfBlock: Array[Array[Int]],
       p: Int,
       gamma: Array[Double]
-  ): Dataset[LogisticBlock] = new SparkPasses(blocks, providersOfBlock, p).withGamma(gamma)
+  ): Dataset[LogisticBlock] =
+    new SparkPasses(blocks, providersOfBlock, p, ReductionGroups(providersOfBlock.length, 1))
+      .withGamma(gamma)
 
   /** The rows of `df` with `linear_predictor` and `probability` (Phase 2b §4): γ̂ⱼ + xᵀβ̂ and its inverse
     * logit, with Spark's StrictMath-based `exp`. Rows of providers not in the fit fail with counts
@@ -780,7 +815,8 @@ object LogisticFE {
   private final class SparkPasses(
       blocks: Dataset[LogisticBlock],
       providersOfBlock: Array[Array[Int]],
-      p: Int
+      p: Int,
+      groups: ReductionGroups
   ) extends SerbinPasses {
 
     private val schema = StructType(
@@ -801,11 +837,15 @@ object LogisticFE {
 
     def schur(gamma: Array[Double], beta: Array[Double]): Kernel.Schur = {
       val b = beta.clone()
+      val (folds, width) = (groups, p)
       val parts = withGamma(gamma)
-        .map { (block: LogisticBlock) =>
-          val s = Kernel.schur(block.rows, block.gamma, b)
-          LogisticSchurPartial(block.blockId, s.packed, s.rhs, s.scoreTerm, s.loglik)
-        }(Encoders.product[LogisticSchurPartial])
+        .mapPartitions((rows: Iterator[LogisticBlock]) =>
+          GroupFold(rows, (block: LogisticBlock) => block.blockId, folds)(new SchurSum(width)) {
+            (sum, block) =>
+              val s = Kernel.schur(block.rows, block.gamma, b)
+              sum.add(LogisticSchurPartial(block.blockId, s.packed, s.rhs, s.scoreTerm, s.loglik))
+          }.map { case (group, sum) => sum.partial(group) }
+        )(Encoders.product[LogisticSchurPartial])
         .collectAs("logistic.pass-a")
         .sortBy(_.blockId)
         .toSeq

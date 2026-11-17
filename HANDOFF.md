@@ -24,7 +24,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
 | Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2 complete (D-65, D-66; rounds 127 to 129); slice 4c-3 complete (D-67; rounds 131 to 133); part 4d's plan approved (D-68), slice 4d-1 complete (D-69, D-70; rounds 135 to 139); slice 4d-2 complete (D-71, D-72; rounds 139 to 144), on the driver path (OI-102); slice 4d-3's specification approved (D-74), its persistence, jobs and Python in rounds 146 to 148. **Paused on 2026-11-13 after round 148**, at a clean point (plan §8) |
-| Performance phase, Cox and logistic fixed effects | Plan approved (D-75, 2026-11-13; round 149, `docs/spec/performance/plan.md`), from the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`). Steps 0 to 6: harness and baseline of `main`; executor-side reduction in fixed groups; chunked compensated accumulation; the Cox weighted-Gram information; Cox per-time aggregates; logistic profile-likelihood Newton; internal scaling. The 2026-11-13 scale runs used round 81's build, whose fixed 4 MB blocks explain each `DriverLimitExceededException` (OI-103). Step 0's harness in round 150 (`bench.perf`, `docs/parity/scale/perf-runbook.md`); `00_build` packages bench and `03_perf` runs the points from the workspace (round 151); points 1 and 2 first measured on a small test cluster, and the harness fixed after them (round 152); D-76, approved 2026-11-16: measure on the production cluster as it is, and support Spark 4.0 (rounds 153 and 154); `GoldenRunsSuite`, NUM-2's golden runs (round 155); operation tags on every action (round 156); points 1 to 4 measured by operation, both 20M points failing in the build, and validation's distinct counts moved out of the counts (round 157); step 1's design, groups and partition keys (round 158); Cox reduced in groups (round 159) |
+| Performance phase, Cox and logistic fixed effects | Plan approved (D-75, 2026-11-13; round 149, `docs/spec/performance/plan.md`), from the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`). Steps 0 to 6: harness and baseline of `main`; executor-side reduction in fixed groups; chunked compensated accumulation; the Cox weighted-Gram information; Cox per-time aggregates; logistic profile-likelihood Newton; internal scaling. The 2026-11-13 scale runs used round 81's build, whose fixed 4 MB blocks explain each `DriverLimitExceededException` (OI-103). Step 0's harness in round 150 (`bench.perf`, `docs/parity/scale/perf-runbook.md`); `00_build` packages bench and `03_perf` runs the points from the workspace (round 151); points 1 and 2 first measured on a small test cluster, and the harness fixed after them (round 152); D-76, approved 2026-11-16: measure on the production cluster as it is, and support Spark 4.0 (rounds 153 and 154); `GoldenRunsSuite`, NUM-2's golden runs (round 155); operation tags on every action (round 156); points 1 to 4 measured by operation, both 20M points failing in the build, and validation's distinct counts moved out of the counts (round 157); step 1's design, groups and partition keys (round 158); Cox reduced in groups (round 159); the logistic fit reduced in groups (round 160) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -227,6 +227,39 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 160 (2026-11-17): step 1, part 3: the logistic fit reduced in groups
+
+- Round 159 is on `main` as `9416b09`.
+- **`LogisticFE.fit`.** It plans at the target size (`LayoutPlan.create`), and `ReductionGroups.plan` replaces the
+  block-count guard.
+- **`LogisticWorkingSet.build(input, plan, groups, storageLevel)`.** It builds as Cox's does: partition keys, one
+  shuffle into R partitions, sorted by block, blocks built one at a time (`LogisticBlockBuilder.buildAll`). The
+  working set carries its groups.
+- **Passes folded per group** with `GroupFold`, with the accumulators in `LogisticGroupSums.scala`:
+  - **summaries** (`SummaryGroup`): plain sums of events and trials, as the driver adds them; Neumaier sums of the
+    weighted features; co-moments merged from the group's first block on, so a one-block group is untouched;
+    per-provider counts concatenated in block order, which the driver slices back with `groups.blocksOf`;
+  - **pass A** (`SchurSum`, inside `SparkPasses.schur`; the groups are copied to locals before the lambda);
+  - **variance** (`VarianceSum`);
+  - **robust meat** (`MeatSum`).
+- **Unchanged.** Pass B and the per-provider passes keep per-block partials, which are small. Covariate tests and
+  predictions keep `BudgetedLayout` but build through the new path, with groups from `ReductionGroups.plan`, always
+  one block each after growth.
+- **`LogisticLayoutSuite`'s L5 test.** Under a budget a third of the partials:
+  - blocks keep their size and count;
+  - estimates and provider effects agree within T-part;
+  - a refit from reversed rows on 7 partitions is bit-identical (estimates, covariance, γ, var γ, log-likelihood);
+  - provider tests run on the grouped fit.
+- **New open items.** OI-116, passes still collecting per block, and OI-117, recording G and R with a fit.
+
+Evidence (assistant sandbox, JDK 17, Classic): `GoldenRunsSuite` passes unchanged (all 40 runs, the 14 logistic
+ones included), and the logistic, three-stage, tag, duplicate-row and perf suites pass (counts in the evidence log).
+The patch applies to a fresh clone of `main` with an identical tree, scalafmt is clean, and `check-engine-api.sh`
+passes with its self-test.
+
+**Next: the step's exit on the cluster.** `03_perf` points 3 to 10 (20M, 50M and 100M rows) with rounds 159 and 160.
+They should fit where round 156's 20M points ran out of memory.
 
 ## Round 159 (2026-11-17): step 1, part 2: Cox reduced in groups
 

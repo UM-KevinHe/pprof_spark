@@ -1,11 +1,14 @@
 package pprof.spark.engine.logistic
 
-import org.apache.spark.sql.{Dataset, Encoders}
+import scala.jdk.CollectionConverters._
+
+import org.apache.spark.sql.{Dataset, Encoders, Row}
 import org.apache.spark.sql.functions.{broadcast, col}
+import org.apache.spark.sql.types.{IntegerType, LongType, StructField, StructType}
 import org.apache.spark.storage.StorageLevel
 import pprof.spark.engine.backend.PlanFrames
 import pprof.spark.engine.data.Validation
-import pprof.spark.engine.layout.LayoutPlan
+import pprof.spark.engine.layout.{LayoutPlan, PartitionKeys, ReductionGroups}
 import pprof.spark.numerics.kernels.{LogisticFE => Kernel}
 import pprof.spark.engine.backend.Operations._
 
@@ -124,6 +127,26 @@ object LogisticBlockBuilder {
   }
 
   /** Sorts a block's rows canonically after normalizing negative zeros (ADR-0004). */
+  /** The blocks of rows sorted by block identifier, built one block at a time (step1-reduction.md §3). */
+  def buildAll(rows: Iterator[LogisticRow], p: Int): Iterator[LogisticBlock] = {
+    val source = rows.buffered
+    new Iterator[LogisticBlock] {
+      private var last = -1
+
+      def hasNext: Boolean = source.hasNext
+
+      def next(): LogisticBlock = {
+        val id = source.head.blockId
+        if (id <= last)
+          throw new IllegalStateException(s"block $id after block $last: rows out of block order")
+        last = id
+        val block = scala.collection.mutable.ArrayBuffer.empty[LogisticRow]
+        while (source.hasNext && source.head.blockId == id) block += source.next()
+        build(id, block.iterator, p)
+      }
+    }
+  }
+
   def build(blockId: Int, rows: Iterator[LogisticRow], p: Int): LogisticBlock = {
     val sorted = rows
       .map(r => r.copy(y = r.y + 0.0, n = r.n + 0.0, x = r.x.map(v => if (v == 0.0) 0.0 else v)))
@@ -173,7 +196,11 @@ object LogisticBlockBuilder {
 }
 
 /** The persisted logistic working set (§6.7). */
-final class LogisticWorkingSet private (val blocks: Dataset[LogisticBlock], val plan: LayoutPlan) {
+final class LogisticWorkingSet private (
+    val blocks: Dataset[LogisticBlock],
+    val plan: LayoutPlan,
+    val groups: ReductionGroups
+) {
   def release(): Unit = {
     blocks.unpersist(blocking = false)
     ()
@@ -182,19 +209,35 @@ final class LogisticWorkingSet private (val blocks: Dataset[LogisticBlock], val 
 
 object LogisticWorkingSet {
 
+  private val PartitionKeyColumn = "__pprof_partition_key"
+
   /** Joins the plan to the rows (dropping screened providers), builds one block per plan block
     * with one shuffle, and persists the blocks at `storageLevel`.
     */
   def build(
       input: LogisticInput,
       plan: LayoutPlan,
+      groups: ReductionGroups,
       storageLevel: StorageLevel
   ): LogisticWorkingSet = {
     val p = input.spec.features.size
-    val placements = PlanFrames.placements(input.frame.sparkSession, plan, input.providerKeyIsText)
+    val spark = input.frame.sparkSession
+    val placements = PlanFrames.placements(spark, plan, input.providerKeyIsText)
+    val keys = PartitionKeys.forPartitions(spark, groups.groups)
+    val blockKeys = spark.createDataFrame(
+      (0 until plan.blockCount).map(b => Row(b, keys(groups.groupOf(b)))).asJava,
+      StructType(
+        Seq(
+          StructField(PlanFrames.BlockIdColumn, IntegerType, nullable = false),
+          StructField(PartitionKeyColumn, LongType, nullable = false)
+        )
+      )
+    )
     val placed = input.frame
       .join(broadcast(placements), Seq(Validation.GroupColumn))
+      .join(broadcast(blockKeys), Seq(PlanFrames.BlockIdColumn))
       .select(
+        col(PartitionKeyColumn),
         col(PlanFrames.BlockIdColumn).as("blockId"),
         col(PlanFrames.GroupIndexColumn).as("groupIndex"),
         col(Validation.RowIdColumn).as("rowId"),
@@ -203,12 +246,12 @@ object LogisticWorkingSet {
         col(Validation.FeaturesColumn).as("x"),
         col(LogisticValidation.ClusterColumn).as("cluster")
       )
-      .as[LogisticRow](Encoders.product[LogisticRow])
     val blocks = placed
-      .groupByKey((row: LogisticRow) => row.blockId)(Encoders.scalaInt)
-      .mapGroups((blockId: Int, rows: Iterator[LogisticRow]) =>
-        LogisticBlockBuilder.build(blockId, rows, p)
-      )(
+      .repartition(groups.groups, col(PartitionKeyColumn))
+      .sortWithinPartitions(col("blockId"))
+      .drop(PartitionKeyColumn)
+      .as[LogisticRow](Encoders.product[LogisticRow])
+      .mapPartitions((rows: Iterator[LogisticRow]) => LogisticBlockBuilder.buildAll(rows, p))(
         Encoders.product[LogisticBlock]
       )
       .persist(storageLevel)
@@ -216,7 +259,7 @@ object LogisticWorkingSet {
       val built = blocks.countAs("logistic.build")
       if (built != plan.blockCount)
         throw new IllegalStateException(s"built $built blocks; the plan has ${plan.blockCount}")
-      new LogisticWorkingSet(blocks, plan)
+      new LogisticWorkingSet(blocks, plan, groups)
     } catch {
       case e: Throwable =>
         blocks.unpersist(blocking = false)

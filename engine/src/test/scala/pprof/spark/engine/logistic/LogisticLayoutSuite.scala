@@ -290,34 +290,47 @@ class LogisticLayoutSuite extends SparkSuite {
   }
 
   test(
-    "blocks grow until the partials fit the driver budget, and later calls find the same plan (L5)"
+    "beyond the driver budget, blocks keep their size, partials are reduced in groups, bit-identically for any " +
+      "partitioning, and later calls find the same plan (step 1, L5)"
   ) {
-    val partial = 8L * (6L + 3L + 2L)
+    val p = Features.size
+    val partial = 8L * (p * (p + 1) / 2 + p + 2)
     val before = LogisticFE.fit(
       frame(spark, "lfe-base"),
       spec("lfe-base"),
       LogisticOptions(blocks = manyBlocks)
     )
-    val budget = before.layout.blockCount * partial - 1L
-    val grown = LogisticFE.fit(
-      frame(spark, "lfe-base"),
-      spec("lfe-base"),
-      LogisticOptions(blocks = manyBlocks.copy(driverBudgetBytes = budget))
-    )
-    assert(grown.converged)
-    assert(grown.layout.blockCount * partial <= budget, s"${grown.layout}")
-    assert(grown.layout.targetRowsPerBlock > before.layout.targetRowsPerBlock, s"${grown.layout}")
+    assert(before.layout.blockCount >= 4, s"${before.layout}")
+    val options =
+      LogisticOptions(blocks =
+        manyBlocks.copy(driverBudgetBytes = (before.layout.blockCount / 3) * partial)
+      )
+    val grouped = LogisticFE.fit(frame(spark, "lfe-base"), spec("lfe-base"), options)
+    assert(grouped.converged)
+    assertEquals(grouped.layout.targetRowsPerBlock, before.layout.targetRowsPerBlock)
+    assertEquals(grouped.layout.blockCount, before.layout.blockCount)
     assert(
       Tolerances("T-part.parameters")
-        .worstRatio(grown.estimates.toArray, before.estimates.toArray) <= 1.0
+        .worstRatio(grouped.estimates.toArray, before.estimates.toArray) <= 1.0
     )
     assert(
       Tolerances("T-part.parameters")
-        .worstRatio(grown.providers.gamma, before.providers.gamma) <= 1.0
+        .worstRatio(grouped.providers.gamma, before.providers.gamma) <= 1.0
     )
+    def outputs(f: LogisticFit): Seq[Long] =
+      (f.estimates ++ f.covariance ++ f.providers.gamma.toSeq ++ f.providers.varGamma.toSeq :+ f.loglik)
+        .map(java.lang.Double.doubleToRawLongBits)
+    val again =
+      LogisticFE.fit(
+        frame(spark, "lfe-base", reverse = true).repartition(7),
+        spec("lfe-base"),
+        options
+      )
+    assertEquals(outputs(again), outputs(grouped))
     assertEquals(
-      LogisticProviderTests.test(frame(spark, "lfe-base"), grown).count(),
-      grown.providers.size.toLong
+      LogisticProviderTests.test(frame(spark, "lfe-base"), grouped).count(),
+      grouped.providers.size.toLong
     )
   }
+
 }
