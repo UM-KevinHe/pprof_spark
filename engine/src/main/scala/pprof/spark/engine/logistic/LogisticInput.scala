@@ -1,17 +1,7 @@
 package pprof.spark.engine.logistic
 
 import org.apache.spark.sql.{Column, DataFrame}
-import org.apache.spark.sql.functions.{
-  array,
-  coalesce,
-  count,
-  countDistinct,
-  lit,
-  max,
-  min,
-  sum,
-  when
-}
+import org.apache.spark.sql.functions.{array, coalesce, count, lit, max, min, sum, when}
 import org.apache.spark.sql.types.{
   BooleanType,
   DataType,
@@ -87,7 +77,7 @@ object LogisticValidation {
     if (providerNulls > 0) problems += InputProblem.InvalidValues(spec.provider, providerNulls, 0L)
     spec.rowId.foreach { name =>
       val nulls = next()
-      val duplicates = (rows - nulls) - next()
+      val duplicates = (rows - nulls) - distinctValues(df, Validation.column(name))
       if (nulls > 0) problems += InputProblem.InvalidValues(name, nulls, 0L)
       if (duplicates > 0) problems += InputProblem.DuplicateRowIds(name, duplicates)
     }
@@ -118,6 +108,12 @@ object LogisticValidation {
     )
     LogisticInput(frame, spec, rows, providerKeyIsText)
   }
+
+  /** The number of distinct non-null values of `value`, as `countDistinct` gives it, in a job of its own: inside the
+    * counts' aggregate, a distinct count makes Spark group every other count by the value (OI-109).
+    */
+  private def distinctValues(df: DataFrame, value: Column): Long =
+    df.where(value.isNotNull).select(value).distinct().countAs("logistic.validate")
 
   private def schemaProblems(
       types: Map[String, DataType],
@@ -177,10 +173,8 @@ object LogisticValidation {
         max(value.cast(DoubleType))
       )
     }
-    val rowId = spec.rowId.toSeq.flatMap { name =>
-      val value = Validation.column(name)
-      Seq(countWhere(value.isNull), countDistinct(value))
-    }
+    // The distinct count of row identifiers runs as a job of its own (`distinctValues`, OI-109).
+    val rowId = spec.rowId.toSeq.map(name => countWhere(Validation.column(name).isNull))
     Seq(count(lit(1)), countWhere(outcome.isNull)) ++ outcomeChecks ++ features ++
       Seq(countWhere(Validation.column(spec.provider).isNull)) ++ rowId ++
       spec.cluster.toSeq.map(name => countWhere(Validation.column(name).isNull))

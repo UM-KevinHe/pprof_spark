@@ -1,16 +1,7 @@
 package pprof.spark.engine.cox
 
 import org.apache.spark.sql.{Column, DataFrame}
-import org.apache.spark.sql.functions.{
-  array,
-  coalesce,
-  count,
-  countDistinct,
-  lit,
-  sum,
-  when,
-  xxhash64
-}
+import org.apache.spark.sql.functions.{array, coalesce, count, lit, sum, when, xxhash64}
 import org.apache.spark.sql.types.{
   ArrayType,
   BooleanType,
@@ -135,13 +126,13 @@ object CoxValidation {
     }
     spec.rowId.foreach { name =>
       val nulls = next()
-      val duplicates = (rows - nulls) - next()
+      val duplicates = (rows - nulls) - distinctValues(df, Validation.column(name))
       if (nulls > 0) problems += InputProblem.InvalidValues(name, nulls, 0L)
       if (duplicates > 0) problems += InputProblem.DuplicateRowIds(name, duplicates)
     }
     if (spec.rowKey.nonEmpty) {
       val nulls = spec.rowKey.map(name => name -> next())
-      val distinctHashes = next()
+      val distinctHashes = distinctValues(df, rowIdentifier(spec))
       nulls.foreach { case (name, n) =>
         if (n > 0) problems += InputProblem.InvalidValues(name, n, 0L)
       }
@@ -208,6 +199,12 @@ object CoxValidation {
     )
     CoxInput(frame, spec, rows, events, strataKeyIsText)
   }
+
+  /** The number of distinct non-null values of `value`, as `countDistinct` gives it, in a job of its own: inside the
+    * counts' aggregate, a distinct count makes Spark group every other count by the value (OI-109).
+    */
+  private def distinctValues(df: DataFrame, value: Column): Long =
+    df.where(value.isNotNull).select(value).distinct().countAs("cox.validate")
 
   private def schemaProblems(types: Map[String, DataType], spec: CoxSpec): Seq[InputProblem] = {
     def check(name: String, accepted: DataType => Boolean, expected: String): Option[InputProblem] =
@@ -303,14 +300,9 @@ object CoxValidation {
       Seq(countWhere(value.isNull), countWhere(Validation.nonFinite(value, types(name))))
     }
     val strata = spec.strata.toSeq.map(name => countWhere(Validation.column(name).isNull))
-    val rowId = spec.rowId.toSeq.flatMap { name =>
-      Seq(countWhere(Validation.column(name).isNull), countDistinct(Validation.column(name)))
-    }
-    val rowKey =
-      if (spec.rowKey.isEmpty) Nil
-      else
-        spec.rowKey.map(name => countWhere(Validation.column(name).isNull)) :+
-          countDistinct(rowIdentifier(spec))
+    // The distinct counts of row identifiers and keys run as jobs of their own (`distinctValues`, OI-109).
+    val rowId = spec.rowId.toSeq.map(name => countWhere(Validation.column(name).isNull))
+    val rowKey = spec.rowKey.map(name => countWhere(Validation.column(name).isNull))
     Seq(
       count(lit(1)),
       countWhere(time.isNull),

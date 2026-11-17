@@ -144,6 +144,10 @@ The kernels alone do not explain a 30-worker run being slower than one pprof_py 
 evaluation costs about 80 CPU-seconds spread over the cluster, against about 26 seconds on pprof_py's one thread
 (arithmetic). The cause lies in what a one-core run cannot show, and step 0 must find it (OI-106). The validation aggregate is the leading candidate.
 
+Measured on the cluster since then (round 157, `perf-results.md`): the kernel passes take 86% of the Cox fit's CPU
+and 79% of the logistic fit's, at about 2.8 times the sandbox's rates per row; validation takes 11% of the wall
+time in both models; and both fail at 20M rows in the working-set build.
+
 The prototype listener also taught one lesson for the harness. It mapped stages to SQL executions when their jobs
 started, and so missed the working-set build's shuffle stage: it attributed no shuffle bytes and only part of the
 build's CPU. The harness therefore maps each stage when it is submitted, from the stage's own properties, and
