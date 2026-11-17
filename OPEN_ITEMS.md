@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-11-17, round 157. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-11-17, round 158. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -120,4 +120,4 @@ decision is approved.
 | OI-112 | Photon clusters leave the JVM executors a small heap (2.2 GB on 16 GB workers in the 2026-11-16 runs), while pprof_spark's passes run in the JVM; those runs also autoscaled and used Runtime 17.3 (Spark 4.0) rather than 18 | Decided by D-76 (2026-11-16): the cluster as it is, exits on CPU per row, bytes and memory; Spark 4.0 and Runtime 17.3 supported, with CI's Python job on PySpark 4.0.0 (round 154) |
 | OI-113 | Logistic AUC pass: 14% of the 5M fit's wall time on the cluster, with GC (264 s) above its CPU (196 s) and 1.46 GiB of shuffle read | Inspect after step 1 |
 | OI-114 | The shared `Validation`, `LinearInput`, `LinearRE` and `LogisticRE` still put `countDistinct` inside their counts' aggregate, which groups every count by the row identifier | The round-157 fix (`distinctValues`) when those models are next worked on |
-| OI-115 | At 20M rows and 180 features, both models fail in the working-set build: executors lost to out-of-memory with 64 MB blocks and 2.2 GB executor heaps (2026-11-17) | Step 1: fixed small blocks reduced in groups |
+| OI-115 | At 20M rows and 180 features, both models fail in the working-set build: executors lost to out-of-memory with 64 MB blocks and 2.2 GB executor heaps (2026-11-17) | Step 1 (`docs/spec/performance/step1-reduction.md`): groups and partition keys in round 158; Cox in round 159, logistic in round 160; then 20M to 100M on the cluster |

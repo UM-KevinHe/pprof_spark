@@ -228,6 +228,8 @@ The maintainer runs the baseline points:
 
 ### Step 1: reduction in fixed groups
 
+Design: `docs/spec/performance/step1-reduction.md` (round 158).
+
 Step 1 addresses OI-02 and part of OI-30.
 - **Blocks.** Blocks stay at `targetBlockBytes`, and `BudgetedLayout`'s growth is retired for both models.
 - **Groups.** There are R groups of G consecutive block identifiers.
