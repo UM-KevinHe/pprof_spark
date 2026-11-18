@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-77: The working set is cached on disk by default (Proposed, round 162)
+### D-77: The working set is cached on disk by default (Proposed, round 162; on hold since round 163)
 
 - **The change.** `BlockOptions.storageLevel` defaults to `DISK_ONLY` instead of `MEMORY_AND_DISK`, for every model's
   working set.
@@ -119,6 +119,19 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
   `MEMORY_AND_DISK`, or any storage level.
 - **After approval.** The default changes, PROJECT_CONTEXT §10.3 and the guides are updated, and the golden runs
   confirm the bits.
+
+**On hold (2026-11-18), at the maintainer's request.** The cost of disk-only for data that fit in memory is to be
+measured first.
+- **The evidence above** compared different sizes and runs, so it did not isolate the storage level.
+- **Paired runs in the sandbox** showed no difference beyond noise at 20 and 180 features (`perf-results.md`, round
+  163), but there the working sets stayed in the page cache.
+- **The cluster comparison** (runbook, "Comparing storage levels") decides among three choices:
+  1. Disk-only by default, if it costs nothing measurable at small sizes.
+  2. A size-based choice, if it does: memory for working sets below a threshold, disk above. The engine knows the
+     working set's size from the plan, and the executor memory from the runtime configuration where it is set. It
+     cannot know the executor count, under Spark Connect or autoscaling. So the threshold would be per executor or a
+     `BlockOptions` setting, set from the measurement.
+  3. Off-heap storage, where the cluster has off-heap memory.
 
 ### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Accepted: approved by the maintainer, 2026-11-16)
 

@@ -38,6 +38,7 @@ dbutils.widgets.dropdown("point", "1", list(POINTS) + ["custom"], "1. Point (per
 dbutils.widgets.text("data_root", "", "2. Data folder (s3://...)")
 dbutils.widgets.text("custom", "", "3. Arguments of point 'custom', without --path")
 dbutils.widgets.text("extra", "", "4. Extra arguments for any point, e.g. --verify false")
+dbutils.widgets.text("storage_levels", "", "5. Storage levels to compare, e.g. MEMORY_AND_DISK,DISK_ONLY")
 
 # COMMAND ----------
 
@@ -84,9 +85,19 @@ print(f"point {point}: PerfJob", " ".join(arguments))
 
 # COMMAND ----------
 
-started = time.time()
-report = runner.runLine(spark._jsparkSession, " ".join(arguments))
-print(f"finished in {time.time() - started:.0f} s; the report is also under {data_root}/{folder}/reports/")
+levels = [level.strip() for level in dbutils.widgets.get("storage_levels").split(",") if level.strip()]
+if levels and "--storage-level" in arguments:
+    raise ValueError("give the storage levels either in widget 5 or as --storage-level, not both")
+reports = []
+for level in levels or [None]:
+    started = time.time()
+    line = " ".join(arguments + (["--storage-level", level] if level else []))
+    reports.append(runner.runLine(spark._jsparkSession, line))
+    print(f"{level or 'default storage'}: finished in {time.time() - started:.0f} s")
+report = reports[-1]
+print(f"the reports are also under {data_root}/{folder}/reports/")
+for line in reports:
+    print(line)
 
 # COMMAND ----------
 

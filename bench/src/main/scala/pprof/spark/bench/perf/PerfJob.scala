@@ -315,6 +315,10 @@ object PerfJob {
       "spark.driver.memory",
       "spark.sql.shuffle.partitions",
       "spark.sql.adaptive.enabled",
+      "spark.memory.fraction",
+      "spark.memory.storageFraction",
+      "spark.memory.offHeap.enabled",
+      "spark.memory.offHeap.size",
       "spark.databricks.photon.enabled",
       "spark.databricks.clusterUsageTags.clusterWorkers",
       "spark.databricks.clusterUsageTags.clusterNodeType",
@@ -343,6 +347,8 @@ object PerfJob {
         .put("max_result_bytes_per_execution", s.maxResultBytes)
         .put("shuffle_write_bytes", s.shuffleWriteBytes)
         .put("shuffle_read_bytes", s.shuffleReadBytes)
+        .put("input_bytes", s.inputBytes)
+        .put("other_ms", math.max(0L, s.runMs - s.cpuMs - s.gcMs))
         .put("spilled_bytes", s.spilledBytes)
         .put("peak_task_memory_bytes", s.peakTaskMemory)
         .put("single_task_stages", s.singleTaskStages)

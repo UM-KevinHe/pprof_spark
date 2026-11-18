@@ -279,3 +279,20 @@ tables are in plan §2.5 and round 149's evidence log.
 |---|---|---|---|---|---|---|
 | Cox (3 iterations) | 31.5 | 4 evaluations, 15.7 s wall | 12.7 | 5.5 | 1.6 | 7.1 |
 | Logistic (4 iterations) | 48.9 | 4 pass A and 4 pass B, 13.5 s wall | 9.3 | 17.3 | 6.8 | 6.0 |
+
+### Round 163: storage levels compared in the sandbox
+
+This is a sandbox measurement: one core, local mode, the logistic model with the simple design. Each configuration
+ran twice, alternating storage levels, each fit in a fresh JVM.
+
+| Point | `MEMORY_AND_DISK`, fit s | `DISK_ONLY`, fit s | Pass A, wall s over all executions: memory, then disk |
+|---|---|---|---|
+| 200,000 rows, 180 features, 320 providers (5 iterations) | 113.8, 120.4 | 122.2, 121.7 | 40.1 and 37.2; 37.4 and 39.4 |
+| 1,000,000 rows, 20 features, 1,000 providers (4 iterations) | 45.9, 46.0 | 47.0, 45.2 | 8.5 and 7.6; 8.4 and 7.6 |
+
+- **No difference beyond run-to-run noise at either width.** Pass B, the lightest per row, was 0.5 to 1.7 s slower
+  over five passes on disk at 180 features.
+- **Caveat.** The working sets, about 0.3 and 0.16 GB, stayed in the operating system's page cache, so these runs
+  measure Spark's serialization path and not device reads. The cluster comparison (runbook, "Comparing storage
+  levels") measures both.
+

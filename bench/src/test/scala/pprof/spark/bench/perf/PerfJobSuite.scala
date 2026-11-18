@@ -88,6 +88,9 @@ class PerfJobSuite extends SparkSuite {
         result.report
       )
       assert(sites.exists(_.get("shuffle_write_bytes").asLong() > 0L), result.report)
+      assert(sites.exists(_.get("input_bytes").asLong() > 0L), result.report)
+      assert(sites.forall(_.get("other_ms").asLong() >= 0L), result.report)
+      assert(report.get("cluster").has("spark.memory.offHeap.enabled"), result.report)
       val recording = fit.get("recording")
       val utilization = recording.get("utilization").asDouble()
       assert(recording.get("core_seconds_available").asDouble() > 0.0, result.report)

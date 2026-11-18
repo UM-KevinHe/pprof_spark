@@ -125,6 +125,29 @@ What to send back:
 - the plans files of points 1 and 2;
 - the driver log of any run that fails other than by the guard.
 
+## Comparing storage levels (D-77 on hold)
+
+`03_perf`'s widget 5 runs a point once per listed storage level, back to back on the same data and cluster, for
+example `MEMORY_AND_DISK,DISK_ONLY`. If a report's cluster block shows `spark.memory.offHeap.enabled` as true, add
+`OFF_HEAP`. Run each line as point `custom`, with these arguments (no `--check-partitions`, which doubles a run):
+
+| # | Arguments | Why |
+|---|---|---|
+| S1 | `--model logistic --rows 1e6 --features 180 --providers 8000` | Small: fits in memory comfortably |
+| S2 | `--model logistic --rows 5e6 --features 180 --providers 8000` | Point 2's size |
+| S3 | `--model logistic --rows 5e6 --features 20 --providers 8000` | Narrow: reading costs most relative to computing |
+| S4 | `--model logistic --rows 2e7 --features 180 --providers 8000` | Point 4's size |
+| S5 | `--model cox --rows 5e6 --features 180 --providers 8000` | Point 1's size |
+| S6 | `--model cox --rows 2e7 --features 180 --providers 8000` | Point 3's size |
+
+For each level, compare:
+- the fit's seconds, against its core-seconds offered;
+- each pass's wall time;
+- `other_ms`, the executor time outside CPU and GC, where reading shows;
+- `input_bytes`, the bytes read from the cached working set.
+
+A level that fails at a size is itself a result.
+
 ## Results
 
 `perf-results.md`.

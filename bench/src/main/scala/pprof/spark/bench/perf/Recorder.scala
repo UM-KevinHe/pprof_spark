@@ -35,6 +35,7 @@ final class ExecutionRecord(val id: Long, val site: String, val start: Long, val
   var resultBytes: Long = 0L
   var shuffleWriteBytes: Long = 0L
   var shuffleReadBytes: Long = 0L
+  var inputBytes: Long = 0L
   var spilledBytes: Long = 0L
   var peakTaskMemory: Long = 0L
   var singleTaskStages: Int = 0
@@ -56,6 +57,7 @@ final case class SiteSummary(
     maxResultBytes: Long,
     shuffleWriteBytes: Long,
     shuffleReadBytes: Long,
+    inputBytes: Long,
     spilledBytes: Long,
     peakTaskMemory: Long,
     singleTaskStages: Int,
@@ -216,6 +218,7 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
           x.resultBytes += m.resultSize
           x.shuffleWriteBytes += m.shuffleWriteMetrics.bytesWritten
           x.shuffleReadBytes += m.shuffleReadMetrics.totalBytesRead
+          x.inputBytes += m.inputMetrics.bytesRead
           x.spilledBytes += m.memoryBytesSpilled + m.diskBytesSpilled
           x.peakTaskMemory = math.max(x.peakTaskMemory, m.peakExecutionMemory)
         case None =>
@@ -309,6 +312,7 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
             xs.map(_.resultBytes).max,
             xs.map(_.shuffleWriteBytes).sum,
             xs.map(_.shuffleReadBytes).sum,
+            xs.map(_.inputBytes).sum,
             xs.map(_.spilledBytes).sum,
             xs.map(_.peakTaskMemory).max,
             xs.map(_.singleTaskStages).sum,
