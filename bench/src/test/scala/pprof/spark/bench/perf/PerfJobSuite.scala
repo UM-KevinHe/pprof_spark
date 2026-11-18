@@ -226,4 +226,34 @@ class PerfJobSuite extends SparkSuite {
       context.setLocalProperty("callSite.long", null)
     }
   }
+
+  test("a storage level is passed to the working set, and the reduction groups are reported") {
+    val path = Files.createTempDirectory("pprof-perf-storage").resolve("point").toString
+    val options = Map(
+      "model" -> "cox",
+      "path" -> path,
+      "rows" -> "2000",
+      "providers" -> "20",
+      "features" -> "3",
+      "storage-level" -> "DISK_ONLY",
+      "block-bytes" -> "2048",
+      "budget-bytes" -> "300",
+      "verify" -> "false"
+    )
+    val report = new ObjectMapper().readTree(PerfJob.run(spark, options).report)
+    assertEquals(report.get("options").get("storage-level").asText(), "DISK_ONLY")
+    val fit = report.get("fit")
+    assert(fit.get("succeeded").asBoolean(), fit.toString)
+    val reduction = fit.get("reduction")
+    val (blocks, perGroup, groups) =
+      (
+        reduction.get("blocks").asInt(),
+        reduction.get("blocks_per_group").asInt(),
+        reduction.get("groups").asInt()
+      )
+    assert(
+      perGroup > 1 && groups * perGroup >= blocks && (groups - 1) * perGroup < blocks,
+      reduction.toString
+    )
+  }
 }

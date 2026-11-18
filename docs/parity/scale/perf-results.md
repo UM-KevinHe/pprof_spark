@@ -38,6 +38,63 @@ What these runs show, and what they could not:
   measured. CPU seconds on these vCPUs (hyperthreads) do not compare directly with the sandbox's, so this is an
   indication to confirm by attribution.
 
+### 2026-11-18: step 1 at 20M and 50M rows (build `7ad4839`, round 160)
+
+This was the same cluster as below: Runtime 17.3 with Photon, autoscaling, 2.2 GB executor heaps, 8,000 providers.
+G and R follow the engine's rule (step1-reduction.md §2).
+
+**Point 3, Cox, 20M rows, 180 features: fits (it ran out of memory on round 156).**
+- Fit 1,474.8 s; 3 iterations; executors 1 to 9; 19,301 core-seconds offered, utilization 0.63.
+- 7,021 blocks (2,500 to 5,000 rows each), G = 14, R = 502.
+- Max |z| 2.38; refit on 401 partitions identical.
+
+| Operation | Executions | Wall s | CPU s | CPU µs per row | GC s | Largest to the driver | Shuffle written |
+|---|---|---|---|---|---|---|---|
+| `cox.evaluate` | 4 | 1,011.0 | 8,726.3 | 109.1 | 561.4 | 65.6 MiB | 0 |
+| `cox.build` | 1 | 360.0 | 744.7 | 37.2 | 382.9 | 5.0 MiB | 7.31 GiB |
+| `cox.summarize` | 1 | 66.7 | 107.3 | 5.4 | 106.9 | 2.2 MiB | 0 |
+| `cox.validate`: counts, then distinct identifiers | 1 + 1 | 29.2 + 3.3 | 90.1 + 8.0 | 4.9 | 0.1 | 146 KiB | 87 MiB, distinct identifiers only |
+
+Evaluation takes 90.2% of the CPU.
+
+**Point 5, Cox, 20M rows, 100 features: fits.**
+- Fit 305.4 s; 4 executors; utilization 0.88.
+- 3,968 blocks, G = 3, R = 1,323.
+- Evaluation: 3,194.9 CPU-s, 39.9 µs per row, 85.9% of the CPU; largest to the driver 57.4 MiB.
+- Build 48.3 s; validation 4.9 s, with no spill; max |z| 2.50.
+
+**Point 6, logistic, 20M rows, 100 features: fits.**
+- Fit 242.2 s; 4 iterations; 8 executors; utilization 0.71.
+- 3,968 blocks, G = 3, R = 1,323.
+- Pass A: 2,302.0 CPU-s, 28.8 µs per row per pass. Pass B: 463.2 CPU-s, 5.8 µs.
+- Variance 29.0 µs per row; summaries 26.5; AUC 12.1; validation 2.9, with no spill.
+- Passes A and B take 59.8% of the CPU, variance and summaries 24.0%. Max |z| 2.37.
+
+**Points 7 and 8, Cox and logistic at 50M rows and 180 features: both fail.**
+
+| | Cox (point 7) | Logistic (point 8) |
+|---|---|---|
+| Failed after | 370.7 s, an executor lost to out-of-memory | 1,278.0 s, `OutOfMemoryError: Java heap space` in pass A while a block was being decoded |
+| Build: wall, CPU, GC | 282.8 s, 2,337 s, 3,683 s | 583.2 s, 2,697 s, 4,039 s |
+| Build: shuffle written, read | 18.28 GiB, 24.90 GiB | 18.16 GiB, 33.60 GiB |
+| Summaries | 4.39 GiB of shuffle read | 16.75 GiB of shuffle read; GC 2,108 s |
+| Pass A | — | 13.89 GiB of shuffle read |
+
+The passes read the shuffle again: cached partitions lost with their executors were recomputed.
+
+Readings:
+- **Step 1 works at 20M.** Both models fit at 20M rows with blocks at the target size. The largest pass sent at most
+  65.6 MiB to the driver, and Cox evaluation took 109.1 µs of CPU per row at 180 features (140.6 at 5M on round 156).
+- **Validation's fix (OI-109) is confirmed.** At 20M rows, Cox validation took 98 CPU-seconds and spilled nothing,
+  against 1,045 CPU-seconds and 527 MiB spilled on round 156.
+- **50M fails on executor heap (OI-118).** At 50M rows each provider has 6,250 rows. Each block therefore holds one
+  provider, with a feature array of about 9 MB, more than twice the target, and building, caching, decoding and (for
+  the logistic model) joining each make copies. In a 2.2 GB heap, arrays of that size are large objects for the
+  garbage collector. GC exceeded CPU in both builds, executors died, and the passes recomputed lost partitions.
+
+  This reading is a hypothesis the next runs test: the same points with the working set cached on disk only
+  (`--storage-level DISK_ONLY`, runbook).
+
 ### 2026-11-17: points 1 to 4 by operation (build `7a14624`, round 156)
 
 The production cluster as it is (D-76):

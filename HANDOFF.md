@@ -24,7 +24,7 @@ Spark Connect (T8), plus the Python wrappers in PySpark 4.1.0. The authoritative
 | Reported issues, rounds 82 to 88 | Ten issues reported against round 81's build, diagnosed in round 82 (`docs/reviews/issues-2026-10.md`), approved as D-49, delivered in rounds 83 to 87, their fixtures in round 88 |
 | Roadmap after Phase 3 (D-50) | P0, inference parity on the four models; P1, random-effect models; P2, survival extensions; P3, penalized models and enhancements; milestones M1 to M6; amended in round 94: M4 before M2 |
 | Phase 4, random-effect models (M4) | Plan approved (D-51, 2026-10-21, with X-037; `docs/spec/random-effects/plan.md`): parts 4a (linear), 4b (logistic), 4c (fixed effects with random clusters), 4d (cluster terms); slice 4a-1's specification approved (D-52); its fixtures and calibration in round 96 (D-53, approved); its numerics kernel, engine, Python wrapper and distributed search in rounds 97 to 100; slice 4a-2's specification (D-54) and fixtures (D-55) approved, its engine in round 103 (`d3b233e`) and Python in round 104; slice 4a-3 complete (D-56; rounds 106 and 107); part 4a's S1 smoke prepared (round 108) and waiting for the maintainer's run, with the gate review (OI-97); slice 4b-1 complete (D-57, D-58, D-59; rounds 109 to 114, CI green); slice 4b-2 complete (D-60, D-61; rounds 115 to 118); slice 4b-3 complete (D-62; rounds 119 to 121); part 4b's S1 smoke prepared (round 122) and waiting for the maintainer's run, with its gate review (OI-100); slice 4c-1 complete (D-63, D-64; rounds 123 to 126); slice 4c-2 complete (D-65, D-66; rounds 127 to 129); slice 4c-3 complete (D-67; rounds 131 to 133); part 4d's plan approved (D-68), slice 4d-1 complete (D-69, D-70; rounds 135 to 139); slice 4d-2 complete (D-71, D-72; rounds 139 to 144), on the driver path (OI-102); slice 4d-3's specification approved (D-74), its persistence, jobs and Python in rounds 146 to 148. **Paused on 2026-11-13 after round 148**, at a clean point (plan §8) |
-| Performance phase, Cox and logistic fixed effects | Plan approved (D-75, 2026-11-13; round 149, `docs/spec/performance/plan.md`), from the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`). Steps 0 to 6: harness and baseline of `main`; executor-side reduction in fixed groups; chunked compensated accumulation; the Cox weighted-Gram information; Cox per-time aggregates; logistic profile-likelihood Newton; internal scaling. The 2026-11-13 scale runs used round 81's build, whose fixed 4 MB blocks explain each `DriverLimitExceededException` (OI-103). Step 0's harness in round 150 (`bench.perf`, `docs/parity/scale/perf-runbook.md`); `00_build` packages bench and `03_perf` runs the points from the workspace (round 151); points 1 and 2 first measured on a small test cluster, and the harness fixed after them (round 152); D-76, approved 2026-11-16: measure on the production cluster as it is, and support Spark 4.0 (rounds 153 and 154); `GoldenRunsSuite`, NUM-2's golden runs (round 155); operation tags on every action (round 156); points 1 to 4 measured by operation, both 20M points failing in the build, and validation's distinct counts moved out of the counts (round 157); step 1's design, groups and partition keys (round 158); Cox reduced in groups (round 159); the logistic fit reduced in groups (round 160) |
+| Performance phase, Cox and logistic fixed effects | Plan approved (D-75, 2026-11-13; round 149, `docs/spec/performance/plan.md`), from the algorithmic feasibility study (`docs/reviews/algorithmic-feasibility-2026-11.md`). Steps 0 to 6: harness and baseline of `main`; executor-side reduction in fixed groups; chunked compensated accumulation; the Cox weighted-Gram information; Cox per-time aggregates; logistic profile-likelihood Newton; internal scaling. The 2026-11-13 scale runs used round 81's build, whose fixed 4 MB blocks explain each `DriverLimitExceededException` (OI-103). Step 0's harness in round 150 (`bench.perf`, `docs/parity/scale/perf-runbook.md`); `00_build` packages bench and `03_perf` runs the points from the workspace (round 151); points 1 and 2 first measured on a small test cluster, and the harness fixed after them (round 152); D-76, approved 2026-11-16: measure on the production cluster as it is, and support Spark 4.0 (rounds 153 and 154); `GoldenRunsSuite`, NUM-2's golden runs (round 155); operation tags on every action (round 156); points 1 to 4 measured by operation, both 20M points failing in the build, and validation's distinct counts moved out of the counts (round 157); step 1's design, groups and partition keys (round 158); Cox reduced in groups (round 159); the logistic fit reduced in groups (round 160); measured at 20M (fits) and 50M (executor memory, OI-118) (round 161) |
 | Scale test (D-28, D-50) | Four phases: S0, architecture checks, now; S1 with each feature; S2 and S3 (the plan's Stages A and B) after D-50's P0 and P1, needing the plan's §12 decisions |
 
 The maintainer reported ten issues against round 81's build. Delivered: logistic `blocks`, with blocks that grow until
@@ -227,6 +227,29 @@ as round 82 did:
 Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
+
+## Round 161 (2026-11-18): step 1 measured; 50M on executor memory
+
+- Round 160 is on `main` as `7ad4839`. The maintainer ran points 3, 5, 6, 7 and 8 on it. They are recorded in
+  `perf-results.md` by shape only.
+- **20M rows.** Cox at 180 features fits, where it ran out of memory on round 156: 7,021 blocks in 502 groups,
+  65.6 MiB to the driver per pass at most, and a bit-identical refit on 401 partitions. Cox and logistic at 100
+  features fit too. Validation's fix is confirmed (OI-109).
+- **50M rows and 180 features: both models fail on executor memory.** Each block holds one provider of 6,250 rows,
+  a feature array of about 9 MB. GC exceeds CPU in the builds (3,683 and 4,039 s), executors die, and passes
+  recompute lost partitions. The logistic failure is `OutOfMemoryError: Java heap space` while decoding a block in
+  pass A (OI-118).
+- **`PerfJob`.** It takes `--storage-level` (passed to `BlockOptions.storageLevel`), and reports `fit.reduction`:
+  blocks, G and R by the engine's own `ReductionGroups.plan`. `PerfJobSuite` gains a test, 9 in all.
+- **The runbook.** It states the expectations after step 1, and the experiment: points 7 and 8 with
+  `--storage-level DISK_ONLY`.
+
+Evidence (assistant sandbox): bench and bench-test compile after scalafmt, and `PerfJobSuite` passes (9). The patch
+applies to a fresh clone of `main` with an identical tree, scalafmt is clean, and `check-engine-api.sh` passes with
+its self-test.
+
+**Next.** It depends on the experiment: if disk-only storage carries 50M and 100M, that is the mitigation, and step 2
+goes on to the kernels; if not, step 2 begins with chunked row storage (OI-118).
 
 ## Round 160 (2026-11-17): step 1, part 3: the logistic fit reduced in groups
 

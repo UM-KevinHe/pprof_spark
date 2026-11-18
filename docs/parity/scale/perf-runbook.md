@@ -90,7 +90,12 @@ their own are counted. These numbers are measurements of the run that wrote them
 
 ## The points
 
-The points are the baseline of `main`. Paths are examples. The expectations come from plan §2.2 and are arithmetic.
+The points began as the baseline of `main`. The "Expected" column below comes from plan §2.2, before step 1. Since
+round 160, blocks stay at the target size and are reduced in groups. The report's `fit.reduction` gives the blocks, G
+and R; at 180 features and 8,000 providers, about 8,000 blocks in 500 groups from 20M rows up (arithmetic).
+
+The experiment for points 7 and 8, which ran out of executor memory on round 160 (OI-118), keeps the working set on
+disk only. Add `--storage-level DISK_ONLY` to the notebook's "Extra arguments", and run point 7 and then point 8.
 
 | # | Model | Rows | Features | Providers | Design | Extra arguments | Expected |
 |---|---|---|---|---|---|---|---|

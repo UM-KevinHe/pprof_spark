@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-17, round 160.
+Updated 2026-11-18, round 161.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -191,7 +191,8 @@ through round 100 as the maintainer reported.
 | 157 | Points 1 to 4 recorded by operation (both 20M points fail in the build, OI-115); step 0b: Cox and logistic validation run their distinct counts as jobs of their own (OI-109), with `DuplicateRowsSuite` | Merged (3c6cc34) |
 | 158 | Performance step 1, part 1: the design (`docs/spec/performance/step1-reduction.md`); `layout.ReductionGroups` and `layout.PartitionKeys` with `ReductionGroupsSuite` (not yet wired into the fits) | Merged (ccfe075) |
 | 159 | Performance step 1, part 2: Cox blocks stay at the target size and are built one group per partition; its evaluation, summary and robust passes fold per group on the executors (`GroupFold`); growth retired for Cox; the golden runs unchanged | Merged (9416b09) |
-| 160 | Performance step 1, part 3: the logistic fit at the target block size, built one group per partition; its summary, pass A, variance and robust-meat passes fold per group; the golden runs unchanged | Delivered as a patch |
+| 160 | Performance step 1, part 3: the logistic fit at the target block size, built one group per partition; its summary, pass A, variance and robust-meat passes fold per group; the golden runs unchanged | Merged (7ad4839) |
+| 161 | Step 1 measured: both models fit at 20M rows, both fail at 50M on executor memory (OI-118); `PerfJob` takes `--storage-level` and reports the reduction groups; the runbook's step-1 expectations and the disk-only experiment | Delivered as a patch |
 
 ## Decisions and spikes
 

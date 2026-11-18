@@ -10,6 +10,7 @@ import org.apache.spark.sql.functions.col
 import pprof.spark.engine.BuildInfo
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.cox.{CoxOptions, CoxPH, CoxSpec, Ties}
+import pprof.spark.engine.layout.ReductionGroups
 import pprof.spark.engine.logistic.{LogisticFE, LogisticOptions, LogisticSpec}
 
 /** The performance phase's runner (docs/parity/scale/perf-runbook.md; docs/spec/performance/plan.md, step 0). It
@@ -24,7 +25,8 @@ object PerfJob {
   val Usage: String =
     "usage: PerfJob --model cox|logistic --path <dir> [--rows n] [--providers m] [--features p] " +
       "[--design simple|correlated] [--seed s] [--strata provider|none] [--ties breslow|efron] " +
-      "[--block-bytes b] [--budget-bytes b] [--partitions k] [--check-partitions k] [--verify true|false] " +
+      "[--block-bytes b] [--budget-bytes b] [--storage-level level] [--partitions k] [--check-partitions k] " +
+      "[--verify true|false] " +
       "[--plans true|false] [--report <dir>]"
 
   private val Known: Set[String] = Set(
@@ -39,6 +41,7 @@ object PerfJob {
     "ties",
     "block-bytes",
     "budget-bytes",
+    "storage-level",
     "partitions",
     "check-partitions",
     "verify",
@@ -69,7 +72,8 @@ object PerfJob {
       iterations: Int,
       converged: Boolean,
       layout: String,
-      matrices: Vector[Double]
+      matrices: Vector[Double],
+      blocks: Int
   )
 
   def main(args: Array[String]): Unit =
@@ -134,12 +138,18 @@ object PerfJob {
     )
   }
 
-  private def fit(data: DataFrame, d: PerfDesign, options: Map[String, String]): Outcome = {
+  /** The working set's options: block size, driver budget and storage level, defaults unless given. */
+  private def blockOptions(options: Map[String, String]): BlockOptions = {
     val defaults = BlockOptions()
-    val blocks = BlockOptions(
+    BlockOptions(
       targetBlockBytes = options.get("block-bytes").fold(defaults.targetBlockBytes)(count),
-      driverBudgetBytes = options.get("budget-bytes").fold(defaults.driverBudgetBytes)(count)
+      driverBudgetBytes = options.get("budget-bytes").fold(defaults.driverBudgetBytes)(count),
+      storageLevel = options.getOrElse("storage-level", defaults.storageLevel)
     )
+  }
+
+  private def fit(data: DataFrame, d: PerfDesign, options: Map[String, String]): Outcome = {
+    val blocks = blockOptions(options)
     if (d.model == "cox") {
       val spec = CoxSpec(
         "time",
@@ -157,7 +167,8 @@ object PerfJob {
         f.iterations,
         f.converged,
         String.valueOf(f.layout),
-        f.information ++ f.covariance
+        f.information ++ f.covariance,
+        f.layout.blockCount
       )
     } else {
       val spec = LogisticSpec("y", d.features, "provider", rowId = Some("id"))
@@ -169,7 +180,8 @@ object PerfJob {
         f.iterations,
         f.converged,
         String.valueOf(f.layout),
-        f.covariance ++ f.providers.gamma.toVector
+        f.covariance ++ f.providers.gamma.toVector,
+        f.layout.blockCount
       )
     }
   }
@@ -249,6 +261,15 @@ object PerfJob {
             .put("converged", o.converged)
             .put("loglik", o.loglik)
             .put("layout", o.layout)
+          // The reduction groups the engine forms (docs/spec/performance/step1-reduction.md §2), recomputed from the
+          // block count with the engine's own rule and the fit's options.
+          val partial = 8L * (2L + d.p + d.p.toLong * (d.p + 1) / 2)
+          val groups = ReductionGroups.plan(o.blocks, partial, blockOptions(options))
+          node
+            .putObject("reduction")
+            .put("blocks", o.blocks)
+            .put("blocks_per_group", groups.blocksPerGroup)
+            .put("groups", groups.groups)
       }
       recording(node.putObject("recording"), window)
       val checks = root.putObject("checks")
