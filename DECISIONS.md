@@ -103,6 +103,23 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-77: The working set is cached on disk by default (Proposed, round 162)
+
+- **The change.** `BlockOptions.storageLevel` defaults to `DISK_ONLY` instead of `MEMORY_AND_DISK`, for every model's
+  working set.
+- **Evidence** (cluster, round 161's build):
+  - At 50M rows and 180 features, both models ran out of executor memory with the in-memory cache, and fit with
+    disk-only storage. Cox also fits at 100M.
+  - Cox's build GC fell from 3,683 s to 362 s at 50M.
+  - Cox evaluation cost 103.6 µs of CPU per row at 50M and 101.7 at 100M on disk, against 109.1 at 20M in memory.
+- **Why.** The production executors have 2.2 GB heaps (Photon), and an in-memory cache of large blocks takes the heap
+  the passes need. Disk-only keeps the heap for computation, and the executors' local disks hold the working set
+  (19 GiB at 50M rows).
+- **No result changes.** Where blocks are stored changes none of their bits. A fit can still choose
+  `MEMORY_AND_DISK`, or any storage level.
+- **After approval.** The default changes, PROJECT_CONTEXT §10.3 and the guides are updated, and the golden runs
+  confirm the bits.
+
 ### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Accepted: approved by the maintainer, 2026-11-16)
 
 The maintainer cannot change the cluster's autoscaling or runtime (2026-11-16). The cluster runs Databricks Runtime

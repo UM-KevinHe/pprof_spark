@@ -49,6 +49,12 @@ object PerfJob {
     "report"
   )
 
+  /** A message without network addresses or host names built from them: the maintainer's records keep none. */
+  def redact(message: String): String =
+    message
+      .replaceAll("""\b\d{1,3}(\.\d{1,3}){3}\b""", "<address>")
+      .replaceAll("""\bip-\d{1,3}(-\d{1,3}){3}\b""", "<address>")
+
   /** Options that name storage locations, which the report leaves out. */
   private val Private: Set[String] = Set("path", "report")
 
@@ -254,7 +260,7 @@ object PerfJob {
         .put("succeeded", first.isRight)
         .put("executors_at_end", executors(spark))
       first match {
-        case Left(error) => node.put("error", error)
+        case Left(error) => node.put("error", redact(error))
         case Right(o)    =>
           node
             .put("iterations", o.iterations)
@@ -340,6 +346,9 @@ object PerfJob {
         .put("spilled_bytes", s.spilledBytes)
         .put("peak_task_memory_bytes", s.peakTaskMemory)
         .put("single_task_stages", s.singleTaskStages)
+        .put("failed_executions", s.failures)
+      if (s.failures > 0)
+        sites.get(sites.size - 1).asInstanceOf[ObjectNode].put("error", redact(s.error))
     }
     node
       .putObject("unattributed")

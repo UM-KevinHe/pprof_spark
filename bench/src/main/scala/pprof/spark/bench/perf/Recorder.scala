@@ -38,6 +38,7 @@ final class ExecutionRecord(val id: Long, val site: String, val start: Long, val
   var spilledBytes: Long = 0L
   var peakTaskMemory: Long = 0L
   var singleTaskStages: Int = 0
+  var error: Option[String] = None
   def wallMs: Long = if (end >= start) end - start else 0L
 }
 
@@ -58,6 +59,8 @@ final case class SiteSummary(
     spilledBytes: Long,
     peakTaskMemory: Long,
     singleTaskStages: Int,
+    failures: Int,
+    error: String,
     plan: String
 )
 
@@ -168,8 +171,12 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
       case e: SparkListenerSQLExecutionStart =>
         executions(e.executionId) =
           new ExecutionRecord(e.executionId, e.description, e.time, e.physicalPlanDescription)
-      case e: SparkListenerSQLExecutionEnd => executions.get(e.executionId).foreach(_.end = e.time)
-      case _                               =>
+      case e: SparkListenerSQLExecutionEnd =>
+        executions.get(e.executionId).foreach { x =>
+          x.end = e.time
+          x.error = e.errorMessage
+        }
+      case _ =>
     }
   }
 
@@ -305,6 +312,8 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
             xs.map(_.spilledBytes).sum,
             xs.map(_.peakTaskMemory).max,
             xs.map(_.singleTaskStages).sum,
+            xs.count(_.error.isDefined),
+            xs.flatMap(_.error).headOption.getOrElse("").take(500),
             xs.head.plan
           )
         }

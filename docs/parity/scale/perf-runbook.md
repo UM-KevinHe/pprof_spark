@@ -96,6 +96,9 @@ and R; at 180 features and 8,000 providers, about 8,000 blocks in 500 groups fro
 
 The experiment for points 7 and 8, which ran out of executor memory on round 160 (OI-118), keeps the working set on
 disk only. Add `--storage-level DISK_ONLY` to the notebook's "Extra arguments", and run point 7 and then point 8.
+Measured since (round 161's build): with it, points 7, 8 and 9 fit. Point 10 failed late (OI-119). Rerun point 10 on
+round 162's build, which reports which operation failed (`failed_executions` and `error` per entry). Use disk-only for
+every point of 50M rows or more until D-77 makes it the default.
 
 | # | Model | Rows | Features | Providers | Design | Extra arguments | Expected |
 |---|---|---|---|---|---|---|---|

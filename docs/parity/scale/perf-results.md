@@ -38,6 +38,75 @@ What these runs show, and what they could not:
   measured. CPU seconds on these vCPUs (hyperthreads) do not compare directly with the sandbox's, so this is an
   indication to confirm by attribution.
 
+### 2026-11-18: disk-only working sets at 50M and 100M rows (build `82fd37a`, round 161)
+
+The same cluster; points 7 to 10 with `--storage-level DISK_ONLY`; 180 features and 8,000 providers. Every point has
+8,000 blocks, one provider each, G = 16 and R = 500.
+
+**Point 7, Cox, 50M rows: fits.** Fit 1,243.6 s; 3 iterations; executors 1 to 10; 31,458 core-seconds offered,
+utilization 0.87; max |z| 2.86; 18.75 GiB cached on disk.
+
+| Operation | Executions | Wall s | CPU s | CPU µs per row | GC s | Largest to the driver | Shuffle |
+|---|---|---|---|---|---|---|---|
+| `cox.evaluate` | 4 | 783.7 | 20,715.9 | 103.6 | 728.3 | 65.4 MiB | None |
+| `cox.build` | 1 | 343.6 | 1,739.1 | 34.8 | 362.4 | 5.4 MiB | 18.28 GiB written and read once |
+| `cox.validate`: counts, then distinct identifiers | 1 + 1 | 74.7 + 7.0 | 224.9 + 19.3 | 4.9 | 0.2 | 353 KiB | 218 MiB |
+| `cox.summarize` | 1 | 30.3 | 309.1 | 6.2 | 118.9 | 2.2 MiB | None |
+
+Evaluation takes 90.0% of the CPU, and GC 4.4% of executor run time.
+
+**Point 8, logistic, 50M rows: fits.** Fit 1,167.6 s; 4 iterations; executors 6 to 10; utilization 0.84; max |z|
+2.90; 18.51 GiB cached on disk.
+
+| Operation | Executions | Wall s | CPU s | CPU µs per row | GC s | Largest to the driver |
+|---|---|---|---|---|---|---|
+| `logistic.pass-a` | 4 | 547.8 | 16,721.7 | 83.6 | 694.0 | 66.4 MiB |
+| `logistic.variance` | 1 | 143.2 | 4,165.7 | 83.3 | 167.7 | 65.7 MiB |
+| `logistic.summarize` | 1 | 140.0 | 3,920.5 | 78.4 | 155.0 | 65.8 MiB |
+| `logistic.build` | 1 | 120.2 | 1,764.9 | 35.3 | 338.2 | 5.5 MiB; 18.16 GiB of shuffle |
+| `logistic.pass-b` | 4 | 118.9 | 2,257.7 | 11.3 | 562.7 | 3.5 MiB |
+| `logistic.auc` | 1 | 53.5 | 903.2 | 18.1 | 337.3 | 7.9 MiB; 446 MiB of shuffle |
+| `logistic.provider-variance` | 1 | 22.8 | 413.8 | 8.3 | 130.5 | 3.0 MiB |
+| `logistic.validate` | 1 + 1 | 15.4 + 1.9 | 240.6 + 15.8 | 5.1 | 0.4 | 365 KiB |
+
+Passes A and B take 62.4% of the CPU, variance and summaries 26.6%.
+
+**Point 9, Cox, 100M rows: fits.**
+- Fit 1,677.5 s; 3 iterations; executors 6 to 10; utilization 0.90; max |z| 3.00.
+- Blocks of 12,500 rows.
+- Evaluation: 4 executions, 1,372.5 s wall, 40,687.7 CPU-s (101.7 µs per row), GC 4,159.9 s, largest to the driver
+  65.8 MiB. It also read 34.44 GiB of shuffle, recomputing partitions lost with executors.
+- Build: 219.5 s wall, 3,749.3 CPU-s, GC 2,900.1 s, 36.56 GiB of shuffle.
+- Evaluation takes 89.2% of the CPU.
+
+**Point 10, logistic, 100M rows: fails late** (OI-119). After 2,858.8 s an executor was lost to out-of-memory. By
+then all of these had run:
+
+| Operation | Wall s | Notes |
+|---|---|---|
+| Pass A, 4 executions | 1,428.8 | 82.9 µs per row; 30.01 GiB of shuffle read |
+| Variance | 410.5 | 24.77 GiB read |
+| Pass B, 4 executions | 300.5 | 22.74 GiB read |
+| Summaries | 254.6 | |
+| Build | 199.1 | GC 2,236 s |
+| AUC | 180.8 | GC 1,226 s against 1,101 s of CPU; 6.54 GiB read |
+| Provider variances | 42.5 | |
+
+Executors fell to 3 during the run, and the passes recomputed lost partitions from the shuffle. The report cannot say
+which job failed; round 162's recorder names the failing operation.
+
+Readings:
+- **Disk-only storage carries both models at 50M rows and Cox at 100M (OI-118).** Cox's build GC fell from 3,683 s
+  to 362 s at 50M, and the 50M passes read no shuffle. D-77 proposes disk-only as the default.
+- **Step 1's exit, as far as measured.**
+  - The bytes to the driver per pass stay flat, at 65.4 to 66.4 MiB from 20M to 100M rows (500 to 502 groups).
+  - Cox fits at 100M rows; R0 held at 20M; GC is 4.4% at 50M.
+  - Logistic at 100M remains (OI-119).
+- **Per-row cost is no worse on disk.** Cox evaluation costs 103.6 µs per row at 50M and 101.7 at 100M on disk,
+  against 109.1 at 20M in memory.
+- **The kernel passes still carry the CPU:** about 90% of Cox's, and 89% of the logistic fit's across passes A and B,
+  variance and summaries. That is step 2's subject.
+
 ### 2026-11-18: step 1 at 20M and 50M rows (build `7ad4839`, round 160)
 
 This was the same cluster as below: Runtime 17.3 with Photon, autoscaling, 2.2 GB executor heaps, 8,000 providers.

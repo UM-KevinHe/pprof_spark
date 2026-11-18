@@ -256,4 +256,30 @@ class PerfJobSuite extends SparkSuite {
       reduction.toString
     )
   }
+
+  test(
+    "a failed execution is counted against its operation, with its error, and addresses are redacted"
+  ) {
+    val recorder = Recorder.attach(spark)
+    try {
+      val from = recorder.mark()
+      intercept[Exception](
+        spark
+          .range(10)
+          .map((x: java.lang.Long) =>
+            if (x == 5L) throw new IllegalStateException("boom") else x.longValue
+          )(
+            org.apache.spark.sql.Encoders.scalaLong
+          )
+          .collect()
+      )
+      val failed = recorder.summary(from).sites.filter(_.failures > 0)
+      assertEquals(failed.size, 1, failed.toString)
+      assert(failed.head.error.contains("boom"), failed.head.error)
+    } finally recorder.detach()
+    assertEquals(
+      PerfJob.redact("Lost task 28.3 (192.0.2.10 executor 94) on ip-192-0-2-10 at 1.5.0"),
+      "Lost task 28.3 (<address> executor 94) on <address> at 1.5.0"
+    )
+  }
 }
