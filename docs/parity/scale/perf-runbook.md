@@ -129,7 +129,8 @@ What to send back:
 
 `03_perf`'s widget 5 runs a point once per listed storage level, back to back on the same data and cluster, for
 example `MEMORY_AND_DISK,DISK_ONLY`. If a report's cluster block shows `spark.memory.offHeap.enabled` as true, add
-`OFF_HEAP`. Run each line as point `custom`, with these arguments (no `--check-partitions`, which doubles a run):
+`OFF_HEAP`. The production cluster does: 6.5 GiB of off-heap memory per executor, as of 2026-11-19. Use
+`MEMORY_AND_DISK,DISK_ONLY,OFF_HEAP` there. Run each line as point `custom`, with these arguments (no `--check-partitions`, which doubles a run):
 
 | # | Arguments | Why |
 |---|---|---|

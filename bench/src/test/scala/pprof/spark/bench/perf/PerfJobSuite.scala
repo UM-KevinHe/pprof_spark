@@ -280,6 +280,10 @@ class PerfJobSuite extends SparkSuite {
       assertEquals(failed.size, 1, failed.toString)
       assert(failed.head.error.contains("boom"), failed.head.error)
     } finally recorder.detach()
+    assertEquals(Recorder.failure(None), None)
+    assertEquals(Recorder.failure(Some("")), None)
+    assertEquals(Recorder.failure(Some("  ")), None)
+    assertEquals(Recorder.failure(Some("boom")), Some("boom"))
     assertEquals(
       PerfJob.redact("Lost task 28.3 (192.0.2.10 executor 94) on ip-192-0-2-10 at 1.5.0"),
       "Lost task 28.3 (<address> executor 94) on <address> at 1.5.0"

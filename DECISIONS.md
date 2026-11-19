@@ -131,7 +131,8 @@ measured first.
      working set's size from the plan, and the executor memory from the runtime configuration where it is set. It
      cannot know the executor count, under Spark Connect or autoscaling. So the threshold would be per executor or a
      `BlockOptions` setting, set from the measurement.
-  3. Off-heap storage, where the cluster has off-heap memory.
+  3. Off-heap storage, where the cluster has off-heap memory. The production cluster has 6.5 GiB per executor (a
+     report of 2026-11-19).
 
 ### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Accepted: approved by the maintainer, 2026-11-16)
 

@@ -176,7 +176,7 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
       case e: SparkListenerSQLExecutionEnd =>
         executions.get(e.executionId).foreach { x =>
           x.end = e.time
-          x.error = e.errorMessage
+          x.error = Recorder.failure(e.errorMessage)
         }
       case _ =>
     }
@@ -349,6 +349,11 @@ final class Recorder private (spark: SparkSession) extends SparkListener {
 }
 
 object Recorder {
+
+  /** A failed execution's message. Spark ends a successful execution with no message, and Databricks with an empty
+    * one, so only a non-blank message is a failure.
+    */
+  def failure(errorMessage: Option[String]): Option[String] = errorMessage.filter(_.trim.nonEmpty)
 
   /** The operation a job tag names: the engine's tags start with "pprof." (from there on, whatever prefix Spark adds
     * to a session's tags), and Spark's own tags (a session's, an SQL execution's, a broadcast's) name none. Dropping

@@ -38,6 +38,26 @@ What these runs show, and what they could not:
   measured. CPU seconds on these vCPUs (hyperthreads) do not compare directly with the sandbox's, so this is an
   indication to confirm by attribution.
 
+### 2026-11-19: point 5 with the default storage level (build `ada822d`, round 163)
+
+Cox, 20M rows, 100 features, `MEMORY_AND_DISK`.
+- Fit 994.3 s; 3 iterations; executors 1 to 10; 11,680 core-seconds offered, utilization 0.39.
+- 3,968 blocks, G = 3, R = 1,323; max |z| 2.50.
+
+Measured:
+- **Evaluation.** 4 executions, 769.0 s wall, 3,296.2 CPU-s (41.2 µs per row), GC 45.8 s. It read 19.96 GiB from the
+  cached working set, 4.99 GiB per pass, and spent 493.1 s of executor time outside CPU and GC, 12.9% of its run time.
+- **The cache peaked at 0.98 GiB in memory and 4.02 GiB on disk.** The cluster started this run with one executor, so
+  four fifths of a "memory" working set were on disk anyway.
+- **Against round 160's run of this point.** That run took 305.4 s, with four executors throughout and 3,194.9 CPU-s
+  in evaluation. The CPU is the same within 3%; the wall time differs with the cores available (utilization 0.39
+  here, 0.88 then).
+- **Off-heap memory is enabled on this cluster,** at 6.50 GiB per executor (Photon's), so off-heap storage joins the
+  comparison (OI-120).
+- **An artifact.** Every operation showed `failed_executions` equal to its executions, with an empty error, although
+  the fit succeeded. Databricks ends successful SQL executions with an empty message where Spark gives none. Round
+  164 counts only non-blank messages.
+
 ### 2026-11-18: disk-only working sets at 50M and 100M rows (build `82fd37a`, round 161)
 
 The same cluster; points 7 to 10 with `--storage-level DISK_ONLY`; 180 features and 8,000 providers. Every point has
