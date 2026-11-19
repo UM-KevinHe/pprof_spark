@@ -94,38 +94,55 @@ for level in levels or [None]:
     line = " ".join(arguments + (["--storage-level", level] if level else []))
     reports.append(runner.runLine(spark._jsparkSession, line))
     print(f"{level or 'default storage'}: finished in {time.time() - started:.0f} s")
-report = reports[-1]
-print(f"the reports are also under {data_root}/{folder}/reports/")
-for line in reports:
-    print(line)
+print(f"{len(reports)} report(s), also under {data_root}/{folder}/reports/, one folder per fit")
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## The report
-# MAGIC The fit's outcome and checks, then its operations, slowest first. Each row is a SQL execution's description
-# MAGIC and the operation tag of its jobs, such as `pprof.cox.evaluate` for Cox's Newton passes. `result_bytes` is what tasks sent to the driver, and
+# MAGIC First one row per fit, side by side when several storage levels ran; then each fit's operations, slowest
+# MAGIC first, by operation tag (such as `pprof.cox.evaluate` for Cox's Newton passes). The last lines are every
+# MAGIC report, one per fit: send them all back. `result_bytes` is what tasks sent to the driver, and
 # MAGIC `max_result_bytes_per_execution` the largest single pass. Send back the line printed at the end.
 
 # COMMAND ----------
 
-parsed = json.loads(report)
-fit = parsed["fit"]
-print({key: fit.get(key) for key in ["succeeded", "error", "seconds", "iterations", "converged", "layout"] if key in fit})
-print("checks:", json.dumps(parsed["checks"]))
-recording = fit["recording"]
-print({key: recording[key] for key in recording if key != "sites"})
-rows = parsed["point"]["n"]
-sites = pd.DataFrame(recording["sites"])
-sites["cpu_us_per_row"] = sites["cpu_ms"] * 1000.0 / rows
-print(
-    f"CPU per row: {sites['cpu_ms'].sum() * 1000.0 / rows:.1f} µs; "
-    f"{recording['core_seconds_available']:.0f} core-seconds available, utilization {recording['utilization']:.2f}; "
-    f"executors {recording['executors_min']} to {recording['executors_max']}"
-)
 columns = [
-    "tags", "site", "executions", "wall_ms", "cpu_ms", "cpu_us_per_row", "gc_ms", "tasks", "result_bytes",
-    "max_result_bytes_per_execution", "shuffle_write_bytes", "spilled_bytes", "single_task_stages",
+    "tags", "site", "executions", "wall_ms", "cpu_ms", "cpu_us_per_row", "gc_ms", "other_ms", "tasks",
+    "result_bytes", "max_result_bytes_per_execution", "input_bytes", "shuffle_write_bytes", "spilled_bytes",
 ]
-display(sites[columns])
-print(report)
+summary = []
+details = []
+for line in reports:
+    parsed = json.loads(line)
+    fit = parsed["fit"]
+    recording = fit["recording"]
+    rows = parsed["point"]["n"]
+    storage = parsed["options"].get("storage-level", "default")
+    sites = pd.DataFrame(recording["sites"])
+    row = {
+        "storage": storage,
+        "succeeded": fit["succeeded"],
+        "fit_s": round(fit["seconds"], 1),
+        "iterations": fit.get("iterations"),
+        "executors": f"{recording['executors_min']} to {recording['executors_max']}",
+        "utilization": round(recording["utilization"], 2),
+        "cache_memory_gib": round(recording["cached_memory_peak_bytes"] / 2**30, 2),
+        "cache_disk_gib": round(recording["cached_disk_peak_bytes"] / 2**30, 2),
+        "max_abs_z": parsed["checks"].get("truth", {}).get("max_abs_z"),
+    }
+    if len(sites):
+        sites["cpu_us_per_row"] = sites["cpu_ms"] * 1000.0 / rows
+        heaviest = sites.loc[sites["cpu_ms"].idxmax()]
+        row["cpu_us_per_row"] = round(sites["cpu_ms"].sum() * 1000.0 / rows, 1)
+        row["heaviest"] = heaviest["tags"]
+        row["heaviest_outside_cpu_gc"] = round(heaviest["other_ms"] / max(heaviest["run_ms"], 1), 3)
+        details.append((storage, fit, sites))
+    summary.append(row)
+display(pd.DataFrame(summary))
+for storage, fit, sites in details:
+    print(f"== {storage}: {fit['seconds']:.0f} s, succeeded {fit['succeeded']}" + (f"; {fit['error']}" if "error" in fit else ""))
+    display(sites[[c for c in columns if c in sites.columns]])
+print(f"Send back these {len(reports)} report line(s), one per fit:")
+for line in reports:
+    print(line)

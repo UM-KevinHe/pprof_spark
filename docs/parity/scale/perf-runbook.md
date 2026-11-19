@@ -149,6 +149,10 @@ For each level, compare:
 
 A level that fails at a size is itself a result.
 
+The notebook's last cell shows one row per storage level, then each fit's operations, and ends with every report
+line, one per fit. Send back all of them. Before round 167 the last cell printed only the last level's report; the
+others are in the run cell's output, and in the point's `reports/` folders.
+
 Two more points, with `OFF_HEAP` alone, against the disk-only results of round 161's build:
 
 | # | Arguments | Against |

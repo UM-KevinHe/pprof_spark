@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-19, round 166.
+Updated 2026-11-19, round 167.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -197,7 +197,8 @@ through round 100 as the maintainer reported.
 | 163 | D-77 on hold: storage levels compared in the sandbox (no difference beyond noise); `03_perf` sweeps storage levels; reports give input bytes, time outside CPU and GC, and memory settings; the runbook's comparison S1 to S6 (OI-120) | Merged (ada822d) |
 | 164 | The recorder counts only non-blank error messages as failures (Databricks ends successful executions with an empty one); point 5 with the default storage level recorded; off-heap storage added to the comparison | Delivered as a patch |
 | 165 | Point 5 with off-heap storage recorded; off-heap falls back to disk where off-heap memory is off (`PerfJobSuite`); off-heap the leading candidate for D-77; S7 and S8 in the runbook | Merged (ee7e514) |
-| 166 | S1 to S8 recorded (off-heap alone): every working set to 50M rows wholly in off-heap memory; logistic at 100M fails in the AUC pass (OI-119) | Delivered as a patch |
+| 166 | S1 to S8 recorded (off-heap alone): every working set to 50M rows wholly in off-heap memory; logistic at 100M fails in the AUC pass (OI-119) | Merged (ea08cf5) |
+| 167 | `03_perf`'s last cell shows every storage level side by side and prints every report line (it printed only the last level's) | Delivered as a patch |
 
 ## Decisions and spikes
 
