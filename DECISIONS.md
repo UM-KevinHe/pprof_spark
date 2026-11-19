@@ -134,6 +134,13 @@ measured first.
   3. Off-heap storage, where the cluster has off-heap memory. The production cluster has 6.5 GiB per executor (a
      report of 2026-11-19).
 
+  **The leading candidate since round 165 is choice 3 as the default.**
+  - At point 5, off-heap storage held the whole working set in memory, with less time outside CPU and GC (8.9% of
+    evaluation against 12.9%) and a lower executor heap peak (1.35 GB against 2.14 GB) than the default. Its fit took
+    247 s against 994 s, though the cluster's executors differed between those runs.
+  - Where off-heap memory is off, `OFF_HEAP` falls back to disk-only (sandbox, round 165; `PerfJobSuite`).
+  - It needs no threshold and no knowledge of the cluster. The sweep S1 to S8 decides.
+
 ### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Accepted: approved by the maintainer, 2026-11-16)
 
 The maintainer cannot change the cluster's autoscaling or runtime (2026-11-16). The cluster runs Databricks Runtime

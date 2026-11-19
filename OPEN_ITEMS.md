@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-11-19, round 164. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-11-19, round 165. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -125,4 +125,4 @@ decision is approved.
 | OI-117 | G and R are not yet recorded with a fit: `LayoutSummary` and its IO in Cox, logistic and the block moments | A small round: fields with defaults, IO that reads files without them as G = 1 |
 | OI-118 | At 50M rows and 180 features, both models fail on executor memory (2.2 GB heaps). Each block holds one provider of 6,250 rows, a feature array of about 9 MB; GC exceeds CPU in the build; executors die and passes recompute lost partitions (2026-11-18) | Answered by measurement (round 161's build): with `--storage-level DISK_ONLY`, both models fit at 50M rows and Cox at 100M, and the build's GC fell tenfold. D-77 proposes disk-only as the default. Chunked row storage moves to step 2, with OI-119 |
 | OI-119 | Logistic at 100M rows and 180 features fails late on executor memory, even with disk-only storage: after its SerBIN iterations and the variance, summary, AUC and provider passes. Executors fell to 3 and lost partitions were recomputed. Its 12,500-row providers make 18 MB feature arrays per block, and the AUC pass's GC exceeded its CPU (2026-11-18) | Rerun point 10 with round 162's recorder, which names the failing operation; then chunked row storage in step 2 |
-| OI-120 | The working set's storage level by size (D-77 on hold): in the sandbox, memory and disk-only fits differ by no more than noise at 20 and 180 features, with the page cache holding the disk blocks; the cluster's trade-off is unmeasured | The runbook's comparison S1 to S6 with `MEMORY_AND_DISK,DISK_ONLY,OFF_HEAP`: the production cluster has 6.5 GiB of off-heap memory per executor. At 20M rows and 100 features, the default level's cache was four fifths on disk anyway (2026-11-19). Then D-77 as a fixed default, a size-based rule or off-heap |
+| OI-120 | The working set's storage level by size (D-77 on hold): in the sandbox, memory and disk-only fits differ by no more than noise at 20 and 180 features, with the page cache holding the disk blocks; the cluster's trade-off is unmeasured | The runbook's sweep S1 to S6 with `MEMORY_AND_DISK,DISK_ONLY,OFF_HEAP`, and S7 and S8 with off-heap at 50M and 100M rows. Point 5 under off-heap (2026-11-19) held the whole cache in off-heap memory, with less time outside CPU and GC and a lower heap peak; off-heap falls back to disk where off-heap memory is off (round 165). Then D-77 |

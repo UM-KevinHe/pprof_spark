@@ -149,6 +149,15 @@ For each level, compare:
 
 A level that fails at a size is itself a result.
 
+Two more points, with `OFF_HEAP` alone, against the disk-only results of round 161's build:
+
+| # | Arguments | Against |
+|---|---|---|
+| S7 | `--model logistic --rows 5e7 --features 180 --providers 8000 --storage-level OFF_HEAP` | Disk-only: 1,167.6 s |
+| S8 | `--model logistic --rows 1e8 --features 180 --providers 8000 --storage-level OFF_HEAP` | Disk-only: failed late (OI-119) |
+
+At 50M rows the cache (about 19 GiB) may fit in the executors' combined off-heap memory, 6.5 GiB each.
+
 ## Results
 
 `perf-results.md`.

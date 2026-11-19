@@ -38,6 +38,31 @@ What these runs show, and what they could not:
   measured. CPU seconds on these vCPUs (hyperthreads) do not compare directly with the sandbox's, so this is an
   indication to confirm by attribution.
 
+### 2026-11-19: point 5 with off-heap storage (build `ada822d`, round 163)
+
+Cox, 20M rows, 100 features, `--storage-level OFF_HEAP`.
+
+| Run | Storage | Executors | Utilization | Fit s | Evaluation CPU s | Evaluation outside CPU and GC | Cache peak | Executor heap peak |
+|---|---|---|---|---|---|---|---|---|
+| Round 160 (`7ad4839`) | `MEMORY_AND_DISK` | 4 | 0.88 | 305.4 | 3,194.9 | Not recorded | — | 2.16 GB |
+| Round 163 (`ada822d`) | `MEMORY_AND_DISK` | 1 to 10 | 0.39 | 994.3 | 3,296.2 | 12.9% | 0.98 GiB memory, 4.02 GiB disk | 2.14 GB |
+| Round 163 (`ada822d`) | `OFF_HEAP` | 5 | 0.82 | 246.6 | 3,106.9 | 8.9% | 4.27 GiB off-heap memory, none on disk | 1.35 GB |
+
+What the off-heap run showed:
+- **It read the cache from off-heap memory.** It read 17.09 GiB over four evaluations, 4.27 GiB a pass, with 25.6 s of
+  GC in evaluation against 45.8 s.
+- **The results are bit-identical across storage levels:** log-likelihood −30,483,874.174662925 and max |z|
+  2.4992479 in every run.
+- **The runs are not paired.** The cluster's executors differed between them, so the fit times compare with care. The
+  measures that do not depend on the cores (CPU, time outside CPU and GC, GC, heap peak) all favour off-heap here.
+
+In the sandbox (round 165), with the same fit (logistic, 1M rows, 20 features) under `OFF_HEAP`:
+- **With off-heap memory off,** as in Spark's default, the cache went wholly to disk (178 MiB) and the fit succeeded.
+- **With off-heap memory on (1 GiB),** the cache stayed wholly in off-heap memory.
+- **Both runs gave the same log-likelihood bits.**
+
+So `OFF_HEAP` falls back to disk-only where a cluster has no off-heap memory.
+
 ### 2026-11-19: point 5 with the default storage level (build `ada822d`, round 163)
 
 Cox, 20M rows, 100 features, `MEMORY_AND_DISK`.

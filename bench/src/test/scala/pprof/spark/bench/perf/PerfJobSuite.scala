@@ -289,4 +289,33 @@ class PerfJobSuite extends SparkSuite {
       "Lost task 28.3 (<address> executor 94) on <address> at 1.5.0"
     )
   }
+
+  test("off-heap storage falls back to disk where off-heap memory is off, with the same result") {
+    val path = Files.createTempDirectory("pprof-perf-offheap").resolve("point").toString
+    val base =
+      Map(
+        "model" -> "cox",
+        "path" -> path,
+        "rows" -> "2000",
+        "providers" -> "20",
+        "features" -> "3",
+        "verify" -> "false"
+      )
+    val offHeap =
+      new ObjectMapper().readTree(PerfJob.run(spark, base + ("storage-level" -> "OFF_HEAP")).report)
+    assume(
+      offHeap.get("cluster").get("spark.memory.offHeap.enabled").asText() != "true",
+      "off-heap memory is on here"
+    )
+    val memory = new ObjectMapper().readTree(
+      PerfJob.run(spark, base + ("storage-level" -> "MEMORY_AND_DISK")).report
+    )
+    val recording = offHeap.get("fit").get("recording")
+    assert(offHeap.get("fit").get("succeeded").asBoolean(), offHeap.toString)
+    assertEquals(recording.get("cached_memory_peak_bytes").asLong(), 0L, recording.toString)
+    assert(recording.get("cached_disk_peak_bytes").asLong() > 0L, recording.toString)
+    def bits(report: com.fasterxml.jackson.databind.JsonNode): Long =
+      java.lang.Double.doubleToRawLongBits(report.get("fit").get("loglik").asDouble())
+    assertEquals(bits(offHeap), bits(memory))
+  }
 }
