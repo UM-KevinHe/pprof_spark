@@ -103,46 +103,45 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-77: The working set is cached on disk by default (Proposed, round 162; on hold since round 163)
+### D-77: The working set is cached off-heap by default (Proposed, round 162; revised round 168)
 
-- **The change.** `BlockOptions.storageLevel` defaults to `DISK_ONLY` instead of `MEMORY_AND_DISK`, for every model's
-  working set.
-- **Evidence** (cluster, round 161's build):
-  - At 50M rows and 180 features, both models ran out of executor memory with the in-memory cache, and fit with
-    disk-only storage. Cox also fits at 100M.
-  - Cox's build GC fell from 3,683 s to 362 s at 50M.
-  - Cox evaluation cost 103.6 µs of CPU per row at 50M and 101.7 at 100M on disk, against 109.1 at 20M in memory.
-- **Why.** The production executors have 2.2 GB heaps (Photon), and an in-memory cache of large blocks takes the heap
-  the passes need. Disk-only keeps the heap for computation, and the executors' local disks hold the working set
-  (19 GiB at 50M rows).
-- **No result changes.** Where blocks are stored changes none of their bits. A fit can still choose
-  `MEMORY_AND_DISK`, or any storage level.
+- **The change.** `BlockOptions.storageLevel` defaults to `OFF_HEAP` instead of `MEMORY_AND_DISK`, for every model's
+  working set:
+  - where off-heap memory is enabled, as on Databricks clusters with Photon, the working set stays in memory outside
+    the JVM heap;
+  - where it is off, Spark's default, it falls back to disk (sandbox and `PerfJobSuite`, round 165);
+  - it never takes the JVM heap.
+
+  The first proposal, disk-only, was held at the maintainer's request (2026-11-18) until paired runs could show the
+  cost for data that fit in memory.
+- **Evidence: paired sweeps.** Round 163's build, 2026-11-19; `perf-results.md`, "storage levels paired". Each point
+  ran under all three levels back to back on the same data.
+
+  Fit seconds:
+
+  | Point | `MEMORY_AND_DISK` | `DISK_ONLY` | `OFF_HEAP` |
+  |---|---|---|---|
+  | Logistic, 1M rows, 180 features | 117.5 | 81.6 | 81.8 |
+  | Logistic, 5M, 180 | 263.4 | 212.4 | 209.8 |
+  | Logistic, 5M, 20 | 20.6 | 18.4 | 18.7 |
+  | Logistic, 20M, 180 | 449.6 | 399.6 | 393.2 |
+  | Cox, 5M, 180 | 148.1 | 153.0 | 146.2 |
+  | Cox, 20M, 180 | 374.2 | 330.5 | 314.4 |
+
+  - Off-heap was fastest, or within 1.4% of the fastest, at every point.
+  - Memory-and-disk was slowest at five of six, with 2.7 to 3.1 times the GC at 20M rows, and within 1.3% at the
+    sixth.
+  - At 50M rows memory-and-disk failed for both models (round 160's build), while disk-only and off-heap fit.
+  - The log-likelihood bits matched across levels in all eighteen paired runs.
+- **Why.** The production executors have 2.2 GB heaps. A heap cache stores blocks as objects at about 3.7 times
+  their serialized size and competes with the passes for the heap.
+- **Caveats.**
+  - Memory-and-disk ran first in each sweep and may carry first-run costs.
+  - On a shared cluster, off-heap storage shares memory with other work. Cached blocks may then be evicted to disk,
+    which slows a fit but cannot change its result.
+  - A fit can still choose any storage level.
 - **After approval.** The default changes, PROJECT_CONTEXT §10.3 and the guides are updated, and the golden runs
-  confirm the bits.
-
-**On hold (2026-11-18), at the maintainer's request.** The cost of disk-only for data that fit in memory is to be
-measured first.
-- **The evidence above** compared different sizes and runs, so it did not isolate the storage level.
-- **Paired runs in the sandbox** showed no difference beyond noise at 20 and 180 features (`perf-results.md`, round
-  163), but there the working sets stayed in the page cache.
-- **The cluster comparison** (runbook, "Comparing storage levels") decides among three choices:
-  1. Disk-only by default, if it costs nothing measurable at small sizes.
-  2. A size-based choice, if it does: memory for working sets below a threshold, disk above. The engine knows the
-     working set's size from the plan, and the executor memory from the runtime configuration where it is set. It
-     cannot know the executor count, under Spark Connect or autoscaling. So the threshold would be per executor or a
-     `BlockOptions` setting, set from the measurement.
-  3. Off-heap storage, where the cluster has off-heap memory. The production cluster has 6.5 GiB per executor (a
-     report of 2026-11-19).
-
-  **The leading candidate since round 165 is choice 3 as the default.**
-  - At point 5, off-heap storage held the whole working set in memory, with less time outside CPU and GC (8.9% of
-    evaluation against 12.9%) and a lower executor heap peak (1.35 GB against 2.14 GB) than the default. Its fit took
-    247 s against 994 s, though the cluster's executors differed between those runs.
-  - Where off-heap memory is off, `OFF_HEAP` falls back to disk-only (sandbox, round 165; `PerfJobSuite`).
-  - It needs no threshold and no knowledge of the cluster. The sweep S1 to S8 decides.
-  - S1 to S8 ran with off-heap alone (2026-11-19). Every working set up to 50M rows stayed wholly in off-heap memory,
-    small ones included, and time outside CPU and GC was 7.8% to 14.2%. A paired run of S1 and S3 against the other
-    levels remains.
+  confirm the bits. They run in local mode, where off-heap memory is off, so they exercise the disk fallback.
 
 ### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Accepted: approved by the maintainer, 2026-11-16)
 

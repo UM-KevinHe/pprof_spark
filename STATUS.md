@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-19, round 167.
+Updated 2026-11-19, round 168.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -199,6 +199,7 @@ through round 100 as the maintainer reported.
 | 165 | Point 5 with off-heap storage recorded; off-heap falls back to disk where off-heap memory is off (`PerfJobSuite`); off-heap the leading candidate for D-77; S7 and S8 in the runbook | Merged (ee7e514) |
 | 166 | S1 to S8 recorded (off-heap alone): every working set to 50M rows wholly in off-heap memory; logistic at 100M fails in the AUC pass (OI-119) | Merged (ea08cf5) |
 | 167 | `03_perf`'s last cell shows every storage level side by side and prints every report line (it printed only the last level's) | Delivered as a patch |
+| 168 | Storage levels paired, S1 to S6: off-heap fastest or within 1.4% everywhere, memory-and-disk slowest at five of six; D-77 revised to an off-heap default | Delivered as a patch |
 
 ## Decisions and spikes
 

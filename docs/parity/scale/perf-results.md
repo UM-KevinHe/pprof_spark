@@ -38,6 +38,55 @@ What these runs show, and what they could not:
   measured. CPU seconds on these vCPUs (hyperthreads) do not compare directly with the sandbox's, so this is an
   indication to confirm by attribution.
 
+### 2026-11-19: storage levels paired, S1 to S6 (build `ada822d`, round 163)
+
+Each point ran three times back to back on the same data and cluster, with widget 5 set to
+`MEMORY_AND_DISK,DISK_ONLY,OFF_HEAP`, in that order. The off-heap runs are the lines recorded in the section below.
+
+**Fit seconds**, with the change against off-heap in brackets:
+
+| Run | Point | Executors (M, D, O) | `MEMORY_AND_DISK` | `DISK_ONLY` | `OFF_HEAP` |
+|---|---|---|---|---|---|
+| S1 | Logistic, 1M rows, 180 features | 4, 4, 4 | 117.5 (+43.6%) | 81.6 (−0.3%) | 81.8 |
+| S2 | Logistic, 5M, 180 | 6, 6, 6 to 8 | 263.4 (+25.5%) | 212.4 (+1.2%) | 209.8 |
+| S3 | Logistic, 5M, 20 | 8, 8, 8 | 20.6 (+10.3%) | 18.4 (−1.4%) | 18.7 |
+| S4 | Logistic, 20M, 180 | 10, 10, 10 | 449.6 (+14.3%) | 399.6 (+1.6%) | 393.2 |
+| S5 | Cox, 5M, 180 | 6, 6, 6 to 9 | 148.1 (+1.3%) | 153.0 (+4.6%) | 146.2 |
+| S6 | Cox, 20M, 180 | 9, 9 to 10, 10 | 374.2 (+19.0%) | 330.5 (+5.1%) | 314.4 |
+
+**The heaviest pass** (pass A, or Cox's evaluation): CPU-s; GC s; share of run time outside CPU and GC.
+
+| Run | `MEMORY_AND_DISK` | `DISK_ONLY` | `OFF_HEAP` |
+|---|---|---|---|
+| S1 | 436.4; 6.9; 14.2% | 435.1; 9.4; 11.5% | 432.0; 8.4; 9.9% |
+| S2 | 2,134.9; 17.1; 8.8% | 2,144.7; 31.4; 8.4% | 2,167.3; 28.6; 9.1% |
+| S3 | 46.3; 2.4; 13.7% | 52.0; 2.9; 12.5% | 51.2; 2.5; 14.2% |
+| S4 | 6,877.6; 460.2; 7.1% | 6,917.0; 191.1; 7.8% | 6,873.4; 185.6; 7.8% |
+| S5 | 2,507.8; 11.7; 8.3% | 2,525.4; 18.9; 8.0% | 2,553.0; 23.7; 9.8% |
+| S6 | 9,053.6; 615.1; 7.2% | 9,008.5; 180.5; 8.1% | 9,002.7; 177.8; 7.8% |
+
+**GC over the whole fit at 20M rows:**
+- S4: 1,537.9 s with memory-and-disk, 654.7 s with disk only, 573.1 s off-heap.
+- S6: 947.1 s, 307.6 s and 303.4 s.
+
+**The cache.** Memory-and-disk keeps blocks as objects in the JVM heap, at about 3.7 times their serialized size:
+1.39 GiB at S1 against 0.37 GiB, and at 20M rows 9.69 GiB in memory plus 4.81 GiB on disk (S4). Disk-only and
+off-heap hold the serialized 0.37 to 7.50 GiB, on disk or wholly in off-heap memory.
+
+**Results.** All three levels gave the same log-likelihood bits at every point.
+
+Readings:
+- **The question D-77 was held for is answered.** On data that fit in memory (1M and 5M rows), keeping the working set
+  on the JVM heap was not faster. It was the slowest level at four of the five small-to-mid points, and within 1.3%
+  of off-heap at S5.
+- **Off-heap was fastest, or within 1.4% of the fastest, at every point.** Disk-only stayed within 5.1% of off-heap.
+- **Memory-and-disk paid in GC:** 2.7 to 3.1 times the other levels' at 20M rows, from a heap cache 3.7 times larger
+  than the serialized one.
+- **The kernels' CPU was the same at every level,** within 1.5% at 180 features. Storage changes what surrounds the
+  kernels, not the kernels.
+- **Caveat.** Memory-and-disk always ran first in its sweep and may carry first-run costs; S1's 44% likely includes
+  some. Its extra GC at 20M is not an order effect.
+
 ### 2026-11-19: S1 to S8 with off-heap storage (build `ada822d`, round 163)
 
 All eight ran with `OFF_HEAP` alone, so the paired comparison with the other levels is still to run. The heaviest
