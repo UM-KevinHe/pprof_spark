@@ -140,6 +140,9 @@ measured first.
     247 s against 994 s, though the cluster's executors differed between those runs.
   - Where off-heap memory is off, `OFF_HEAP` falls back to disk-only (sandbox, round 165; `PerfJobSuite`).
   - It needs no threshold and no knowledge of the cluster. The sweep S1 to S8 decides.
+  - S1 to S8 ran with off-heap alone (2026-11-19). Every working set up to 50M rows stayed wholly in off-heap memory,
+    small ones included, and time outside CPU and GC was 7.8% to 14.2%. A paired run of S1 and S3 against the other
+    levels remains.
 
 ### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Accepted: approved by the maintainer, 2026-11-16)
 

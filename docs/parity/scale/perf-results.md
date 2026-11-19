@@ -38,6 +38,43 @@ What these runs show, and what they could not:
   measured. CPU seconds on these vCPUs (hyperthreads) do not compare directly with the sandbox's, so this is an
   indication to confirm by attribution.
 
+### 2026-11-19: S1 to S8 with off-heap storage (build `ada822d`, round 163)
+
+All eight ran with `OFF_HEAP` alone, so the paired comparison with the other levels is still to run. The heaviest
+pass is pass A for the logistic model and evaluation for Cox. "Outside CPU and GC" is `other_ms` over that pass's
+executor run time.
+
+| Run | Point | Fit s | Iterations | Executors, utilization | Blocks, G, R | Cache (all off-heap) | Heaviest pass: CPU µs per row | Outside CPU and GC | Max \|z\| |
+|---|---|---|---|---|---|---|---|---|---|
+| S1 | Logistic, 1M rows, 180 features | 151.7 | 5 | 2 to 6, 0.58 | 352, 1, 352 | 0.37 GiB | 88.4 | 8.9% | 2.91 |
+| S2 | Logistic, 5M, 180 | 209.8 | 5 | 6 to 8, 0.66 | 1,756, 4, 439 | 1.85 GiB | 86.7 | 9.1% | 2.87 |
+| S3 | Logistic, 5M, 20 | 18.7 | 4 | 8, 0.36 | 229, 1, 229 | 0.23 GiB | 2.6 | 14.2% | 1.67 |
+| S4 | Logistic, 20M, 180 | 393.2 | 4 | 10, 0.90 | 7,021, 14, 502 | 7.40 GiB | 85.9 | 7.8% | 3.15 |
+| S5 | Cox, 5M, 180 | 146.2 | 3 | 6 to 9, 0.65 | 1,756, 4, 439 | 1.88 GiB | 127.6 | 9.8% | 2.86 |
+| S6 | Cox, 20M, 180 | 314.4 | 3 | 10, 0.89 | 7,021, 14, 502 | 7.50 GiB | 112.5 | 7.8% | 2.38 |
+| S7 | Logistic, 50M, 180 | 1,218.9 | 4 | 6 to 10, 0.81 | 8,000, 16, 500 | 18.51 GiB | 83.3 | 11.1% | 2.90 |
+| S8 | Logistic, 100M, 180 | Failed after 5,690.5 | — | 0 to 10, 0.76 | — | — | — | — | — |
+
+**S8.** The recorder names the failing operation: `logistic.auc`, an executor lost to out-of-memory (exit code 52).
+The cluster fell to no executors at one point, and every pass read tens of GiB of shuffle, recomputing lost
+partitions (OI-119).
+
+**Against earlier runs with the other levels.** These comparisons are not paired; the cores differed.
+
+| Point | Off-heap | Earlier run | Notes |
+|---|---|---|---|
+| Cox, 20M, 180 (S6) | Fit 314.4 s; evaluation 9,002.7 CPU-s; 7.8% outside CPU and GC; GC 177.8 s | Round 160, `MEMORY_AND_DISK`: 1,474.8 s; 8,726.3 CPU-s; 10.5%; GC 561.4 s | 10 executors throughout against 1 to 9 |
+| Logistic, 50M, 180 (S7) | Fit 1,218.9 s; pass A 16,666.1 CPU-s; 11.1% | Round 161, `DISK_ONLY`: 1,167.6 s; 16,721.7 CPU-s; 13.2% | Both with 6 to 10 executors |
+
+Readings:
+- **Off-heap held every working set up to 50M rows wholly in memory,** S1 and S3 included. On this cluster, an
+  off-heap default would keep small data in memory: the case D-77's question was about.
+- **Its time outside CPU and GC was lowest of the levels measured so far:** 7.8% to 11.1% on wide points, and 14.2% on
+  the narrow S3, where reading weighs most against computing. The CPU per row matched the other levels.
+- **What is still unmeasured is a paired run at small sizes.** S1 and S3 with
+  `MEMORY_AND_DISK,DISK_ONLY,OFF_HEAP` in widget 5 take minutes.
+- **Logistic at 100M rows fails in the AUC pass under any level** (OI-119).
+
 ### 2026-11-19: point 5 with off-heap storage (build `ada822d`, round 163)
 
 Cox, 20M rows, 100 features, `--storage-level OFF_HEAP`.
