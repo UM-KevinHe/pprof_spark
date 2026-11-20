@@ -1,12 +1,16 @@
 package pprof.spark.engine.cox
 
+import java.nio.file.Files
+
 import scala.jdk.CollectionConverters._
 
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StructField, StructType}
 
+import pprof.spark.engine.FitFiles
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.cox.CoxFixtures._
+import pprof.spark.engine.layout.ReductionGroups
 import pprof.spark.testkit.{SparkSuite, Tolerances}
 
 /** Distributed correctness of Cox fits beyond the default one-block layout (OI-67, round 79):
@@ -189,5 +193,21 @@ class CoxLayoutSuite extends SparkSuite {
     val again = CoxPH.fit(frame(spark, name, reverse = true).repartition(7), spec(name), options)
     assertEquals(outputs(again), outputs(grouped))
     assert(CoxPH.baseline(frame(spark, name), grouped).count() > 0L)
+
+    // The fit records G and R (OI-117); they survive saving, and a file of the previous format reads as G = 1.
+    assertEquals(before.layout.blocksPerGroup, 1)
+    val planned = ReductionGroups.plan(grouped.layout.blockCount, partial, options.blocks)
+    assert(planned.blocksPerGroup > 1, s"$planned")
+    assertEquals(
+      (grouped.layout.blocksPerGroup, grouped.layout.reductionGroups),
+      (planned.blocksPerGroup, planned.groups)
+    )
+    val path = Files.createTempDirectory("pprof-cox-groups").resolve("model").toString
+    CoxFitIO.save(spark, grouped, path)
+    assertEquals(CoxFitIO.load(spark, path).layout, grouped.layout)
+    FitFiles.editMetadata(path)(
+      FitFiles.asVersion(5, CoxFitIO.FormatVersion, "blocksPerGroup", "reductionGroups")
+    )
+    assertEquals(CoxFitIO.load(spark, path).layout, grouped.layout.copy(blocksPerGroup = 1))
   }
 }

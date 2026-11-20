@@ -27,14 +27,15 @@ import pprof.spark.engine.backend.Operations._
   */
 object CoxFitIO {
 
-  val FormatVersion: Int = 5
+  val FormatVersion: Int = 6
 
   /** Versions this release reads: 1 lacks `entryCol` and `hasBaseline`; 1 and 2 lack the robust
     * fields, so their fits load as model-based.; 1 to 3 lack
     * `maxStratumBytes`, read as its default (round 83); 1 to 4 lack
-    * `rowKeyCols`, read as no row key (round 87)
+    * `rowKeyCols`, read as no row key (round 87); 1 to 5 lack the reduction groups, read as one
+    * block per group (round 174, OI-117)
     */
-  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4, 5)
+  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4, 5, 6)
   val Kind: String = "pprof.spark.engine.cox.CoxFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -110,6 +111,8 @@ object CoxFitIO {
       field("oversizedGroups", IntegerType),
       field("largestBlockRows", LongType),
       field("smallestBlockRows", LongType),
+      field("blocksPerGroup", IntegerType, nullable = true),
+      field("reductionGroups", IntegerType, nullable = true),
       field("fingerprint", LongType)
     )
   )
@@ -188,6 +191,8 @@ object CoxFitIO {
       fit.layout.oversizedGroups,
       fit.layout.largestBlockRows,
       fit.layout.smallestBlockRows,
+      fit.layout.blocksPerGroup,
+      fit.layout.reductionGroups,
       fit.fingerprint
     )
     spark
@@ -311,7 +316,8 @@ object CoxFitIO {
         r.getAs[Int]("blockCount"),
         r.getAs[Int]("oversizedGroups"),
         r.getAs[Long]("largestBlockRows"),
-        r.getAs[Long]("smallestBlockRows")
+        r.getAs[Long]("smallestBlockRows"),
+        Option(r.getAs[Any]("blocksPerGroup")).map(_.asInstanceOf[Int]).getOrElse(1)
       ),
       r.getAs[Long]("fingerprint"),
       r.getAs[String]("featureStatus"),

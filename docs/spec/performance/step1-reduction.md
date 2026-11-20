@@ -21,7 +21,8 @@ logistic model; the step's exit is measured on the cluster after that.
   - G = 1 when B ≤ M; otherwise G = ⌈B / M⌉.
   - R = ⌈B / G⌉ ≤ M.
   - Group g holds blocks gG to min(B, (g + 1)G) − 1, consecutive and in order.
-- **Reproducibility.** G and R depend only on the plan and the options, and are recorded with the fit.
+- **Reproducibility.** G and R depend only on the plan and the options, and are recorded with the fit (since round
+  174, OI-117: `LayoutSummary.blocksPerGroup` and `reductionGroups`; files written before read as G = 1).
 - **Code.** `layout.ReductionGroups` (round 158).
 
 ## 3. Placing groups

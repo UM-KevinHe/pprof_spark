@@ -1,12 +1,16 @@
 package pprof.spark.engine.logistic
 
+import java.nio.file.Files
+
 import scala.jdk.CollectionConverters._
 
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.functions.{col, expr}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StructField, StructType}
 
+import pprof.spark.engine.FitFiles
 import pprof.spark.engine.backend.{BlockOptions, DriverLimitExceededException}
+import pprof.spark.engine.layout.ReductionGroups
 import pprof.spark.engine.logistic.LogisticFixtures._
 import pprof.spark.numerics.{Cholesky, InMemorySerbinPasses, Serbin, SerbinOptions}
 import pprof.spark.numerics.kernels.{LogisticFE => Kernel}
@@ -331,6 +335,22 @@ class LogisticLayoutSuite extends SparkSuite {
       LogisticProviderTests.test(frame(spark, "lfe-base"), grouped).count(),
       grouped.providers.size.toLong
     )
+
+    // The fit records G and R (OI-117); they survive saving, and a file of the previous format reads as G = 1.
+    assertEquals(before.layout.blocksPerGroup, 1)
+    val planned = ReductionGroups.plan(grouped.layout.blockCount, partial, options.blocks)
+    assert(planned.blocksPerGroup > 1, s"$planned")
+    assertEquals(
+      (grouped.layout.blocksPerGroup, grouped.layout.reductionGroups),
+      (planned.blocksPerGroup, planned.groups)
+    )
+    val path = Files.createTempDirectory("pprof-logistic-groups").resolve("model").toString
+    LogisticFitIO.save(spark, grouped, path)
+    assertEquals(LogisticFitIO.load(spark, path).layout, grouped.layout)
+    FitFiles.editMetadata(path)(
+      FitFiles.asVersion(4, LogisticFitIO.FormatVersion, "blocksPerGroup", "reductionGroups")
+    )
+    assertEquals(LogisticFitIO.load(spark, path).layout, grouped.layout.copy(blocksPerGroup = 1))
   }
 
 }

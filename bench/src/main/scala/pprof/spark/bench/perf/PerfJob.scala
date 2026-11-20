@@ -10,7 +10,6 @@ import org.apache.spark.sql.functions.col
 import pprof.spark.engine.BuildInfo
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.cox.{CoxOptions, CoxPH, CoxSpec, Ties}
-import pprof.spark.engine.layout.ReductionGroups
 import pprof.spark.engine.logistic.{LogisticFE, LogisticOptions, LogisticSpec}
 
 /** The performance phase's runner (docs/parity/scale/perf-runbook.md; docs/spec/performance/plan.md, step 0). It
@@ -79,7 +78,9 @@ object PerfJob {
       converged: Boolean,
       layout: String,
       matrices: Vector[Double],
-      blocks: Int
+      blocks: Int,
+      blocksPerGroup: Int,
+      groups: Int
   )
 
   def main(args: Array[String]): Unit =
@@ -174,7 +175,9 @@ object PerfJob {
         f.converged,
         String.valueOf(f.layout),
         f.information ++ f.covariance,
-        f.layout.blockCount
+        f.layout.blockCount,
+        f.layout.blocksPerGroup,
+        f.layout.reductionGroups
       )
     } else {
       val spec = LogisticSpec("y", d.features, "provider", rowId = Some("id"))
@@ -187,7 +190,9 @@ object PerfJob {
         f.converged,
         String.valueOf(f.layout),
         f.covariance ++ f.providers.gamma.toVector,
-        f.layout.blockCount
+        f.layout.blockCount,
+        f.layout.blocksPerGroup,
+        f.layout.reductionGroups
       )
     }
   }
@@ -269,15 +274,13 @@ object PerfJob {
             .put("converged", o.converged)
             .put("loglik", o.loglik)
             .put("layout", o.layout)
-          // The reduction groups the engine forms (docs/spec/performance/step1-reduction.md §2), recomputed from the
-          // block count with the engine's own rule and the fit's options.
-          val partial = 8L * (2L + d.p + d.p.toLong * (d.p + 1) / 2)
-          val groups = ReductionGroups.plan(o.blocks, partial, blockOptions(options))
+          // The reduction groups the fit used (docs/spec/performance/step1-reduction.md §2), as its layout records
+          // them since round 174 (OI-117); before, the report recomputed them with the engine's rule.
           node
             .putObject("reduction")
             .put("blocks", o.blocks)
-            .put("blocks_per_group", groups.blocksPerGroup)
-            .put("groups", groups.groups)
+            .put("blocks_per_group", o.blocksPerGroup)
+            .put("groups", o.groups)
       }
       recording(node.putObject("recording"), window)
       val checks = root.putObject("checks")

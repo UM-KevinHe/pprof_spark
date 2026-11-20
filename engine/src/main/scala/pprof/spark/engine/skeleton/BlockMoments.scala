@@ -13,7 +13,7 @@ import pprof.spark.engine.backend.{
   WorkingSet
 }
 import pprof.spark.engine.data.{InputSpec, Validation}
-import pprof.spark.engine.layout.{GroupKey, GroupSizes, LayoutPlan}
+import pprof.spark.engine.layout.{GroupKey, GroupSizes, LayoutPlan, ReductionGroups}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.numerics.kernels.{Fingerprint, Moments}
 
@@ -29,14 +29,25 @@ final case class MomentsPartial(
 /** Results for one group, computed within its block. */
 final case class GroupMoments(groupIndex: Int, rows: Long, means: Array[Double])
 
-/** The shape of the layout plan, recorded with the result (§6.10). */
+/** The shape of the layout plan, recorded with the result (§6.10).
+  *
+  * @param blocksPerGroup G, the blocks whose partials each reduction group folds on the executors before the driver
+  *   folds the groups' partials (docs/spec/performance/step1-reduction.md §2, OI-117); 1, the single-level fold, for
+  *   fits that reduce block by block and for files written before round 174
+  */
 final case class LayoutSummary(
     targetRowsPerBlock: Int,
     blockCount: Int,
     oversizedGroups: Int,
     largestBlockRows: Long,
-    smallestBlockRows: Long
-)
+    smallestBlockRows: Long,
+    blocksPerGroup: Int = 1
+) {
+  require(blocksPerGroup >= 1, s"a reduction group holds at least one block, got $blocksPerGroup")
+
+  /** R, the number of reduction groups. */
+  def reductionGroups: Int = ((blockCount.toLong + blocksPerGroup - 1) / blocksPerGroup).toInt
+}
 
 object LayoutSummary {
   def of(plan: LayoutPlan): LayoutSummary = {
@@ -48,6 +59,15 @@ object LayoutSummary {
       rows.max,
       rows.min
     )
+  }
+
+  /** The plan's shape with the reduction groups its passes use. */
+  def of(plan: LayoutPlan, groups: ReductionGroups): LayoutSummary = {
+    require(
+      groups.blocks == plan.blockCount,
+      s"groups for ${groups.blocks} blocks, plan of ${plan.blockCount}"
+    )
+    of(plan).copy(blocksPerGroup = groups.blocksPerGroup)
   }
 }
 

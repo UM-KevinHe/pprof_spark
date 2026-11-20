@@ -228,6 +228,31 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 174 (2026-11-20): G and R recorded with a fit (OI-117)
+
+- Round 173 is on `main` as `5d71c58`. The maintainer will send its CI run and S8 (logistic, 100M rows) when he has
+  them.
+- **The record.** `LayoutSummary` gains `blocksPerGroup`, G, with default 1, and `reductionGroups`, R, derived from
+  the block count and G. `LayoutSummary.of(plan, groups)` takes them from the `ReductionGroups` a fit's passes use.
+  Cox and the logistic fixed-effect fit record them. The linear and random-effect models and the block moments
+  reduce block by block and keep G = 1.
+- **Files.** `CoxFitIO` (format 6) and `LogisticFitIO` (format 5) write both values and read G back. Files of
+  earlier formats lack them and read as G = 1, the single-level fold.
+- **The harness.** `PerfJob` reports the fit's recorded G and R in `fit.reduction` instead of recomputing them with
+  the engine's rule.
+- **Tests.** The grouped-reduction tests of `CoxLayoutSuite` and `LogisticLayoutSuite` now check G and R against
+  `ReductionGroups.plan`. They also save the fit and load it back with the same layout, and load a file rewritten as
+  the previous format with G = 1. The editing helper is `FitFiles`, in the engine tests.
+- **Records.** OI-117 closed; step 1's note and the runbook say the values are recorded.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags; scalafmt is clean and `check-engine-api.sh` passes.
+- All 60 engine suites pass, 541 tests; the extended layout tests are among them, and the golden runs are unchanged.
+  The app and bench suites pass (38 and 30 tests), and the Python tests on PySpark 4.1.0 (47).
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21.
+
+**Next: OI-114**, the `countDistinct` pattern in the other validators; then OI-116.
+
 ## Round 173 (2026-11-20): a leaner AUC pass with the same bits (OI-119)
 
 - Round 172 is on `main` as `5adcc31`, and the maintainer reported its CI green.

@@ -205,7 +205,7 @@ object CoxPH {
         spec,
         options,
         SoftwareInfo.capture(df.sparkSession),
-        LayoutSummary.of(prepared.plan),
+        LayoutSummary.of(prepared.plan, prepared.workingSet.groups),
         prepared.fingerprint,
         naiveCovariance = naive.toVector,
         robust = robust,

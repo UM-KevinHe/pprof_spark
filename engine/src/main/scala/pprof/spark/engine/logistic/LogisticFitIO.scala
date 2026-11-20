@@ -29,13 +29,14 @@ import pprof.spark.numerics.SerbinStep
   */
 object LogisticFitIO {
 
-  val FormatVersion: Int = 4
+  val FormatVersion: Int = 5
 
   /** Version 1 lacks `correlationThresholdBits` (its fits load with the default threshold); versions 1
     * and 2 lack slice 2b's cluster column, robust variances and AUC; versions 1 to 3 lack providers
-    * added after fitting (§8a), and read as having none.
+    * added after fitting (§8a), and read as having none; versions 1 to 4 lack the reduction groups,
+    * read as one block per group (round 174, OI-117).
     */
-  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4)
+  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4, 5)
   val Kind: String = "pprof.spark.engine.logistic.LogisticFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -108,6 +109,8 @@ object LogisticFitIO {
       field("oversizedGroups", IntegerType),
       field("largestBlockRows", LongType),
       field("smallestBlockRows", LongType),
+      field("blocksPerGroup", IntegerType, nullable = true),
+      field("reductionGroups", IntegerType, nullable = true),
       field("fingerprint", LongType),
       field("robustCovarianceBits", Longs, nullable = true),
       field("clusters", LongType, nullable = true),
@@ -210,6 +213,8 @@ object LogisticFitIO {
       fit.layout.oversizedGroups,
       fit.layout.largestBlockRows,
       fit.layout.smallestBlockRows,
+      fit.layout.blocksPerGroup,
+      fit.layout.reductionGroups,
       fit.fingerprint,
       fit.robustCovariance.map(v => bits(v)).orNull,
       fit.clusters,
@@ -412,7 +417,8 @@ object LogisticFitIO {
         r.getAs[Int]("blockCount"),
         r.getAs[Int]("oversizedGroups"),
         r.getAs[Long]("largestBlockRows"),
-        r.getAs[Long]("smallestBlockRows")
+        r.getAs[Long]("smallestBlockRows"),
+        Option(r.getAs[Any]("blocksPerGroup")).map(_.asInstanceOf[Int]).getOrElse(1)
       ),
       r.getAs[Long]("fingerprint"),
       r.getAs[String]("featureStatus"),

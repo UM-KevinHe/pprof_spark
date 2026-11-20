@@ -92,7 +92,8 @@ their own are counted. These numbers are measurements of the run that wrote them
 
 The points began as the baseline of `main`. The "Expected" column below comes from plan §2.2, before step 1. Since
 round 160, blocks stay at the target size and are reduced in groups. The report's `fit.reduction` gives the blocks, G
-and R; at 180 features and 8,000 providers, about 8,000 blocks in 500 groups from 20M rows up (arithmetic).
+and R, as the fit records them since round 174; at 180 features and 8,000 providers, about 8,000 blocks in 500 groups
+from 20M rows up (arithmetic).
 
 Points 7 and 8 ran out of executor memory on round 160's build, with the working set on the JVM heap (OI-118). With
 `--storage-level DISK_ONLY` (round 161's build), points 7, 8 and 9 fit, and point 10 failed late (OI-119). Since

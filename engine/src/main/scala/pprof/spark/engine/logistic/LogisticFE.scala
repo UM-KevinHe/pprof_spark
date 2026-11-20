@@ -329,7 +329,7 @@ object LogisticFE {
         spec,
         options,
         SoftwareInfo.capture(df.sparkSession),
-        LayoutSummary.of(plan),
+        LayoutSummary.of(plan, groups),
         summaries.iterator.map(_.fingerprint).sum,
         robustCovariance = robust.map(_._1),
         clusters = robust.map(_._2).getOrElse(0L),
