@@ -259,6 +259,7 @@ object PerfJob {
         .put("seconds", seconds)
         .put("succeeded", first.isRight)
         .put("storage_level", blockOptions(options).storageLevel)
+        .put("storage_level_used", blockOptions(options).storageLevelNameIn(spark))
         .put("executors_at_end", executors(spark))
       first match {
         case Left(error) => node.put("error", redact(error))

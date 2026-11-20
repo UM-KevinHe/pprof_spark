@@ -12,6 +12,7 @@ import org.apache.spark.sql.functions.{
 }
 import org.apache.spark.sql.types.{DoubleType, NumericType, StringType}
 import pprof.spark.engine.backend.BlockOptions
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.layout.GroupKey
 import pprof.spark.engine.metadata.SoftwareInfo
@@ -174,7 +175,7 @@ object LogisticFERandomCluster {
       .withColumn("y_adj", Validation.column(spec.outcome).cast(DoubleType))
       .withColumn("stage1_offset", xbeta)
       .withColumn(ObservedColumn, observed)
-      .persist(options.blocks.resolvedStorageLevel)
+      .persistAt(options.blocks)
     val threeStage =
       ThreeStageSpec(ObservedColumn, spec.features, spec.provider, spec.cluster, spec.rowId)
     (records, ThreeStage.compress(records, threeStage, options.stage3), rows, fingerprint)

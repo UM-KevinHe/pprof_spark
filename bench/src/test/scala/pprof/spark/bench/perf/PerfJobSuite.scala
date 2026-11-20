@@ -6,6 +6,7 @@ import scala.jdk.CollectionConverters._
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import pprof.spark.bench.synthetic.Synthetic
+import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.testkit.SparkSuite
 
 /** The performance runner on small points (docs/parity/scale/perf-runbook.md): the generator, the recorder and the
@@ -248,6 +249,7 @@ class PerfJobSuite extends SparkSuite {
     val fit = report.get("fit")
     assert(fit.get("succeeded").asBoolean(), fit.toString)
     assertEquals(fit.get("storage_level").asText(), "DISK_ONLY")
+    assertEquals(fit.get("storage_level_used").asText(), "DISK_ONLY")
     val reduction = fit.get("reduction")
     val (blocks, perGroup, groups) =
       (
@@ -292,7 +294,7 @@ class PerfJobSuite extends SparkSuite {
   }
 
   test(
-    "the default storage level, off-heap, falls back to disk where off-heap memory is off (D-77)"
+    "the default storage level, off-heap, is used as DISK_ONLY where the session has no off-heap memory"
   ) {
     val path = Files.createTempDirectory("pprof-perf-offheap").resolve("point").toString
     val base =
@@ -307,10 +309,8 @@ class PerfJobSuite extends SparkSuite {
     val offHeap = new ObjectMapper().readTree(PerfJob.run(spark, base).report)
     assert(!offHeap.get("options").has("storage-level"), offHeap.get("options").toString)
     assertEquals(offHeap.get("fit").get("storage_level").asText(), "OFF_HEAP")
-    assume(
-      offHeap.get("cluster").get("spark.memory.offHeap.enabled").asText() != "true",
-      "off-heap memory is on here"
-    )
+    assume(!BlockOptions.hasOffHeapMemory(spark), "off-heap memory is on here")
+    assertEquals(offHeap.get("fit").get("storage_level_used").asText(), "DISK_ONLY")
     val memory = new ObjectMapper().readTree(
       PerfJob.run(spark, base + ("storage-level" -> "MEMORY_AND_DISK")).report
     )

@@ -3,6 +3,7 @@ package pprof.spark.engine.cox
 import org.apache.spark.sql.{DataFrame, Encoders}
 import org.apache.spark.sql.functions.{broadcast, col}
 
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.backend.{BlockOptions, OrderedReduction, PlanFrames}
 import pprof.spark.engine.data.Validation
 import pprof.spark.engine.layout.{GroupFold, GroupSizes, LayoutPlan, ReductionGroups}
@@ -302,7 +303,7 @@ object CoxPH {
           col("cumulativeHazard").as("cumulative_hazard"),
           col("survival")
         )
-        .persist(fit.options.blocks.resolvedStorageLevel)
+        .persistAt(fit.options.blocks)
       table.countAs("cox.baseline")
       table
     }
@@ -347,7 +348,7 @@ object CoxPH {
             .join(keys, Seq(Validation.RowIdColumn))
             .select(fit.spec.rowKey.map(Validation.column) ++ values: _*)
       }
-      val table = keyed.persist(fit.options.blocks.resolvedStorageLevel)
+      val table = keyed.persistAt(fit.options.blocks)
       table.countAs("cox.residuals")
       table
     }
@@ -388,7 +389,7 @@ object CoxPH {
       }
     val groups =
       ReductionGroups.plan(plan.blockCount, 8L * (2L + p + Moments.packedLength(p)), options.blocks)
-    val workingSet = CoxWorkingSet.build(input, plan, groups, options.blocks.resolvedStorageLevel)
+    val workingSet = CoxWorkingSet.build(input, plan, groups, options.blocks)
     try {
       val summaries = workingSet.blocks
         .mapPartitions((blocks: Iterator[CoxBlock]) =>

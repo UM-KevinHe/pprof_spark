@@ -4,6 +4,7 @@ import org.apache.spark.sql.{DataFrame, Encoders}
 import org.apache.spark.sql.functions.{broadcast, col, lit}
 
 import pprof.spark.engine.backend.PlanFrames
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.Validation
 import pprof.spark.numerics.kernels.{CoxMeasures => MeasureKernels}
 import pprof.spark.engine.backend.Operations._
@@ -107,7 +108,7 @@ object CoxMeasures {
           )
       }.toMap
       results.values.foreach { t =>
-        t.persist(fit.options.blocks.resolvedStorageLevel)
+        t.persistAt(fit.options.blocks)
         t.countAs("cox.measures")
       }
       val unexpected = rows.filter((r: CoxProviderRow) => r.expected == 0.0).countAs("cox.measures")

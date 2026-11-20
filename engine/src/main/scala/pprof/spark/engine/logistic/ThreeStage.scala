@@ -12,6 +12,7 @@ import org.apache.spark.sql.types.{
   StructField,
   StructType
 }
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.backend.{BlockOptions, DriverGuards}
 import pprof.spark.engine.layout.GroupKey
@@ -412,7 +413,7 @@ object ThreeStage {
       offsetColumn: String = "stage1_offset"
   ): ThreeStageStage3 = {
     val (providers, clusters, cellData) = compressed(prepared, spec, options, offsetColumn)
-    val cells = cellData.persist(options.blocks.resolvedStorageLevel)
+    val cells = cellData.persistAt(options.blocks)
     try {
       val bins = cells
         .map((c: ThreeStageKernel.Cell) => c.bins.length.toLong)(Encoders.scalaLong)
@@ -487,7 +488,7 @@ object ThreeStage {
         val sorted = rows.toArray.sortBy(c => (c.cluster, c.provider))
         ThreeStageClusterBlock(id, sorted.map(_.cluster).distinct, sorted)
       }(Encoders.product[ThreeStageClusterBlock])
-      .persist(options.blocks.resolvedStorageLevel)
+      .persistAt(options.blocks)
     try {
       val passes =
         new SparkThreeStagePasses(blocks, providers.size, clusters.size, sigma, options.nNodes)

@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-77: The working set is cached off-heap by default (Accepted: approved by the maintainer, 2026-11-19)
+### D-77: The working set is cached off-heap by default (Accepted: approved by the maintainer, 2026-11-19; amended at his direction, 2026-11-20)
 
 - **The change.** `BlockOptions.storageLevel` defaults to `OFF_HEAP` instead of `MEMORY_AND_DISK`, for every model's
   working set:
@@ -153,6 +153,15 @@ Implemented in round 169:
   `MEMORY_AND_DISK`.
 - Not foreseen: where off-heap memory is off, Spark logs three warnings for each cached partition as it falls back
   to disk, 684 lines in `GoldenRunsSuite` under CI's log settings. Results are unaffected. OI-121 holds the options.
+
+Amendment (round 170, 2026-11-20, at the maintainer's direction; OI-121): where the session has no off-heap memory,
+the engine persists at `DISK_ONLY` itself, so Spark no longer tries memory first and warns.
+- **What counts as off-heap memory.** Spark sizes off-heap storage by `spark.memory.offHeap.size`, whatever
+  `spark.memory.offHeap.enabled` says, and requires a positive size when the flag is on. A probe on Spark 4.0.0 and
+  4.1.0 with the flag off and a size of 64 MB kept an off-heap cache in memory. The engine therefore counts off-heap
+  memory as present when the flag is on or the size is positive, as the session's configuration shows them.
+- **Records.** A fit records the level asked for, as before. `PerfJob`'s report also records the level used
+  (`fit.storage_level_used`), which shows whether the engine saw a cluster's off-heap memory.
 
 ### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Accepted: approved by the maintainer, 2026-11-16)
 

@@ -5,8 +5,9 @@ import scala.jdk.CollectionConverters._
 import org.apache.spark.sql.{Dataset, Encoders, Row}
 import org.apache.spark.sql.functions.{broadcast, col}
 import org.apache.spark.sql.types.{IntegerType, LongType, StructField, StructType}
-import org.apache.spark.storage.StorageLevel
+import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.backend.PlanFrames
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.Validation
 import pprof.spark.engine.layout.{LayoutPlan, PartitionKeys, ReductionGroups}
 import pprof.spark.numerics.kernels.{LogisticFE => Kernel}
@@ -212,13 +213,13 @@ object LogisticWorkingSet {
   private val PartitionKeyColumn = "__pprof_partition_key"
 
   /** Joins the plan to the rows (dropping screened providers), builds one block per plan block
-    * with one shuffle, and persists the blocks at `storageLevel`.
+    * with one shuffle, and persists the blocks at `blockOptions`' storage level.
     */
   def build(
       input: LogisticInput,
       plan: LayoutPlan,
       groups: ReductionGroups,
-      storageLevel: StorageLevel
+      blockOptions: BlockOptions
   ): LogisticWorkingSet = {
     val p = input.spec.features.size
     val spark = input.frame.sparkSession
@@ -254,7 +255,7 @@ object LogisticWorkingSet {
       .mapPartitions((rows: Iterator[LogisticRow]) => LogisticBlockBuilder.buildAll(rows, p))(
         Encoders.product[LogisticBlock]
       )
-      .persist(storageLevel)
+      .persistAt(blockOptions)
     try {
       val built = blocks.countAs("logistic.build")
       if (built != plan.blockCount)

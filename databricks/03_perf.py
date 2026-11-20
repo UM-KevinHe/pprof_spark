@@ -118,11 +118,14 @@ for line in reports:
     fit = parsed["fit"]
     recording = fit["recording"]
     rows = parsed["point"]["n"]
-    # The level the fit used (round 169 on; OFF_HEAP by default, D-77), else the one given, else "default".
+    # The level asked for (round 169 on; OFF_HEAP by default, D-77), else the one given, else "default";
+    # and, from round 170, the level used: DISK_ONLY for OFF_HEAP where the cluster has no off-heap memory.
     storage = parsed["fit"].get("storage_level") or parsed["options"].get("storage-level", "default")
+    storage_used = parsed["fit"].get("storage_level_used", "")
     sites = pd.DataFrame(recording["sites"])
     row = {
         "storage": storage,
+        "storage_used": storage_used,
         "succeeded": fit["succeeded"],
         "fit_s": round(fit["seconds"], 1),
         "iterations": fit.get("iterations"),

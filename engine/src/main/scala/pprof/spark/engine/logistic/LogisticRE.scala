@@ -24,6 +24,7 @@ import org.apache.spark.sql.types.{
   StructField,
   StructType
 }
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.backend.{BlockOptions, DriverGuards, PlanFrames}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.layout.{BudgetedLayout, GroupKey, GroupSizes, LayoutPlan}
@@ -258,7 +259,7 @@ object LogisticRE {
       8L * m.toLong * (p + 3L),
       options.blocks
     )
-    val workingSet = LinearWorkingSet.build(input, plan, options.blocks.resolvedStorageLevel)
+    val workingSet = LinearWorkingSet.build(input, plan, options.blocks)
     try
       fitOn(df, spec, options, input, plan, workingSet, p, m) {
         (blocks, rows, centre, outcomeMean) =>
@@ -292,7 +293,7 @@ object LogisticRE {
     val p = input.spec.features.size - 1
     val m = sizes.size
     require(beta.length == p, s"beta has ${beta.length} values; the model has $p fixed effects")
-    val workingSet = LinearWorkingSet.build(input, plan, options.blocks.resolvedStorageLevel)
+    val workingSet = LinearWorkingSet.build(input, plan, options.blocks)
     try
       fitOn(df, spec, options, input, plan, workingSet, p, m) { (blocks, rows, centre, _) =>
         Kernel.at(blocks, rows, p, options.includeIntercept, centre, sigma, beta.toArray)
@@ -410,7 +411,7 @@ object LogisticRE {
     val (input, _, plan) = layout(df, fit.spec, fit.options)
     val p = input.spec.features.size - 1
     require(beta.length == p, s"beta has ${beta.length} values; the model has $p fixed effects")
-    val workingSet = LinearWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel)
+    val workingSet = LinearWorkingSet.build(input, plan, fit.options.blocks)
     try
       new DistributedBlocks(
         workingSet,
@@ -452,7 +453,7 @@ object LogisticRE {
   private[logistic] def training(df: DataFrame, fit: LogisticREFit): Training = {
     val (input, sizes, plan) = layout(df, fit.spec, fit.options)
     val p = input.spec.features.size - 1
-    val workingSet = LinearWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel)
+    val workingSet = LinearWorkingSet.build(input, plan, fit.options.blocks)
     val first = workingSet.blocks
       .map((block: LinearBlock) => firstSums(block))(Encoders.product[LogisticREFirstPartial])
       .collect()
@@ -689,7 +690,7 @@ object LogisticRE {
       .join(keys, Seq("groupIndex"))
       .select(col(key), col("records"), col("weight"), col("blup"), col("variance"), col("se"))
       .orderBy(key)
-      .persist(options.blocks.resolvedStorageLevel)
+      .persistAt(options.blocks)
     table.count()
     table
   }

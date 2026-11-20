@@ -5,8 +5,8 @@ import scala.jdk.CollectionConverters._
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders, Row, SparkSession}
 import org.apache.spark.sql.functions.{broadcast, col}
 import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
-import org.apache.spark.storage.StorageLevel
 
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.{ValidatedInput, Validation}
 import pprof.spark.engine.layout.{GroupKey, LayoutPlan}
 import pprof.spark.engine.backend.Operations._
@@ -27,7 +27,7 @@ object WorkingSet {
     * (§10.2). The plan reaches executors through a broadcast join (§6.7); blocks are assembled on
     * executors; only the block count reaches the driver. Connect-compatible.
     */
-  def build(input: ValidatedInput, plan: LayoutPlan, storageLevel: StorageLevel): WorkingSet = {
+  def build(input: ValidatedInput, plan: LayoutPlan, blockOptions: BlockOptions): WorkingSet = {
     val p = input.spec.featureCols.size
     val placements = PlanFrames.placements(input.frame.sparkSession, plan, input.groupKeyIsText)
     val placed = input.frame
@@ -44,7 +44,7 @@ object WorkingSet {
       .mapGroups((blockId: Int, rows: Iterator[PlacedRow]) => BlockBuilder.build(blockId, rows, p))(
         Encoders.product[BlockRecord]
       )
-      .persist(storageLevel)
+      .persistAt(blockOptions)
     try {
       val built = blocks.countAs("layout.build")
       if (built != plan.blockCount)

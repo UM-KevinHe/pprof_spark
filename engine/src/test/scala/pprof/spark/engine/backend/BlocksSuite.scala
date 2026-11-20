@@ -36,14 +36,42 @@ class BlocksSuite extends munit.FunSuite {
   test("the default storage level is off-heap, which never stores blocks on the JVM heap (D-77)") {
     val defaults = BlockOptions()
     assertEquals(defaults.storageLevel, "OFF_HEAP")
-    assertEquals(defaults.resolvedStorageLevel, StorageLevel.OFF_HEAP)
-    val level = defaults.resolvedStorageLevel
+    assertEquals(defaults.namedStorageLevel, StorageLevel.OFF_HEAP)
+    val level = defaults.namedStorageLevel
     assert(level.useOffHeap && level.useDisk && !level.deserialized, level.toString)
     assertEquals(
-      BlockOptions(storageLevel = "DISK_ONLY").resolvedStorageLevel,
+      BlockOptions(storageLevel = "DISK_ONLY").namedStorageLevel,
       StorageLevel.DISK_ONLY
     )
-    intercept[IllegalArgumentException](BlockOptions(storageLevel = "HEAP").resolvedStorageLevel)
+    intercept[IllegalArgumentException](BlockOptions(storageLevel = "HEAP").namedStorageLevel)
+  }
+
+  test("an off-heap level becomes DISK_ONLY where the session has no off-heap memory (OI-121)") {
+    assertEquals(BlockOptions.levelName("OFF_HEAP", offHeapMemory = false), "DISK_ONLY")
+    assertEquals(BlockOptions.levelName("OFF_HEAP", offHeapMemory = true), "OFF_HEAP")
+    assertEquals(
+      BlockOptions.levelName("MEMORY_AND_DISK", offHeapMemory = false),
+      "MEMORY_AND_DISK"
+    )
+    assertEquals(BlockOptions.levelName("DISK_ONLY", offHeapMemory = true), "DISK_ONLY")
+    intercept[IllegalArgumentException](BlockOptions.levelName("HEAP", offHeapMemory = false))
+  }
+
+  test(
+    "off-heap memory: the flag on, or a positive size whatever the flag says (round 170's probe)"
+  ) {
+    def memory(enabled: Option[String], size: Option[String]) =
+      BlockOptions.offHeapMemory(enabled, size)
+    assert(!memory(None, None))
+    assert(!memory(Some("false"), Some("0")))
+    assert(!memory(None, Some(" 0b ")))
+    assert(memory(Some("true"), None))
+    assert(memory(Some(" TRUE "), Some("0")))
+    assert(memory(Some("false"), Some("64m")))
+    assert(memory(None, Some("6656m")))
+    assert(memory(None, Some("1 G")))
+    assert(memory(None, Some("1073741824")))
+    assert(memory(None, Some("an unreadable size")))
   }
 
   test("rows of the wrong width are rejected") {

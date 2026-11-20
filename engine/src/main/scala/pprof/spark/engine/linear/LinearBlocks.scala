@@ -2,8 +2,9 @@ package pprof.spark.engine.linear
 
 import org.apache.spark.sql.{Dataset, Encoders}
 import org.apache.spark.sql.functions.{broadcast, col}
-import org.apache.spark.storage.StorageLevel
+import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.backend.PlanFrames
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.Validation
 import pprof.spark.engine.layout.LayoutPlan
 import pprof.spark.numerics.kernels.{LinearFE => Kernel}
@@ -108,7 +109,7 @@ final class LinearWorkingSet private (val blocks: Dataset[LinearBlock], val plan
 
 object LinearWorkingSet {
 
-  def build(input: LinearInput, plan: LayoutPlan, storageLevel: StorageLevel): LinearWorkingSet = {
+  def build(input: LinearInput, plan: LayoutPlan, blockOptions: BlockOptions): LinearWorkingSet = {
     val p = input.spec.features.size
     val placements = PlanFrames.placements(input.frame.sparkSession, plan, input.providerKeyIsText)
     val placed = input.frame
@@ -128,7 +129,7 @@ object LinearWorkingSet {
       )(
         Encoders.product[LinearBlock]
       )
-      .persist(storageLevel)
+      .persistAt(blockOptions)
     try {
       val built = blocks.count()
       if (built != plan.blockCount)

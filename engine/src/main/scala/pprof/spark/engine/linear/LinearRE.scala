@@ -13,6 +13,7 @@ import org.apache.spark.sql.functions.{
   when
 }
 import org.apache.spark.sql.types.{DataType, DoubleType, LongType, NumericType, StringType}
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.backend.{BlockOptions, DriverGuards, PlanFrames}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.layout.{BudgetedLayout, GroupKey, GroupSizes, LayoutPlan}
@@ -288,11 +289,11 @@ object LinearRE {
     if (input.rowCount <= p.toLong) design += InputProblem.TooFewRows(input.rowCount, p)
     val problems = design.result()
     if (problems.nonEmpty) throw new InvalidInputException(problems)
-    val workingSet = LinearWorkingSet.build(input, plan, options.blocks.resolvedStorageLevel)
+    val workingSet = LinearWorkingSet.build(input, plan, options.blocks)
     try {
       val partials = workingSet.blocks
         .map((block: LinearBlock) => moments(block))(Encoders.product[LinearREMomentPartial])
-        .persist(options.blocks.resolvedStorageLevel)
+        .persistAt(options.blocks)
       try fitOn(df, spec, options, input, plan, workingSet, partials, p, m)
       finally partials.unpersist(blocking = false)
     } finally workingSet.release()
@@ -457,7 +458,7 @@ object LinearRE {
       fit: LinearREFit
   ): (LinearWorkingSet, LayoutPlan, LinearInput) = {
     val (input, _, plan) = layout(df, fit.spec, fit.options)
-    (LinearWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel), plan, input)
+    (LinearWorkingSet.build(input, plan, fit.options.blocks), plan, input)
   }
 
   /** `df` with `prediction`: the fixed part xᵀβ̂, plus the offset column when the fit has one and `withOffset`
@@ -670,7 +671,7 @@ object LinearRE {
         col("variance"),
         sqrt(col("variance")).as("se")
       )
-      .persist(options.blocks.resolvedStorageLevel)
+      .persistAt(options.blocks)
     table.count()
     table
   }

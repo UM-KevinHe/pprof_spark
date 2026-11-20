@@ -13,6 +13,7 @@ import org.apache.spark.sql.types.{
   StructType
 }
 import pprof.spark.engine.backend.BlockOptions
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
 
@@ -191,7 +192,7 @@ object LogisticREFitIO {
         col("se")
       )
       .orderBy(spec.provider)
-      .persist(options.blocks.resolvedStorageLevel)
+      .persistAt(options.blocks)
     val stored = providers.count()
     require(
       stored == count,

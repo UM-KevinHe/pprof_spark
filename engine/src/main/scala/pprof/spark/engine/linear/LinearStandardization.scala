@@ -4,6 +4,7 @@ import org.apache.spark.sql.{Column, DataFrame, Encoders}
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.types.{DoubleType, StringType}
 import pprof.spark.engine.backend.PlanFrames
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.Validation
 import pprof.spark.engine.logistic.EffectReference
 import pprof.spark.numerics.{NeumaierSum, StudentT, Summation}
@@ -142,7 +143,7 @@ object LinearStandardization {
           )
       }
       tables.map { case (kind, t) =>
-        val persisted = t.orderBy(spec.provider).persist(fit.options.blocks.resolvedStorageLevel)
+        val persisted = t.orderBy(spec.provider).persistAt(fit.options.blocks)
         persisted.count()
         kind -> persisted
       }.toMap

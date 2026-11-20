@@ -15,6 +15,7 @@ import org.apache.spark.sql.types.{
   StructType
 }
 import org.slf4j.LoggerFactory
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.backend.{DriverLimitExceededException, OrderedReduction}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.layout.{
@@ -101,7 +102,7 @@ object LogisticFE {
       lists.map(_.result())
     }
     val workingSet =
-      LogisticWorkingSet.build(input, plan, groups, options.blocks.resolvedStorageLevel)
+      LogisticWorkingSet.build(input, plan, groups, options.blocks)
     try {
       val summaries = workingSet.blocks
         .mapPartitions((blocks: Iterator[LogisticBlock]) =>
@@ -478,7 +479,7 @@ object LogisticFE {
       plan,
       ReductionGroups
         .plan(plan.blockCount, 8L * (Moments.packedLength(p) + p + 2L), fit.options.blocks),
-      fit.options.blocks.resolvedStorageLevel
+      fit.options.blocks
     )
     try {
       val fingerprint = workingSet.blocks
@@ -498,7 +499,7 @@ object LogisticFE {
         val j = features.indexOf(name)
         val reduced = workingSet.blocks
           .map((block: LogisticBlock) => dropColumn(block, j))(Encoders.product[LogisticBlock])
-          .persist(fit.options.blocks.resolvedStorageLevel)
+          .persistAt(fit.options.blocks)
         try {
           val passes = new SparkPasses(reduced, providersOfBlock, p - 1, workingSet.groups)
           val refit =
@@ -601,7 +602,7 @@ object LogisticFE {
       plan,
       ReductionGroups
         .plan(plan.blockCount, 8L * (Moments.packedLength(p) + p + 2L), fit.options.blocks),
-      fit.options.blocks.resolvedStorageLevel
+      fit.options.blocks
     )
     val fingerprint =
       try

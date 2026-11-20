@@ -4,6 +4,7 @@ import java.util.SplittableRandom
 
 import org.apache.spark.storage.StorageLevel
 
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.testkit.SparkSuite
 
 /** One input row of the toy workload; `rowId` is the stable row identifier of DIST-6. */
@@ -93,6 +94,18 @@ class BackendShapeSuite extends SparkSuite {
       bits(ToyKernels.partial(block).value),
       "in-block order"
     )
+  }
+
+  test(
+    "where the session has no off-heap memory, the default level persists at DISK_ONLY (OI-121)"
+  ) {
+    assume(!BlockOptions.hasOffHeapMemory(spark), "this session has off-heap memory")
+    assertEquals(BlockOptions().storageLevelNameIn(spark), "DISK_ONLY")
+    val ds = spark.range(10).persistAt(BlockOptions())
+    try {
+      assertEquals(ds.count(), 10L)
+      assertEquals(ds.storageLevel, StorageLevel.DISK_ONLY)
+    } finally ds.unpersist(blocking = true)
   }
 }
 

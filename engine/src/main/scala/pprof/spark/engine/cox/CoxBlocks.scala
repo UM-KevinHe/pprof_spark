@@ -5,9 +5,10 @@ import scala.jdk.CollectionConverters._
 import org.apache.spark.sql.{Dataset, Encoders, Row}
 import org.apache.spark.sql.functions.{broadcast, col}
 import org.apache.spark.sql.types.{IntegerType, LongType, StructField, StructType}
-import org.apache.spark.storage.StorageLevel
 
+import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.backend.PlanFrames
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.Validation
 import pprof.spark.engine.layout.{LayoutPlan, PartitionKeys, ReductionGroups}
 import pprof.spark.engine.backend.Operations._
@@ -214,14 +215,14 @@ object CoxWorkingSet {
   private val PartitionKeyColumn = "__pprof_partition_key"
 
   /** Joins the plan to the rows and, with one shuffle, places each reduction group in a partition of its own, its
-    * rows sorted by block; builds the blocks one at a time and persists them at `storageLevel`
+    * rows sorted by block; builds the blocks one at a time and persists them at `blockOptions`' storage level
     * (step1-reduction.md §3).
     */
   def build(
       input: CoxInput,
       plan: LayoutPlan,
       groups: ReductionGroups,
-      storageLevel: StorageLevel
+      blockOptions: BlockOptions
   ): CoxWorkingSet = {
     val p = input.spec.features.size
     val spark = input.frame.sparkSession
@@ -260,7 +261,7 @@ object CoxWorkingSet {
       .mapPartitions((rows: Iterator[CoxRow]) => CoxBlockBuilder.buildAll(rows, p))(
         Encoders.product[CoxBlock]
       )
-      .persist(storageLevel)
+      .persistAt(blockOptions)
     try {
       val built = blocks.countAs("cox.build")
       if (built != plan.blockCount)

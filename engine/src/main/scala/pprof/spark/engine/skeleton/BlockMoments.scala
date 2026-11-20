@@ -115,7 +115,7 @@ object BlockMoments {
       plan.groupCount.toLong * 8L * (2L + p),
       options
     )
-    val workingSet = WorkingSet.build(input, plan, options.resolvedStorageLevel)
+    val workingSet = WorkingSet.build(input, plan, options)
     try {
       val combined = MomentsKernel.combine(collectPartials(workingSet).toSeq, plan, p)
       if (combined.rows != input.rowCount)

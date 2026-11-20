@@ -3,6 +3,7 @@ package pprof.spark.engine.linear
 import org.apache.spark.sql.{DataFrame, Encoders}
 import org.apache.spark.sql.functions.{array, col, lit, sqrt}
 import org.apache.spark.sql.types.{DoubleType, LongType, StringType}
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.backend.{DriverGuards, PlanFrames}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.layout.{BudgetedLayout, GroupSizes, LayoutPlan}
@@ -35,7 +36,7 @@ object LinearFE {
       plan.blockCount.toLong * 8L * (Moments.packedLength(p) + p + 4L),
       options.blocks
     )
-    val workingSet = LinearWorkingSet.build(input, plan, options.blocks.resolvedStorageLevel)
+    val workingSet = LinearWorkingSet.build(input, plan, options.blocks)
     try {
       val partials = workingSet.blocks
         .map((block: LinearBlock) => moments(block))(Encoders.product[LinearMomentPartial])
@@ -214,7 +215,7 @@ object LinearFE {
     )
     val sizes = GroupSizes.collectGroupSizes(residuals, fit.options.blocks).sortBy(_._1)
     val plan = LayoutPlan.create(sizes, fit.options.blocks.targetRowsPerBlock(2))
-    val workingSet = LinearWorkingSet.build(scored, plan, fit.options.blocks.resolvedStorageLevel)
+    val workingSet = LinearWorkingSet.build(scored, plan, fit.options.blocks)
     try {
       val first = workingSet.blocks
         .map((block: LinearBlock) => scoreSums(block))(Encoders.product[LinearScorePartial])
@@ -318,7 +319,7 @@ object LinearFE {
     val q = fit.spec.features.size
     val plan =
       BudgetedLayout.plan(sizes, fit.options.blocks, q + 1, 8L * (Moments.packedLength(q) + q + 4L))
-    (LinearWorkingSet.build(input, plan, fit.options.blocks.resolvedStorageLevel), plan, input)
+    (LinearWorkingSet.build(input, plan, fit.options.blocks), plan, input)
   }
 
   private def residuals(block: LinearBlock, beta: Array[Double], v: Array[Double], mean: Double) = {
@@ -370,7 +371,7 @@ object LinearFE {
         variance.as("variance"),
         sqrt(variance).as("se")
       )
-      .persist(options.blocks.resolvedStorageLevel)
+      .persistAt(options.blocks)
     table.count()
     table
   }

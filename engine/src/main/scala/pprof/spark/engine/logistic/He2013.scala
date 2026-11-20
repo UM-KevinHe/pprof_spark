@@ -3,6 +3,7 @@ package pprof.spark.engine.logistic
 import org.apache.spark.sql.{DataFrame, Encoders, Row}
 import org.apache.spark.sql.types.{DoubleType, LongType}
 import pprof.spark.engine.backend.DriverGuards
+import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.Validation
 import pprof.spark.engine.layout.GroupKey
 import pprof.spark.numerics.{GaussHermite, NeumaierSum}
@@ -75,7 +76,7 @@ private[logistic] object He2013 {
         }
         He2013Cell(key._1, key._2, sorted.map(_._2), sorted.map(_._3))
       }(Encoders.product[He2013Cell])
-      .persist(options.blocks.resolvedStorageLevel)
+      .persistAt(options.blocks)
     try {
       val count = cells.count()
       DriverGuards.requireWithinBudget(

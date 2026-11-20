@@ -72,7 +72,7 @@ A fit that fails, such as one the driver budget refuses, is reported with its er
 | `point`, `options` | The point and every argument given |
 | `cluster` | Executors, total cores, the driver's heap, node types, Photon, adaptive execution, shuffle partitions |
 | `data` | Whether this run generated the data, the seconds that took, the checksum, and the verification |
-| `fit` | Seconds, success or the error, the storage level used (`storage_level`, since round 169), iterations, convergence, log-likelihood, and the block layout |
+| `fit` | Seconds, success or the error, the storage level asked for (`storage_level`, since round 169) and the level used (`storage_level_used`, since round 170), iterations, convergence, log-likelihood, and the block layout |
 | `fit.recording.sites` | One entry per call site (see below) |
 | `fit.recording` | Executor time no execution claims; the driver's heap peak, sampled every 50 ms and by its pools; the executors' heap peak from their heartbeats; the peak of cached blocks |
 | `checks` | `truth`, and `partitions` with `--check-partitions` |
@@ -129,9 +129,10 @@ What to send back:
 
 D-77, approved on 2026-11-19, rests on this comparison: `OFF_HEAP` is the default from round 169's build. Rerun it to
 check the default on another cluster or build. `03_perf`'s widget 5 runs a point once per listed storage level, back
-to back on the same data and cluster, for example `OFF_HEAP,DISK_ONLY,MEMORY_AND_DISK`. Where a report's cluster
-block shows `spark.memory.offHeap.enabled` as false, `OFF_HEAP` falls back to disk, as `DISK_ONLY` does. The
-production cluster has 6.5 GiB of off-heap memory per executor, as of 2026-11-19. Run each line as point `custom`,
+to back on the same data and cluster, for example `OFF_HEAP,DISK_ONLY,MEMORY_AND_DISK`. Where the cluster has no
+off-heap memory, the engine runs `OFF_HEAP` as `DISK_ONLY` (round 170), and `fit.storage_level_used` says so. The
+production cluster has 6.5 GiB of off-heap memory per executor, as of 2026-11-19, so there `storage_level_used`
+should read `OFF_HEAP`: if it reads `DISK_ONLY`, the engine did not see that memory, and the report should go back. Run each line as point `custom`,
 with these arguments (no `--check-partitions`, which doubles a run):
 
 | # | Arguments | Why |
@@ -152,8 +153,8 @@ For each level, compare:
 A level that fails at a size is itself a result.
 
 The notebook's last cell shows one row per storage level, then each fit's operations, and ends with every report
-line, one per fit. Send back all of them. Since round 169 each report's `fit.storage_level` names the level the fit
-used, the default included. Before round 167 the last cell printed only the last level's report; the
+line, one per fit. Send back all of them. Since round 169 each report's `fit.storage_level` names the level asked
+for, the default included, and since round 170 `fit.storage_level_used` names the level the engine used. Before round 167 the last cell printed only the last level's report; the
 others are in the run cell's output, and in the point's `reports/` folders.
 
 Two more points, with `OFF_HEAP` alone, against the disk-only results of round 161's build:
