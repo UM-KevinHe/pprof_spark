@@ -187,6 +187,11 @@ These options were added in round 83 (D-49).
   is unchanged. The growth is recorded in the fit's layout. `LogisticFixedEffect(..., blocks={...})` now
   takes the same block options as `CoxPH` and `LinearFixedEffect`: `targetBlockBytes`,
   `maxGroupsOnDriver`, `driverBudgetBytes`, `storageLevel`.
+- **The storage level.** `storageLevel` applies to the working set and to the other tables a fit persists. It is
+  `OFF_HEAP` by default since round 169 (D-77): the blocks stay in off-heap memory where the cluster enables it
+  (`spark.memory.offHeap.enabled`), and go to disk where it is off, Spark's default; they never take the JVM heap.
+  Any name of Spark's `StorageLevel` may be given, such as `DISK_ONLY` or `MEMORY_AND_DISK`. The level changes where
+  blocks are kept, never the results. A saved fit keeps the level it was fitted with.
 - **Row identifiers for counting-process data.** Residuals need a unique row identifier, and every later call
   checks that its data are the fit's through a fingerprint that includes it. Identifiers from
   `monotonically_increasing_id()` change whenever Spark recomputes the DataFrame, so later calls refuse the

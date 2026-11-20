@@ -178,8 +178,9 @@ assumptions and failure modes, validation.
   `entryOrder` and `cluster`.
 - **Steps.** A broadcast join of the rows with the small placement table (stratum key → block, group
   index); conversion to `CoxRow`; `groupByKey(blockId)` and `mapGroups(CoxBlockBuilder.build)`: the
-  one shuffle of row data; `persist` at `MEMORY_AND_DISK`; `count()` to materialize it and check the
-  block count against the plan.
+  one shuffle of row data; `persist` at the fit's storage level, `OFF_HEAP` by default since D-77
+  (`MEMORY_AND_DISK` before round 169); `count()` to materialize it and check the block count against
+  the plan.
 - **Code.** [`canonicalOrder`](../../../engine/src/main/scala/pprof/spark/engine/cox/CoxBlocks.scala#L53-L90),
   [`CoxBlockBuilder.build`](../../../engine/src/main/scala/pprof/spark/engine/cox/CoxBlocks.scala#L95-L154),
   [`CoxWorkingSet.build`](../../../engine/src/main/scala/pprof/spark/engine/cox/CoxBlocks.scala#L189-L223).

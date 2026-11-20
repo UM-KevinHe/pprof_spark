@@ -103,7 +103,7 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-77: The working set is cached off-heap by default (Proposed, round 162; revised round 168)
+### D-77: The working set is cached off-heap by default (Accepted: approved by the maintainer, 2026-11-19)
 
 - **The change.** `BlockOptions.storageLevel` defaults to `OFF_HEAP` instead of `MEMORY_AND_DISK`, for every model's
   working set:
@@ -140,8 +140,19 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
   - On a shared cluster, off-heap storage shares memory with other work. Cached blocks may then be evicted to disk,
     which slows a fit but cannot change its result.
   - A fit can still choose any storage level.
-- **After approval.** The default changes, PROJECT_CONTEXT §10.3 and the guides are updated, and the golden runs
-  confirm the bits. They run in local mode, where off-heap memory is off, so they exercise the disk fallback.
+
+Proposed in round 162 (disk-only), held in round 163, revised in round 168, and approved as revised on 2026-11-19.
+Implemented in round 169:
+- `BlockOptions.storageLevel` defaults to `BlockOptions.DefaultStorageLevel`, `OFF_HEAP`. The job specifications,
+  `PythonApi` and the Python wrappers take their default from `BlockOptions()`. Fits saved by earlier builds keep the
+  level they recorded.
+- PROJECT_CONTEXT v2.11 §10.3, the Python guide, the runbook, `03_perf` and the Cox tutorials state the default.
+  `PerfJob`'s report records the level each fit used (`fit.storage_level`).
+- Evidence (assistant sandbox, local mode, where off-heap memory is off): the 40 golden runs are bit-identical under
+  the disk fallback, and `PerfJobSuite` finds the default's cache wholly on disk, with the same log-likelihood bits as
+  `MEMORY_AND_DISK`.
+- Not foreseen: where off-heap memory is off, Spark logs three warnings for each cached partition as it falls back
+  to disk, 684 lines in `GoldenRunsSuite` under CI's log settings. Results are unaffected. OI-121 holds the options.
 
 ### D-76: Measuring on the production cluster as it is; Spark 4.0 supported (Accepted: approved by the maintainer, 2026-11-16)
 

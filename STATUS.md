@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-19, round 168.
+Updated 2026-11-19, round 169.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -195,11 +195,12 @@ through round 100 as the maintainer reported.
 | 161 | Step 1 measured: both models fit at 20M rows, both fail at 50M on executor memory (OI-118); `PerfJob` takes `--storage-level` and reports the reduction groups; the runbook's step-1 expectations and the disk-only experiment | Merged (82fd37a) |
 | 162 | Disk-only runs recorded: 50M fits for both models and 100M for Cox, while logistic at 100M fails late (OI-119); D-77 proposed (disk-only by default); the recorder counts failed executions per operation, and `PerfJob` redacts addresses from errors | Merged (084fc8b) |
 | 163 | D-77 on hold: storage levels compared in the sandbox (no difference beyond noise); `03_perf` sweeps storage levels; reports give input bytes, time outside CPU and GC, and memory settings; the runbook's comparison S1 to S6 (OI-120) | Merged (ada822d) |
-| 164 | The recorder counts only non-blank error messages as failures (Databricks ends successful executions with an empty one); point 5 with the default storage level recorded; off-heap storage added to the comparison | Delivered as a patch |
+| 164 | The recorder counts only non-blank error messages as failures (Databricks ends successful executions with an empty one); point 5 with the default storage level recorded; off-heap storage added to the comparison | Merged (6b7583a) |
 | 165 | Point 5 with off-heap storage recorded; off-heap falls back to disk where off-heap memory is off (`PerfJobSuite`); off-heap the leading candidate for D-77; S7 and S8 in the runbook | Merged (ee7e514) |
 | 166 | S1 to S8 recorded (off-heap alone): every working set to 50M rows wholly in off-heap memory; logistic at 100M fails in the AUC pass (OI-119) | Merged (ea08cf5) |
-| 167 | `03_perf`'s last cell shows every storage level side by side and prints every report line (it printed only the last level's) | Delivered as a patch |
-| 168 | Storage levels paired, S1 to S6: off-heap fastest or within 1.4% everywhere, memory-and-disk slowest at five of six; D-77 revised to an off-heap default | Delivered as a patch |
+| 167 | `03_perf`'s last cell shows every storage level side by side and prints every report line (it printed only the last level's) | Merged (f50687c) |
+| 168 | Storage levels paired, S1 to S6: off-heap fastest or within 1.4% everywhere, memory-and-disk slowest at five of six; D-77 revised to an off-heap default | Merged (2ac2519) |
+| 169 | D-77 approved and implemented: `OFF_HEAP` is the default storage level of every model's working set (disk where off-heap memory is off, never the JVM heap); PROJECT_CONTEXT v2.11 §10.3, the Python guide, the runbook, `03_perf` and the Cox tutorials; `PerfJob` reports the level each fit used; OI-120 closed; OI-121, Spark's warnings on the disk fallback | Delivered as a patch |
 
 ## Decisions and spikes
 

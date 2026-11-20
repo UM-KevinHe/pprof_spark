@@ -1,5 +1,7 @@
 package pprof.spark.engine.backend
 
+import org.apache.spark.storage.StorageLevel
+
 class BlocksSuite extends munit.FunSuite {
 
   private def bits(x: Double): Long = java.lang.Double.doubleToRawLongBits(x)
@@ -29,6 +31,19 @@ class BlocksSuite extends munit.FunSuite {
     assertEquals(shuffled.values.toSeq.map(bits), reference.values.toSeq.map(bits))
     assertEquals(shuffled.rowId.toSeq, reference.rowId.toSeq)
     assertEquals(shuffled.groupStart.toSeq, reference.groupStart.toSeq)
+  }
+
+  test("the default storage level is off-heap, which never stores blocks on the JVM heap (D-77)") {
+    val defaults = BlockOptions()
+    assertEquals(defaults.storageLevel, "OFF_HEAP")
+    assertEquals(defaults.resolvedStorageLevel, StorageLevel.OFF_HEAP)
+    val level = defaults.resolvedStorageLevel
+    assert(level.useOffHeap && level.useDisk && !level.deserialized, level.toString)
+    assertEquals(
+      BlockOptions(storageLevel = "DISK_ONLY").resolvedStorageLevel,
+      StorageLevel.DISK_ONLY
+    )
+    intercept[IllegalArgumentException](BlockOptions(storageLevel = "HEAP").resolvedStorageLevel)
   }
 
   test("rows of the wrong width are rejected") {

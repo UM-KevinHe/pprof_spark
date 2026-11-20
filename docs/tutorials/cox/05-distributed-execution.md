@@ -71,6 +71,10 @@ InMemoryRelation  StorageLevel(disk, memory, deserialized)          <- persist(M
                      +- BroadcastExchange <- placement table (one row per stratum)
 ```
 
+The probe ran under the default of its time, `MEMORY_AND_DISK`. Since round 169 the default is `OFF_HEAP`
+(D-77), which the plan shows as `StorageLevel(disk, memory, offheap, 1 replicas)`: serialized blocks in
+off-heap memory where it is enabled, and on disk where it is off.
+
 Every input row crosses the network exactly once, to the task that builds its block. Nothing in a
 Newton iteration shuffles row data again (section 5.6).
 

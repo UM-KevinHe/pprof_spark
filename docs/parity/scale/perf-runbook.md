@@ -72,7 +72,7 @@ A fit that fails, such as one the driver budget refuses, is reported with its er
 | `point`, `options` | The point and every argument given |
 | `cluster` | Executors, total cores, the driver's heap, node types, Photon, adaptive execution, shuffle partitions |
 | `data` | Whether this run generated the data, the seconds that took, the checksum, and the verification |
-| `fit` | Seconds, success or the error, iterations, convergence, log-likelihood, and the block layout |
+| `fit` | Seconds, success or the error, the storage level used (`storage_level`, since round 169), iterations, convergence, log-likelihood, and the block layout |
 | `fit.recording.sites` | One entry per call site (see below) |
 | `fit.recording` | Executor time no execution claims; the driver's heap peak, sampled every 50 ms and by its pools; the executors' heap peak from their heartbeats; the peak of cached blocks |
 | `checks` | `truth`, and `partitions` with `--check-partitions` |
@@ -94,11 +94,11 @@ The points began as the baseline of `main`. The "Expected" column below comes fr
 round 160, blocks stay at the target size and are reduced in groups. The report's `fit.reduction` gives the blocks, G
 and R; at 180 features and 8,000 providers, about 8,000 blocks in 500 groups from 20M rows up (arithmetic).
 
-The experiment for points 7 and 8, which ran out of executor memory on round 160 (OI-118), keeps the working set on
-disk only. Add `--storage-level DISK_ONLY` to the notebook's "Extra arguments", and run point 7 and then point 8.
-Measured since (round 161's build): with it, points 7, 8 and 9 fit. Point 10 failed late (OI-119). Rerun point 10 on
-round 162's build, which reports which operation failed (`failed_executions` and `error` per entry). Use disk-only for
-every point of 50M rows or more until D-77 makes it the default.
+Points 7 and 8 ran out of executor memory on round 160's build, with the working set on the JVM heap (OI-118). With
+`--storage-level DISK_ONLY` (round 161's build), points 7, 8 and 9 fit, and point 10 failed late (OI-119). Since
+round 169 the default storage level is `OFF_HEAP` (D-77): off-heap memory where the cluster enables it, disk where it
+is off, never the JVM heap. From that build on, no point needs a storage argument; on earlier builds, add
+`--storage-level OFF_HEAP` to the notebook's "Extra arguments" for points of 50M rows or more.
 
 | # | Model | Rows | Features | Providers | Design | Extra arguments | Expected |
 |---|---|---|---|---|---|---|---|
@@ -125,12 +125,14 @@ What to send back:
 - the plans files of points 1 and 2;
 - the driver log of any run that fails other than by the guard.
 
-## Comparing storage levels (D-77 on hold)
+## Comparing storage levels (D-77)
 
-`03_perf`'s widget 5 runs a point once per listed storage level, back to back on the same data and cluster, for
-example `MEMORY_AND_DISK,DISK_ONLY`. If a report's cluster block shows `spark.memory.offHeap.enabled` as true, add
-`OFF_HEAP`. The production cluster does: 6.5 GiB of off-heap memory per executor, as of 2026-11-19. Use
-`MEMORY_AND_DISK,DISK_ONLY,OFF_HEAP` there. Run each line as point `custom`, with these arguments (no `--check-partitions`, which doubles a run):
+D-77, approved on 2026-11-19, rests on this comparison: `OFF_HEAP` is the default from round 169's build. Rerun it to
+check the default on another cluster or build. `03_perf`'s widget 5 runs a point once per listed storage level, back
+to back on the same data and cluster, for example `OFF_HEAP,DISK_ONLY,MEMORY_AND_DISK`. Where a report's cluster
+block shows `spark.memory.offHeap.enabled` as false, `OFF_HEAP` falls back to disk, as `DISK_ONLY` does. The
+production cluster has 6.5 GiB of off-heap memory per executor, as of 2026-11-19. Run each line as point `custom`,
+with these arguments (no `--check-partitions`, which doubles a run):
 
 | # | Arguments | Why |
 |---|---|---|
@@ -150,7 +152,8 @@ For each level, compare:
 A level that fails at a size is itself a result.
 
 The notebook's last cell shows one row per storage level, then each fit's operations, and ends with every report
-line, one per fit. Send back all of them. Before round 167 the last cell printed only the last level's report; the
+line, one per fit. Send back all of them. Since round 169 each report's `fit.storage_level` names the level the fit
+used, the default included. Before round 167 the last cell printed only the last level's report; the
 others are in the run cell's output, and in the point's `reports/` folders.
 
 Two more points, with `OFF_HEAP` alone, against the disk-only results of round 161's build:

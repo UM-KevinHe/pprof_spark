@@ -48,9 +48,10 @@ oversized stratum, which always gets a block of its own whatever its size up to 
 is not: a 1,000,000-row stratum with p = 10 makes final arrays of roughly 130 MB and a larger
 transient peak in one task.
 
-**Cache.** The working set is persisted at `MEMORY_AND_DISK`, and every pass decodes each block from
-the cache into a `CoxBlock` before running the kernel (the `DeserializeToObject` step of the plan in
-chapter 5). That costs O(n·p) per pass, small next to the O(n·p²) kernel unless p is small.
+**Cache.** The working set is persisted at the fit's storage level, `OFF_HEAP` by default since D-77
+(round 169): serialized, in off-heap memory where the cluster enables it and on disk where it does not,
+never on the JVM heap. Every pass decodes each block from the cache into a `CoxBlock` before running
+the kernel (the `DeserializeToObject` step of the plan in chapter 5). That costs O(n·p) per pass, small next to the O(n·p²) kernel unless p is small.
 
 ## 8.3 Parallelism and skew
 

@@ -247,6 +247,7 @@ class PerfJobSuite extends SparkSuite {
     assertEquals(report.get("options").get("storage-level").asText(), "DISK_ONLY")
     val fit = report.get("fit")
     assert(fit.get("succeeded").asBoolean(), fit.toString)
+    assertEquals(fit.get("storage_level").asText(), "DISK_ONLY")
     val reduction = fit.get("reduction")
     val (blocks, perGroup, groups) =
       (
@@ -290,7 +291,9 @@ class PerfJobSuite extends SparkSuite {
     )
   }
 
-  test("off-heap storage falls back to disk where off-heap memory is off, with the same result") {
+  test(
+    "the default storage level, off-heap, falls back to disk where off-heap memory is off (D-77)"
+  ) {
     val path = Files.createTempDirectory("pprof-perf-offheap").resolve("point").toString
     val base =
       Map(
@@ -301,8 +304,9 @@ class PerfJobSuite extends SparkSuite {
         "features" -> "3",
         "verify" -> "false"
       )
-    val offHeap =
-      new ObjectMapper().readTree(PerfJob.run(spark, base + ("storage-level" -> "OFF_HEAP")).report)
+    val offHeap = new ObjectMapper().readTree(PerfJob.run(spark, base).report)
+    assert(!offHeap.get("options").has("storage-level"), offHeap.get("options").toString)
+    assertEquals(offHeap.get("fit").get("storage_level").asText(), "OFF_HEAP")
     assume(
       offHeap.get("cluster").get("spark.memory.offHeap.enabled").asText() != "true",
       "off-heap memory is on here"

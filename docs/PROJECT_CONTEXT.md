@@ -1,10 +1,13 @@
 # pprof_spark — Project Context
 
-**Version** 2.10 · **Date** 2026-10-23 · **Supersedes** v2.9 (2026-10-21)
+**Version** 2.11 · **Date** 2026-11-19 · **Supersedes** v2.10 (2026-10-23)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
+> **v2.11 names the default storage level in §10.3** (D-77, round 169): `OFF_HEAP`, off-heap memory where it is
+> enabled and disk where it is off, never the JVM heap.
+>
 > **v2.10 adds the tolerance class T-est to §8.4** (D-59, round 114).
 >
 > **v2.9 adds Phase 4, the random-effect models** (round 94): §4 follows D-50's roadmap as amended (M4 before
@@ -750,7 +753,7 @@ Each algorithm's specification states its passes per iteration, shuffle volume (
 | Choose the block size so that B stays within the driver budget (§6.8), and size physical partitions to keep all executor cores busy. | Driver traffic scales with B·p². |
 | Bin-pack heavy-tailed groups by size or estimated cost; split oversized strata with the TimeRange technique. | Straggler tasks dominate wall time. |
 | Avoid metadata actions (`count`, schema requests) inside loops. | Each is a job or, under Connect, a round trip. |
-| Set storage levels explicitly; `unpersist` in `finally`. | Predictable memory. |
+| Set storage levels explicitly; `unpersist` in `finally`. The working set and the tables a fit persists use `BlockOptions.storageLevel`, `OFF_HEAP` by default (D-77): off-heap memory where it is enabled, disk where it is off, never the JVM heap. | Predictable memory. A heap cache holds blocks as objects, about 3.7 times their serialized size, and competes with the passes for small executor heaps (D-77). |
 | Never rely on adaptive query execution for working-set layout. | Reproducibility (DIST-5). |
 | Run direct standardization as a block kernel over a shipped provider-effect vector, never as a cross join. | O(n·m) work without O(n·m) data. |
 | Respect `spark.driver.maxResultSize` and the package's own driver budget. | Driver stability. |

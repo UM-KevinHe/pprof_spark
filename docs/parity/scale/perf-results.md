@@ -86,6 +86,7 @@ Readings:
   kernels, not the kernels.
 - **Caveat.** Memory-and-disk always ran first in its sweep and may carry first-run costs; S1's 44% likely includes
   some. Its extra GC at 20M is not an order effect.
+- **The decision.** D-77 was approved on 2026-11-19: `OFF_HEAP` is the default storage level from round 169's build.
 
 ### 2026-11-19: S1 to S8 with off-heap storage (build `ada822d`, round 163)
 

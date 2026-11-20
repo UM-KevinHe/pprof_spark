@@ -38,7 +38,7 @@ dbutils.widgets.dropdown("point", "1", list(POINTS) + ["custom"], "1. Point (per
 dbutils.widgets.text("data_root", "", "2. Data folder (s3://...)")
 dbutils.widgets.text("custom", "", "3. Arguments of point 'custom', without --path")
 dbutils.widgets.text("extra", "", "4. Extra arguments for any point, e.g. --verify false")
-dbutils.widgets.text("storage_levels", "", "5. Storage levels to compare, e.g. MEMORY_AND_DISK,DISK_ONLY")
+dbutils.widgets.text("storage_levels", "", "5. Storage levels to compare, e.g. OFF_HEAP,DISK_ONLY")
 
 # COMMAND ----------
 
@@ -118,7 +118,8 @@ for line in reports:
     fit = parsed["fit"]
     recording = fit["recording"]
     rows = parsed["point"]["n"]
-    storage = parsed["options"].get("storage-level", "default")
+    # The level the fit used (round 169 on; OFF_HEAP by default, D-77), else the one given, else "default".
+    storage = parsed["fit"].get("storage_level") or parsed["options"].get("storage-level", "default")
     sites = pd.DataFrame(recording["sites"])
     row = {
         "storage": storage,

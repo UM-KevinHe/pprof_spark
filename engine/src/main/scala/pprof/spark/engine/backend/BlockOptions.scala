@@ -10,13 +10,15 @@ import org.apache.spark.storage.StorageLevel
   * @param maxGroupsOnDriver most groups whose sizes and results may be collected to the driver
   *   (DIST-1)
   * @param driverBudgetBytes most bytes collected to the driver by one pass (§6.8)
-  * @param storageLevel name of the working set's storage level (§10.3)
+  * @param storageLevel name of the storage level of the working set and of the other tables a
+  *   fit persists (§10.3); `OFF_HEAP` by default (D-77): off-heap memory where it is enabled,
+  *   disk where it is off (Spark's default), never the JVM heap
   */
 final case class BlockOptions(
     targetBlockBytes: Long = BlockOptions.DefaultTargetBlockBytes,
     maxGroupsOnDriver: Int = BlockOptions.DefaultMaxGroupsOnDriver,
     driverBudgetBytes: Long = BlockOptions.DefaultDriverBudgetBytes,
-    storageLevel: String = "MEMORY_AND_DISK"
+    storageLevel: String = BlockOptions.DefaultStorageLevel
 ) {
   require(targetBlockBytes > 0, "targetBlockBytes must be positive")
   require(maxGroupsOnDriver > 0, "maxGroupsOnDriver must be positive")
@@ -34,6 +36,9 @@ object BlockOptions {
   val DefaultTargetBlockBytes: Long = 4L * 1024 * 1024
   val DefaultMaxGroupsOnDriver: Int = 2000000
   val DefaultDriverBudgetBytes: Long = 64L * 1024 * 1024
+
+  /** The default storage level (D-77): off-heap memory, or disk where it is off. */
+  val DefaultStorageLevel: String = "OFF_HEAP"
 }
 
 /** A guarded transfer to the driver would exceed its limit (DIST-1, DIST-2). */
