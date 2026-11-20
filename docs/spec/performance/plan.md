@@ -294,7 +294,8 @@ NUM-2 relies on golden runs, but the project has never listed them. This plan de
   weights, offsets and entry times; the logistic cases have trials.
 
 For each run, `GoldenRunsSuite` records the bit patterns of the log-likelihood, the estimates, the information or
-Schur complement, the covariance, the provider effects and variances, and the iteration and halving counts. These
+Schur complement, the covariance, the provider effects and variances, and the iteration and halving counts. Since
+round 171 it also records the AUC of each logistic fit with 0/1 outcomes, pinned before OI-119 changes its pass. These
 go into a committed manifest, and the suite fails on any difference.
 
 A negative control perturbs one recorded value by one ulp and checks that the comparison fails.

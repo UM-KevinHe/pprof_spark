@@ -107,6 +107,7 @@ class GoldenRunsSuite extends SparkSuite {
       name,
       Map(
         "loglik" -> Vector(f.loglik),
+        "auc" -> f.auc.toVector,
         "estimates" -> f.coefficients.map(_.estimate),
         "standard_errors" -> f.coefficients.map(_.standardError),
         "covariance" -> f.covariance.toVector,
