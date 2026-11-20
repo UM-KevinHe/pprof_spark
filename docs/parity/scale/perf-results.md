@@ -412,6 +412,27 @@ tables are in plan §2.5 and round 149's evidence log.
 | Cox (3 iterations) | 31.5 | 4 evaluations, 15.7 s wall | 12.7 | 5.5 | 1.6 | 7.1 |
 | Logistic (4 iterations) | 48.9 | 4 pass A and 4 pass B, 13.5 s wall | 9.3 | 17.3 | 6.8 | 6.0 |
 
+### Round 173: the AUC pass before and after
+
+This is a sandbox measurement: one core, local mode, where the working set is on disk; the logistic model with the
+simple design. Builds alternated, `main`'s at `5adcc31` and round 173's, each fit in a fresh JVM. The figures are those
+of the `logistic.auc` call site.
+
+| Point | Build | Wall s | Run s | CPU s | GC s | Read from the cache |
+|---|---|---|---|---|---|---|
+| 200,000 rows, 180 features, 320 providers | before | 7.29, 7.09 | 5.39, 5.16 | 3.07, 2.87 | 0.87, 0.43 | 595 MB |
+| | after | 6.69, 6.56 | 4.51, 4.25 | 2.75, 2.55 | 0.15, 0.15 | 301 MB |
+| 1,000,000 rows, 20 features, 1,000 providers | before | 6.44, 5.75 | 4.99, 4.29 | 3.08, 2.82 | 0.46, 0.36 | 374 MB |
+| | after | 6.50, 6.35 | 4.81, 4.60 | 3.29, 2.98 | 0.10, 0.14 | 203 MB |
+
+- **The pass reads the working set once instead of twice,** and its GC falls by two thirds or more. At 180 features its
+  wall time fell by about 8%; at 20 features, where the blocks are small and the cached scores cost as much as the
+  second read saved, it did not change.
+- **The results are the same:** the log-likelihood bits match across builds at each point, and the AUC is pinned by the
+  golden runs and `LogisticAucSuite`. Whole-fit times varied by up to 10 s between runs of the same build.
+- **Caveat.** A one-core sandbox cannot show the effect that matters for OI-119, memory pressure on 2.2 GB executor
+  heaps with 18 MB blocks; S8 on the cluster can.
+
 ### Round 163: storage levels compared in the sandbox
 
 This is a sandbox measurement: one core, local mode, the logistic model with the simple design. Each configuration

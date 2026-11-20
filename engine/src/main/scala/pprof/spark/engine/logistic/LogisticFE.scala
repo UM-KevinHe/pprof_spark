@@ -16,7 +16,7 @@ import org.apache.spark.sql.types.{
 }
 import org.slf4j.LoggerFactory
 import pprof.spark.engine.backend.Storage._
-import pprof.spark.engine.backend.{DriverLimitExceededException, OrderedReduction}
+import pprof.spark.engine.backend.{BlockOptions, DriverLimitExceededException, OrderedReduction}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 import pprof.spark.engine.layout.{
   BudgetedLayout,
@@ -252,7 +252,10 @@ object LogisticFE {
       }
       val binaryOutcomes =
         summaries.forall(_.maxOutcome <= 1.0) && summaries.exists(_.zeroOutcomes > 0L)
-      val auc = if (binaryOutcomes) Some(areaUnderCurve(passes.withGamma(gamma), beta)) else None
+      val auc =
+        if (binaryOutcomes)
+          Some(areaUnderCurve(workingSet.blocks, providersOfBlock, gamma, beta, options.blocks))
+        else None
       val median = Serbin.median(gamma)
       val degenerate =
         Array.tabulate(m)(k => providerEvents(k) <= 0.0 || providerEvents(k) >= providerTrials(k))
@@ -681,19 +684,35 @@ object LogisticFE {
 
   /** The Mann–Whitney AUC of the fitted π against 0/1 outcomes, exact: one sort by π (equal values share
     * a partition), integer counts per partition, combined in partition order (Phase 2b §5).
+    *
+    * Leaner since round 173 (OI-119), with the same result to the bit: each task takes its blocks' effects
+    * from `gamma` instead of a join that copied every cached block, and the scores are computed once and
+    * kept at the fit's storage level for the sort, which reads them twice (its sample, then its shuffle).
     */
-  private def areaUnderCurve(blocks: Dataset[LogisticBlock], beta: Array[Double]): Double = {
+  private def areaUnderCurve(
+      blocks: Dataset[LogisticBlock],
+      providersOfBlock: Array[Array[Int]],
+      gamma: Array[Double],
+      beta: Array[Double],
+      storage: BlockOptions
+  ): Double = {
     val b = beta.clone()
-    val parts = blocks
+    val gammaOfBlock = providersOfBlock.map(_.map(gamma(_)))
+    val scores = blocks
       .flatMap { (block: LogisticBlock) =>
-        val pi = Kernel.fitted(block.rows, block.gamma, b)
+        val pi = Kernel.fitted(block.rows, gammaOfBlock(block.blockId), b)
         pi.indices.iterator.map(r => LogisticScore(pi(r), block.y(r) > 0.5))
       }(Encoders.product[LogisticScore])
-      .orderBy("pi")
-      .mapPartitions((scores: Iterator[LogisticScore]) => Iterator(aucPartial(scores)))(
-        Encoders.product[LogisticAucPartial]
-      )
-      .collectAs("logistic.auc")
+      .persistAt(storage)
+    val parts =
+      try
+        scores
+          .orderBy("pi")
+          .mapPartitions((sorted: Iterator[LogisticScore]) => Iterator(aucPartial(sorted)))(
+            Encoders.product[LogisticAucPartial]
+          )
+          .collectAs("logistic.auc")
+      finally scores.unpersist(blocking = false)
     var negativesBefore = 0L
     var twiceNumerator = 0L
     var positives = 0L

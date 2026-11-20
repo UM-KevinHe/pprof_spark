@@ -164,6 +164,9 @@ Two more points, with `OFF_HEAP` alone, against the disk-only results of round 1
 | S7 | `--model logistic --rows 5e7 --features 180 --providers 8000 --storage-level OFF_HEAP` | Disk-only: 1,167.6 s |
 | S8 | `--model logistic --rows 1e8 --features 180 --providers 8000 --storage-level OFF_HEAP` | Disk-only: failed late (OI-119) |
 
+S8 failed in the AUC pass (`logistic.auc`) on round 163's build. Round 173 made that pass leaner with the same result:
+rerun S8 on round 173's build or later and send back its report, failed or not.
+
 At 50M rows the cache (about 19 GiB) may fit in the executors' combined off-heap memory, 6.5 GiB each.
 
 ## Results

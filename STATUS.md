@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-20, round 172.
+Updated 2026-11-20, round 173.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -203,7 +203,8 @@ through round 100 as the maintainer reported.
 | 169 | D-77 approved and implemented: `OFF_HEAP` is the default storage level of every model's working set (disk where off-heap memory is off, never the JVM heap); PROJECT_CONTEXT v2.11 §10.3, the Python guide, the runbook, `03_perf` and the Cox tutorials; `PerfJob` reports the level each fit used; OI-120 closed; OI-121, Spark's warnings on the disk fallback | Merged (195885b) |
 | 170 | D-77 amended at the maintainer's direction (OI-121 closed): where the session has no off-heap memory, the engine persists at `DISK_ONLY` itself, so Spark no longer warns for each cached partition; off-heap memory counts as present when `spark.memory.offHeap.size` is positive or the flag is on; `PerfJob` reports the level used | Merged (882941a) |
 | 171 | OI-119's first step: the golden runs record the AUC of every logistic fit with 0/1 outcomes (11 runs; the manifest only gains these values), so that a leaner AUC pass must keep its bits | Merged (f513712) |
-| 172 | CI fix: from round 166, one job per run failed to download Scala 2.13.17 from Maven Central, which rate-limits GitHub's runners (HTTP 429, at times reported as not found), because the shared cache lacked it. One job now fetches every artifact with retries and writes the only dependency cache, which the other jobs restore | Delivered as a patch |
+| 172 | CI fix: from round 166, one job per run failed to download Scala 2.13.17 from Maven Central, which rate-limits GitHub's runners (HTTP 429, at times reported as not found), because the shared cache lacked it. One job now fetches every artifact with retries and writes the only dependency cache, which the other jobs restore | Merged (5adcc31) |
+| 173 | OI-119: the AUC pass made leaner, same bits: each task takes its blocks' effects instead of a join that copied every cached block, and the scores are computed once and cached for the sort; `LogisticAucSuite` checks the AUC against an exact driver-side Mann–Whitney on data with many ties; in the sandbox at 180 features the pass reads half as much and its GC fell from 0.4–0.9 s to 0.15 s | Delivered as a patch |
 
 ## Decisions and spikes
 
