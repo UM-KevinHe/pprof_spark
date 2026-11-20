@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-20, round 171.
+Updated 2026-11-20, round 172.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -201,8 +201,9 @@ through round 100 as the maintainer reported.
 | 167 | `03_perf`'s last cell shows every storage level side by side and prints every report line (it printed only the last level's) | Merged (f50687c) |
 | 168 | Storage levels paired, S1 to S6: off-heap fastest or within 1.4% everywhere, memory-and-disk slowest at five of six; D-77 revised to an off-heap default | Merged (2ac2519) |
 | 169 | D-77 approved and implemented: `OFF_HEAP` is the default storage level of every model's working set (disk where off-heap memory is off, never the JVM heap); PROJECT_CONTEXT v2.11 §10.3, the Python guide, the runbook, `03_perf` and the Cox tutorials; `PerfJob` reports the level each fit used; OI-120 closed; OI-121, Spark's warnings on the disk fallback | Merged (195885b) |
-| 170 | D-77 amended at the maintainer's direction (OI-121 closed): where the session has no off-heap memory, the engine persists at `DISK_ONLY` itself, so Spark no longer warns for each cached partition; off-heap memory counts as present when `spark.memory.offHeap.size` is positive or the flag is on; `PerfJob` reports the level used | Delivered as a patch |
-| 171 | OI-119's first step: the golden runs record the AUC of every logistic fit with 0/1 outcomes (11 runs; the manifest only gains these values), so that a leaner AUC pass must keep its bits | Delivered as a patch |
+| 170 | D-77 amended at the maintainer's direction (OI-121 closed): where the session has no off-heap memory, the engine persists at `DISK_ONLY` itself, so Spark no longer warns for each cached partition; off-heap memory counts as present when `spark.memory.offHeap.size` is positive or the flag is on; `PerfJob` reports the level used | Merged (882941a) |
+| 171 | OI-119's first step: the golden runs record the AUC of every logistic fit with 0/1 outcomes (11 runs; the manifest only gains these values), so that a leaner AUC pass must keep its bits | Merged (f513712) |
+| 172 | CI fix: from round 166, one job per run failed to download Scala 2.13.17 from Maven Central, which rate-limits GitHub's runners (HTTP 429, at times reported as not found), because the shared cache lacked it. One job now fetches every artifact with retries and writes the only dependency cache, which the other jobs restore | Delivered as a patch |
 
 ## Decisions and spikes
 

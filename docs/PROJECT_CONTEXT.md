@@ -1,10 +1,13 @@
 # pprof_spark — Project Context
 
-**Version** 2.11 · **Date** 2026-11-19 · **Supersedes** v2.10 (2026-10-23)
+**Version** 2.12 · **Date** 2026-11-20 · **Supersedes** v2.11 (2026-11-19)
 **Status** Living document. Statements marked *(re-verify)* describe external platforms or the state of the reference implementation; re-check them before relying on them.
 **Reference implementation** [`pprof_py`](https://github.com/UM-KevinHe/pprof_py) (MIT). Pinned: v0.7.0, commit `9320766` (D-05); the reference-tool versions are recorded in `reference/REFERENCE.lock`.
 
 
+> **v2.12 describes CI's dependency job in §11.4** (round 172): one job fetches every artifact, retrying while Maven
+> Central refuses, and writes the only dependency cache, which the other jobs restore.
+>
 > **v2.11 names the default storage level in §10.3** (D-77, round 169): `OFF_HEAP`, off-heap memory where it is
 > enabled and disk where it is off, never the JVM heap.
 >
@@ -827,8 +830,8 @@ Tests fork a JVM with the `--add-opens` flags of the pinned Spark's `JavaModuleO
 
 | Workflow | Trigger | Content | Gate |
 |---|---|---|---|
-| `ci.yml` | Pull requests; pushes to main | Engine API rules with a self-test; scalafmt; the linkage compile (PLAT-3, PLAT-4); compilation with `-Werror` and tests on JDK 17 and 21 (Temurin, `sbt/setup-sbt`); the engine suites under Spark Connect (T8); failure details and per-module test counts published as annotations | Required |
-| `ci.yml`, job `python` | Pull requests; pushes to main | The Python wrappers' tests in PySpark 4.1.0 (local Classic) against the JARs this commit builds, with absolute JAR paths; pytest's JUnit report feeds the counts and failure annotations | Required |
+| `ci.yml` | Pull requests; pushes to main | First, one job fetches every artifact, retrying while Maven Central refuses (`scripts/ci-resolve.sh`), and writes the only dependency cache; the other jobs restore it. Then: engine API rules with a self-test; scalafmt; the linkage compile (PLAT-3, PLAT-4); compilation with `-Werror` and tests on JDK 17 and 21 (Temurin, `sbt/setup-sbt`); the engine suites under Spark Connect (T8); failure details and per-module test counts published as annotations | Required |
+| `ci.yml`, job `python` | Pull requests; pushes to main | The Python wrappers' tests in PySpark 4.1.0 and 4.0.0 (local Classic; D-76) against the JARs this commit builds, with absolute JAR paths; pytest's JUnit report feeds the counts and failure annotations | Required |
 | `fixtures.yml` | By hand, on a re-pin | Pinned pprof_py and R stack; outputs recomputed from the committed inputs and compared under T-part; calibration | Review |
 | `bench.yml` | By hand | Benchmark workloads on JDK 17 and 21; results on the run page | Informational |
 | Release | Version tag | Build; publish to GitHub Releases (D-08); attach the validation report and compatibility entry | Not written yet |

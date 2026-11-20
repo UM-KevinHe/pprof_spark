@@ -228,6 +228,43 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 172 (2026-11-20): CI's dependencies fetched once and cached
+
+- Rounds 170 and 171 are on `main` as `882941a` and `f513712`.
+- **The failure.** From round 166, each CI run failed in one job, a different one each time: the Python job on
+  PySpark 4.0.0 (rounds 166 and 169), on 4.1.0 (167 and 171), and the tests on JDK 21 (168). Each time,
+  `testkit / update` could not download the POMs of `scala-library`, `scala-reflect` and `scala-compiler` 2.13.17
+  from Maven Central. Round 168's annotation shows the cause: HTTP 429, Maven Central's rate limit on GitHub's
+  runners. The others report "not found" for the same POMs, which exist on Maven Central. The other jobs passed.
+- **Why only those artifacts** (inferred: a cache's contents cannot be seen without signing in). Every job could
+  write the shared cache of `setup-java`, under one key, and the first to finish won. The linkage check, fastest,
+  forces Scala 2.13.16, so a cache it wrote would lack the 2.13.17 artifacts that Spark 4.1 brings, and every other
+  job would download them on every run. The failures begin with round 166.
+- **The fix.** A first job, `dependencies`, restores the cache and, unless the key matched, runs
+  `scripts/ci-resolve.sh`. The script fetches every artifact: `update` for all modules and configurations, the
+  compiler bridge (`numerics/compile`), the linkage check's resolution and scalafmt. It retries each command up to
+  four times after pauses of 1, 2 and 3 minutes. The job then saves the cache. The other jobs wait for it, restore
+  the cache and never write it. The key is new (`sbt-deps-…`), so the first run fetches everything once.
+- **Records.** PROJECT_CONTEXT v2.12 §11.4 (which also now names the Python job's two PySpark versions); D-12 lists
+  the cache action; STATUS marks rounds 170 and 171 merged.
+
+Evidence (assistant sandbox; sbt and GitHub's runners are not available here):
+- The run pages of rounds 165 to 171, read without signing in, show the failures above. Round 165's page shows
+  test counts for every job and no error annotation.
+- `scripts/ci-resolve.sh` was run against a stand-in `sbt` that fails a set number of times. Commands that
+  succeed run once; commands that fail twice succeed on the third attempt; a command that always fails is tried
+  four times, stops the script, and fails the step through `tee`.
+- `actionlint` passes on the new `ci.yml`, as on the old one. The tags `actions/cache/restore@v6` and
+  `actions/cache/save@v6` exist.
+- The patch applies to a fresh clone of `main` with an identical tree, and scalafmt is clean. Not run here: the
+  workflow itself.
+
+What to send back: the CI run. The first run on this key fetches everything in the dependencies job; later runs
+should restore the cache there in seconds. `bench.yml` keeps setup-java's cache and can still meet the rate limit
+on a cache miss.
+
+**Next: the leaner AUC pass** (OI-119), as round 171 planned.
+
 ## Round 171 (2026-11-20): the AUC pinned in the golden runs (OI-119, first step)
 
 - Round 170 is not yet on `main`; this patch applies on top of it.
