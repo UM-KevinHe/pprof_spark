@@ -228,6 +228,39 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 181 (2026-11-21): the golden runs' fixed points (step 2, round C; D-79)
+
+- Round 180 is on `main` as `200e7e3`. The maintainer will run Cox at 100M rows on it later (OI-118).
+- **Fixed points** (D-79, `step2-chunks.md` §6). Each golden run also records the values step 2's chunked sums will
+  touch, at two fixed points: the fit's start (Cox: β = 0; logistic: SerBIN's start, every γ at logit(ȳ) and β = 0,
+  as `fit` starts) and the fit's estimates.
+  - **Cox** (26 runs): the log-likelihood, score and information of one evaluation. `CoxPH.evaluate` is now visible
+    in its package, and the test helper `CoxGoldenPoints` evaluates both points on one working set.
+  - **Logistic** (14 runs): pass A's Schur complement, right-hand side, log-likelihood and score term, and the
+    variance pass's Schur complement and log-likelihood, through the new `LogisticFE.fixedPoints`, with the merged
+    co-moments.
+- **Shared code.** `fixedPoints` lays out and summarizes the working set as `fit` does. `fit`'s summaries and variance
+  pass became `summariesOf` and `variancePass`, which both share, with the same operations.
+- **The manifest.** It was rewritten with `PPROF_GOLDEN_WRITE`. Compared value by value, every recorded value of the 40
+  runs is unchanged; the file gains 338 lines and changes none. The new values are bit-identical at 1 and 7 partitions.
+- **Records.** The plan's §6.1, the note's §11 and D-79 say the fixed points are pinned.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags. scalafmt is clean, and `check-engine-api.sh` passes with its
+  self-test.
+- `GoldenRunsSuite` passes against the rewritten manifest, 3 tests. Every other suite of the modules that depend on
+  the engine passes:
+  - engine, 62 suites and 559 tests;
+  - app 38, bench 30 and testkit 28;
+  - the Python tests on PySpark 4.1.0, 47.
+- Numerics code did not change.
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21, Spark
+  4.0.0's jars, and the Python tests on PySpark 4.0.0.
+
+**Next: round D**, the chunked compensated sums (§5). It amends the Cox and logistic specifications and ADR-0006
+first (NN-2), and adds `GoldenRunsSuite`'s comparison under D-78's bounds against the previous manifest. Then it
+re-baselines the manifest under D-78 and D-79.
+
 ## Round 180 (2026-11-21): Cox rows stored in records; the Breslow buffer (step 2, round B)
 
 - Round 179 is on `main` as `86a7d9f`.

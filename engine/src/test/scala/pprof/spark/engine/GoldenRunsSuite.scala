@@ -21,15 +21,24 @@ import org.apache.spark.sql.types.{
 }
 
 import pprof.spark.engine.backend.BlockOptions
-import pprof.spark.engine.cox.{CoxFixtures, CoxOptions, CoxPH, CoxSpec, Ties}
-import pprof.spark.engine.logistic.{LogisticFE, LogisticFixtures, LogisticOptions, LogisticSpec}
+import pprof.spark.engine.cox.{CoxFixtures, CoxGoldenPoints, CoxOptions, CoxPH, CoxSpec, Ties}
+import pprof.spark.engine.logistic.{
+  LogisticFE,
+  LogisticFixtures,
+  LogisticGoldenPoints,
+  LogisticOptions,
+  LogisticSpec
+}
+import pprof.spark.numerics.Evaluation
 import pprof.spark.testkit.SparkSuite
 
 /** NUM-2's golden runs (docs/spec/performance/plan.md §6.1, D-75). Every Cox and logistic fixture case, at default
   * and tight options, and two multi-block synthetic cases per model, are recorded as the IEEE-754 bit patterns of
   * their outputs in `golden/runs.json`. Any difference fails: a change meant to preserve bits must leave the manifest
-  * as it is, and one that reorders sums replaces it under the re-baselining rule of plan §6.3. With the environment
-  * variable PPROF_GOLDEN_WRITE set to a path, the suite writes the manifest there instead of comparing.
+  * as it is, and one that reorders sums replaces it under the re-baselining rule of plan §6.3 (D-78). Each run also
+  * records, under D-79, the values step 2's chunked sums touch at the fit's start and at its estimates
+  * (docs/spec/performance/step2-chunks.md §6). With the environment variable PPROF_GOLDEN_WRITE set to a path, the
+  * suite writes the manifest there instead of comparing.
   */
 class GoldenRunsSuite extends SparkSuite {
   import GoldenRunsSuite._
@@ -79,6 +88,18 @@ class GoldenRunsSuite extends SparkSuite {
 
   private def coxRun(name: String, df: DataFrame, spec: CoxSpec, options: CoxOptions): Run = {
     val f = CoxPH.fit(df, spec, options)
+    val points = CoxGoldenPoints.evaluate(
+      df,
+      spec,
+      options,
+      Seq(new Array[Double](spec.features.size), f.estimates.toArray)
+    )
+    def at(prefix: String, e: Evaluation): Map[String, Vector[Double]] =
+      Map(
+        s"${prefix}_loglik" -> Vector(e.value),
+        s"${prefix}_score" -> e.gradient.toVector,
+        s"${prefix}_information" -> e.information.toVector
+      )
     Run(
       name,
       Map(
@@ -87,7 +108,7 @@ class GoldenRunsSuite extends SparkSuite {
         "standard_errors" -> f.standardErrors.toVector,
         "information" -> f.information.toVector,
         "covariance" -> f.covariance.toVector
-      ),
+      ) ++ at("at_start", points(0)) ++ at("at_estimates", points(1)),
       Map(
         "iterations" -> Vector(f.iterations.toLong),
         "halvings" -> Vector(f.halvings.toLong),
@@ -114,6 +135,12 @@ class GoldenRunsSuite extends SparkSuite {
         "gamma" -> f.providers.gamma.toVector,
         "var_gamma" -> f.providers.varGamma.toVector,
         "var_case_mix" -> f.providers.varCaseMix.toVector
+      ) ++ LogisticGoldenPoints.values(
+        df,
+        spec,
+        options,
+        f.providers.gamma.toArray,
+        f.coefficients.map(_.estimate).toArray
       ),
       Map(
         "iterations" -> Vector(f.iterations.toLong),

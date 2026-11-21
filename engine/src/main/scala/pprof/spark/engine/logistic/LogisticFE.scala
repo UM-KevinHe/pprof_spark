@@ -89,18 +89,7 @@ object LogisticFE {
     val workingSet =
       LogisticWorkingSet.build(input, plan, groups, options.blocks)
     try {
-      val summaries = workingSet.records
-        .mapPartitions((records: Iterator[LogisticChunk]) =>
-          GroupFold(
-            LogisticBlocks.assemble(records),
-            (block: LogisticBlock) => block.blockId,
-            groups
-          )(new SummaryGroup(p))((sum, block) => sum.add(summarize(block))).map {
-            case (group, sum) => sum.summary(group)
-          }
-        )(Encoders.product[LogisticSummary])
-        .collectAs("logistic.summarize")
-        .sortBy(_.blockId)
+      val summaries = summariesOf(workingSet.records, groups, p)
       val rows = summaries.iterator.map(_.rows).sum
       if (rows != plan.rowCount)
         throw new IllegalStateException(
@@ -158,35 +147,10 @@ object LogisticFE {
       val gamma = result.gamma
       val beta = result.beta
       val effects = LogisticBlocks.effects(providersOfBlock, gamma)
-      val variance = workingSet.records
-        .mapPartitions((records: Iterator[LogisticChunk]) =>
-          GroupFold(
-            LogisticBlocks.assemble(records),
-            (block: LogisticBlock) => block.blockId,
-            groups
-          )(new VarianceSum(p))((sum, block) =>
-            sum.add(
-              LogisticVariancePartial(
-                block.blockId,
-                Kernel.varianceSchur(block.rows, effects(block.blockId), beta),
-                Kernel.loglik(block.rows, effects(block.blockId), beta)
-              )
-            )
-          ).map { case (group, sum) => sum.partial(group) }
-        )(Encoders.product[LogisticVariancePartial])
-        .collectAs("logistic.variance")
-        .sortBy(_.blockId)
-      val factor = Cholesky.factor(
-        OrderedReduction
-          .reduce(variance.toSeq.map(v => v.blockId -> v.packed), Moments.packedLength(p)),
-        p,
-        options.aliasTolerance
-      )
+      val (varianceSchur, loglik) = variancePass(workingSet.records, effects, groups, p, beta)
+      val factor = Cholesky.factor(varianceSchur, p, options.aliasTolerance)
       if (!factor.isFullRank) throw new LogisticAliasingException(factor.aliased.map(spec.features))
       val covariance = factor.inversePacked
-      val loglikSum = new NeumaierSum
-      variance.foreach(v => loglikSum.add(v.loglik))
-      val loglik = loglikSum.value
       val varGamma = new Array[Double](m)
       val varCaseMix = new Array[Double](m)
       workingSet.records
@@ -607,6 +571,122 @@ object LogisticFE {
       )
     }
     (workingSet, providersOfBlock)
+  }
+
+  /** The working set's block summaries, folded in groups and in block order (§6.10). */
+  private def summariesOf(
+      records: Dataset[LogisticChunk],
+      groups: ReductionGroups,
+      p: Int
+  ): Array[LogisticSummary] =
+    records
+      .mapPartitions((chunks: Iterator[LogisticChunk]) =>
+        GroupFold(
+          LogisticBlocks.assemble(chunks),
+          (block: LogisticBlock) => block.blockId,
+          groups
+        )(new SummaryGroup(p))((sum, block) => sum.add(summarize(block))).map { case (group, sum) =>
+          sum.summary(group)
+        }
+      )(Encoders.product[LogisticSummary])
+      .collectAs("logistic.summarize")
+      .sortBy(_.blockId)
+
+  /** The variance pass at (γ, β): the Schur complement at clipped π and the log-likelihood, reduced in block order
+    * within groups (Phase 2a specification §8, step1-reduction.md §4).
+    */
+  private def variancePass(
+      records: Dataset[LogisticChunk],
+      effects: Array[Array[Double]],
+      groups: ReductionGroups,
+      p: Int,
+      beta: Array[Double]
+  ): (Array[Double], Double) = {
+    val variance = records
+      .mapPartitions((chunks: Iterator[LogisticChunk]) =>
+        GroupFold(
+          LogisticBlocks.assemble(chunks),
+          (block: LogisticBlock) => block.blockId,
+          groups
+        )(new VarianceSum(p))((sum, block) =>
+          sum.add(
+            LogisticVariancePartial(
+              block.blockId,
+              Kernel.varianceSchur(block.rows, effects(block.blockId), beta),
+              Kernel.loglik(block.rows, effects(block.blockId), beta)
+            )
+          )
+        ).map { case (group, sum) => sum.partial(group) }
+      )(Encoders.product[LogisticVariancePartial])
+      .collectAs("logistic.variance")
+      .sortBy(_.blockId)
+    val loglik = new NeumaierSum
+    variance.foreach(v => loglik.add(v.loglik))
+    (
+      OrderedReduction.reduce(
+        variance.toSeq.map(v => v.blockId -> v.packed),
+        Moments.packedLength(p)
+      ),
+      loglik.value
+    )
+  }
+
+  /** Pass A and the variance pass at one fixed (γ, β) (D-79, step2-chunks.md §6). */
+  private[logistic] final case class FixedPoint(
+      schur: Array[Double],
+      rhs: Array[Double],
+      loglik: Double,
+      scoreTerm: Double,
+      varianceSchur: Array[Double],
+      varianceLoglik: Double
+  )
+
+  /** The golden runs' fixed points (D-79): the data's merged co-moments, then pass A and the variance pass at SerBIN's
+    * start, every γ at logit(ȳ) and β = 0, and at `gamma` and `beta`. The working set is laid out and summarized as
+    * `fit` does it.
+    */
+  private[logistic] def fixedPoints(
+      df: DataFrame,
+      spec: LogisticSpec,
+      options: LogisticOptions,
+      gamma: Array[Double],
+      beta: Array[Double]
+  ): (Array[Double], FixedPoint, FixedPoint) = {
+    val input = LogisticValidation.validate(df, spec)
+    val p = spec.features.size
+    val sizes = GroupSizes.collectGroupSizes(input.frame, options.blocks).sortBy(_._1)
+    val fitted = if (options.screen) sizes.filter(_._2 > options.minRecords) else sizes
+    val (plan, groups) = layout(fitted, p, options.blocks)
+    val providersOfBlock = providersOf(plan)
+    val workingSet = LogisticWorkingSet.build(input, plan, groups, options.blocks)
+    try {
+      val summaries = summariesOf(workingSet.records, groups, p)
+      val events = summaries.iterator.map(_.events).sum
+      val trials = summaries.iterator.map(_.trials).sum
+      val yBar = events / trials
+      val comoments = summaries
+        .map(s => Moments.Centred(s.rows, s.featureMean, s.featureComoments))
+        .reduceLeft(Moments.merge)
+        .comoments
+      val passes = new SparkPasses(workingSet.records, providersOfBlock, p, workingSet.groups)
+      def at(g: Array[Double], b: Array[Double]): FixedPoint = {
+        val s = passes.schur(g, b)
+        val (variance, loglik) =
+          variancePass(
+            workingSet.records,
+            LogisticBlocks.effects(providersOfBlock, g),
+            groups,
+            p,
+            b
+          )
+        FixedPoint(s.packed, s.rhs, s.loglik, s.scoreTerm, variance, loglik)
+      }
+      (
+        comoments,
+        at(Array.fill(plan.groupCount)(StrictMath.log(yBar / (1.0 - yBar))), new Array[Double](p)),
+        at(gamma, beta)
+      )
+    } finally workingSet.release()
   }
 
   /** The layout of a fit's working set and of every later call that rebuilds it: blocks at the target size, their

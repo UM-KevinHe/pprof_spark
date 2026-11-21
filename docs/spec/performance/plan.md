@@ -297,8 +297,9 @@ NUM-2 relies on golden runs, but the project has never listed them. This plan de
 
 For each run, `GoldenRunsSuite` records the bit patterns of the log-likelihood, the estimates, the information or
 Schur complement, the covariance, the provider effects and variances, and the iteration and halving counts. Since
-round 171 it also records the AUC of each logistic fit with 0/1 outcomes, pinned before OI-119 changes its pass. These
-go into a committed manifest, and the suite fails on any difference.
+round 171 it also records the AUC of each logistic fit with 0/1 outcomes, pinned before OI-119 changes its pass. Since
+round 181 it also records, under D-79, the values step 2's chunked sums touch at two fixed points: the fit's start and
+its estimates. These go into a committed manifest, and the suite fails on any difference.
 
 A negative control perturbs one recorded value by one ulp and checks that the comparison fails.
 

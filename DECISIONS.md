@@ -128,7 +128,7 @@ The golden runs record nothing at a fixed β, and they record quantities D-78 do
     the evidence log and approved, as for iteration counts.
 
 Approved as proposed on 2026-11-21, with step 2's design note. It applies from step 2's round C, which pins the fixed
-points.
+points. Round 181 pinned them (step2-chunks.md §11).
 
 ### D-78: The re-baselining rule for changes of summation order, from step 2 onward (Accepted: approved by the maintainer, 2026-11-21)
 

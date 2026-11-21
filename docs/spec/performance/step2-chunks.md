@@ -276,3 +276,18 @@ The specifications state today's sums. Round D amends them with its evidence:
   - the baseline, residuals, reference point, both standardizations and the provider tests.
 
   So does every Cox kernel for records of any size (numerics `CoxRowsSuite`).
+
+**Round C, round 181.**
+- **The fixed points.** Each golden run now also records the values of D-79's two fixed points, at the fit's start and
+  at its estimates:
+  - Cox: the log-likelihood, score and information of one evaluation, through `CoxPH.evaluate` (now visible in its
+    package);
+  - logistic: pass A's Schur complement, right-hand side, log-likelihood and score term, and the variance pass's
+    Schur complement and log-likelihood, through `LogisticFE.fixedPoints`;
+  - logistic: also the data's merged co-moments.
+- **Shared code.** `fixedPoints` lays the working set out and summarizes it as `fit` does. `fit`'s summaries and
+  variance pass are now the helpers `summariesOf` and `variancePass`, which `fixedPoints` shares.
+- **The manifest.** Every recorded value is unchanged: 40 runs, 338 lines added and none changed. The new values are
+  bit-identical at 1 and 7 partitions.
+- **Points.** A run's fixed points are evaluated at its fit's own estimates. Round D's comparison evaluates the new
+  code at the previous manifest's estimates instead.

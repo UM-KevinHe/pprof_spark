@@ -517,7 +517,7 @@ object CoxPH {
   }
 
   /** One pass: block partials combined in block order (ADR-0003). */
-  private def evaluate(prepared: Prepared, beta: Array[Double], ties: Ties): Evaluation = {
+  private[cox] def evaluate(prepared: Prepared, beta: Array[Double], ties: Ties): Evaluation = {
     val p = prepared.center.length
     val b = beta.clone()
     val c = prepared.center.clone()
