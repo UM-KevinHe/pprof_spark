@@ -187,7 +187,7 @@ object Serbin {
 /** The passes over blocks held in memory, reduced in the given order: the engine's arithmetic
   * without Spark, for kernel tests and lockstep parity (§9.2).
   */
-final class InMemorySerbinPasses(blocks: Seq[LogisticFE.Rows]) extends SerbinPasses {
+final class InMemorySerbinPasses(blocks: Seq[LogisticFE.RowsView]) extends SerbinPasses {
   private val offsets = blocks.scanLeft(0)(_ + _.providers).toVector
 
   private def slice(gamma: Array[Double], b: Int): Array[Double] =

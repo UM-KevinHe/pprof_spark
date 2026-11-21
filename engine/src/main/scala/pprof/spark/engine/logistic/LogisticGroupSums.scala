@@ -101,3 +101,31 @@ private[logistic] final class SummaryGroup(p: Int) {
     )
   }
 }
+
+/** A group's score-test terms, the centred S and the score, in block order (step2-chunks.md §4). */
+private[logistic] final class ScoreSum(p: Int) {
+  private val packed = new NeumaierVector(Moments.packedLength(p))
+  private val score = new NeumaierVector(p)
+
+  def add(part: LogisticScorePartial): Unit = {
+    packed.add(part.packed)
+    score.add(part.score)
+  }
+
+  def partial(group: Int): LogisticScorePartial =
+    LogisticScorePartial(group, packed.values, score.values)
+}
+
+/** A group's exact direct sums at every effect, in block order (step2-chunks.md §4). */
+private[logistic] final class DirectSum(effects: Int) {
+  private val direct = new NeumaierVector(effects)
+  private val variance = new NeumaierVector(effects)
+
+  def add(part: LogisticDirectPartial): Unit = {
+    direct.add(part.direct)
+    variance.add(part.variance)
+  }
+
+  def partial(group: Int): LogisticDirectPartial =
+    LogisticDirectPartial(group, direct.values, variance.values)
+}

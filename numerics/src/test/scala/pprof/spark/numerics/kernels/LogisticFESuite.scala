@@ -223,4 +223,105 @@ class LogisticFESuite extends munit.FunSuite {
     one.beta.indices.foreach(j => close(two.beta(j), one.beta(j), 1e-12, s"beta $j"))
     one.gamma.indices.foreach(k => close(two.gamma(k), one.gamma(k), 1e-12, s"gamma $k"))
   }
+
+  /** `rows` stored in records of `size` rows (docs/spec/performance/step2-chunks.md §3). */
+  private def inRecords(rows: LogisticFE.Rows, size: Int): LogisticFE.ChunkedRows = {
+    val count = rows.rows
+    val records = (count + size - 1) / size
+    def doubles(a: Array[Double], width: Int): Array[Array[Double]] =
+      Array.tabulate(records)(i =>
+        a.slice(i * size * width, math.min(count, (i + 1) * size) * width)
+      )
+    val clusters =
+      if (rows.cluster.isEmpty) Array.fill(records)(Array.emptyIntArray)
+      else
+        Array.tabulate(records)(i => rows.cluster.slice(i * size, math.min(count, (i + 1) * size)))
+    new LogisticFE.ChunkedRows(
+      rows.p,
+      size,
+      rows.starts,
+      doubles(rows.y, 1),
+      doubles(rows.n, 1),
+      doubles(rows.x, rows.p),
+      clusters
+    )
+  }
+
+  private def bits(values: Array[Double]): Vector[Long] =
+    values.toVector.map(java.lang.Double.doubleToRawLongBits)
+
+  /** Every kernel's outputs at (γ, β), as bit patterns, in a fixed order. */
+  private def outputs(
+      rows: LogisticFE.RowsView,
+      gamma: Array[Double],
+      beta: Array[Double]
+  ): Vector[Long] = {
+    val p = rows.p
+    val s = LogisticFE.schur(rows, gamma, beta)
+    val t = LogisticFE.trial(rows, gamma, beta, Array.fill(p)(0.125), Array(1.0, 0.5, 0.25))
+    val terms = LogisticFE.terms(rows, gamma, beta)
+    val variance = LogisticFE.varianceSchur(rows, gamma, beta)
+    val covariance = Array.tabulate(Moments.packedLength(p))(i => if (i == 0) 0.5 else 0.01 * i)
+    val xbar = Array.tabulate(p)(j => 0.1 * (j + 1))
+    val v = LogisticFE.providerVariances(rows, gamma, beta, covariance, xbar)
+    val meat = LogisticFE.robustMeat(rows, gamma, beta)
+    val robust = LogisticFE.robustProviders(rows, gamma, beta, meat.packed, covariance, xbar)
+    val score = LogisticFE.scoreTerms(rows, gamma, beta)
+    Vector(
+      s.packed,
+      s.rhs,
+      Array(s.scoreTerm, s.loglik, LogisticFE.loglik(rows, gamma, beta), meat.clusters.toDouble),
+      t.deltaGamma,
+      t.loglik,
+      Array(terms.loglik),
+      terms.scoreGamma,
+      terms.infoGamma,
+      terms.crossInfo,
+      terms.scoreBeta,
+      terms.infoBeta,
+      variance,
+      v.varGamma,
+      v.varCaseMix,
+      LogisticFE.fitted(rows, gamma, beta),
+      meat.packed,
+      robust.caseMix,
+      robust.fixedBeta,
+      score.packed,
+      score.score
+    ).flatMap(bits)
+  }
+
+  test(
+    "every kernel gives the same bits from records of any size as from flat rows (step2-chunks.md §3)"
+  ) {
+    val flat = data(Seq(12, 1, 15, 20, 11, 7), 3, trials = 3, seed = 17L)
+    val rows = flat.copy(cluster = Array.tabulate(flat.rows)(r => (r * 7) % 5))
+    val gamma = Array(-0.75, 0.25, -0.4, 0.1, -0.2, 0.3)
+    val beta = Array(0.3, -0.2, 0.15)
+    val expected = outputs(rows, gamma, beta)
+    Seq(1, 2, 3, 7, 13, rows.rows, rows.rows + 5).foreach { size =>
+      assertEquals(outputs(inRecords(rows, size), gamma, beta), expected, s"records of $size rows")
+    }
+    val moments = Moments.centred(rows.x, 3, 0, rows.rows)
+    Seq(1, 4, 9, rows.rows).foreach { size =>
+      val view = inRecords(rows, size)
+      val c = Moments.centredRows(view.rows, 3, view.xs, view.xBase)
+      assertEquals(
+        bits(c.mean ++ c.comoments),
+        bits(moments.mean ++ moments.comoments),
+        s"co-moments, $size rows"
+      )
+    }
+  }
+
+  test("records of the wrong sizes are refused") {
+    val one = Array(Array(0.0, 1.0), Array(1.0))
+    val ok =
+      new LogisticFE.ChunkedRows(1, 2, Array(0), one, one, one, Array.fill(2)(Array.emptyIntArray))
+    assertEquals(ok.rows, 3)
+    assert(!ok.hasClusters)
+    intercept[IllegalArgumentException] {
+      new LogisticFE.ChunkedRows(1, 3, Array(0), one, one, one, Array.fill(2)(Array.emptyIntArray))
+    }
+  }
 }

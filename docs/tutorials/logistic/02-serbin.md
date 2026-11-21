@@ -210,10 +210,10 @@ and the tests implement in memory (`InMemorySerbinPasses`, used for lockstep par
 | B, `trial` | Per block: recompute each provider's sums (the same bits as pass A), Δγⱼ, and ℓ at eight step lengths | Place each block's Δγ into the m-vector; scan the ladder; update and bound γ; update β; test |
 
 γ has to reach the blocks for both passes, and it changes every step, so it cannot live in the
-persisted working set. `withGamma` builds a small table on the driver with one row per block holding
-that block's providers' effects, and joins it to the cached blocks with a broadcast hint
-(lines 780–787). That is the pattern of PROJECT_CONTEXT §6.7: O(m) parameters as a broadcast-joined
-table, which Spark Connect supports, rather than a broadcast variable, which it does not. Pass B
+persisted working set. Since round 178 (OI-105) the driver splits γ by block and each pass's function
+carries those effects, m doubles in all, so no pass joins them to the cached blocks. Before, `withGamma` joined
+a small table of the effects, one row per block, with a broadcast hint: PROJECT_CONTEXT §6.7's pattern for O(m)
+parameters, which copied every cached block once more per pass. Pass B
 returns Δγ, m doubles, to the driver. So every step moves about 16m bytes of provider effects plus
 B small partials, and holds γ on the driver, guarded by `maxProvidersOnDriver` (OI-50 records the
 alternative of a distributed γ).

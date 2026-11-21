@@ -86,13 +86,13 @@ nResample, seed)` ([lines 76–178](../../../engine/src/main/scala/pprof/spark/e
 
 1. γ₀ on the driver, from the fit's effects.
 2. For every method but `wald`: rebuild the working set with the fit's provider plan and check the
-   fingerprint (`LogisticFE.trainingWorkingSet`); ship the effects to the blocks as a broadcast-joined
-   table (`withEffects`); on the executors, for each tested provider of each block, compute πᵢ⁰, the
+   fingerprint (`LogisticFE.trainingWorkingSet`); give each block its providers' effects in the task
+   (`LogisticBlocks.effects`, since round 178); on the executors, for each tested provider of each block, compute πᵢ⁰, the
    statistic, and for the exact test the limits.
 3. Collect the result rows (m rows), recreate them as a Dataset, join the provider keys with a
    broadcast hint, and order by provider.
 
-The probe recorded 15 Spark jobs for the exact test on `lfe-base`: nine jobs of preparation (the
+Before round 178, which removed the effects' broadcast join, the probe recorded 15 Spark jobs for the exact test on `lfe-base`: nine jobs of preparation (the
 fit's eleven without the two that collect provider sizes, since the plan comes from the fit), the effects' broadcast, the test pass,
 and a small sort. The per-provider cost is O(nⱼ·min(oⱼ, nⱼ − oⱼ)) per tail evaluation, times the tens of
 evaluations of the limits, so blocks packed by record count can be unbalanced for exact tests (OI-57).

@@ -16,7 +16,7 @@ import org.apache.spark.scheduler.{
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StructField, StructType}
 
-import pprof.spark.engine.backend.BlockOptions
+import pprof.spark.engine.backend.{BlockOptions, RowRecords}
 import pprof.spark.numerics.{Cholesky, InMemorySerbinPasses, Serbin, SerbinOptions, SerbinResult}
 import pprof.spark.numerics.kernels.{LogisticFE => Kernel}
 
@@ -91,7 +91,7 @@ object LogisticProbe {
     val rows = records.map { case (id, prov, y, x) =>
       LogisticRow(0, index(prov), id, y.toDouble, 1.0, x, "")
     }
-    LogisticBlockBuilder.build(0, rows.iterator, p)
+    LogisticBlocks.assemble(LogisticBlockBuilder.build(0, rows.iterator, p, RowRecords.default(p))).next()
   }
 
   var inMemory: SerbinResult = _

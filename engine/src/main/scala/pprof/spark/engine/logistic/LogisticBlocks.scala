@@ -7,6 +7,7 @@ import org.apache.spark.sql.functions.{broadcast, col}
 import org.apache.spark.sql.types.{IntegerType, LongType, StructField, StructType}
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.backend.PlanFrames
+import pprof.spark.engine.backend.RowRecords
 import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.Validation
 import pprof.spark.engine.layout.{LayoutPlan, PartitionKeys, ReductionGroups}
@@ -24,12 +25,16 @@ final case class LogisticRow(
     cluster: String
 )
 
-/** Whole providers in canonical order (Phase 2a specification §11, DIST-6), covariates row-major.
-  * Provider `g` holds rows `groupStart(g)` until the next start. `gamma` holds the providers'
-  * effects for one pass; it is empty in the persisted working set.
+/** One stored record of a block (docs/spec/performance/step2-chunks.md §3): the block's rows `firstRow` on, in
+  * canonical order (Phase 2a specification §11, DIST-6), covariates row-major. It lists the providers whose first
+  * row it holds, by group index and block row, and ranks its rows' cluster keys in the block (empty without a
+  * cluster column). Record `record` of the block's `records`; every record but the last holds as many rows.
   */
-final case class LogisticBlock(
+final case class LogisticChunk(
     blockId: Int,
+    record: Int,
+    records: Int,
+    firstRow: Int,
     p: Int,
     groupIndex: Array[Int],
     groupStart: Array[Int],
@@ -37,10 +42,31 @@ final case class LogisticBlock(
     y: Array[Double],
     n: Array[Double],
     x: Array[Double],
-    cluster: Array[Int],
-    gamma: Array[Double]
-) {
-  def rows: Kernel.Rows = Kernel.Rows(groupStart, y, n, x, p, cluster)
+    cluster: Array[Int]
+)
+
+/** Whole providers in canonical order, read from a block's records in order: provider `g` holds rows `groupStart(g)`
+  * until the next start. Kernels read its rows through `rows` (step2-chunks.md §3).
+  */
+final class LogisticBlock private[logistic] (parts: Array[LogisticChunk]) {
+  val blockId: Int = parts(0).blockId
+  val p: Int = parts(0).p
+  val groupIndex: Array[Int] = Array.concat(parts.map(_.groupIndex).toSeq: _*)
+  val groupStart: Array[Int] = Array.concat(parts.map(_.groupStart).toSeq: _*)
+  private val recordRows = math.max(1, parts(0).rowId.length)
+  val rows: Kernel.ChunkedRows = new Kernel.ChunkedRows(
+    p,
+    recordRows,
+    groupStart,
+    parts.map(_.y),
+    parts.map(_.n),
+    parts.map(_.x),
+    parts.map(_.cluster)
+  )
+  def rowCount: Int = rows.rows
+  def rowId(r: Int): Long = parts(r / recordRows).rowId(r % recordRows)
+  def y(r: Int): Double = rows.yAt(r)
+  def n(r: Int): Double = rows.nAt(r)
 }
 
 /** Per block: counts, Σ n x, the fingerprint, and records, events and trials of each provider. */
@@ -127,83 +153,141 @@ object LogisticBlockBuilder {
     }
   }
 
-  /** Sorts a block's rows canonically after normalizing negative zeros (ADR-0004). */
-  /** The blocks of rows sorted by block identifier, built one block at a time (step1-reduction.md §3). */
-  def buildAll(rows: Iterator[LogisticRow], p: Int): Iterator[LogisticBlock] = {
+  /** The records of rows sorted by block identifier: each block built in turn (step1-reduction.md §3) and stored in
+    * records of `recordRows` rows (step2-chunks.md §3).
+    */
+  def buildAll(rows: Iterator[LogisticRow], p: Int, recordRows: Int): Iterator[LogisticChunk] = {
     val source = rows.buffered
-    new Iterator[LogisticBlock] {
+    new Iterator[Iterator[LogisticChunk]] {
       private var last = -1
 
       def hasNext: Boolean = source.hasNext
 
-      def next(): LogisticBlock = {
+      def next(): Iterator[LogisticChunk] = {
         val id = source.head.blockId
         if (id <= last)
           throw new IllegalStateException(s"block $id after block $last: rows out of block order")
         last = id
         val block = scala.collection.mutable.ArrayBuffer.empty[LogisticRow]
         while (source.hasNext && source.head.blockId == id) block += source.next()
-        build(id, block.iterator, p)
+        build(id, block.iterator, p, recordRows)
       }
-    }
+    }.flatten
   }
 
-  def build(blockId: Int, rows: Iterator[LogisticRow], p: Int): LogisticBlock = {
+  /** Sorts a block's rows canonically after normalizing negative zeros (ADR-0004), then stores them in records of
+    * `recordRows` rows, the last possibly shorter.
+    */
+  def build(
+      blockId: Int,
+      rows: Iterator[LogisticRow],
+      p: Int,
+      recordRows: Int
+  ): Iterator[LogisticChunk] = {
+    require(recordRows > 0, s"a record holds at least one row, got $recordRows")
     val sorted = rows
       .map(r => r.copy(y = r.y + 0.0, n = r.n + 0.0, x = r.x.map(v => if (v == 0.0) 0.0 else v)))
       .toArray
       .sorted(canonicalOrder)
     val count = sorted.length
-    val rowIds = new Array[Long](count)
-    val y = new Array[Double](count)
-    val n = new Array[Double](count)
-    val x = new Array[Double](count * p)
     val keys = sorted.iterator.map(_.cluster).toArray.distinct.sorted
-    val clusters =
+    val ranks =
       if (keys.forall(_.isEmpty)) Array.emptyIntArray
       else {
         val rank = keys.zipWithIndex.toMap
         sorted.map(row => rank(row.cluster))
       }
-    val groups = Array.newBuilder[Int]
-    val starts = Array.newBuilder[Int]
-    var r = 0
-    while (r < count) {
-      val row = sorted(r)
-      require(row.x.length == p, s"expected $p covariates, got ${row.x.length}")
-      if (r == 0 || row.groupIndex != sorted(r - 1).groupIndex) {
-        groups += row.groupIndex
-        starts += r
+    val records = (count + recordRows - 1) / recordRows
+    Iterator.tabulate(records) { i =>
+      val from = i * recordRows
+      val until = math.min(count, from + recordRows)
+      val rowIds = new Array[Long](until - from)
+      val y = new Array[Double](until - from)
+      val n = new Array[Double](until - from)
+      val x = new Array[Double]((until - from) * p)
+      val groups = Array.newBuilder[Int]
+      val starts = Array.newBuilder[Int]
+      var r = from
+      while (r < until) {
+        val row = sorted(r)
+        require(row.x.length == p, s"expected $p covariates, got ${row.x.length}")
+        if (r == 0 || row.groupIndex != sorted(r - 1).groupIndex) {
+          groups += row.groupIndex
+          starts += r
+        }
+        rowIds(r - from) = row.rowId
+        y(r - from) = row.y
+        n(r - from) = row.n
+        System.arraycopy(row.x, 0, x, (r - from) * p, p)
+        r += 1
       }
-      rowIds(r) = row.rowId
-      y(r) = row.y
-      n(r) = row.n
-      System.arraycopy(row.x, 0, x, r * p, p)
-      r += 1
+      LogisticChunk(
+        blockId,
+        i,
+        records,
+        from,
+        p,
+        groups.result(),
+        starts.result(),
+        rowIds,
+        y,
+        n,
+        x,
+        if (ranks.isEmpty) Array.emptyIntArray else java.util.Arrays.copyOfRange(ranks, from, until)
+      )
     }
-    LogisticBlock(
-      blockId,
-      p,
-      groups.result(),
-      starts.result(),
-      rowIds,
-      y,
-      n,
-      x,
-      clusters,
-      Array.emptyDoubleArray
-    )
   }
 }
 
-/** The persisted logistic working set (§6.7). */
+/** Reading the working set's records as blocks (docs/spec/performance/step2-chunks.md §3). */
+object LogisticBlocks {
+
+  /** The blocks of a partition's records, each from its consecutive records; fails if a block's records are out of
+    * order or incomplete. The group fold checks the blocks' order (step1-reduction.md §4).
+    */
+  def assemble(records: Iterator[LogisticChunk]): Iterator[LogisticBlock] =
+    new Iterator[LogisticBlock] {
+      def hasNext: Boolean = records.hasNext
+
+      def next(): LogisticBlock = {
+        val first = records.next()
+        if (first.record != 0)
+          throw new IllegalStateException(
+            s"block ${first.blockId} begins with record ${first.record} of ${first.records}"
+          )
+        val parts = new Array[LogisticChunk](first.records)
+        parts(0) = first
+        var i = 1
+        while (i < parts.length) {
+          if (!records.hasNext)
+            throw new IllegalStateException(
+              s"block ${first.blockId} ends after $i of ${parts.length} records"
+            )
+          val part = records.next()
+          if (part.blockId != first.blockId || part.record != i)
+            throw new IllegalStateException(
+              s"record ${part.record} of block ${part.blockId} where record $i of block ${first.blockId} belongs"
+            )
+          parts(i) = part
+          i += 1
+        }
+        new LogisticBlock(parts)
+      }
+    }
+
+  /** Each block's providers' effects from `gamma`, in key order, for a task to take instead of a join (OI-105). */
+  def effects(providersOfBlock: Array[Array[Int]], gamma: Array[Double]): Array[Array[Double]] =
+    providersOfBlock.map(_.map(gamma(_)))
+}
+
+/** The persisted logistic working set (§6.7): each block's records (docs/spec/performance/step2-chunks.md §3). */
 final class LogisticWorkingSet private (
-    val blocks: Dataset[LogisticBlock],
+    val records: Dataset[LogisticChunk],
     val plan: LayoutPlan,
     val groups: ReductionGroups
 ) {
   def release(): Unit = {
-    blocks.unpersist(blocking = false)
+    records.unpersist(blocking = false)
     ()
   }
 }
@@ -212,8 +296,8 @@ object LogisticWorkingSet {
 
   private val PartitionKeyColumn = "__pprof_partition_key"
 
-  /** Joins the plan to the rows (dropping screened providers), builds one block per plan block
-    * with one shuffle, and persists the blocks at `blockOptions`' storage level.
+  /** Joins the plan to the rows (dropping screened providers), builds each plan block's records
+    * with one shuffle, and persists them at `blockOptions`' storage level.
     */
   def build(
       input: LogisticInput,
@@ -222,6 +306,7 @@ object LogisticWorkingSet {
       blockOptions: BlockOptions
   ): LogisticWorkingSet = {
     val p = input.spec.features.size
+    val recordRows = RowRecords.rowsPerRecord(p)
     val spark = input.frame.sparkSession
     val placements = PlanFrames.placements(spark, plan, input.providerKeyIsText)
     val keys = PartitionKeys.forPartitions(spark, groups.groups)
@@ -247,23 +332,24 @@ object LogisticWorkingSet {
         col(Validation.FeaturesColumn).as("x"),
         col(LogisticValidation.ClusterColumn).as("cluster")
       )
-    val blocks = placed
+    val records = placed
       .repartition(groups.groups, col(PartitionKeyColumn))
       .sortWithinPartitions(col("blockId"))
       .drop(PartitionKeyColumn)
       .as[LogisticRow](Encoders.product[LogisticRow])
-      .mapPartitions((rows: Iterator[LogisticRow]) => LogisticBlockBuilder.buildAll(rows, p))(
-        Encoders.product[LogisticBlock]
-      )
+      .mapPartitions((rows: Iterator[LogisticRow]) =>
+        LogisticBlockBuilder.buildAll(rows, p, recordRows)
+      )(Encoders.product[LogisticChunk])
       .persistAt(blockOptions)
     try {
-      val built = blocks.countAs("logistic.build")
+      val built =
+        records.filter((record: LogisticChunk) => record.record == 0).countAs("logistic.build")
       if (built != plan.blockCount)
         throw new IllegalStateException(s"built $built blocks; the plan has ${plan.blockCount}")
-      new LogisticWorkingSet(blocks, plan, groups)
+      new LogisticWorkingSet(records, plan, groups)
     } catch {
       case e: Throwable =>
-        blocks.unpersist(blocking = false)
+        records.unpersist(blocking = false)
         throw e
     }
   }

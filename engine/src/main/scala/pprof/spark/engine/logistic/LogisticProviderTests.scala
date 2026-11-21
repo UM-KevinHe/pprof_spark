@@ -113,8 +113,8 @@ object LogisticProviderTests {
         spark.createDataset(waldRows(fit, view, g0, alternative, c, tested))(Encoders.product)
       else {
         val (workingSet, providersOfBlock) = LogisticFE.trainingWorkingSet(df, fit)
-        val p = fit.spec.features.size
         val beta = fit.estimates.toArray
+        val effects = LogisticBlocks.effects(providersOfBlock, fit.providers.gamma)
         // Data-based rows for the fitted providers, indexed into the view; a replaced provider shows
         // its new effect. A provider added after fitting has no rows: z 0 and p 1, as in pprof_py.
         val testedArray = Array.fill(fit.providers.size)(false)
@@ -128,15 +128,28 @@ object LogisticProviderTests {
         }
         val fittedRows =
           try
-            LogisticFE
-              .withEffects(workingSet.blocks, providersOfBlock, p, fit.providers.gamma)
-              .flatMap { (block: LogisticBlock) =>
-                (0 until block.groupIndex.length).iterator
-                  .filter(k => testedArray(block.groupIndex(k)))
-                  .map(k =>
-                    providerRow(block, k, beta, g0, method, alternative, c, nResample, seed)
-                  )
-              }(Encoders.product[LogisticProviderTestRow])
+            workingSet.records
+              .mapPartitions((records: Iterator[LogisticChunk]) =>
+                LogisticBlocks.assemble(records).flatMap { block =>
+                  val gamma = effects(block.blockId)
+                  (0 until block.groupIndex.length).iterator
+                    .filter(k => testedArray(block.groupIndex(k)))
+                    .map(k =>
+                      providerRow(
+                        block,
+                        k,
+                        gamma(k),
+                        beta,
+                        g0,
+                        method,
+                        alternative,
+                        c,
+                        nResample,
+                        seed
+                      )
+                    )
+                }
+              )(Encoders.product[LogisticProviderTestRow])
               .collect()
               .toSeq
           finally workingSet.release()
@@ -259,6 +272,7 @@ object LogisticProviderTests {
   private def providerRow(
       block: LogisticBlock,
       k: Int,
+      gamma: Double,
       beta: Array[Double],
       g0: Double,
       method: String,
@@ -268,11 +282,11 @@ object LogisticProviderTests {
       seed: Long
   ): LogisticProviderTestRow = {
     val rows = block.rows
-    val from = rows.starts(k)
+    val from = rows.start(k)
     val until = rows.end(k)
     val linear = Array.tabulate(until - from)(i => Kernel.eta(rows, from + i, 0.0, beta))
-    val trials = Array.tabulate(until - from)(i => rows.n(from + i).toInt)
-    val observed = (from until until).map(r => rows.y(r)).sum
+    val trials = Array.tabulate(until - from)(i => rows.nAt(from + i).toInt)
+    val observed = (from until until).map(r => rows.yAt(r)).sum
     val totalTrials = trials.foldLeft(0L)(_ + _)
     def probabilities(g: Double) = linear.map(eta => Kernel.sigmoid(g + eta))
     val atNull = probabilities(g0).map(PoissonBinomial.clip)
@@ -282,7 +296,7 @@ object LogisticProviderTests {
       expected += trials(i) * atNull(i)
       variance += trials(i) * atNull(i) * (1.0 - atNull(i))
     }
-    val estimate = block.gamma(k)
+    val estimate = gamma
     val (z, lower, upper) = method match {
       case "score" =>
         (

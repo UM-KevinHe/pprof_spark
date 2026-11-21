@@ -14,6 +14,7 @@ import org.apache.spark.sql.types.{
 import pprof.spark.engine.backend.DriverGuards
 import pprof.spark.engine.layout.GroupKey
 import pprof.spark.numerics.{NeumaierSum, NeumaierVector, Normal, TaylorBins}
+import pprof.spark.engine.layout.GroupFold
 import pprof.spark.numerics.kernels.{LogisticFE => Kernel}
 
 /** One block's bin moments (Phase 2d specification §4). */
@@ -72,27 +73,30 @@ object LogisticStandardization {
       val m = fit.providers.size
       val expected = new Array[Double](m)
       val variance = new Array[Double](m)
-      LogisticFE
-        .withEffects(workingSet.blocks, providersOfBlock, beta.length, fit.providers.gamma)
-        .map { (block: LogisticBlock) =>
-          val rows = block.rows
-          val e = new Array[Double](rows.providers)
-          val v = new Array[Double](rows.providers)
-          (0 until rows.providers).foreach { k =>
-            val es = new NeumaierSum
-            val vs = new NeumaierSum
-            (rows.starts(k) until rows.end(k)).foreach { r =>
-              val eta = Kernel.eta(rows, r, 0.0, beta)
-              val p0 = Kernel.sigmoid(g0 + eta)
-              val pv = if (fitted) Kernel.sigmoid(block.gamma(k) + eta) else p0
-              es.add(rows.n(r) * p0)
-              vs.add(rows.n(r) * pv * (1.0 - pv))
+      val effects = LogisticBlocks.effects(providersOfBlock, fit.providers.gamma)
+      workingSet.records
+        .mapPartitions((records: Iterator[LogisticChunk]) =>
+          LogisticBlocks.assemble(records).map { block =>
+            val rows = block.rows
+            val gamma = effects(block.blockId)
+            val e = new Array[Double](rows.providers)
+            val v = new Array[Double](rows.providers)
+            (0 until rows.providers).foreach { k =>
+              val es = new NeumaierSum
+              val vs = new NeumaierSum
+              (rows.start(k) until rows.end(k)).foreach { r =>
+                val eta = Kernel.eta(rows, r, 0.0, beta)
+                val p0 = Kernel.sigmoid(g0 + eta)
+                val pv = if (fitted) Kernel.sigmoid(gamma(k) + eta) else p0
+                es.add(rows.nAt(r) * p0)
+                vs.add(rows.nAt(r) * pv * (1.0 - pv))
+              }
+              e(k) = es.value
+              v(k) = vs.value
             }
-            e(k) = es.value
-            v(k) = vs.value
+            LogisticIndirectPartial(block.blockId, e, v)
           }
-          LogisticIndirectPartial(block.blockId, e, v)
-        }(Encoders.product[LogisticIndirectPartial])
+        )(Encoders.product[LogisticIndirectPartial])
         .collect()
         .foreach { part =>
           val ids = providersOfBlock(part.blockId)
@@ -118,19 +122,21 @@ object LogisticStandardization {
     val beta = fit.estimates.toArray
     try
       if (method == "binned") {
-        val bins = workingSet.blocks
-          .flatMap { (block: LogisticBlock) =>
-            val rows = block.rows
-            val acc = scala.collection.mutable.TreeMap.empty[Long, NeumaierVector]
-            (0 until rows.rows).foreach { r =>
-              val eta = Kernel.eta(rows, r, 0.0, beta)
-              val b = TaylorBins.bin(eta)
-              acc
-                .getOrElseUpdate(b, new NeumaierVector(TaylorBins.Order + 1))
-                .add(TaylorBins.rowMoments(eta, rows.n(r), b))
+        val bins = workingSet.records
+          .mapPartitions((records: Iterator[LogisticChunk]) =>
+            LogisticBlocks.assemble(records).flatMap { block =>
+              val rows = block.rows
+              val acc = scala.collection.mutable.TreeMap.empty[Long, NeumaierVector]
+              (0 until rows.rows).foreach { r =>
+                val eta = Kernel.eta(rows, r, 0.0, beta)
+                val b = TaylorBins.bin(eta)
+                acc
+                  .getOrElseUpdate(b, new NeumaierVector(TaylorBins.Order + 1))
+                  .add(TaylorBins.rowMoments(eta, rows.nAt(r), b))
+              }
+              acc.iterator.map { case (b, v) => LogisticBinPartial(b, block.blockId, v.values) }
             }
-            acc.iterator.map { case (b, v) => LogisticBinPartial(b, block.blockId, v.values) }
-          }(Encoders.product[LogisticBinPartial])
+          )(Encoders.product[LogisticBinPartial])
           .groupByKey((p: LogisticBinPartial) => p.bin)(Encoders.scalaLong)
           .mapGroups { (b: Long, parts: Iterator[LogisticBinPartial]) =>
             val sum = new NeumaierVector(TaylorBins.Order + 1)
@@ -164,27 +170,36 @@ object LogisticStandardization {
         }
         (d, s)
       } else {
+        val folds = workingSet.groups
         DriverGuards.requireWithinBudget(
-          s"${workingSet.plan.blockCount} exact direct partials of ${effects.length} effects",
-          workingSet.plan.blockCount.toLong * effects.length * 16L,
+          s"${folds.groups} exact direct partials of ${effects.length} effects",
+          folds.groups.toLong * effects.length * 16L,
           fit.options.blocks
         )
         val gammas = effects.clone()
-        val parts = workingSet.blocks
-          .map { (block: LogisticBlock) =>
-            val rows = block.rows
-            val ds = Array.fill(gammas.length)(new NeumaierSum)
-            val vs = Array.fill(gammas.length)(new NeumaierSum)
-            (0 until rows.rows).foreach { r =>
-              val eta = Kernel.eta(rows, r, 0.0, beta)
-              gammas.indices.foreach { j =>
-                val p = Kernel.sigmoid(gammas(j) + eta)
-                ds(j).add(rows.n(r) * p)
-                vs(j).add(rows.n(r) * p * (1.0 - p))
+        val parts = workingSet.records
+          .mapPartitions((records: Iterator[LogisticChunk]) =>
+            GroupFold(
+              LogisticBlocks.assemble(records),
+              (block: LogisticBlock) => block.blockId,
+              folds
+            )(
+              new DirectSum(gammas.length)
+            ) { (sum, block) =>
+              val rows = block.rows
+              val ds = Array.fill(gammas.length)(new NeumaierSum)
+              val vs = Array.fill(gammas.length)(new NeumaierSum)
+              (0 until rows.rows).foreach { r =>
+                val eta = Kernel.eta(rows, r, 0.0, beta)
+                gammas.indices.foreach { j =>
+                  val p = Kernel.sigmoid(gammas(j) + eta)
+                  ds(j).add(rows.nAt(r) * p)
+                  vs(j).add(rows.nAt(r) * p * (1.0 - p))
+                }
               }
-            }
-            LogisticDirectPartial(block.blockId, ds.map(_.value), vs.map(_.value))
-          }(Encoders.product[LogisticDirectPartial])
+              sum.add(LogisticDirectPartial(block.blockId, ds.map(_.value), vs.map(_.value)))
+            }.map { case (group, sum) => sum.partial(group) }
+          )(Encoders.product[LogisticDirectPartial])
           .collect()
           .sortBy(_.blockId)
         val d = new NeumaierVector(effects.length)

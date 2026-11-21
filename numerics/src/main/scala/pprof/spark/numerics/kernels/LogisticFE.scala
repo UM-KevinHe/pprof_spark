@@ -15,9 +15,28 @@ object LogisticFE {
   /** π is clipped to [1e-10, 1 − 1e-10] for the variances (pprof_py's `_estimate_variances`). */
   val VarianceClip: Double = 1e-10
 
-  /** One block's rows, grouped by provider; `cluster(r)` ranks row r's cluster key in the block (empty
-    * without a cluster column; Phase 2b §5).
+  /** One block's rows, grouped by provider in canonical order: provider `k` holds rows `start(k)` until `end(k)`.
+    * Row r's covariates are `xs(r)(xBase(r) + j)`, so a kernel takes a row's array once, whether the rows are stored
+    * flat ([[Rows]]) or in records ([[ChunkedRows]], docs/spec/performance/step2-chunks.md §3); the arithmetic is the
+    * same either way. `clusterAt(r)` ranks row r's cluster key in the block (Phase 2b §5).
     */
+  trait RowsView {
+    def p: Int
+    def rows: Int
+    def providers: Int
+    def start(k: Int): Int
+    def end(k: Int): Int = if (k + 1 < providers) start(k + 1) else rows
+    def yAt(r: Int): Double
+    def nAt(r: Int): Double
+
+    /** Whether every row has a cluster rank. */
+    def hasClusters: Boolean
+    def clusterAt(r: Int): Int
+    def xs(r: Int): Array[Double]
+    def xBase(r: Int): Int
+  }
+
+  /** One block's rows stored flat, covariates row-major; `cluster` is empty without a cluster column. */
   final case class Rows(
       starts: Array[Int],
       y: Array[Double],
@@ -25,10 +44,54 @@ object LogisticFE {
       x: Array[Double],
       p: Int,
       cluster: Array[Int] = Array.emptyIntArray
-  ) {
+  ) extends RowsView {
     def providers: Int = starts.length
     def rows: Int = y.length
-    def end(k: Int): Int = if (k + 1 < starts.length) starts(k + 1) else y.length
+    def start(k: Int): Int = starts(k)
+    override def end(k: Int): Int = if (k + 1 < starts.length) starts(k + 1) else y.length
+    def yAt(r: Int): Double = y(r)
+    def nAt(r: Int): Double = n(r)
+    def hasClusters: Boolean = cluster.length == y.length
+    def clusterAt(r: Int): Int = cluster(r)
+    def xs(r: Int): Array[Double] = x
+    def xBase(r: Int): Int = r * p
+  }
+
+  /** One block's rows in records of `recordRows` rows, the last possibly shorter (step2-chunks.md §3): row r is row
+    * r mod `recordRows` of record r / `recordRows`. `starts` are block rows; `cluster` holds each record's ranks, or
+    * empty arrays without a cluster column.
+    */
+  final class ChunkedRows(
+      val p: Int,
+      val recordRows: Int,
+      starts: Array[Int],
+      y: Array[Array[Double]],
+      n: Array[Array[Double]],
+      x: Array[Array[Double]],
+      cluster: Array[Array[Int]]
+  ) extends RowsView {
+    require(recordRows > 0, s"a record holds at least one row, got $recordRows")
+    require(
+      n.length == y.length && x.length == y.length && cluster.length == y.length,
+      "every record needs its outcomes, trials, covariates and cluster ranks"
+    )
+    require(
+      y.indices.forall { i =>
+        val count = y(i).length
+        (if (i + 1 < y.length) count == recordRows else count >= 1 && count <= recordRows) &&
+        n(i).length == count && x(i).length == count * p
+      },
+      s"every record holds $recordRows rows but the last, which holds 1 to $recordRows"
+    )
+    val rows: Int = y.iterator.map(_.length).sum
+    def providers: Int = starts.length
+    def start(k: Int): Int = starts(k)
+    def yAt(r: Int): Double = y(r / recordRows)(r % recordRows)
+    def nAt(r: Int): Double = n(r / recordRows)(r % recordRows)
+    val hasClusters: Boolean = cluster.indices.forall(i => cluster(i).length == y(i).length)
+    def clusterAt(r: Int): Int = cluster(r / recordRows)(r % recordRows)
+    def xs(r: Int): Array[Double] = x(r / recordRows)
+    def xBase(r: Int): Int = (r % recordRows) * p
   }
 
   /** The block's share of the Schur system: S packed, r = g_β − Σ bⱼgⱼ/hⱼ, Σ gⱼ²/hⱼ and ℓ. */
@@ -65,12 +128,13 @@ object LogisticFE {
     else StrictMath.log1p(StrictMath.exp(eta))
 
   /** η = γ + xᵀβ for row `r`. */
-  def eta(rows: Rows, r: Int, gamma: Double, beta: Array[Double]): Double = {
+  def eta(rows: RowsView, r: Int, gamma: Double, beta: Array[Double]): Double = {
     var dot = 0.0
     var j = 0
-    val base = r * rows.p
+    val xs = rows.xs(r)
+    val base = rows.xBase(r)
     while (j < rows.p) {
-      dot += rows.x(base + j) * beta(j)
+      dot += xs(base + j) * beta(j)
       j += 1
     }
     gamma + dot
@@ -80,7 +144,7 @@ object LogisticFE {
   def rowLoglik(y: Double, n: Double, eta: Double): Double = y * eta - n * log1pExp(eta)
 
   /** Pass A of the specification (§6, steps 1 and 2) at (γ, β); `gamma` holds the block's providers. */
-  def schur(rows: Rows, gamma: Array[Double], beta: Array[Double]): Schur = {
+  def schur(rows: RowsView, gamma: Array[Double], beta: Array[Double]): Schur = {
     val p = rows.p
     val pi = new Array[Double](rows.rows)
     val q = new Array[Double](rows.rows)
@@ -103,7 +167,7 @@ object LogisticFE {
     * (γ + vΔγ, β + vΔβ) for each step length v.
     */
   def trial(
-      rows: Rows,
+      rows: RowsView,
       gamma: Array[Double],
       beta: Array[Double],
       deltaBeta: Array[Double],
@@ -130,9 +194,9 @@ object LogisticFE {
       var t = 0
       while (t < steps.length) {
         val gammaT = gamma(k) + steps(t) * deltaGamma(k)
-        var row = rows.starts(k)
+        var row = rows.start(k)
         while (row < rows.end(k)) {
-          logliks(t).add(rowLoglik(rows.y(row), rows.n(row), eta(rows, row, gammaT, betas(t))))
+          logliks(t).add(rowLoglik(rows.yAt(row), rows.nAt(row), eta(rows, row, gammaT, betas(t))))
           row += 1
         }
         t += 1
@@ -143,13 +207,13 @@ object LogisticFE {
   }
 
   /** ℓ at (γ, β) over the block. */
-  def loglik(rows: Rows, gamma: Array[Double], beta: Array[Double]): Double = {
+  def loglik(rows: RowsView, gamma: Array[Double], beta: Array[Double]): Double = {
     val sum = new NeumaierSum
     var k = 0
     while (k < rows.providers) {
-      var r = rows.starts(k)
+      var r = rows.start(k)
       while (r < rows.end(k)) {
-        sum.add(rowLoglik(rows.y(r), rows.n(r), eta(rows, r, gamma(k), beta)))
+        sum.add(rowLoglik(rows.yAt(r), rows.nAt(r), eta(rows, r, gamma(k), beta)))
         r += 1
       }
       k += 1
@@ -158,7 +222,7 @@ object LogisticFE {
   }
 
   /** The uncentered terms of §2 at (γ, β), with the iteration's weight floor. */
-  def terms(rows: Rows, gamma: Array[Double], beta: Array[Double]): Terms = {
+  def terms(rows: RowsView, gamma: Array[Double], beta: Array[Double]): Terms = {
     val p = rows.p
     val pi = new Array[Double](rows.rows)
     val q = new Array[Double](rows.rows)
@@ -175,17 +239,19 @@ object LogisticFE {
       scoreGamma(k) = provider.g
       infoGamma(k) = provider.h
       System.arraycopy(provider.b, 0, cross, k * p, p)
-      var r = rows.starts(k)
+      var r = rows.start(k)
       while (r < rows.end(k)) {
-        val residual = rows.y(r) - rows.n(r) * pi(r)
+        val xs = rows.xs(r)
+        val base = rows.xBase(r)
+        val residual = rows.yAt(r) - rows.nAt(r) * pi(r)
         var i = 0
         var index = 0
         while (i < p) {
-          val xi = rows.x(r * p + i)
+          val xi = xs(base + i)
           scoreBeta.add(i, xi * residual)
           var j = i
           while (j < p) {
-            infoBeta.add(index, q(r) * xi * rows.x(r * p + j))
+            infoBeta.add(index, q(r) * xi * xs(base + j))
             index += 1
             j += 1
           }
@@ -199,7 +265,7 @@ object LogisticFE {
   }
 
   /** S at the estimates with π clipped and no floor, for Var(β̂) = S⁻¹ (§5, Variances). */
-  def varianceSchur(rows: Rows, gamma: Array[Double], beta: Array[Double]): Array[Double] = {
+  def varianceSchur(rows: RowsView, gamma: Array[Double], beta: Array[Double]): Array[Double] = {
     val p = rows.p
     val pi = new Array[Double](rows.rows)
     val q = new Array[Double](rows.rows)
@@ -220,7 +286,7 @@ object LogisticFE {
     * V = Var(β̂) packed and x̄ the trials-weighted mean covariate row of the fitted rows.
     */
   def providerVariances(
-      rows: Rows,
+      rows: RowsView,
       gamma: Array[Double],
       beta: Array[Double],
       covariance: Array[Double],
@@ -262,11 +328,11 @@ object LogisticFE {
   final case class ScoreTerms(packed: Array[Double], score: Array[Double])
 
   /** The fitted probability of every row, unclipped (AUC, prediction). */
-  def fitted(rows: Rows, gamma: Array[Double], beta: Array[Double]): Array[Double] = {
+  def fitted(rows: RowsView, gamma: Array[Double], beta: Array[Double]): Array[Double] = {
     val out = new Array[Double](rows.rows)
     var k = 0
     while (k < rows.providers) {
-      var r = rows.starts(k)
+      var r = rows.start(k)
       while (r < rows.end(k)) {
         out(r) = sigmoid(eta(rows, r, gamma(k), beta))
         r += 1
@@ -277,7 +343,7 @@ object LogisticFE {
   }
 
   /** Pass R1 at the estimates, π clipped: Σ over clusters of ũₖũₖᵀ, ũₖ = Σᵢ∈ₖ (xᵢ − x̄ⱼ)eᵢ. */
-  def robustMeat(rows: Rows, gamma: Array[Double], beta: Array[Double]): Meat = {
+  def robustMeat(rows: RowsView, gamma: Array[Double], beta: Array[Double]): Meat = {
     val p = rows.p
     val pi = new Array[Double](rows.rows)
     val q = new Array[Double](rows.rows)
@@ -294,13 +360,15 @@ object LogisticFE {
         var i = 0
         while (i < order.length) {
           java.util.Arrays.fill(u, 0.0)
-          val cluster = rows.cluster(order(i))
-          while (i < order.length && rows.cluster(order(i)) == cluster) {
+          val cluster = rows.clusterAt(order(i))
+          while (i < order.length && rows.clusterAt(order(i)) == cluster) {
             val r = order(i)
-            val e = rows.y(r) - rows.n(r) * pi(r)
+            val xs = rows.xs(r)
+            val base = rows.xBase(r)
+            val e = rows.yAt(r) - rows.nAt(r) * pi(r)
             var j = 0
             while (j < p) {
-              u(j) += (rows.x(r * p + j) - provider.xbar(j)) * e
+              u(j) += (xs(base + j) - provider.xbar(j)) * e
               j += 1
             }
             i += 1
@@ -318,7 +386,7 @@ object LogisticFE {
     * the average case mix x̄ (Phase 2b §2).
     */
   def robustProviders(
-      rows: Rows,
+      rows: RowsView,
       gamma: Array[Double],
       beta: Array[Double],
       meat: Array[Double],
@@ -349,14 +417,16 @@ object LogisticFE {
         while (i < order.length) {
           var residual = 0.0
           java.util.Arrays.fill(clusterScore, 0.0)
-          val cluster = rows.cluster(order(i))
-          while (i < order.length && rows.cluster(order(i)) == cluster) {
+          val cluster = rows.clusterAt(order(i))
+          while (i < order.length && rows.clusterAt(order(i)) == cluster) {
             val r = order(i)
-            val e = rows.y(r) - rows.n(r) * pi(r)
+            val xs = rows.xs(r)
+            val base = rows.xBase(r)
+            val e = rows.yAt(r) - rows.nAt(r) * pi(r)
             residual += e
             var j = 0
             while (j < p) {
-              clusterScore(j) += rows.x(r * p + j) * e
+              clusterScore(j) += xs(base + j) * e
               j += 1
             }
             i += 1
@@ -389,7 +459,7 @@ object LogisticFE {
   /** At clipped π: the centred Schur complement over all p features and the uncentred score Σ xᵢeᵢ;
     * the score test reads entry j of both at the fit without feature j (Phase 2b §2).
     */
-  def scoreTerms(rows: Rows, gamma: Array[Double], beta: Array[Double]): ScoreTerms = {
+  def scoreTerms(rows: RowsView, gamma: Array[Double], beta: Array[Double]): ScoreTerms = {
     val p = rows.p
     val pi = new Array[Double](rows.rows)
     val q = new Array[Double](rows.rows)
@@ -402,12 +472,14 @@ object LogisticFE {
     while (k < rows.providers) {
       provider.accumulate(rows, k, gamma(k), beta, pi, q, floored = false, unused)
       centeredInto(rows, k, provider.xbar, pi, q, s, r)
-      var row = rows.starts(k)
+      var row = rows.start(k)
       while (row < rows.end(k)) {
-        val e = rows.y(row) - rows.n(row) * pi(row)
+        val xs = rows.xs(row)
+        val base = rows.xBase(row)
+        val e = rows.yAt(row) - rows.nAt(row) * pi(row)
         var j = 0
         while (j < p) {
-          score.add(j, rows.x(row * p + j) * e)
+          score.add(j, xs(base + j) * e)
           j += 1
         }
         row += 1
@@ -476,9 +548,9 @@ object LogisticFE {
   }
 
   /** Provider k's rows by cluster: clusters by rank, rows in canonical order within (a stable sort). */
-  private def byCluster(rows: Rows, k: Int): Array[Int] = {
-    require(rows.cluster.length == rows.rows, "robust variances need every row's cluster")
-    (rows.starts(k) until rows.end(k)).toArray.sortBy(r => rows.cluster(r))
+  private def byCluster(rows: RowsView, k: Int): Array[Int] = {
+    require(rows.hasClusters, "robust variances need every row's cluster")
+    (rows.start(k) until rows.end(k)).toArray.sortBy(r => rows.clusterAt(r))
   }
 
   /** vᵀMv for M symmetric, packed row by row. */
@@ -501,7 +573,7 @@ object LogisticFE {
 
   /** Adds Σ q(x − x̄)(x − x̄)ᵀ to `s` and Σ (x − x̄)(y − nπ) to `r` over provider k's rows. */
   private def centeredInto(
-      rows: Rows,
+      rows: RowsView,
       k: Int,
       xbar: Array[Double],
       pi: Array[Double],
@@ -511,14 +583,16 @@ object LogisticFE {
   ): Unit = {
     val p = rows.p
     val d = new Array[Double](p)
-    var row = rows.starts(k)
+    var row = rows.start(k)
     while (row < rows.end(k)) {
+      val xs = rows.xs(row)
+      val base = rows.xBase(row)
       var j = 0
       while (j < p) {
-        d(j) = rows.x(row * p + j) - xbar(j)
+        d(j) = xs(base + j) - xbar(j)
         j += 1
       }
-      val residual = rows.y(row) - rows.n(row) * pi(row)
+      val residual = rows.yAt(row) - rows.nAt(row) * pi(row)
       var i = 0
       var index = 0
       while (i < p) {
@@ -548,7 +622,7 @@ object LogisticFE {
     var h: Double = 0.0
 
     def accumulate(
-        rows: Rows,
+        rows: RowsView,
         k: Int,
         gamma: Double,
         beta: Array[Double],
@@ -560,22 +634,24 @@ object LogisticFE {
       gSum.reset()
       hSum.reset()
       bSum.reset()
-      var r = rows.starts(k)
+      var r = rows.start(k)
       while (r < rows.end(k)) {
+        val xs = rows.xs(r)
+        val base = rows.xBase(r)
         val e = eta(rows, r, gamma, beta)
         val prob =
           if (floored) sigmoid(e)
           else math.min(math.max(sigmoid(e), VarianceClip), 1.0 - VarianceClip)
-        val raw = rows.n(r) * prob * (1.0 - prob)
+        val raw = rows.nAt(r) * prob * (1.0 - prob)
         val weight = if (floored) math.max(raw, WeightFloor) else raw
         pi(r) = prob
         q(r) = weight
-        gSum.add(rows.y(r) - rows.n(r) * prob)
+        gSum.add(rows.yAt(r) - rows.nAt(r) * prob)
         hSum.add(weight)
-        loglik.add(rowLoglik(rows.y(r), rows.n(r), e))
+        loglik.add(rowLoglik(rows.yAt(r), rows.nAt(r), e))
         var j = 0
         while (j < p) {
-          bSum.add(j, weight * rows.x(r * p + j))
+          bSum.add(j, weight * xs(base + j))
           j += 1
         }
         r += 1

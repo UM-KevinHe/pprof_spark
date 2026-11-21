@@ -18,8 +18,10 @@ others fill shared blocks largest first, each into the least-loaded block. The t
 ⌊4 MiB / (8·(p + 4))⌋ = 74,898 rows for p = 3, so the 1,075 rows of `lfe-base` form one block. Inside a
 block the rows are sorted by provider, row identifier, covariates, events and trials, after negative
 zeros are normalized ([LogisticBlocks.scala lines 101–171](../../../engine/src/main/scala/pprof/spark/engine/logistic/LogisticBlocks.scala#L101-L171)).
-A `LogisticBlock` carries the rows as primitive arrays and a `gamma` array that is empty in the
-persisted working set: provider effects change every step, so they travel separately.
+Since round 178 a block is stored as records of at most 256 KiB of covariates each (`LogisticChunk`,
+[step2-chunks.md §3](../../spec/performance/step2-chunks.md)); a pass reads a block's records back in order as a
+`LogisticBlock`, whose rows the kernels read through a view, with the same arithmetic as from flat arrays. Provider
+effects change every step, so they are not stored with the rows.
 
 ## 6.2 The end-to-end flow of `LogisticFE.fit`
 
@@ -37,13 +39,15 @@ persisted working set: provider effects change every step, so they travel separa
 | 10 | Flags, coefficient table, warnings, `LogisticFit` | Driver | [lines 231–309](../../../engine/src/main/scala/pprof/spark/engine/logistic/LogisticFE.scala#L231-L309) |
 | 11 | Release the working set | Driver | [line 310](../../../engine/src/main/scala/pprof/spark/engine/logistic/LogisticFE.scala#L310) |
 
-## 6.3 Shipping γ: a table joined with a broadcast hint
+## 6.3 Shipping γ: each block's effects in the pass's function
 
-Every pass needs each block's provider effects. `SparkPasses.withGamma` builds, on the driver, a
-DataFrame with one row per block holding that block's effects, and joins it to the persisted blocks
-with a broadcast hint ([lines 780–787](../../../engine/src/main/scala/pprof/spark/engine/logistic/LogisticFE.scala#L780-L787)).
-This is the project's pattern for O(m) parameters (§6.7): a broadcast-joined table rather than a
-broadcast variable, which Spark Connect does not have. Pass B returns Δγ, which the driver places into
+Every pass needs each block's provider effects. Since round 178 (OI-105) the driver splits γ by block
+(`LogisticBlocks.effects`), and each pass's function carries them, m doubles in all, so a task takes its blocks'
+effects without a join; the AUC pass did so from round 173. Spark Connect sends the function with its captured
+values, so no broadcast variable is needed. Before round 178, `SparkPasses.withGamma` joined a table of the
+effects, one row per block, to the persisted blocks with a broadcast hint (PROJECT_CONTEXT §6.7's pattern for O(m)
+parameters), which copied every cached block once more per pass. OI-122 records the size of the captured effects
+at very large m. Pass B returns Δγ, which the driver places into
 the m-vector by provider index; the driver applies the step and the bound and ships the new γ with the
 next pass. So γ lives on the driver for the whole fit, which is why `maxProvidersOnDriver` (10⁷)
 guards m; a distributed γ is OI-50.
@@ -53,10 +57,10 @@ sequenceDiagram
   participant D as Driver: Serbin.fit
   participant E as Executors: persisted blocks
   loop each Newton step
-    D->>E: gamma table (one row per block), broadcast join
+    D->>E: each block's effects, in the pass's function
     E-->>D: pass A partials per block: S packed, r, sum of g^2/h, l
     Note over D: reduce in block order, Cholesky of S, delta beta, lambda
-    D->>E: gamma table again, with beta, delta beta and eight step lengths in the closure
+    D->>E: the effects again, with beta, delta beta and eight step lengths in the closure
     E-->>D: pass B per block: delta gamma per provider, l at eight step lengths
     Note over D: assemble delta gamma (m doubles), pick v, update and bound gamma, update beta, test
   end

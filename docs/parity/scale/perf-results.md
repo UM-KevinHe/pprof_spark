@@ -412,6 +412,33 @@ tables are in plan §2.5 and round 149's evidence log.
 | Cox (3 iterations) | 31.5 | 4 evaluations, 15.7 s wall | 12.7 | 5.5 | 1.6 | 7.1 |
 | Logistic (4 iterations) | 48.9 | 4 pass A and 4 pass B, 13.5 s wall | 9.3 | 17.3 | 6.8 | 6.0 |
 
+### Round 178: logistic rows in records (step 2, round A)
+
+This is a sandbox measurement: one core, local mode, with the working set on disk, the logistic model and the simple
+design. Builds alternated, `main`'s at `b92919c` and round 178's, each fit in a fresh JVM. Records hold 182 rows at
+180 features and 1,638 at 20.
+
+| Point | Build | Fit s | Pass A, 5 or 4 runs: CPU s; GC s | Variance pass: CPU s; GC s | Passes' peak task memory |
+|---|---|---|---|---|---|
+| 200,000 rows, 180 features, 320 providers | before | 134.2, 150.7 | 34.4, 37.4; 0.99, 1.21 | 6.87, 7.44; 0.15, 0.14 | 1.0 MB |
+| | after | 142.8, 146.3 | 35.6, 38.0; 0.28, 0.29 | 7.19, 7.09; 0.04, 0.06 | none |
+| 1,000,000 rows, 20 features, 1,000 providers | before | 60.6, 55.5 | 4.57, 4.46; 0.26, 0.49 | 1.20, 1.23; 0.07, 0.06 | 1.0 MB |
+| | after | 56.5, 56.9 | 3.74, 3.89; 0.11, 0.15 | 0.99, 1.07; 0.03, 0.03 | none |
+
+- **The same results.** The log-likelihood's bits and the iteration counts match across builds at both points.
+- **Without the join.** The passes no longer join γ to the blocks.
+  - Their GC fell by about three quarters at 180 features, and by half or more at 20.
+  - Their peak task memory, the join's, fell from 1 MB to none.
+  - At 20 features, pass A's CPU fell by about 15%. At 180 features the kernel dominates, and its CPU did not change.
+- **Unchanged.** These stayed within noise:
+  - the bytes each pass reads from the cache, the whole working set: about 297 MB and 187 MB;
+  - the cache's size, 299 MB and 195 MB;
+  - the build, pass B, the AUC pass and the summaries.
+
+  Whole-fit times varied by up to 16 s between runs of the same build.
+- **Caveat.** The sandbox's blocks are 4 MB, smaller than the cluster's one-provider blocks of 9 to 18 MB at 50M and
+  100M rows. A one-core sandbox also cannot show memory pressure on 2.2 GB executor heaps. S8 on the cluster can.
+
 ### Round 173: the AUC pass before and after
 
 This is a sandbox measurement: one core, local mode, where the working set is on disk; the logistic model with the

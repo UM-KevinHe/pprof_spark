@@ -228,6 +228,55 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 178 (2026-11-21): logistic rows stored in records (step 2, round A); D-79 approved
+
+- Round 177 is on `main` as `b92919c`. The maintainer approved step 2's design note and D-79 as written on
+  2026-11-21. D-79 is marked accepted, and the note records the approval.
+- **Records** (`step2-chunks.md` §3).
+  - The logistic working set is persisted as `LogisticChunk` records of at most C = max(1, ⌊256 KiB / 8p⌋) rows
+    (`RowRecords`; 182 rows at 180 features).
+  - Every pass reads a block back through `LogisticBlocks.assemble`, which checks record order and count, as a
+    `LogisticBlock` view.
+  - The kernels read rows through `LogisticFE.RowsView`: `Rows` stores them flat, `ChunkedRows` in records. The
+    arithmetic and its order are unchanged, and `Moments.centredRows` gives the co-moments the same way.
+- **Effects in the task.** Every logistic pass takes each block's effects in the task, as the AUC pass has since round
+  173, so no pass joins γ to the cached blocks any more (OI-105 closed). The values and their order are unchanged. A
+  pass's function carries m doubles (OI-122, new).
+- **Layouts** (§4).
+  - The covariate tests, the provider tests and the standardized measures plan as their fit does: one shared
+    `layout`, with no growth.
+  - The score test's per-block terms and the exact direct standardization's per-block sums, which §4 missed (all m
+    effects per block), now fold in groups.
+  - The data check hashes rows, one value per block, instead of building block summaries with p×p co-moments.
+- **Same bits.** The 40 golden runs are unchanged. `LogisticRecordsSuite` (5 tests) shows that records of 7 rows
+  give, to the bit:
+  - every output of the fit, robust and AUC included, at two block sizes;
+  - the covariate tests, the provider tests, and the measures by both methods.
+
+  It also checks the records' shape, the adapter's refusals, and the fit's layout beyond the budget. Numerics'
+  `LogisticFESuite` shows that every kernel gives the same bits from records of 1 to 47 rows as from flat rows.
+- **Docs.** The logistic tutorials (02, 04, 06) and their probe describe records and the effects in the task. The
+  note gains "As built" (§11), and the plan marks the design approved. `InMemorySerbinPasses` takes any rows view.
+- **Measured in the sandbox** (`perf-results.md`, "Round 178"): the log-likelihood's bits match across builds at
+  200,000 rows by 180 features and at 1M by 20. Without the γ join, the passes' GC fell by about three quarters at 180
+  features and by half or more at 20, and pass A's CPU fell by about 15% at 20 features. At 180 features, pass A's CPU
+  and the fit times did not change beyond noise.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags. scalafmt is clean, and `check-engine-api.sh` passes with its
+  self-test.
+- Every suite passes:
+  - numerics, 105 tests;
+  - engine, 61 suites and 555 tests, among them the unchanged golden runs and `LogisticRecordsSuite`;
+  - app 38, bench 30 and testkit 28;
+  - the Python tests on PySpark 4.1.0, 47.
+- On Spark 4.0.0's jars, `GoldenRunsSuite` and `LogisticRecordsSuite` pass, 8 tests. The tutorial probe compiles.
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21, and
+  the Python tests on PySpark 4.0.0.
+
+**Next: round B**, Cox's records with the Breslow buffer (OI-104), then round C's fixed-point pins (D-79). OI-122 is
+open. Still awaited: the CI runs of rounds 176 to 178, and S8 on round 173's build or later.
+
 ## Round 177 (2026-11-21): D-78 recorded; step 2's design note
 
 - Round 176 is on `main` as `5db844e`. The maintainer reported CI green through round 175; round 176's run is not

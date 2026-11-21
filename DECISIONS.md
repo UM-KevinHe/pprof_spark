@@ -103,9 +103,9 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-79: How D-78 applies to the golden runs (Proposed, round 177)
+### D-79: How D-78 applies to the golden runs (Accepted: approved by the maintainer, 2026-11-21)
 
-Proposed with step 2's design note (`docs/spec/performance/step2-chunks.md` §6), for the maintainer's approval. D-78
+Proposed with step 2's design note (`docs/spec/performance/step2-chunks.md` §6). D-78
 names log-likelihoods, scores and information at fixed β, converged estimates and covariances, and counts and flags.
 The golden runs record nothing at a fixed β, and they record quantities D-78 does not name. Proposed:
 - **Values at fixed points.** Before the first change of summation order, a bit-preserving round adds to each golden
@@ -126,6 +126,9 @@ The golden runs record nothing at a fixed β, and they record quantities D-78 do
   - `at_bound` is a flag, and must be identical.
   - The AUC is a ratio of integer counts from an exact sort. It must be identical, or any difference is explained in
     the evidence log and approved, as for iteration counts.
+
+Approved as proposed on 2026-11-21, with step 2's design note. It applies from step 2's round C, which pins the fixed
+points.
 
 ### D-78: The re-baselining rule for changes of summation order, from step 2 onward (Accepted: approved by the maintainer, 2026-11-21)
 

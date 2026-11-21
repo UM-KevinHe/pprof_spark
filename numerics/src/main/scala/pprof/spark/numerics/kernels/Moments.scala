@@ -71,13 +71,22 @@ object Moments {
     */
   def centred(values: Array[Double], p: Int, from: Int, until: Int): Centred = {
     checkRows(values, p, from, until)
-    val n = until - from
+    centredRows(until - from, p, _ => values, r => (from + r) * p)
+  }
+
+  /** [[Centred]] of `count` rows whose row r holds its `p` values in `values(r)` from `offset(r)` on: the same sums
+    * in the same order as the flat form, for rows stored in records (docs/spec/performance/step2-chunks.md §3).
+    */
+  def centredRows(count: Int, p: Int, values: Int => Array[Double], offset: Int => Int): Centred = {
+    val n = count
     val sums = new NeumaierVector(p)
-    var r = from
-    while (r < until) {
+    var r = 0
+    while (r < n) {
+      val xs = values(r)
+      val base = offset(r)
       var j = 0
       while (j < p) {
-        sums.addAt(j, values(r * p + j))
+        sums.addAt(j, xs(base + j))
         j += 1
       }
       r += 1
@@ -85,11 +94,13 @@ object Moments {
     val mean = if (n == 0) new Array[Double](p) else sums.values.map(_ / n)
     val m2 = new NeumaierVector(packedLength(p))
     val d = new Array[Double](p)
-    r = from
-    while (r < until) {
+    r = 0
+    while (r < n) {
+      val xs = values(r)
+      val base = offset(r)
       var j = 0
       while (j < p) {
-        d(j) = values(r * p + j) - mean(j)
+        d(j) = xs(base + j) - mean(j)
         j += 1
       }
       var i = 0

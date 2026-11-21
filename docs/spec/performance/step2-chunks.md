@@ -1,8 +1,8 @@
 # Performance step 2: chunked rows and chunked compensated sums
 
-Status: design for plan step 2 (D-75, as amended by D-76), round 177, **for the maintainer's review**. Nothing in it
-is implemented. Changes of summation order follow D-78 (plan §6.3). How D-78 applies to the golden runs is proposed
-as D-79.
+Status: design for plan step 2 (D-75, as amended by D-76), round 177. **Approved by the maintainer as written on
+2026-11-21**, with D-79, which says how D-78 (plan §6.3) applies to the golden runs. Round A is built in round 178
+(§11).
 
 ## 1. Why
 
@@ -244,3 +244,21 @@ The specifications state today's sums. Round D amends them with its evidence:
 3. **Cox in step 2.** It is an interim before step 3, with its own re-baselining. It is included because step 3
    needs a specification and fixtures first (plan §4).
 4. **D-79.** How D-78 applies to the golden runs (§6).
+
+## 11. As built
+
+**Round A, round 178.**
+- **Records.** `LogisticChunk` is the persisted record; `LogisticBlock` is the view a pass reads, through
+  `LogisticBlocks.assemble`, which checks record order and count. `RowRecords.default(p)` gives C, and tests can set it
+  lower. The kernels read rows through `LogisticFE.RowsView`: `Rows` stores them flat, `ChunkedRows` in records.
+- **Effects in the task.** Every logistic pass now takes each block's effects in the task, as the AUC pass has since
+  round 173 (OI-105). The γ join copied every cached block once more per pass, and it could not attach effects to
+  records without repeating them in each. The values and their order are unchanged. A pass's function carries m
+  doubles; OI-122 records the size at very large m.
+- **Fingerprints.** The tests and measures check the data's fingerprint by hashing rows, one value per block. Before,
+  they built whole block summaries, with p×p co-moments per block.
+- **Exact direct sums.** The exact direct standardization collects all m effects' sums per block, B × m values, so
+  §4 should have listed it. Those sums now fold in groups too, and its driver guard counts R instead of B.
+- **Evidence.** The golden runs are unchanged. Records of 7 rows give the fit, the covariate tests, the provider tests
+  and the measures to the bit (`LogisticRecordsSuite`), and so does every kernel for records of any size (numerics
+  `LogisticFESuite`).
