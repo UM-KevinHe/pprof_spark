@@ -247,7 +247,7 @@ object CoxPH {
           "the data differ from the data the model was fitted to (fingerprint mismatch, API-3)"
         )
       CoxReference.point(
-        prepared.workingSet.blocks,
+        prepared.workingSet.records,
         fit.spec.features.size,
         fit.spec.entry.isDefined,
         prepared.workingSet.groups
@@ -271,16 +271,16 @@ object CoxPH {
         )
       val beta = fit.estimates.toArray
       val efron = fit.options.ties == Ties.Efron
-      val raw = prepared.workingSet.blocks
-        .flatMap((block: CoxBlock) => CoxKernel.baseline(block, beta, efron))(
-          Encoders.product[CoxBaselineRow]
-        )
+      val raw = prepared.workingSet.records
+        .mapPartitions((records: Iterator[CoxChunk]) =>
+          CoxBlocks.assemble(records).flatMap(block => CoxKernel.baseline(block, beta, efron))
+        )(Encoders.product[CoxBaselineRow])
       val rows =
         if (reference == BaselineReference.Raw) raw
         else {
           val factor = CoxReference
             .point(
-              prepared.workingSet.blocks,
+              prepared.workingSet.records,
               fit.spec.features.size,
               fit.spec.entry.isDefined,
               prepared.workingSet.groups
@@ -334,8 +334,10 @@ object CoxPH {
       val center = prepared.center.clone()
       val efron = fit.options.ties == Ties.Efron
       val covariance = fit.modelCovariance.toArray
-      val rows = prepared.workingSet.blocks.flatMap((block: CoxBlock) =>
-        CoxKernel.residuals(block, beta, center, efron, covariance)
+      val rows = prepared.workingSet.records.mapPartitions((records: Iterator[CoxChunk]) =>
+        CoxBlocks
+          .assemble(records)
+          .flatMap(block => CoxKernel.residuals(block, beta, center, efron, covariance))
       )(Encoders.product[CoxResidualRow])
       val features = fit.spec.features
       val values = Seq(col("martingale")) ++
@@ -397,11 +399,13 @@ object CoxPH {
       ReductionGroups.plan(plan.blockCount, 8L * (2L + p + Moments.packedLength(p)), options.blocks)
     val workingSet = CoxWorkingSet.build(input, plan, groups, options.blocks)
     try {
-      val summaries = workingSet.blocks
-        .mapPartitions((blocks: Iterator[CoxBlock]) =>
-          GroupFold(blocks, (block: CoxBlock) => block.blockId, groups)(new SummarySum(p))(
-            (sum, block) => sum.add(CoxKernel.summary(block))
-          ).map { case (group, sum) => sum.summary(group) }
+      val summaries = workingSet.records
+        .mapPartitions((records: Iterator[CoxChunk]) =>
+          GroupFold(CoxBlocks.assemble(records), (block: CoxBlock) => block.blockId, groups)(
+            new SummarySum(p)
+          )((sum, block) => sum.add(CoxKernel.summary(block))).map { case (group, sum) =>
+            sum.summary(group)
+          }
         )(Encoders.product[CoxBlockSummary])
         .collectAs("cox.summarize")
         .sortBy(_.blockId)
@@ -446,9 +450,9 @@ object CoxPH {
     val groups = prepared.workingSet.groups
     val partials =
       if (!clustered)
-        prepared.workingSet.blocks
-          .mapPartitions((blocks: Iterator[CoxBlock]) =>
-            GroupFold(blocks, (block: CoxBlock) => block.blockId, groups)(
+        prepared.workingSet.records
+          .mapPartitions((records: Iterator[CoxChunk]) =>
+            GroupFold(CoxBlocks.assemble(records), (block: CoxBlock) => block.blockId, groups)(
               new RobustSum(p)
             )((sum, block) => sum.add(CoxKernel.robustPerRow(block, b, c, efron))).map {
               case (group, sum) => sum.partial(group)
@@ -456,10 +460,12 @@ object CoxPH {
           )(Encoders.product[CoxRobustPartial])
           .collectAs("cox.robust")
       else
-        prepared.workingSet.blocks
-          .flatMap((block: CoxBlock) => CoxKernel.weightedScores(block, b, c, efron))(
-            Encoders.product[CoxScoreRow]
-          )
+        prepared.workingSet.records
+          .mapPartitions((records: Iterator[CoxChunk]) =>
+            CoxBlocks
+              .assemble(records)
+              .flatMap(block => CoxKernel.weightedScores(block, b, c, efron))
+          )(Encoders.product[CoxScoreRow])
           .groupByKey((row: CoxScoreRow) => row.cluster)(Encoders.STRING)
           .mapGroups((key: String, rows: Iterator[CoxScoreRow]) =>
             CoxKernel.clusterSum(key, rows, p)
@@ -517,9 +523,9 @@ object CoxPH {
     val c = prepared.center.clone()
     val efron = ties == Ties.Efron
     val groups = prepared.workingSet.groups
-    val partials = prepared.workingSet.blocks
-      .mapPartitions((blocks: Iterator[CoxBlock]) =>
-        GroupFold(blocks, (block: CoxBlock) => block.blockId, groups)(
+    val partials = prepared.workingSet.records
+      .mapPartitions((records: Iterator[CoxChunk]) =>
+        GroupFold(CoxBlocks.assemble(records), (block: CoxBlock) => block.blockId, groups)(
           new EvaluationSum(p)
         )((sum, block) => sum.add(CoxKernel.partial(block, b, c, efron))).map { case (group, sum) =>
           sum.partial(group)

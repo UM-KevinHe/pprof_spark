@@ -1,5 +1,11 @@
 # 4. From mathematics to code
 
+> **Note (round 180).** This chapter describes the working set as built before performance step 1 (round 160)
+> and step 2 (round 180). The working set is now built with one shuffle into reduction groups
+> ([step1-reduction.md](../../spec/performance/step1-reduction.md)), stored in records of at most 256 KiB of
+> covariates and read back as `CoxBlock` views ([step2-chunks.md §3](../../spec/performance/step2-chunks.md)); passes
+> fold block partials in groups. OI-124 records the refresh.
+
 [Tutorial home](README.md) · previous: [3. Estimation and inference](03-estimation-and-inference.md) ·
 next: [5. Distributed execution](05-distributed-execution.md)
 

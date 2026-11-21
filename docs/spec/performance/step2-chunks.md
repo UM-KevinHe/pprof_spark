@@ -262,3 +262,17 @@ The specifications state today's sums. Round D amends them with its evidence:
 - **Evidence.** The golden runs are unchanged. Records of 7 rows give the fit, the covariate tests, the provider tests
   and the measures to the bit (`LogisticRecordsSuite`), and so does every kernel for records of any size (numerics
   `LogisticFESuite`).
+
+**Round B, round 180.**
+- **Records.** `CoxChunk` is the persisted record and `CoxBlock` the view a pass reads, through `CoxBlocks.assemble`,
+  which checks record order and count. Each record carries its rows' positions of each stratum's entry order.
+- **The kernels.** `CoxStratum`, `CoxResiduals` and `CoxMeasures` read rows through `CoxRowsView`: `CoxRows` stores
+  them flat and `ChunkedCoxRows` in records. Their flat-array signatures remain as wrappers. `Moments.columnSumsRows`
+  gives the column sums the same way.
+- **§5.3's two pieces.** Breslow fits no longer zero the Efron buffers at each distinct time (OI-104). The Breslow
+  term's means are computed once per time.
+- **Evidence.** The golden runs are unchanged. Records of 7 rows give, to the bit (`CoxRecordsSuite`):
+  - the fit, under both tie methods at two block sizes;
+  - the baseline, residuals, reference point, both standardizations and the provider tests.
+
+  So does every Cox kernel for records of any size (numerics `CoxRowsSuite`).

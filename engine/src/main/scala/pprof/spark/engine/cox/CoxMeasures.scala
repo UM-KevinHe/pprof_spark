@@ -48,16 +48,18 @@ object CoxMeasures {
           "the data differ from the data the model was fitted to (fingerprint mismatch, API-3)"
         )
       val beta = fit.estimates.toArray
-      val blocks = prepared.workingSet.blocks
-      val maxEta = blocks
-        .map((block: CoxBlock) => CoxKernel.maxEta(block, beta))(Encoders.scalaDouble)
+      val records = prepared.workingSet.records
+      val maxEta = records
+        .mapPartitions((chunks: Iterator[CoxChunk]) =>
+          CoxBlocks.assemble(chunks).map(block => CoxKernel.maxEta(block, beta))
+        )(Encoders.scalaDouble)
         .collectAs("cox.measures")
         .max
       val limit = fit.options.blocks.maxGroupsOnDriver
-      val totals = blocks
-        .flatMap((block: CoxBlock) => CoxKernel.timeTotals(block, beta, maxEta))(
-          Encoders.product[CoxTimeTotal]
-        )
+      val totals = records
+        .mapPartitions((chunks: Iterator[CoxChunk]) =>
+          CoxBlocks.assemble(chunks).flatMap(block => CoxKernel.timeTotals(block, beta, maxEta))
+        )(Encoders.product[CoxTimeTotal])
         .groupByKey((t: CoxTimeTotal) => t.time)(Encoders.scalaDouble)
         .mapGroups((time: Double, parts: Iterator[CoxTimeTotal]) =>
           CoxKernel.combineTimeTotals(time, parts)
@@ -77,8 +79,12 @@ object CoxMeasures {
         totals.map(_.entrySum),
         totals.map(_.events)
       )
-      val rows = blocks.flatMap((block: CoxBlock) =>
-        CoxKernel.providerMeasures(block, beta, maxEta, eventTimes, cumulative, riskSets)
+      val rows = records.mapPartitions((chunks: Iterator[CoxChunk]) =>
+        CoxBlocks
+          .assemble(chunks)
+          .flatMap(block =>
+            CoxKernel.providerMeasures(block, beta, maxEta, eventTimes, cumulative, riskSets)
+          )
       )(Encoders.product[CoxProviderRow])
       val keys = PlanFrames
         .placements(df.sparkSession, prepared.plan, prepared.strataKeyIsText)

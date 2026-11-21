@@ -23,6 +23,22 @@ object CoxMeasures {
       until: Int,
       beta: Array[Double],
       maxEta: Double
+  ): (Array[Double], Array[Double], Array[Double], Array[Long]) =
+    timeTotals(
+      CoxRows(time, entry, Array.emptyIntArray, event, Array.emptyDoubleArray, offset, x, p),
+      from,
+      until,
+      beta,
+      maxEta
+    )
+
+  /** As above, with the rows read through a view (docs/spec/performance/step2-chunks.md §3). */
+  def timeTotals(
+      rows: CoxRowsView,
+      from: Int,
+      until: Int,
+      beta: Array[Double],
+      maxEta: Double
   ): (Array[Double], Array[Double], Array[Double], Array[Long]) = {
     val totals =
       scala.collection.mutable.TreeMap.empty[Double, (NeumaierSum, NeumaierSum, Array[Long])]
@@ -30,11 +46,11 @@ object CoxMeasures {
       totals.getOrElseUpdate(t + 0.0, (new NeumaierSum, new NeumaierSum, Array(0L)))
     var r = from
     while (r < until) {
-      val w = StrictMath.exp(eta(x, p, r, beta, offset) - maxEta)
-      val exit = slot(time(r))
+      val w = StrictMath.exp(eta(rows, r, beta) - maxEta)
+      val exit = slot(rows.timeAt(r))
       exit._1.add(w)
-      if (event(r)) exit._3(0) += 1
-      slot(entry(r))._2.add(w)
+      if (rows.eventAt(r)) exit._3(0) += 1
+      slot(rows.entryAt(r))._2.add(w)
       r += 1
     }
     val keys = totals.keysIterator.toArray
@@ -106,6 +122,28 @@ object CoxMeasures {
       eventTimes: Array[Double],
       cumulative: Array[Double],
       riskSets: Array[Double]
+  ): (Long, Double, Double, Double) =
+    provider(
+      CoxRows(time, entry, entryOrder, event, Array.emptyDoubleArray, offset, x, p),
+      from,
+      until,
+      beta,
+      maxEta,
+      eventTimes,
+      cumulative,
+      riskSets
+    )
+
+  /** As above, with the rows read through a view (docs/spec/performance/step2-chunks.md §3). */
+  def provider(
+      rows: CoxRowsView,
+      from: Int,
+      until: Int,
+      beta: Array[Double],
+      maxEta: Double,
+      eventTimes: Array[Double],
+      cumulative: Array[Double],
+      riskSets: Array[Double]
   ): (Long, Double, Double, Double) = {
     def at(v: Double): Int = {
       var lo = 0
@@ -119,18 +157,18 @@ object CoxMeasures {
       found
     }
     val w =
-      Array.tabulate(until - from)(i => StrictMath.exp(eta(x, p, from + i, beta, offset) - maxEta))
+      Array.tabulate(until - from)(i => StrictMath.exp(eta(rows, from + i, beta) - maxEta))
     val expected = new NeumaierSum
     val personTime = new NeumaierSum
     var observed = 0L
     var r = from
     while (r < until) {
-      val ke = at(time(r))
-      val ks = at(entry(r))
+      val ke = at(rows.timeAt(r))
+      val ks = at(rows.entryAt(r))
       val lambda = (if (ke >= 0) cumulative(ke) else 0.0) - (if (ks >= 0) cumulative(ks) else 0.0)
       expected.add(w(r - from) * lambda)
-      personTime.add(time(r) - entry(r))
-      if (event(r)) observed += 1
+      personTime.add(rows.timeAt(r) - rows.entryAt(r))
+      if (rows.eventAt(r)) observed += 1
       r += 1
     }
     val own = new NeumaierSum
@@ -138,15 +176,15 @@ object CoxMeasures {
     var removal = from
     r = from
     while (r < until) {
-      val t = time(r)
+      val t = rows.timeAt(r)
       var d = 0L
-      while (r < until && time(r) == t) {
+      while (r < until && rows.timeAt(r) == t) {
         own.add(w(r - from))
-        if (event(r)) d += 1
+        if (rows.eventAt(r)) d += 1
         r += 1
       }
-      while (removal < until && entry(entryOrder(removal)) >= t) {
-        own.add(-w(entryOrder(removal) - from))
+      while (removal < until && rows.entryAt(rows.entryOrderAt(removal)) >= t) {
+        own.add(-w(rows.entryOrderAt(removal) - from))
         removal += 1
       }
       if (d > 0) {
@@ -166,6 +204,19 @@ object CoxMeasures {
       j += 1
     }
     s + offset(r)
+  }
+
+  /** As above, with row r read through a view (step2-chunks.md §3). */
+  def eta(rows: CoxRowsView, r: Int, beta: Array[Double]): Double = {
+    val xs = rows.xs(r)
+    val base = rows.xBase(r)
+    var s = 0.0
+    var j = 0
+    while (j < rows.p) {
+      s += xs(base + j) * beta(j)
+      j += 1
+    }
+    s + rows.offsetAt(r)
   }
 
 }

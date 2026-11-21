@@ -38,6 +38,30 @@ object Moments {
     sums
   }
 
+  /** [[columnSums]] of `count` rows whose row r holds its `p` values in `values(r)` from `offset(r)` on: the same
+    * columns, summed the same way, for rows stored in records (docs/spec/performance/step2-chunks.md §3).
+    */
+  def columnSumsRows(
+      count: Int,
+      p: Int,
+      values: Int => Array[Double],
+      offset: Int => Int
+  ): Array[Double] = {
+    val column = new Array[Double](count)
+    val sums = new Array[Double](p)
+    var j = 0
+    while (j < p) {
+      var r = 0
+      while (r < count) {
+        column(r) = values(r)(offset(r) + j)
+        r += 1
+      }
+      sums(j) = Summation.pairwise(column, 0, column.length)
+      j += 1
+    }
+    sums
+  }
+
   /** Packed sums of `x_i * x_j`, `i <= j`, over rows `from` to `until - 1`. */
   def crossProducts(values: Array[Double], p: Int, from: Int, until: Int): Array[Double] = {
     checkRows(values, p, from, until)

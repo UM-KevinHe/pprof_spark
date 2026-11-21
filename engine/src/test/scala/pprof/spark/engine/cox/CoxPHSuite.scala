@@ -394,12 +394,12 @@ class CoxPHSuite extends SparkSuite {
       CoxRow(0, 1, 5L, 2.0, event = true, 0.5, 0.25, Array(2.0)),
       CoxRow(0, 1, 4L, 3.0, event = false, 2.0, 0.0, Array(0.5))
     )
-    val block = CoxBlockBuilder.build(0, rows.iterator, 1)
+    val block = CoxBlocks.assemble(CoxBlockBuilder.build(0, rows.iterator, 1, 3)).next()
     assertEquals(block.groupIndex.toSeq, Seq(0, 1))
     assertEquals(block.groupStart.toSeq, Seq(0, 1))
-    assertEquals(block.rowId.toSeq, Seq(3L, 4L, 5L, 7L))
-    assertEquals(block.weight.toSeq, Seq(1.0, 2.0, 0.5, 1.0))
-    assertEquals(java.lang.Double.doubleToLongBits(block.x(0)), 0L)
+    assertEquals((0 until block.rowCount).map(block.rowId), Seq(3L, 4L, 5L, 7L))
+    assertEquals((0 until block.rowCount).map(block.weight), Seq(1.0, 2.0, 0.5, 1.0))
+    assertEquals(java.lang.Double.doubleToLongBits(block.rows.xs(0)(block.rows.xBase(0))), 0L)
     assertEquals(java.lang.Double.doubleToLongBits(block.offset(0)), 0L)
   }
 

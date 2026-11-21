@@ -45,3 +45,6 @@ non-behavioral (NUM-2), it must stay identical in every digit.
 Commit `9385836` (round 69), whose Cox sources are identical at `efb6329` (round 75); scalac 2.13.17 from PySpark 4.1.0's jars; OpenJDK 21.0.10; Spark 4.1.0 in local
 mode (`local[4]`, 4 shuffle partitions, ANSI on, adaptive query execution on). This is sandbox
 evidence, not CI evidence (NN-8).
+
+Since round 180 the probes build blocks from records (`CoxBlocks.assemble` over `CoxBlockBuilder.build`) and read
+rows through the block's view; their printed outputs elsewhere in these chapters predate that (OI-124).

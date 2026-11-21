@@ -99,7 +99,7 @@ object CoxKernel {
         values(5) =
           if (block.cluster(r) == null) 0.0
           else scala.util.hashing.MurmurHash3.stringHash(block.cluster(r)).toDouble
-        System.arraycopy(block.x, r * p, values, 6, p)
+        System.arraycopy(block.rows.xs(r), block.rows.xBase(r), values, 6, p)
         fingerprint += Fingerprint.row(block.groupIndex(g), block.rowId(r), values, 0, p + 6)
         r += 1
       }
@@ -111,7 +111,7 @@ object CoxKernel {
       block.rowCount.toLong,
       events,
       withoutEvents,
-      Moments.columnSums(block.x, p, 0, block.rowCount),
+      Moments.columnSumsRows(block.rowCount, p, block.rows.xs, block.rows.xBase),
       fingerprint
     )
   }
@@ -127,14 +127,7 @@ object CoxKernel {
     var g = 0
     while (g < block.groupCount) {
       CoxStratum.add(
-        block.time,
-        block.entry,
-        block.entryOrder,
-        block.event,
-        block.weight,
-        block.offset,
-        block.x,
-        block.p,
+        block.rows,
         block.groupStart(g),
         block.groupEnd(g),
         beta,
@@ -155,14 +148,7 @@ object CoxKernel {
     var g = 0
     while (g < block.groupCount) {
       val (times, increments) = CoxStratum.baseline(
-        block.time,
-        block.entry,
-        block.entryOrder,
-        block.event,
-        block.weight,
-        block.offset,
-        block.x,
-        block.p,
+        block.rows,
         block.groupStart(g),
         block.groupEnd(g),
         beta,
@@ -204,14 +190,7 @@ object CoxKernel {
       val from = block.groupStart(g)
       val until = block.groupEnd(g)
       val (martingale, score) = CoxResiduals.stratum(
-        block.time,
-        block.entry,
-        block.entryOrder,
-        block.event,
-        block.weight,
-        block.offset,
-        block.x,
-        p,
+        block.rows,
         from,
         until,
         beta,
@@ -250,14 +229,7 @@ object CoxKernel {
   ) =
     (0 until block.groupCount).map { g =>
       val (_, score) = CoxResiduals.stratum(
-        block.time,
-        block.entry,
-        block.entryOrder,
-        block.event,
-        block.weight,
-        block.offset,
-        block.x,
-        block.p,
+        block.rows,
         block.groupStart(g),
         block.groupEnd(g),
         beta,
@@ -352,7 +324,7 @@ object CoxKernel {
     var m = Double.NegativeInfinity
     var r = 0
     while (r < block.rowCount) {
-      m = math.max(m, MeasureKernels.eta(block.x, block.p, r, beta, block.offset))
+      m = math.max(m, MeasureKernels.eta(block.rows, r, beta))
       r += 1
     }
     m
@@ -361,12 +333,7 @@ object CoxKernel {
   /** The block's per-time totals for the national baseline (Phase 1d §4). */
   def timeTotals(block: CoxBlock, beta: Array[Double], maxEta: Double): Seq[CoxTimeTotal] = {
     val (times, exits, entries, events) = MeasureKernels.timeTotals(
-      block.time,
-      block.entry,
-      block.event,
-      block.offset,
-      block.x,
-      block.p,
+      block.rows,
       0,
       block.rowCount,
       beta,
@@ -400,13 +367,7 @@ object CoxKernel {
   ): Seq[CoxProviderRow] =
     (0 until block.groupCount).map { g =>
       val (observed, expected, personTime, direct) = MeasureKernels.provider(
-        block.time,
-        block.entry,
-        block.entryOrder,
-        block.event,
-        block.offset,
-        block.x,
-        block.p,
+        block.rows,
         block.groupStart(g),
         block.groupEnd(g),
         beta,

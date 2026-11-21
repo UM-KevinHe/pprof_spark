@@ -30,18 +30,38 @@ object CoxResiduals {
       beta: Array[Double],
       center: Array[Double],
       efron: Boolean
+  ): (Array[Double], Array[Double]) = stratum(
+    CoxRows(time, entry, entryOrder, event, weight, offset, x, p),
+    from,
+    until,
+    beta,
+    center,
+    efron
+  )
+
+  /** As above, with the rows read through a view (docs/spec/performance/step2-chunks.md §3). */
+  def stratum(
+      rows: CoxRowsView,
+      from: Int,
+      until: Int,
+      beta: Array[Double],
+      center: Array[Double],
+      efron: Boolean
   ): (Array[Double], Array[Double]) = {
+    val p = rows.p
     val n = until - from
     val risk = new Array[Double](n)
     var r = from
     while (r < until) {
+      val xs = rows.xs(r)
+      val base = rows.xBase(r)
       var j = 0
       var linear = 0.0
       while (j < p) {
-        linear += (x(r * p + j) - center(j)) * beta(j)
+        linear += (xs(base + j) - center(j)) * beta(j)
         j += 1
       }
-      risk(r - from) = StrictMath.exp(linear + offset(r))
+      risk(r - from) = StrictMath.exp(linear + rows.offsetAt(r))
       r += 1
     }
     val s0 = new NeumaierSum
@@ -57,42 +77,46 @@ object CoxResiduals {
     var removal = from
     r = from
     while (r < until) {
-      val t = time(r)
+      val t = rows.timeAt(r)
       var d = 0
       var dw = 0.0
       var d0 = 0.0
       java.util.Arrays.fill(d1, 0.0)
-      while (r < until && time(r) == t) {
-        val w = weight(r)
+      while (r < until && rows.timeAt(r) == t) {
+        val w = rows.weightAt(r)
         if (w > 0.0) {
+          val xs = rows.xs(r)
+          val base = rows.xBase(r)
           val rw = w * risk(r - from)
           s0.add(rw)
           var j = 0
           while (j < p) {
-            s1.addAt(j, rw * (x(r * p + j) - center(j)))
+            s1.addAt(j, rw * (xs(base + j) - center(j)))
             j += 1
           }
-          if (event(r)) {
+          if (rows.eventAt(r)) {
             d += 1
             dw += w
             d0 += rw
             j = 0
             while (j < p) {
-              d1(j) += rw * (x(r * p + j) - center(j))
+              d1(j) += rw * (xs(base + j) - center(j))
               j += 1
             }
           }
         }
         r += 1
       }
-      while (removal < until && entry(entryOrder(removal)) >= t) {
-        val i = entryOrder(removal)
-        if (weight(i) > 0.0) {
-          val rw = weight(i) * risk(i - from)
+      while (removal < until && rows.entryAt(rows.entryOrderAt(removal)) >= t) {
+        val i = rows.entryOrderAt(removal)
+        if (rows.weightAt(i) > 0.0) {
+          val rw = rows.weightAt(i) * risk(i - from)
           s0.add(-rw)
+          val xs = rows.xs(i)
+          val base = rows.xBase(i)
           var j = 0
           while (j < p) {
-            s1.addAt(j, -(rw * (x(i * p + j) - center(j))))
+            s1.addAt(j, -(rw * (xs(base + j) - center(j))))
             j += 1
           }
         }
@@ -187,17 +211,19 @@ object CoxResiduals {
     r = from
     while (r < until) {
       val i = r - from
-      val kb = lastAtOrBefore(time(r))
-      val ka = lastAtOrBefore(entry(r))
+      val kb = lastAtOrBefore(rows.timeAt(r))
+      val ka = lastAtOrBefore(rows.entryAt(r))
       val lambda = (if (kb >= 0) hTotal(kb) else 0.0) - (if (ka >= 0) hTotal(ka) else 0.0)
-      val dies = event(r) && weight(r) > 0.0
+      val dies = rows.eventAt(r) && rows.weightAt(r) > 0.0
       val corrected = dies && efron && ds(kb) >= 2
       val rr = risk(i)
       martingale(i) =
         (if (dies) 1.0 else 0.0) - rr * lambda + (if (corrected) rr * (hs(kb) - c0s(kb)) else 0.0)
+      val xs = rows.xs(r)
+      val base = rows.xBase(r)
       var j = 0
       while (j < p) {
-        val xc = x(r * p + j) - center(j)
+        val xc = xs(base + j) - center(j)
         val gamma =
           (if (kb >= 0) gTotal(kb * p + j) else 0.0) - (if (ka >= 0) gTotal(ka * p + j) else 0.0)
         var u = -rr * (xc * lambda - gamma)

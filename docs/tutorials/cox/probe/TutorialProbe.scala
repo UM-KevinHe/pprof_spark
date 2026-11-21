@@ -17,7 +17,7 @@ import org.apache.spark.scheduler.{
 import org.apache.spark.sql.{DataFrame, Encoders, Row, SparkSession}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, StructField, StructType}
 
-import pprof.spark.engine.backend.BlockOptions
+import pprof.spark.engine.backend.{BlockOptions, RowRecords}
 import pprof.spark.numerics.{Cholesky, Evaluation, Newton, NewtonOptions, NewtonResult, Normal}
 import pprof.spark.numerics.kernels.{CoxStratum, CoxTotals, Moments}
 
@@ -94,18 +94,18 @@ object TutorialProbe {
     val rows = tinyRows.map { case (i, _, t, e, x) =>
       CoxRow(0, 0, i, t, e == 1, 1.0, 0.0, Array(x))
     }
-    val block = CoxBlockBuilder.build(0, rows.iterator, 1)
+    val block = CoxBlocks.assemble(CoxBlockBuilder.build(0, rows.iterator, 1, RowRecords.default(1))).next()
     println(
-      "canonical order (id:time:event:x) = " + block.rowId.indices
+      "canonical order (id:time:event:x) = " + (0 until block.rowCount)
         .map(r =>
-          s"${block.rowId(r)}:${block.time(r)}:${if (block.event(r)) 1 else 0}:${block.x(r)}"
+          s"${block.rowId(r)}:${block.time(r)}:${if (block.event(r)) 1 else 0}:${block.rows.xs(r)(block.rows.xBase(r))}"
         )
         .mkString("  ")
     )
     println(
-      s"entryOrder = ${block.entryOrder.mkString(",")}  groupStart = ${block.groupStart.mkString(",")}"
+      s"entryOrder = ${(0 until block.rowCount).map(block.rows.entryOrderAt).mkString(",")}  groupStart = ${block.groupStart.mkString(",")}"
     )
-    val center = Array(Moments.columnSums(block.x, 1, 0, block.rowCount)(0) / block.rowCount)
+    val center = Array(Moments.columnSumsRows(block.rowCount, 1, block.rows.xs, block.rows.xBase)(0) / block.rowCount)
     println(s"center (column mean) = ${center(0)}")
     for (ties <- Seq("breslow", "efron")) {
       val efron = ties == "efron"
@@ -319,24 +319,19 @@ object TutorialProbe {
         println(
           s"center ${g(prepared.center(0))}; rows ${prepared.rows}; events ${prepared.events}; fingerprint ${prepared.fingerprint}"
         )
-        val blocks = prepared.workingSet.blocks.collect().sortBy(_.blockId)
+        val blocks = CoxBlocks
+          .assemble(prepared.workingSet.records.collect().sortBy(c => (c.blockId, c.record)).iterator)
+          .toVector
         val beta = fitTwo.estimates.toArray
         val c = prepared.center.clone()
         blocks.foreach { b =>
           println(
-            s"  block ${b.blockId}: groups ${b.groupIndex.mkString(",")} starts ${b.groupStart.mkString(",")} rowIds ${b.rowId.mkString(",")}"
+            s"  block ${b.blockId}: groups ${b.groupIndex.mkString(",")} starts ${b.groupStart.mkString(",")} rowIds ${(0 until b.rowCount).map(b.rowId).mkString(",")}"
           )
           (0 until b.groupCount).foreach { k =>
             val t = new CoxTotals(1)
             CoxStratum.add(
-              b.time,
-              b.entry,
-              b.entryOrder,
-              b.event,
-              b.weight,
-              b.offset,
-              b.x,
-              1,
+              b.rows,
               b.groupStart(k),
               b.groupEnd(k),
               beta,
@@ -358,11 +353,13 @@ object TutorialProbe {
           f"  driver reduction in block order: loglik ${g(evaluation.value)}  U ${g(evaluation.gradient(0))}  I ${g(evaluation.information(0))}"
         )
         val cached =
-          prepared.workingSet.blocks.asInstanceOf[org.apache.spark.sql.classic.Dataset[CoxBlock]]
+          prepared.workingSet.records.asInstanceOf[org.apache.spark.sql.classic.Dataset[CoxChunk]]
         println("-- physical plan of the persisted working set (built once, one shuffle):")
         println(shortPlan(cached.queryExecution.executedPlan.toString))
-        val evalDs = prepared.workingSet.blocks
-          .map((b: CoxBlock) => CoxKernel.partial(b, beta, c, false))(Encoders.product[CoxPartial])
+        val evalDs = prepared.workingSet.records
+          .mapPartitions((rs: Iterator[CoxChunk]) =>
+            CoxBlocks.assemble(rs).map(b => CoxKernel.partial(b, beta, c, false))
+          )(Encoders.product[CoxPartial])
           .asInstanceOf[org.apache.spark.sql.classic.Dataset[CoxPartial]]
         println("-- physical plan of one evaluation pass (per Newton step):")
         println(shortPlan(evalDs.queryExecution.executedPlan.toString))

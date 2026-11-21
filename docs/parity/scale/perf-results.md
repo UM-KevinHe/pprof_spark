@@ -457,6 +457,27 @@ tables are in plan §2.5 and round 149's evidence log.
 | Cox (3 iterations) | 31.5 | 4 evaluations, 15.7 s wall | 12.7 | 5.5 | 1.6 | 7.1 |
 | Logistic (4 iterations) | 48.9 | 4 pass A and 4 pass B, 13.5 s wall | 9.3 | 17.3 | 6.8 | 6.0 |
 
+### Round 180: Cox rows in records (step 2, round B)
+
+This is a sandbox measurement: one core, local mode, with the working set on disk, and the Cox model stratified by
+provider with Breslow ties and the simple design. Builds alternated, `main`'s at `86a7d9f` and round 180's, each fit
+in a fresh JVM. Records hold 182 rows at 180 features and 1,638 at 20.
+
+| Point | Build | Fit s | Evaluation, 4 passes: CPU s; GC s | Build: CPU s; GC s |
+|---|---|---|---|---|
+| 100,000 rows, 180 features, 160 strata | before | 55.0, 59.6 | 21.43, 21.13; 0.35, 0.54 | 2.74, 3.21; 0.36, 0.29 |
+| | after | 57.7, 56.0 | 19.13, 19.23; 0.18, 0.19 | 2.95, 3.04; 0.25, 0.27 |
+| 1,000,000 rows, 20 features, 1,000 strata | before | 32.7, 31.3 | 5.05, 5.14; 0.21, 0.19 | 3.83, 3.67; 0.20, 0.26 |
+| | after | 32.7, 32.6 | 4.61, 4.52; 0.13, 0.11 | 4.01, 3.89; 0.31, 0.32 |
+
+- **The same results.** The log-likelihood's bits and the iteration counts match across builds at both points.
+- **The evaluation.** Its CPU fell by about 10% at both points, and its GC by between a third and a half. Breslow fits
+  no longer zero the Efron buffers at each distinct time, and the Breslow term's means are computed once per time.
+- **The build.** It took about 5% more CPU at 20 features (4.0 s against 3.7 to 3.8 s), and the same at 180. Fit times
+  stayed within noise.
+- **Caveat.** As for round 178, the sandbox's blocks are small, and memory pressure on the cluster's heaps is not
+  visible here.
+
 ### Round 178: logistic rows in records (step 2, round A)
 
 This is a sandbox measurement: one core, local mode, with the working set on disk, the logistic model and the simple

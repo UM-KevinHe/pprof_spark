@@ -8,10 +8,12 @@ import org.apache.spark.sql.types.{IntegerType, LongType, StructField, StructTyp
 
 import pprof.spark.engine.backend.BlockOptions
 import pprof.spark.engine.backend.PlanFrames
+import pprof.spark.engine.backend.RowRecords
 import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.data.Validation
 import pprof.spark.engine.layout.{LayoutPlan, PartitionKeys, ReductionGroups}
 import pprof.spark.engine.backend.Operations._
+import pprof.spark.numerics.kernels.ChunkedCoxRows
 
 /** One input row placed in its block (§6.6). */
 final case class CoxRow(
@@ -27,11 +29,16 @@ final case class CoxRow(
     cluster: String = null
 )
 
-/** Whole strata in canonical order (Cox specification §6, DIST-6), covariates row-major. Stratum
-  * `g` holds rows `groupStart(g)` until `groupEnd(g)`.
+/** One stored record of a block (docs/spec/performance/step2-chunks.md §3): the block's rows `firstRow` on, in
+  * canonical order (Cox specification §6, DIST-6), covariates row-major, with the same positions of each stratum's
+  * entry order. It lists the strata whose first row it holds, by group index and block row. Record `record` of the
+  * block's `records`; every record but the last holds as many rows.
   */
-final case class CoxBlock(
+final case class CoxChunk(
     blockId: Int,
+    record: Int,
+    records: Int,
+    firstRow: Int,
     p: Int,
     groupIndex: Array[Int],
     groupStart: Array[Int],
@@ -44,10 +51,38 @@ final case class CoxBlock(
     entry: Array[Double],
     entryOrder: Array[Int],
     cluster: Array[String]
-) {
-  def rowCount: Int = rowId.length
+)
+
+/** Whole strata in canonical order, read from a block's records in order: stratum `g` holds rows `groupStart(g)` until
+  * `groupEnd(g)`. Kernels read its rows through `rows` (step2-chunks.md §3).
+  */
+final class CoxBlock private[cox] (parts: Array[CoxChunk]) {
+  val blockId: Int = parts(0).blockId
+  val p: Int = parts(0).p
+  val groupIndex: Array[Int] = Array.concat(parts.map(_.groupIndex).toSeq: _*)
+  val groupStart: Array[Int] = Array.concat(parts.map(_.groupStart).toSeq: _*)
+  private val recordRows = math.max(1, parts(0).rowId.length)
+  val rows: ChunkedCoxRows = new ChunkedCoxRows(
+    p,
+    recordRows,
+    parts.map(_.time),
+    parts.map(_.entry),
+    parts.map(_.entryOrder),
+    parts.map(_.event),
+    parts.map(_.weight),
+    parts.map(_.offset),
+    parts.map(_.x)
+  )
+  def rowCount: Int = rows.rows
   def groupCount: Int = groupIndex.length
   def groupEnd(g: Int): Int = if (g + 1 < groupCount) groupStart(g + 1) else rowCount
+  def rowId(r: Int): Long = parts(r / recordRows).rowId(r % recordRows)
+  def cluster(r: Int): String = parts(r / recordRows).cluster(r % recordRows)
+  def time(r: Int): Double = rows.timeAt(r)
+  def event(r: Int): Boolean = rows.eventAt(r)
+  def weight(r: Int): Double = rows.weightAt(r)
+  def offset(r: Int): Double = rows.offsetAt(r)
+  def entry(r: Int): Double = rows.entryAt(r)
 }
 
 object CoxBlockBuilder {
@@ -94,20 +129,14 @@ object CoxBlockBuilder {
     }
   }
 
-  /** Sorts a block's rows canonically, normalizing negative zeros first so that the order and
-    * every later sum depend on values alone.
+  /** Sorts a block's rows canonically, normalizing negative zeros first so that the order and every later sum depend
+    * on values alone; orders each stratum's rows by entry time; and stores both in records of `recordRows` rows, the
+    * last possibly shorter (step2-chunks.md §3).
     */
-  def build(blockId: Int, rows: Iterator[CoxRow], p: Int): CoxBlock = {
+  def build(blockId: Int, rows: Iterator[CoxRow], p: Int, recordRows: Int): Iterator[CoxChunk] = {
+    require(recordRows > 0, s"a record holds at least one row, got $recordRows")
     val sorted = rows.map(normalize).toArray.sorted(canonicalOrder)
     val n = sorted.length
-    val rowIds = new Array[Long](n)
-    val times = new Array[Double](n)
-    val events = new Array[Boolean](n)
-    val weights = new Array[Double](n)
-    val offsets = new Array[Double](n)
-    val entries = new Array[Double](n)
-    val clusters = new Array[String](n)
-    val x = new Array[Double](n * p)
     val groups = Array.newBuilder[Int]
     val starts = Array.newBuilder[Int]
     var r = 0
@@ -118,16 +147,9 @@ object CoxBlockBuilder {
         groups += row.groupIndex
         starts += r
       }
-      rowIds(r) = row.rowId
-      times(r) = row.time
-      events(r) = row.event
-      weights(r) = row.weight
-      offsets(r) = row.offset
-      entries(r) = row.entry
-      clusters(r) = row.cluster
-      System.arraycopy(row.x, 0, x, r * p, p)
       r += 1
     }
+    val groupIndex = groups.result()
     val groupStarts = starts.result()
     val entryOrder = new Array[Int](n)
     var g = 0
@@ -135,47 +157,84 @@ object CoxBlockBuilder {
       val from = groupStarts(g)
       val until = if (g + 1 < groupStarts.length) groupStarts(g + 1) else n
       val order = (from until until).sortWith { (a, b) =>
-        val byEntry = java.lang.Double.compare(entries(b), entries(a))
+        val byEntry = java.lang.Double.compare(sorted(b).entry, sorted(a).entry)
         byEntry < 0 || (byEntry == 0 && a < b)
       }
       order.copyToArray(entryOrder, from)
       g += 1
     }
-    CoxBlock(
-      blockId,
-      p,
-      groups.result(),
-      groupStarts,
-      rowIds,
-      times,
-      events,
-      weights,
-      offsets,
-      x,
-      entries,
-      entryOrder,
-      clusters
-    )
+    val records = (n + recordRows - 1) / recordRows
+    Iterator.tabulate(records) { i =>
+      val from = i * recordRows
+      val until = math.min(n, from + recordRows)
+      val count = until - from
+      val rowIds = new Array[Long](count)
+      val times = new Array[Double](count)
+      val events = new Array[Boolean](count)
+      val weights = new Array[Double](count)
+      val offsets = new Array[Double](count)
+      val entries = new Array[Double](count)
+      val clusters = new Array[String](count)
+      val x = new Array[Double](count * p)
+      var r = from
+      while (r < until) {
+        val row = sorted(r)
+        rowIds(r - from) = row.rowId
+        times(r - from) = row.time
+        events(r - from) = row.event
+        weights(r - from) = row.weight
+        offsets(r - from) = row.offset
+        entries(r - from) = row.entry
+        clusters(r - from) = row.cluster
+        System.arraycopy(row.x, 0, x, (r - from) * p, p)
+        r += 1
+      }
+      val first = groupStarts.indexWhere(_ >= from)
+      val last = if (first < 0) first else groupStarts.lastIndexWhere(_ < until)
+      val (gi, gs) =
+        if (first < 0 || last < first) (Array.emptyIntArray, Array.emptyIntArray)
+        else (groupIndex.slice(first, last + 1), groupStarts.slice(first, last + 1))
+      CoxChunk(
+        blockId,
+        i,
+        records,
+        from,
+        p,
+        gi,
+        gs,
+        rowIds,
+        times,
+        events,
+        weights,
+        offsets,
+        x,
+        entries,
+        java.util.Arrays.copyOfRange(entryOrder, from, until),
+        clusters
+      )
+    }
   }
 
-  /** The blocks of rows sorted by block identifier, built one block at a time (step1-reduction.md §3). */
-  def buildAll(rows: Iterator[CoxRow], p: Int): Iterator[CoxBlock] = {
+  /** The records of rows sorted by block identifier: each block built in turn (step1-reduction.md §3) and stored in
+    * records of `recordRows` rows (step2-chunks.md §3).
+    */
+  def buildAll(rows: Iterator[CoxRow], p: Int, recordRows: Int): Iterator[CoxChunk] = {
     val source = rows.buffered
-    new Iterator[CoxBlock] {
+    new Iterator[Iterator[CoxChunk]] {
       private var last = -1
 
       def hasNext: Boolean = source.hasNext
 
-      def next(): CoxBlock = {
+      def next(): Iterator[CoxChunk] = {
         val id = source.head.blockId
         if (id <= last)
           throw new IllegalStateException(s"block $id after block $last: rows out of block order")
         last = id
         val block = scala.collection.mutable.ArrayBuffer.empty[CoxRow]
         while (source.hasNext && source.head.blockId == id) block += source.next()
-        build(id, block.iterator, p)
+        build(id, block.iterator, p, recordRows)
       }
-    }
+    }.flatten
   }
 
   private def normalize(row: CoxRow): CoxRow =
@@ -198,14 +257,51 @@ object CoxBlockBuilder {
   }
 }
 
-/** The persisted Cox working set (§6.7). */
+/** Reading the working set's records as blocks (docs/spec/performance/step2-chunks.md §3). */
+object CoxBlocks {
+
+  /** The blocks of a partition's records, each from its consecutive records; fails if a block's records are out of
+    * order or incomplete. The group fold checks the blocks' order (step1-reduction.md §4).
+    */
+  def assemble(records: Iterator[CoxChunk]): Iterator[CoxBlock] =
+    new Iterator[CoxBlock] {
+      def hasNext: Boolean = records.hasNext
+
+      def next(): CoxBlock = {
+        val first = records.next()
+        if (first.record != 0)
+          throw new IllegalStateException(
+            s"block ${first.blockId} begins with record ${first.record} of ${first.records}"
+          )
+        val parts = new Array[CoxChunk](first.records)
+        parts(0) = first
+        var i = 1
+        while (i < parts.length) {
+          if (!records.hasNext)
+            throw new IllegalStateException(
+              s"block ${first.blockId} ends after $i of ${parts.length} records"
+            )
+          val part = records.next()
+          if (part.blockId != first.blockId || part.record != i)
+            throw new IllegalStateException(
+              s"record ${part.record} of block ${part.blockId} where record $i of block ${first.blockId} belongs"
+            )
+          parts(i) = part
+          i += 1
+        }
+        new CoxBlock(parts)
+      }
+    }
+}
+
+/** The persisted Cox working set (§6.7): each block's records (docs/spec/performance/step2-chunks.md §3). */
 final class CoxWorkingSet private (
-    val blocks: Dataset[CoxBlock],
+    val records: Dataset[CoxChunk],
     val plan: LayoutPlan,
     val groups: ReductionGroups
 ) {
   def release(): Unit = {
-    blocks.unpersist(blocking = false)
+    records.unpersist(blocking = false)
     ()
   }
 }
@@ -225,6 +321,7 @@ object CoxWorkingSet {
       blockOptions: BlockOptions
   ): CoxWorkingSet = {
     val p = input.spec.features.size
+    val recordRows = RowRecords.rowsPerRecord(p)
     val spark = input.frame.sparkSession
     val placements = PlanFrames.placements(spark, plan, input.strataKeyIsText)
     val keys = PartitionKeys.forPartitions(spark, groups.groups)
@@ -253,23 +350,23 @@ object CoxWorkingSet {
         col(CoxValidation.ClusterColumn).as("cluster"),
         col(Validation.FeaturesColumn).as("x")
       )
-    val blocks = placed
+    val records = placed
       .repartition(groups.groups, col(PartitionKeyColumn))
       .sortWithinPartitions(col("blockId"))
       .drop(PartitionKeyColumn)
       .as[CoxRow](Encoders.product[CoxRow])
-      .mapPartitions((rows: Iterator[CoxRow]) => CoxBlockBuilder.buildAll(rows, p))(
-        Encoders.product[CoxBlock]
+      .mapPartitions((rows: Iterator[CoxRow]) => CoxBlockBuilder.buildAll(rows, p, recordRows))(
+        Encoders.product[CoxChunk]
       )
       .persistAt(blockOptions)
     try {
-      val built = blocks.countAs("cox.build")
+      val built = records.filter((record: CoxChunk) => record.record == 0).countAs("cox.build")
       if (built != plan.blockCount)
         throw new IllegalStateException(s"built $built blocks; the plan has ${plan.blockCount}")
-      new CoxWorkingSet(blocks, plan, groups)
+      new CoxWorkingSet(records, plan, groups)
     } catch {
       case e: Throwable =>
-        blocks.unpersist(blocking = false)
+        records.unpersist(blocking = false)
         throw e
     }
   }

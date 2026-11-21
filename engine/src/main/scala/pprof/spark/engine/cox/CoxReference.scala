@@ -77,11 +77,13 @@ object CoxReference {
     var r = 0
     while (r < block.rowCount) {
       val w = block.weight(r)
+      val xs = block.rows.xs(r)
+      val base = block.rows.xBase(r)
       sums(0).add(w)
       sums(1).add(w * block.offset(r))
       var k = 0
       while (k < p) {
-        val v = block.x(r * p + k)
+        val v = xs(base + k)
         sums(2 + k).add(w * v)
         sums(2 + p + k).add(v)
         if (v != -1.0 && v != 0.0 && v != 1.0) outside(k) += 1L
@@ -100,17 +102,17 @@ object CoxReference {
     * not one per block; with one block per group, the sums are the same to the bit.
     */
   def point(
-      blocks: Dataset[CoxBlock],
+      records: Dataset[CoxChunk],
       p: Int,
       entryTimes: Boolean,
       groups: ReductionGroups
   ): CoxReferencePoint = {
     val parts =
-      blocks
-        .mapPartitions((it: Iterator[CoxBlock]) =>
-          GroupFold(it, (b: CoxBlock) => b.blockId, groups)(new ReferenceSum(3 + 3 * p))((sum, b) =>
-            sum.add(partial(b))
-          ).map { case (group, sum) => sum.partial(group) }
+      records
+        .mapPartitions((chunks: Iterator[CoxChunk]) =>
+          GroupFold(CoxBlocks.assemble(chunks), (b: CoxBlock) => b.blockId, groups)(
+            new ReferenceSum(3 + 3 * p)
+          )((sum, b) => sum.add(partial(b))).map { case (group, sum) => sum.partial(group) }
         )(Encoders.product[CoxReferencePartial])
         .collectAs("cox.reference")
     val s = OrderedReduction.reduce(parts.toSeq.map(q => q.blockId -> q.values), 3 + 3 * p)

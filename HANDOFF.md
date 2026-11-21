@@ -228,6 +228,52 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 180 (2026-11-21): Cox rows stored in records; the Breslow buffer (step 2, round B)
+
+- Round 179 is on `main` as `86a7d9f`.
+- **Records** (`step2-chunks.md` §3). The Cox working set is persisted as `CoxChunk` records of at most
+  C = max(1, ⌊256 KiB / 8p⌋) rows, each with its rows' positions of each stratum's entry order. Every pass reads a
+  block back through `CoxBlocks.assemble`, which checks record order and count, as a `CoxBlock` view whose methods keep
+  the old field names. The passes are `CoxPH`'s summaries, evaluation, baseline, residuals and robust passes,
+  `CoxMeasures`' three, and `CoxReference`'s.
+- **Kernels.** `CoxStratum`, `CoxResiduals` and `CoxMeasures` read rows through `CoxRowsView`: `CoxRows` stores them
+  flat, `ChunkedCoxRows` in records. The arithmetic and its order are unchanged, and the flat-array signatures remain
+  as wrappers. `Moments.columnSumsRows` gives the column sums the same way.
+- **§5.3's bit-preserving pieces.**
+  - Breslow fits no longer zero the Efron buffers at each distinct time; OI-104 is closed.
+  - The Breslow term's means S₁/S₀ are computed once per time, instead of p² divisions per time.
+- **Same bits.**
+  - The 40 golden runs are unchanged.
+  - `CoxRecordsSuite` (4 tests) shows that records of 7 rows give, to the bit:
+    - every output of the fit, under both tie methods at two block sizes, with ties, left truncation, zero weights,
+      offsets and clusters;
+    - the baseline, raw and at the means;
+    - the residuals, the reference point, both standardizations and the provider tests.
+  - Numerics' `CoxRowsSuite` shows every Cox kernel gives the same bits from records of 1 to 69 rows as from flat
+    rows.
+- **Docs.**
+  - The Cox tutorials described the working set as it was before step 1. Chapters 04, 05, 06 and 08 now say so at
+    their head, and their probes' code is current; OI-124, new, records the refresh.
+  - The note gains round B in §11.
+- **Measured in the sandbox** (`perf-results.md`, "Round 180"): at both points the log-likelihood's bits and the
+  iteration counts match across builds. The evaluation's CPU fell by about 10%, and its GC by between a third and a
+  half; fit times did not change beyond noise.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags. scalafmt is clean, and `check-engine-api.sh` passes with its
+  self-test.
+- Every suite passes:
+  - numerics, 107 tests;
+  - engine, 62 suites and 559 tests, among them the unchanged golden runs and `CoxRecordsSuite`;
+  - app 38, bench 30 and testkit 28;
+  - the Python tests on PySpark 4.1.0, 47.
+- On Spark 4.0.0's jars, `GoldenRunsSuite` and `CoxRecordsSuite` pass, 7 tests. The Cox tutorial probes compile.
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21, and
+  the Python tests on PySpark 4.0.0.
+
+**Next: round C**, the fixed-point pins in the golden runs (D-79), then round D, the chunked sums. A Cox run at 100M rows
+on this build or later closes OI-118; S8 on round 178's build or later informs OI-123.
+
 ## Round 179 (2026-11-21): S8 fits the logistic model at 100M rows
 
 - Round 178 is on `main` as `8a0cea3`. The maintainer reports CI green for rounds 176 to 178.

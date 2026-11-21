@@ -1,6 +1,7 @@
 // Edge-case probe: documentation material for docs/tutorials/cox, not compiled by sbt.
 package pprof.spark.engine.cox
 
+import pprof.spark.engine.backend.RowRecords
 import pprof.spark.numerics.{Cholesky, Evaluation, Newton, NewtonOptions, NewtonResult}
 import pprof.spark.numerics.kernels.Moments
 
@@ -8,14 +9,19 @@ object EdgeProbe {
   def g(d: Double): String = f"$d%.10g"
 
   def block(rows: Seq[(Long, Double, Boolean, Double, Array[Double])], p: Int): CoxBlock =
-    CoxBlockBuilder.build(
-      0,
-      rows.map { case (id, t, e, o, x) => CoxRow(0, 0, id, t, e, 1.0, o, x) }.iterator,
-      p
-    )
+    CoxBlocks
+      .assemble(
+        CoxBlockBuilder.build(
+          0,
+          rows.map { case (id, t, e, o, x) => CoxRow(0, 0, id, t, e, 1.0, o, x) }.iterator,
+          p,
+          RowRecords.default(p)
+        )
+      )
+      .next()
 
   def evaluator(b: CoxBlock, efron: Boolean): Array[Double] => Evaluation = {
-    val c = Moments.columnSums(b.x, b.p, 0, b.rowCount).map(_ / b.rowCount)
+    val c = Moments.columnSumsRows(b.rowCount, b.p, b.rows.xs, b.rows.xBase).map(_ / b.rowCount)
     beta => {
       val part = CoxKernel.partial(b, beta, c, efron)
       Evaluation(part.value, part.score, part.information)
