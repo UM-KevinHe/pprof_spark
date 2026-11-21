@@ -14,11 +14,13 @@ import org.apache.spark.sql.types.{
 
 import pprof.spark.engine.cox.{CoxPH, CoxSpec}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException}
-import pprof.spark.engine.logistic.{LogisticFE, LogisticSpec}
+import pprof.spark.engine.linear.{LinearFE, LinearRE, LinearRESpec, LinearSpec}
+import pprof.spark.engine.logistic.{LogisticFE, LogisticRE, LogisticRESpec, LogisticSpec}
 import pprof.spark.testkit.SparkSuite
 
-/** Duplicate and missing row identifiers in Cox and logistic validation, whose distinct counts run as jobs of their
-  * own (OI-109): rows 1 to 3 share identifier 0 with row 0, so three are duplicates, and rows 4 and 5 have none.
+/** Duplicate and missing row identifiers in each model's validation, whose distinct counts run as jobs of their own
+  * (OI-109 for Cox and logistic fixed effects, OI-114 for the others): rows 1 to 3 share identifier 0 with row 0, so
+  * three are duplicates, and rows 4 and 5 have none.
   */
 class DuplicateRowsSuite extends SparkSuite {
 
@@ -85,5 +87,48 @@ class DuplicateRowsSuite extends SparkSuite {
       problems(LogisticFE.fit(df, LogisticSpec("y", Seq("x1"), "provider", rowId = Some("id"))))
     assert(found.contains(InputProblem.InvalidValues("id", 2L, 0L)), found.mkString("; "))
     assert(found.contains(InputProblem.DuplicateRowIds("id", 3L)), found.mkString("; "))
+  }
+
+  private def outcomes(continuous: Boolean): DataFrame =
+    frame(
+      (0 until 40).map(i =>
+        Row(id(i), (i % 4).toLong, if (continuous) (i % 7).toDouble else i % 2, (i % 5) / 5.0)
+      ),
+      Seq(
+        ("id", LongType, true),
+        ("provider", LongType, false),
+        ("y", if (continuous) DoubleType else IntegerType, false),
+        ("x1", DoubleType, false)
+      )
+    )
+
+  private def checkCounted(found: Seq[InputProblem]): Unit = {
+    assert(found.contains(InputProblem.InvalidValues("id", 2L, 0L)), found.mkString("; "))
+    assert(found.contains(InputProblem.DuplicateRowIds("id", 3L)), found.mkString("; "))
+  }
+
+  test("linear fixed effects: duplicate and missing row identifiers are counted exactly (OI-114)") {
+    checkCounted(
+      problems(
+        LinearFE.fit(
+          outcomes(continuous = true),
+          LinearSpec("y", Seq("x1"), "provider", Some("id"))
+        )
+      )
+    )
+  }
+
+  test(
+    "linear random effects: duplicate and missing row identifiers are counted exactly (OI-114)"
+  ) {
+    val spec = LinearRESpec("y", Seq("x1"), "provider", rowId = Some("id"))
+    checkCounted(problems(LinearRE.fit(outcomes(continuous = true), spec)))
+  }
+
+  test(
+    "logistic random effects: duplicate and missing row identifiers are counted exactly (OI-114)"
+  ) {
+    val spec = LogisticRESpec("y", Seq("x1"), "provider", rowId = Some("id"))
+    checkCounted(problems(LogisticRE.fit(outcomes(continuous = false), spec)))
   }
 }

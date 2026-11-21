@@ -1,17 +1,7 @@
 package pprof.spark.engine.linear
 
 import org.apache.spark.sql.{Column, DataFrame, Dataset, Encoders}
-import org.apache.spark.sql.functions.{
-  array,
-  coalesce,
-  col,
-  count,
-  countDistinct,
-  lit,
-  sqrt,
-  sum,
-  when
-}
+import org.apache.spark.sql.functions.{array, coalesce, col, count, lit, sqrt, sum, when}
 import org.apache.spark.sql.types.{DataType, DoubleType, LongType, NumericType, StringType}
 import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.backend.{BlockOptions, DriverGuards, PlanFrames}
@@ -192,7 +182,12 @@ object LinearREValidation {
     }
     spec.rowId.foreach { name =>
       val nulls = next()
-      val duplicates = (rows - nulls) - next()
+      val duplicates =
+        (rows - nulls) - Validation.distinctValues(
+          df,
+          Validation.column(name),
+          "linear.re.validate"
+        )
       if (nulls > 0) problems += InputProblem.InvalidValues(name, nulls, 0L)
       if (duplicates > 0) problems += InputProblem.DuplicateRowIds(name, duplicates)
     }
@@ -262,7 +257,7 @@ object LinearREValidation {
       ) ++
       spec.rowId.toSeq.flatMap { name =>
         val value = Validation.column(name)
-        Seq(countWhere(value.isNull), countDistinct(value))
+        Seq(countWhere(value.isNull))
       }
   }
 }

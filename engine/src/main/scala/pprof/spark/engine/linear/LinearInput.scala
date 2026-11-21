@@ -1,7 +1,7 @@
 package pprof.spark.engine.linear
 
 import org.apache.spark.sql.{Column, DataFrame}
-import org.apache.spark.sql.functions.{array, coalesce, count, countDistinct, lit, sum, when}
+import org.apache.spark.sql.functions.{array, coalesce, count, lit, sum, when}
 import org.apache.spark.sql.types.{DataType, DoubleType, LongType, NumericType, StringType}
 import pprof.spark.engine.data.{InputProblem, InvalidInputException, Validation}
 
@@ -50,7 +50,8 @@ object LinearValidation {
     if (providerNulls > 0) problems += InputProblem.InvalidValues(spec.provider, providerNulls, 0L)
     spec.rowId.foreach { name =>
       val nulls = next()
-      val duplicates = (rows - nulls) - next()
+      val duplicates =
+        (rows - nulls) - Validation.distinctValues(df, Validation.column(name), "linear.validate")
       if (nulls > 0) problems += InputProblem.InvalidValues(name, nulls, 0L)
       if (duplicates > 0) problems += InputProblem.DuplicateRowIds(name, duplicates)
     }
@@ -116,7 +117,7 @@ object LinearValidation {
     }
     val rowId = spec.rowId.toSeq.flatMap { name =>
       val value = Validation.column(name)
-      Seq(countWhere(value.isNull), countDistinct(value))
+      Seq(countWhere(value.isNull))
     }
     Seq(count(lit(1))) ++ outcome ++ features ++ Seq(
       countWhere(Validation.column(spec.provider).isNull)

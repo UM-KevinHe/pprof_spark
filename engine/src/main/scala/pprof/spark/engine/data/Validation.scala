@@ -1,17 +1,7 @@
 package pprof.spark.engine.data
 
 import org.apache.spark.sql.{Column, DataFrame}
-import org.apache.spark.sql.functions.{
-  array,
-  coalesce,
-  col,
-  count,
-  countDistinct,
-  isnan,
-  lit,
-  sum,
-  when
-}
+import org.apache.spark.sql.functions.{array, coalesce, col, count, isnan, lit, sum, when}
 import org.apache.spark.sql.types.{
   ByteType,
   DataType,
@@ -155,7 +145,7 @@ object Validation {
     spec.rowIdCol.foreach { name =>
       val base = 2 + 2 * spec.featureCols.size
       val nulls = counts.getLong(base)
-      val duplicates = (rows - nulls) - counts.getLong(base + 1)
+      val duplicates = (rows - nulls) - distinctValues(df, column(name), "input.validate")
       if (nulls > 0) problems += InputProblem.InvalidValues(name, nulls, 0L)
       if (duplicates > 0) problems += InputProblem.DuplicateRowIds(name, duplicates)
     }
@@ -202,7 +192,7 @@ object Validation {
       Seq(countWhere(column(name).isNull), countWhere(nonFinite(column(name), types(name))))
     }
     val rowId = spec.rowIdCol.toSeq.flatMap { name =>
-      Seq(countWhere(column(name).isNull), countDistinct(column(name)))
+      Seq(countWhere(column(name).isNull))
     }
     Seq(count(lit(1)), countWhere(column(spec.groupCol).isNull)) ++ features ++ rowId
   }
@@ -217,6 +207,13 @@ object Validation {
     case ByteType | ShortType | IntegerType | LongType => true
     case _                                             => false
   }
+
+  /** The number of distinct non-null values of `value`, as `countDistinct` gives it, in a job of its own under
+    * `operation`: inside the counts' aggregate, a distinct count makes Spark group every other count by the value
+    * (OI-109, OI-114).
+    */
+  private[engine] def distinctValues(df: DataFrame, value: Column, operation: String): Long =
+    df.where(value.isNotNull).select(value).distinct().countAs(operation)
 
   /** A column reference that tolerates dots and other special characters in names. */
   private[engine] def column(name: String): Column = col("`" + name.replace("`", "``") + "`")

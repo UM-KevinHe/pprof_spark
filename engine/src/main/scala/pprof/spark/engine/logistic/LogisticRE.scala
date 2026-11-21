@@ -3,18 +3,7 @@ package pprof.spark.engine.logistic
 import scala.jdk.CollectionConverters._
 
 import org.apache.spark.sql.{Column, DataFrame, Encoders, Row}
-import org.apache.spark.sql.functions.{
-  array,
-  coalesce,
-  col,
-  count,
-  countDistinct,
-  exp,
-  lit,
-  log,
-  sum,
-  when
-}
+import org.apache.spark.sql.functions.{array, coalesce, col, count, exp, lit, log, sum, when}
 import org.apache.spark.sql.types.{
   DataType,
   DoubleType,
@@ -183,7 +172,7 @@ object LogisticREValidation {
       spec.offset.toSeq.flatMap(invalid) ++
       spec.rowId.toSeq.flatMap { name =>
         val value = Validation.column(name)
-        Seq(countWhere(value.isNull), countDistinct(value))
+        Seq(countWhere(value.isNull))
       }
     val counts = df.agg(aggregates.head, aggregates.tail: _*).collect().head
     var position = 0
@@ -208,7 +197,12 @@ object LogisticREValidation {
     spec.offset.foreach(values)
     spec.rowId.foreach { name =>
       val nulls = next()
-      val duplicates = (rows - nulls) - next()
+      val duplicates =
+        (rows - nulls) - Validation.distinctValues(
+          df,
+          Validation.column(name),
+          "logistic.re.validate"
+        )
       if (nulls > 0) problems += InputProblem.InvalidValues(name, nulls, 0L)
       if (duplicates > 0) problems += InputProblem.DuplicateRowIds(name, duplicates)
     }

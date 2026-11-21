@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-20, round 174.
+Updated 2026-11-20, round 175.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -206,6 +206,7 @@ through round 100 as the maintainer reported.
 | 172 | CI fix: from round 166, one job per run failed to download Scala 2.13.17 from Maven Central, which rate-limits GitHub's runners (HTTP 429, at times reported as not found), because the shared cache lacked it. One job now fetches every artifact with retries and writes the only dependency cache, which the other jobs restore | Merged (5adcc31) |
 | 173 | OI-119: the AUC pass made leaner, same bits: each task takes its blocks' effects instead of a join that copied every cached block, and the scores are computed once and cached for the sort; `LogisticAucSuite` checks the AUC against an exact driver-side Mann–Whitney on data with many ties; in the sandbox at 180 features the pass reads half as much and its GC fell from 0.4–0.9 s to 0.15 s | Merged (5d71c58) |
 | 174 | OI-117 closed: a fit's layout records G, the blocks per reduction group, and R, the groups; Cox and logistic fits save them (file formats 6 and 5), and older files read as G = 1; `PerfJob` reports the recorded values instead of recomputing them | Delivered as a patch |
+| 175 | OI-114 closed: the shared validator and the linear and random-effect models count distinct row identifiers in a job of their own, as Cox and logistic have since round 157, instead of inside the counts' aggregate; `DuplicateRowsSuite` covers all five models | Delivered as a patch |
 
 ## Decisions and spikes
 

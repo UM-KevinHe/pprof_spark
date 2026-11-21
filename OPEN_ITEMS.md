@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-11-20, round 174. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-11-20, round 175. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -119,7 +119,7 @@ decision is approved.
 | OI-111 | `02_scale` appended a row from the previous run's fit when a fit did not complete: three rows on 2026-11-16, one of them an apparent failure to recover the truth at 200 features | Round 152 makes the notebook refuse such a row; why those three fits did not complete is not known |
 | OI-112 | Photon clusters leave the JVM executors a small heap (2.2 GB on 16 GB workers in the 2026-11-16 runs), while pprof_spark's passes run in the JVM; those runs also autoscaled and used Runtime 17.3 (Spark 4.0) rather than 18 | Decided by D-76 (2026-11-16): the cluster as it is, exits on CPU per row, bytes and memory; Spark 4.0 and Runtime 17.3 supported, with CI's Python job on PySpark 4.0.0 (round 154) |
 | OI-113 | Logistic AUC pass: 14% of the 5M fit's wall time on the cluster, with GC (264 s) above its CPU (196 s) and 1.46 GiB of shuffle read | Inspect after step 1 |
-| OI-114 | The shared `Validation`, `LinearInput`, `LinearRE` and `LogisticRE` still put `countDistinct` inside their counts' aggregate, which groups every count by the row identifier | The round-157 fix (`distinctValues`) when those models are next worked on |
+| OI-114 | The shared `Validation`, `LinearInput`, `LinearRE` and `LogisticRE` still put `countDistinct` inside their counts' aggregate, which groups every count by the row identifier | The round-157 fix (`distinctValues`) when those models are next worked on. Closed in round 175: all four count distinct row identifiers in a job of their own, through the shared `Validation.distinctValues`; no `countDistinct` is left in engine code |
 | OI-115 | At 20M rows and 180 features, both models fail in the working-set build: executors lost to out-of-memory with 64 MB blocks and 2.2 GB executor heaps (2026-11-17) | Step 1 in both fits (rounds 159 and 160). On the cluster, the bytes to the driver per pass stay flat at 65 to 66 MiB from 20M to 100M rows; Cox fits at 100M and logistic at 50M (disk-only); logistic at 100M is OI-119 |
 | OI-116 | Passes that still collect per block: Cox's baseline, residuals, measures and reference; logistic pass B and the per-provider passes (small partials); and logistic covariate tests and predictions, which still plan with growth (`BudgetedLayout`) | Move the large ones to `GroupFold` when a measurement or a size calls for it |
 | OI-117 | G and R are not yet recorded with a fit: `LayoutSummary` and its IO in Cox, logistic and the block moments | A small round: fields with defaults, IO that reads files without them as G = 1. Closed in round 174: `LayoutSummary.blocksPerGroup` (G, default 1) and `reductionGroups` (R, derived); Cox and logistic fits record them, and their files, formats 6 and 5, keep them; older files read as G = 1. The other models and the block moments reduce block by block, G = 1 |

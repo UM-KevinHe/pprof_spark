@@ -228,6 +228,29 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 175 (2026-11-20): distinct row identifiers counted apart in every model (OI-114)
+
+- Round 174 is not yet on `main`; this patch applies on top of it.
+- **The change.** The shared `Validation` (block moments), `LinearInput` (linear fixed effects), `LinearRE` and
+  `LogisticRE` counted distinct row identifiers with `countDistinct` inside their counts' aggregate. Spark then
+  groups every count by the identifier, a shuffle of every row. Each now counts them in a job of its own through
+  `Validation.distinctValues`, as Cox and logistic fixed effects have since round 157 (OI-109). The other counts
+  stay one aggregate. Each job carries an operation tag: `input.validate`, `linear.validate`,
+  `linear.re.validate`, `logistic.re.validate`. No `countDistinct` is left in engine code.
+- **Same counts.** `DuplicateRowsSuite` adds the three model families to Cox's and logistic's case: three duplicate
+  and two missing identifiers, counted exactly. `ValidationSuite` covers the shared validator. Round 157 measured the
+  effect for Cox and logistic; this round does not measure the other models.
+- **Records.** OI-114 closed.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags; scalafmt is clean and `check-engine-api.sh` passes.
+- All 60 engine suites pass, 544 tests, the three new ones among them. The app and bench suites pass (38 and 30
+  tests), and the Python tests on PySpark 4.1.0 (47).
+- Rounds 174 and 175 apply in order to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark
+  Connect, JDK 21.
+
+**Next: OI-116**, the passes that still collect per block.
+
 ## Round 174 (2026-11-20): G and R recorded with a fit (OI-117)
 
 - Round 173 is on `main` as `5d71c58`. The maintainer will send its CI run and S8 (logistic, 100M rows) when he has
