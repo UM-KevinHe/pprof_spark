@@ -48,6 +48,9 @@ logistic model; the step's exit is measured on the cluster after that.
 - **Per-provider vectors.** Δγ and the variances travel with their group's partial, in block order, m values in total
   per pass.
 - **Constraints kept.** No pass shuffles, none uses an RDD, and everything works under Connect.
+- **After a fit** (round 176, OI-116). Cox's reference point, whose block partials hold 3 + 3p values, folds in the
+  working set's groups too. The other passes that collect per block send O(m + blocks) values: logistic pass B and
+  the provider variances, and Cox's per-block maxima of the linear predictor.
 
 ## 5. Properties
 

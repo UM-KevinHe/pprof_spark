@@ -228,6 +228,41 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 176 (2026-11-21): the Cox reference point folded in reduction groups (OI-116)
+
+- Rounds 174 and 175 are on `main` as `9bed0e5` and `f87f2c9`.
+- **Sizes of the passes that still collected per block**, at 8,000 blocks, 8,000 providers and 180 features, against
+  the 64 MB driver budget:
+
+  | Pass | Values sent to the driver | At that scale |
+  |---|---|---|
+  | Cox reference point (`referencePoint`, a non-raw baseline) | 3 + 3p per block | about 35 MB |
+  | Logistic pass B | the block's Δγ and one log-likelihood per block | under 1 MB |
+  | Logistic provider variances | two values per provider, per block | under 1 MB |
+  | Cox measures | one maximum per block; per-time totals capped by `maxGroupsOnDriver` | under 1 MB |
+  | Cox baseline and residuals | none: tables kept on the executors | none |
+
+- **The change.** The reference point grows with the features, so it now folds its block sums in the working set's
+  groups (`GroupFold`, with a `ReferenceSum` of Neumaier sums). Its two callers pass `workingSet.groups`. With one
+  block per group, as in every golden run, the sums are the same to the bit. Beyond the budget, at most R partials
+  reach the driver.
+- **Left for step 2.** The covariate tests and predictions of the logistic model still plan with growth
+  (`BudgetedLayout`), so their blocks grow with the data. That is a block-size problem, for step 2's design note with
+  OI-118.
+- **Tests.** `CoxLayoutSuite`'s grouped-reduction test now also computes the reference point at G > 1. It must give
+  the same bits under two partitionings and come within 1e-12 of the block-by-block point. The reference and
+  baseline suites cover G = 1 against R and pprof_py, unchanged.
+- **Records.** OI-116 closed; the step 1 note lists the passes after a fit.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags; scalafmt is clean and `check-engine-api.sh` passes.
+- All 60 engine suites pass, 544 tests, the extended grouped test and the golden runs among them. The app and bench
+  suites pass (38 and 30 tests), and the Python tests on PySpark 4.1.0 (47).
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21.
+
+**Next: step 2's design note** (`docs/spec/performance/step2-*.md`): chunked row storage, with the covariate tests'
+and predictions' growing blocks, and the re-baselining decision proposed as D-78.
+
 ## Round 175 (2026-11-20): distinct row identifiers counted apart in every model (OI-114)
 
 - Round 174 is not yet on `main`; this patch applies on top of it.

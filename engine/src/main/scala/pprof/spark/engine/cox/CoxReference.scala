@@ -3,6 +3,7 @@ package pprof.spark.engine.cox
 import org.apache.spark.sql.{Dataset, Encoders}
 
 import pprof.spark.engine.backend.OrderedReduction
+import pprof.spark.engine.layout.{GroupFold, ReductionGroups}
 import pprof.spark.numerics.NeumaierSum
 import pprof.spark.engine.backend.Operations._
 
@@ -94,11 +95,23 @@ object CoxReference {
     )
   }
 
-  /** The reference point of a working set, its block sums reduced in block order (DIST-6). */
-  def point(blocks: Dataset[CoxBlock], p: Int, entryTimes: Boolean): CoxReferencePoint = {
+  /** The reference point of a working set, its block sums reduced in block order (DIST-6): in the working set's
+    * reduction groups since round 176 (OI-116), so that the driver receives at most R partials of 3 + 3p values,
+    * not one per block; with one block per group, the sums are the same to the bit.
+    */
+  def point(
+      blocks: Dataset[CoxBlock],
+      p: Int,
+      entryTimes: Boolean,
+      groups: ReductionGroups
+  ): CoxReferencePoint = {
     val parts =
       blocks
-        .map((b: CoxBlock) => partial(b))(Encoders.product[CoxReferencePartial])
+        .mapPartitions((it: Iterator[CoxBlock]) =>
+          GroupFold(it, (b: CoxBlock) => b.blockId, groups)(new ReferenceSum(3 + 3 * p))((sum, b) =>
+            sum.add(partial(b))
+          ).map { case (group, sum) => sum.partial(group) }
+        )(Encoders.product[CoxReferencePartial])
         .collectAs("cox.reference")
     val s = OrderedReduction.reduce(parts.toSeq.map(q => q.blockId -> q.values), 3 + 3 * p)
     val rows = s(0)

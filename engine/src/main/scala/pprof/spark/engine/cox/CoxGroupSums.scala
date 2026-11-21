@@ -41,6 +41,15 @@ private[cox] final class SummarySum(p: Int) {
     CoxBlockSummary(group, rows, events, strataWithoutEvents, columnSums.values, fingerprint)
 }
 
+/** A group's sums of the reference point's block partials (`CoxReference`), 3 + 3p values each. */
+private[cox] final class ReferenceSum(width: Int) {
+  private val sums = new NeumaierVector(width)
+
+  def add(part: CoxReferencePartial): Unit = sums.add(part.values)
+
+  def partial(group: Int): CoxReferencePartial = CoxReferencePartial(group, sums.values)
+}
+
 private[cox] final class RobustSum(p: Int) {
   private var units = 0L
   private val outer = new NeumaierVector(Moments.packedLength(p))

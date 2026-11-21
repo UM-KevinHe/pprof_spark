@@ -209,5 +209,18 @@ class CoxLayoutSuite extends SparkSuite {
       FitFiles.asVersion(5, CoxFitIO.FormatVersion, "blocksPerGroup", "reductionGroups")
     )
     assertEquals(CoxFitIO.load(spark, path).layout, grouped.layout.copy(blocksPerGroup = 1))
+
+    // The reference point folds its block sums in the same groups (OI-116): the same bits for any partitioning, and
+    // within a few ulps of the block-by-block sums.
+    val reference = CoxPH.referencePoint(frame(spark, name).repartition(7), grouped)
+    assertEquals(
+      CoxPH.referencePoint(frame(spark, name, reverse = true).repartition(3), grouped),
+      reference
+    )
+    val ungrouped = CoxPH.referencePoint(frame(spark, name), before)
+    assertEquals(reference.centered, ungrouped.centered)
+    (reference.offsetMean +: reference.means).zip(ungrouped.offsetMean +: ungrouped.means).foreach {
+      case (a, b) => assert(math.abs(a - b) <= 1e-12 * math.max(1.0, math.abs(b)), s"$a vs $b")
+    }
   }
 }

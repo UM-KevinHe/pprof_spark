@@ -249,7 +249,8 @@ object CoxPH {
       CoxReference.point(
         prepared.workingSet.blocks,
         fit.spec.features.size,
-        fit.spec.entry.isDefined
+        fit.spec.entry.isDefined,
+        prepared.workingSet.groups
       )
     }
 
@@ -278,7 +279,12 @@ object CoxPH {
         if (reference == BaselineReference.Raw) raw
         else {
           val factor = CoxReference
-            .point(prepared.workingSet.blocks, fit.spec.features.size, fit.spec.entry.isDefined)
+            .point(
+              prepared.workingSet.blocks,
+              fit.spec.features.size,
+              fit.spec.entry.isDefined,
+              prepared.workingSet.groups
+            )
             .factor(reference, fit.estimates)
           raw.map((r: CoxBaselineRow) =>
             r.copy(
