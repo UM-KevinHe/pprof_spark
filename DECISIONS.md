@@ -103,6 +103,56 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-79: How D-78 applies to the golden runs (Proposed, round 177)
+
+Proposed with step 2's design note (`docs/spec/performance/step2-chunks.md` §6), for the maintainer's approval. D-78
+names log-likelihoods, scores and information at fixed β, converged estimates and covariances, and counts and flags.
+The golden runs record nothing at a fixed β, and they record quantities D-78 does not name. Proposed:
+- **Values at fixed points.** Before the first change of summation order, a bit-preserving round adds to each golden
+  run the values the change touches, at two points: the fit's start (Cox: β = 0; logistic: SerBIN's start, every γ
+  at logit(ȳ) and β = 0) and the run's recorded estimates.
+  - Cox: the log-likelihood, score and information of one evaluation.
+  - Logistic: pass A's Schur complement, right-hand side, log-likelihood and score term; the variance pass's Schur
+    complement; and the merged co-moments.
+  - A re-baselining round evaluates the new code at the previous manifest's points. These values are D-78's
+    log-likelihoods, scores and information at fixed β, compared within 1·10⁻¹³ scaled; the logistic Schur terms
+    stand for that model's information and score.
+- **Converged outputs D-78 does not name.**
+  - Standard errors, Cox's information at the estimates, and the provider effects and their two variances: within
+    T-part's bound for parameters (1·10⁻¹⁰), as estimates and covariances are.
+  - The converged log-likelihood: within T-part's bound for the objective (1·10⁻¹²).
+  - Each is scaled by its largest element (D-09).
+- **Counts and flags.**
+  - `at_bound` is a flag, and must be identical.
+  - The AUC is a ratio of integer counts from an exact sort. It must be identical, or any difference is explained in
+    the evidence log and approved, as for iteration counts.
+
+### D-78: The re-baselining rule for changes of summation order, from step 2 onward (Accepted: approved by the maintainer, 2026-11-21)
+
+Plan §6.3's rule, in force from performance step 2 onward. As §6.3 states it:
+
+Some changes reorder floating-point sums without changing what is summed: chunked accumulation, the weighted-Gram
+identity, per-time aggregates, and groups with G > 1. Such a change is admitted when the round that makes it shows
+all four of the following:
+1. **Fixtures.** Every fixture comparison passes in its tolerance class, with tolerances unchanged.
+2. **Old manifest against new:**
+   - log-likelihoods, scores and information at fixed β agree within 1·10⁻¹³ scaled, a tenth of T-fn;
+   - converged estimates and covariances agree within T-part (1·10⁻¹⁰);
+   - iteration counts, halving counts and flags are identical. A difference in counts is explained in the evidence
+     log and approved.
+3. **R0 for the new code.** Bits are identical across partition counts and repeated runs, with the one-ulp
+   negative control.
+4. **Re-baselining.** The new manifest, written with `PPROF_GOLDEN_WRITE`, replaces the old in the same commit, and the evidence log reports the
+   largest difference for each quantity.
+
+- **The approval.** The maintainer approved D-78 on 2026-11-21 as "plan §6.3's re-baselining rule for changes to
+  summation order, adopted from step 2 onward", before its text was written. Round 177 records it as §6.3's rule,
+  word for word.
+- **D-75.** D-75 had approved the plan with this rule while §6.3 was still headed "proposed"; §6.3 now cites D-78.
+  §6.3's paragraph on changes of iterates (step 5) is outside D-78 and stands as D-75 approved it.
+- **Beyond §6.3.** How the rule applies to the golden runs' quantities that it does not name is proposed separately,
+  as D-79.
+
 ### D-77: The working set is cached off-heap by default (Accepted: approved by the maintainer, 2026-11-19; amended at his direction, 2026-11-20)
 
 - **The change.** `BlockOptions.storageLevel` defaults to `OFF_HEAP` instead of `MEMORY_AND_DISK`, for every model's

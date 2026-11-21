@@ -228,6 +228,55 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 177 (2026-11-21): D-78 recorded; step 2's design note
+
+- Round 176 is on `main` as `5db844e`. The maintainer reported CI green through round 175; round 176's run is not
+  yet reported.
+- **D-78** (Accepted: approved by the maintainer, 2026-11-21): plan §6.3's re-baselining rule for changes of
+  summation order, in force from step 2 onward.
+  - It was approved before its text existed. It is recorded as §6.3's four conditions, word for word, and §6.3 no
+    longer says "proposed".
+  - D-75 had approved the plan with the rule. §6.3's paragraph on changes of iterates is outside D-78.
+- **D-79** (Proposed): how D-78 applies to the golden runs. Values are pinned at two fixed points before the change.
+  It also covers the converged outputs D-78 does not name, `at_bound` and the AUC.
+- **`docs/spec/performance/step2-chunks.md`**, for the maintainer's review. Nothing is implemented.
+  - **Chunked row storage.** Blocks keep whole providers or strata and their fold order. Their rows are stored as
+    records of at most 256 KiB of features, read through a view, which changes no bit. Spark 4.0 and 4.1 close a
+    cached batch at 4 MiB, so today each 9 to 18 MB block is a batch of its own.
+  - **The tests' and measures' layouts.** The covariate tests, provider tests and standardized measures still grow
+    blocks (`BudgetedLayout`). Since round 160, beyond the budget, their layout therefore differs from their fit's.
+    They will plan as the fit does, and the score test will fold in groups. `predict` builds no blocks: round 176's
+    "predictions" are these callers.
+  - **Chunked compensated sums, L = 256.** They apply only where p(p+1)/2 terms per row or per event time carry the
+    cost:
+    - the logistic Schur complement (pass A, the variance pass, the score test);
+    - the co-moments;
+    - Cox's S₂, whose reads add the pending chunk;
+    - Cox's per-time information.
+
+    Log-likelihoods and scores at fixed parameters keep their bits.
+  - **Rounds A to D.** Logistic storage and layouts; Cox storage with OI-104; fixed-point values in the golden runs;
+    then the chunked sums under D-78, with the specification and ADR amendments.
+- **A probe** (`docs/spec/performance/step2-probe/Probe.scala`) of the packed S₂ update at 180 features, in the
+  sandbox:
+  - Neumaier per term: 26 to 31 µs per row;
+  - a branch-free TwoSum with the same bits: 19 to 24;
+  - chunks of 256: 7.9 without reads, and 10.0 with a read every 6 rows when reads add the pending chunk;
+  - plain sums: 7.5 to 10.6.
+
+  After 95% of the rows are removed again, chunked sums stay within 5·10⁻¹⁵ of today's, scaled. Plain sums reach
+  8.3·10⁻¹⁴, and 2.4·10⁻¹³ at 50 features.
+- **Records.** The plan's status, §4, §6.3 and §10; OI-38, OI-104, OI-116, OI-118 and OI-119.
+
+Evidence (assistant sandbox, JDK 17):
+- The round adds documentation and a probe outside every module, so no suite was run.
+- The 4 MiB limit was read with `javap` from Spark 4.0.0's and 4.1.0's jars. The probe's output is in the evidence log.
+- The patch applies to a fresh clone of `main` with an identical tree. scalafmt is clean, and `check-engine-api.sh`
+  passes with its self-test.
+
+**Next: the maintainer's review** of the note and of D-79; round A follows his approval. S8 on round 173's build or
+later is still awaited.
+
 ## Round 176 (2026-11-21): the Cox reference point folded in reduction groups (OI-116)
 
 - Rounds 174 and 175 are on `main` as `9bed0e5` and `f87f2c9`.

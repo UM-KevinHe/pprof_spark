@@ -1,6 +1,6 @@
 # Performance phase plan: Cox and provider fixed-effect logistic regression at scale
 
-Status: **approved** as D-75 on 2026-11-13 (proposed in round 149), and amended by D-76 on 2026-11-16. The plan follows the algorithmic feasibility study
+Status: **approved** as D-75 on 2026-11-13 (proposed in round 149), and amended by D-76 on 2026-11-16; its re-baselining rule (§6.3) was approved as D-78 on 2026-11-21. The plan follows the algorithmic feasibility study
 (`docs/reviews/algorithmic-feasibility-2026-11.md`, read at round 139) and a reading of the code at round 148
 (`303ae11`), recorded in §2. Phase 4 is paused while this phase runs (§8).
 
@@ -256,6 +256,7 @@ Step 1 addresses OI-02 and part of OI-30.
 - **Step 2** addresses OI-38 and OI-104. It brings the study's chunked accumulation into the kernels: plain sums over
   a fixed number of rows, in a layout the JIT vectorizes, with each chunk folded into Neumaier totals. The chunk
   length is fixed in code, so it is not a tuning parameter that could change bits between runs.
+  Design: `docs/spec/performance/step2-chunks.md` (round 177), for the maintainer's review.
 - **Step 3** specifies the weighted-Gram identity with Efron ties and entry times before any code is written (NN-2),
   with fixtures for Efron ties with truncation.
 - **Step 4** covers gridded times, which addresses OI-03 for them. Continuous times keep the sorted scans planned
@@ -311,7 +312,11 @@ and the finding is recorded.
 
 A bit-preserving change must leave the manifest unchanged: NUM-2 as written.
 
-### 6.3 Changes to summation order: the proposed re-baselining rule
+### 6.3 Changes to summation order: the re-baselining rule (D-78)
+
+The maintainer approved this rule as D-78 on 2026-11-21, in force from step 2 onward; it is no longer only
+proposed. How it applies to the golden runs' quantities that it does not name is proposed as D-79 (step 2's design
+note, §6).
 
 Some changes reorder floating-point sums without changing what is summed: chunked accumulation, the weighted-Gram
 identity, per-time aggregates, and groups with G > 1. Such a change is admitted when the round that makes it shows
@@ -376,3 +381,4 @@ Phase 4 paused at a clean point on 2026-11-13, after round 148. Nothing is half-
 
 - D-76 (approved 2026-11-16): measuring on the production cluster as it is, and supporting Spark 4.0. Folded into
   §1, §4 and §5.
+- D-78 (approved 2026-11-21): §6.3's re-baselining rule, in force from step 2 onward.

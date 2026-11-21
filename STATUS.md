@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-21, round 176.
+Updated 2026-11-21, round 177.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -207,7 +207,8 @@ through round 100 as the maintainer reported.
 | 173 | OI-119: the AUC pass made leaner, same bits: each task takes its blocks' effects instead of a join that copied every cached block, and the scores are computed once and cached for the sort; `LogisticAucSuite` checks the AUC against an exact driver-side Mann–Whitney on data with many ties; in the sandbox at 180 features the pass reads half as much and its GC fell from 0.4–0.9 s to 0.15 s | Merged (5d71c58) |
 | 174 | OI-117 closed: a fit's layout records G, the blocks per reduction group, and R, the groups; Cox and logistic fits save them (file formats 6 and 5), and older files read as G = 1; `PerfJob` reports the recorded values instead of recomputing them | Merged (9bed0e5) |
 | 175 | OI-114 closed: the shared validator and the linear and random-effect models count distinct row identifiers in a job of their own, as Cox and logistic have since round 157, instead of inside the counts' aggregate; `DuplicateRowsSuite` covers all five models | Merged (f87f2c9) |
-| 176 | OI-116 closed by size: Cox's reference point, the only per-block collect that grows with the features (3 + 3p values per block), folds in the working set's reduction groups, the same to the bit with one block per group; the other per-block collects send O(m + blocks) values | Delivered as a patch |
+| 176 | OI-116 closed by size: Cox's reference point, the only per-block collect that grows with the features (3 + 3p values per block), folds in the working set's reduction groups, the same to the bit with one block per group; the other per-block collects send O(m + blocks) values | Merged (5db844e) |
+| 177 | D-78 recorded: plan §6.3's re-baselining rule for changes of summation order, approved by the maintainer on 2026-11-21, in force from step 2; D-79 proposed (how D-78 applies to the golden runs); step 2's design note (`docs/spec/performance/step2-chunks.md`), for the maintainer's review: chunked row storage, the tests' and measures' layouts, chunked compensated sums (L = 256), and the rounds that re-baseline; a sandbox probe of five summations | Delivered as a patch |
 
 ## Decisions and spikes
 
