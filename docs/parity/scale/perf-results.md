@@ -11,6 +11,50 @@ Estimates and arithmetic are never entered here; they live in `docs/spec/perform
 
 The scale runs reported on 2026-11-13 used round 81's build (OI-103), so they are not entered.
 
+### 2026-11-21: S8 on round 177's build (`b92919c`)
+
+S8 again: the logistic model with 100M rows, 180 features and 8,000 providers, off-heap storage, on Spark 4.0.
+Round 177's build has round 173's leaner AUC pass and D-77's off-heap default, but not round 178's records.
+
+| Run | Point | Fit s | Iterations | Executors, utilization | Blocks, G, R | Cache | Heaviest pass: CPU µs per row | Outside CPU and GC | Max \|z\| |
+|---|---|---|---|---|---|---|---|---|---|
+| S8 | Logistic, 100M, 180 | 3,934.9 | 4 | 1 to 10, 0.76 | 8,000, 16, 500 | 170.0 GiB, 36.5 of it on disk | 81.0 | 24.9% | 2.86 |
+
+By operation, with CPU and GC summed over executors:
+
+| Operation | Runs | Wall s | Share of the fit | CPU s | GC, share of CPU | Shuffle read |
+|---|---|---|---|---|---|---|
+| Pass A | 4 | 1,523.8 | 38.7% | 32,391.9 | 14.5% | 37.35 GiB |
+| Build | 1 | 1,144.1 | 29.1% | 3,660.9 | 52.8% | 38.07 GiB, its own shuffle |
+| Variance pass | 1 | 354.7 | 9.0% | 8,008.3 | 9.3% | none |
+| Summaries | 1 | 327.5 | 8.3% | 7,554.2 | 10.7% | 5.96 GiB |
+| Pass B | 4 | 298.3 | 7.6% | 6,129.9 | 52.1% | 33.42 GiB |
+| Validation | 2 | 167.4 | 4.3% | 528.6 | 0.1% | its own shuffle |
+| Provider variances | 1 | 59.0 | 1.5% | 1,086.1 | 61.0% | 5.52 GiB |
+| AUC pass | 1 | 55.4 | 1.4% | 561.1 | 87.5% | 1.63 GiB, its sort's 0.76 among it |
+
+Readings:
+- **The logistic model fits at 100M rows.** S8 on round 163's build failed in the AUC pass after 5,690.5 s. Round 173's
+  AUC pass took 55.4 s here. OI-119 is closed.
+- **Pass A carries the fit.** It takes 38.7% of the wall time, at 81.0 µs of CPU per row per pass (S7 at 50M: 83.3).
+  Step 2's chunked sums (round D) are for it. The next heaviest per row are the variance pass at 80.1 µs and the
+  summaries' co-moments at 75.5.
+- **The passes recompute cached partitions.** These passes read shuffle output:
+  - pass A, 37.35 GiB over its four runs;
+  - pass B, 33.42 GiB;
+  - the summaries, 5.96 GiB;
+  - the provider variances, 5.52 GiB.
+
+  Partitions of the cached working set were rebuilt from the build's shuffle. As a result, 24.9% of pass A's executor
+  time was outside CPU and GC, against 11.1% for S7. Executors went from 1 to 10 during the fit, and 36.5 GiB of the
+  170.0 GiB cache was on disk (OI-123).
+- **GC.**
+  - Its share of CPU: pass A 14.5%, pass B and the build about half, the provider variances 61.0%, the AUC pass 87.5%.
+  - Round 178's build no longer joins γ to the blocks in any pass. In the sandbox, that cut the passes' GC by about
+    three quarters at 180 features.
+- **Twice S7's rows took 3.2 times its time** (1,218.9 s), the recomputation included.
+- **Heaps.** The driver heap peaked at 8.58 GiB, 1.17 GiB after GC; executor heaps reached 2.01 GiB.
+
 ### 2026-11-16: points 1 and 2 on a small test cluster (build `d0b9bd5`, round 151)
 
 This was not the standard cluster:
@@ -123,7 +167,8 @@ Readings:
   the narrow S3, where reading weighs most against computing. The CPU per row matched the other levels.
 - **What is still unmeasured is a paired run at small sizes.** S1 and S3 with
   `MEMORY_AND_DISK,DISK_ONLY,OFF_HEAP` in widget 5 take minutes.
-- **Logistic at 100M rows fails in the AUC pass under any level** (OI-119).
+- **Logistic at 100M rows fails in the AUC pass under any level** (OI-119). On round 177's build it fits
+  (2026-11-21, above).
 
 ### 2026-11-19: point 5 with off-heap storage (build `ada822d`, round 163)
 

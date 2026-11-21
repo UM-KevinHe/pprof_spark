@@ -228,6 +228,31 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 179 (2026-11-21): S8 fits the logistic model at 100M rows
+
+- Round 178 is on `main` as `8a0cea3`. The maintainer reports CI green for rounds 176 to 178.
+- **S8 on round 177's build** (`b92919c`, off-heap, Spark 4.0, reported 2026-11-21): the logistic model with 100M
+  rows, 180 features and 8,000 providers fit in 3,934.9 s. It took 4 iterations, max |z| was 2.86, and the 8,000 blocks
+  formed 500 groups of 16. The earlier S8 failed in the AUC pass after 5,690.5 s, while round 173's AUC pass took 55.4 s
+  here. OI-119 is closed.
+- **Readings** (`perf-results.md`, "2026-11-21"):
+  - **Pass A** is 38.7% of the fit, at 81.0 µs of CPU per row per pass (S7: 83.3). It is the target of step 2's
+    round D.
+  - **Recomputation.** The passes read shuffle output, rebuilding cached partitions: 37.35 GiB in pass A's four runs,
+    33.42 GiB in pass B's, and about 6 GiB each in the summaries and the provider variances. 24.9% of pass A's executor
+    time was outside CPU and GC (S7: 11.1%). Executors went from 1 to 10 during the fit, and 36.5 GiB of the 170.0 GiB
+    cache was on disk. OI-123 is new.
+  - **GC** was 14.5% of pass A's CPU, about half of pass B's and the build's, and 87.5% of the AUC pass's. Round 178's
+    build no longer joins γ to the blocks in any pass.
+- **Records.** `perf-results.md`, OI-118, OI-119 (closed), OI-123 (new) and STATUS.
+
+Evidence (assistant sandbox): documentation only. Every figure was computed from the report's JSON, and no
+cluster-identifying detail was recorded. The patch applies to a fresh clone of `main` with an identical tree; scalafmt
+is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next: round B**, Cox's records with the Breslow buffer (OI-104), then round C's fixed-point pins (D-79). A 100M run on
+round 178's build or later would show round A's effect and inform OI-123; it is not required.
+
 ## Round 178 (2026-11-21): logistic rows stored in records (step 2, round A); D-79 approved
 
 - Round 177 is on `main` as `b92919c`. The maintainer approved step 2's design note and D-79 as written on

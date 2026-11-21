@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-21, round 178.
+Updated 2026-11-21, round 179.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -209,7 +209,8 @@ through round 100 as the maintainer reported.
 | 175 | OI-114 closed: the shared validator and the linear and random-effect models count distinct row identifiers in a job of their own, as Cox and logistic have since round 157, instead of inside the counts' aggregate; `DuplicateRowsSuite` covers all five models | Merged (f87f2c9) |
 | 176 | OI-116 closed by size: Cox's reference point, the only per-block collect that grows with the features (3 + 3p values per block), folds in the working set's reduction groups, the same to the bit with one block per group; the other per-block collects send O(m + blocks) values | Merged (5db844e) |
 | 177 | D-78 recorded: plan §6.3's re-baselining rule for changes of summation order, approved by the maintainer on 2026-11-21, in force from step 2; D-79 proposed (how D-78 applies to the golden runs); step 2's design note (`docs/spec/performance/step2-chunks.md`), for the maintainer's review: chunked row storage, the tests' and measures' layouts, chunked compensated sums (L = 256), and the rounds that re-baseline; a sandbox probe of five summations | Merged (b92919c) |
-| 178 | Step 2's design note and D-79 approved by the maintainer (2026-11-21). Step 2, round A: the logistic working set stored in records of at most 256 KiB of covariates (`LogisticChunk`), read back as block views; the kernels read rows through a view, with the same arithmetic; every pass takes its blocks' effects in the task (OI-105 closed; OI-122 opened); the covariate tests, provider tests and measures plan as their fit, with the score test's and the exact direct standardization's sums folded in groups; the golden runs unchanged | Delivered as a patch |
+| 178 | Step 2's design note and D-79 approved by the maintainer (2026-11-21). Step 2, round A: the logistic working set stored in records of at most 256 KiB of covariates (`LogisticChunk`), read back as block views; the kernels read rows through a view, with the same arithmetic; every pass takes its blocks' effects in the task (OI-105 closed; OI-122 opened); the covariate tests, provider tests and measures plan as their fit, with the score test's and the exact direct standardization's sums folded in groups; the golden runs unchanged | Merged (8a0cea3) |
+| 179 | S8 recorded: on round 177's build the logistic model fits at 100M rows and 180 features in 3,934.9 s (OI-119 closed); its passes recompute cached partitions (OI-123, new); CI green for rounds 176 to 178 | Delivered as a patch |
 
 ## Decisions and spikes
 
