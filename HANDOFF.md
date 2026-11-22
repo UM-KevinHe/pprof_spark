@@ -228,6 +228,40 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 183 (2026-11-22): step 3's specification, the Cox weighted-Gram information (D-80 proposed)
+
+- Round 182 is on `main` as `2138485`. The maintainer runs step 2's exit measurement on the cluster next. The runs
+  were clarified in chat: S2–S8 and points 7 and 9 on round 182's build, with off-heap storage, compared with the
+  earlier off-heap runs.
+- **`docs/spec/cox/weighted-gram.md`** (Draft), for approval as D-80.
+  - **The identity.** I(β) = Σᵢ ωᵢxᵢxᵢᵀ − Σₜ Σₛ aₜm̄ₜₛm̄ₜₛᵀ, with ωᵢ = rᵢ(Λᵢ − ψᵢ): Λᵢ the cumulative hazard over row
+    i's at-risk interval, and ψᵢ the Efron correction of tied events. Both are exactly what `CoxResiduals` computes.
+  - **The algorithm.** The sweep keeps S₀ and S₁ but no S₂, and puts the rank-one terms in a chunked sum M. A second,
+    in-memory pass puts ωᵢxᵢxᵢᵀ in a chunked sum G, and I = G − M. Removals cost O(p).
+  - **Late entries.** Λᵢ is a compensated difference of the cumulative hazard's sum and compensation (Sterbenz), so
+    they keep relative accuracy.
+  - **The fixture.** A new case, `lt-heavy-ties`, gives the Efron ties with truncation that plan §4 asks for; the
+    present truncated cases seldom tie two deaths in a stratum.
+  - **Rounds.** The fixture, then the kernel with the specification amendments under D-78, then the cluster's
+    measurement.
+- **A probe** (`docs/spec/cox/weighted-gram-probe/GramProbe.scala`) compared the weighted-Gram information with round
+  182's kernel on one stratum of 20,000 rows at 180 features, in the sandbox:
+  - Breslow: 1.11 times faster;
+  - Efron: 2.13 times;
+  - with 40% of the rows truncated: 1.49 (Breslow) and 2.43 (Efron).
+
+  Agreement was 3.0·10⁻¹⁶ to 4.5·10⁻¹⁶, scaled, which also checks the Efron and truncation derivation.
+- **Records.** D-80 (Proposed); plan §4's step 3; STATUS.
+
+Evidence (assistant sandbox, JDK 17):
+- The round adds documentation and a probe outside every module, so no suite was run.
+- The probe was compiled against round 182's numerics classes. Its output is in the evidence log.
+- The patch applies to a fresh clone of `main` with an identical tree. scalafmt is clean, and `check-engine-api.sh`
+  passes with its self-test.
+
+**Next: the maintainer's review of D-80.** Then the fixture round, which needs the reference environment, and step 2's
+exit results when they come.
+
 ## Round 182 (2026-11-21): chunked compensated sums, re-baselined under D-78 (step 2, round D)
 
 - Round 181 is on `main` as `cb6f8c1`.

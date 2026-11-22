@@ -103,6 +103,22 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-80: The Cox weighted-Gram information, performance step 3's specification (Proposed, round 183)
+
+Proposed for the maintainer's approval: `docs/spec/cox/weighted-gram.md`.
+- **The identity.** I(β) = Σᵢ ωᵢxᵢxᵢᵀ − Σₜ Σₛ aₜm̄ₜₛm̄ₜₛᵀ, with ωᵢ = rᵢ(Λᵢ − ψᵢ). Λᵢ is the cumulative hazard over row i's
+  at-risk interval, and ψᵢ the Efron correction of tied events, as the martingale residuals compute them. ℓ and U are
+  unchanged.
+- **The algorithm.** The present sweep keeps S₀ and S₁ but no S₂, and adds the rank-one terms to a chunked sum M. A
+  second, in-memory pass adds ωᵢxᵢxᵢᵀ to a chunked sum G, and I = G − M. Λᵢ is a compensated difference of the
+  cumulative hazard's sum and compensation, so late entries keep their accuracy.
+- **A new fixture case.** `lt-heavy-ties`: Efron ties with truncation, with entries on event times.
+- **Validation.** Exact references; round 182's S₂ kernel as a test reference; the fixtures; the golden runs
+  re-baselined under D-78 and D-79.
+- **Rounds.** The fixture, then the kernel with the specification amendments, then the cluster's measurement.
+- **Measured** in the sandbox probe at 180 features: 1.1 times faster for Breslow and 2.1 for Efron; 1.5 and 2.4 with
+  40% of the rows truncated. Agreement with round 182's kernel was 3.0·10⁻¹⁶ to 4.5·10⁻¹⁶, scaled.
+
 ### D-79: How D-78 applies to the golden runs (Accepted: approved by the maintainer, 2026-11-21)
 
 Proposed with step 2's design note (`docs/spec/performance/step2-chunks.md` §6). D-78

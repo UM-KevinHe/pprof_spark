@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-11-21, round 182. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-11-22, round 183. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
