@@ -229,7 +229,10 @@ preparation. A final pass at the estimates gives the provider table, distributed
 by closure (p² doubles).
 
 **Determinism.** Provider sums in canonical row order with Neumaier-compensated sums (the fused pairwise
-cascade that ADR-0006 and OI-34 planned was not adopted; round 80);
+cascade that ADR-0006 and OI-34 planned was not adopted; round 80). Since round 182 (D-78), the centred Schur
+complement S of pass A, the variance pass and the score test, and the summaries' co-moments, are chunked compensated
+sums: plain sums over L = 256 rows of the block, across its providers, each chunk folded into Neumaier totals in block
+order ([step2-chunks.md §5](../performance/step2-chunks.md));
 partials in block order with compensated summation; the median is exact (a sort of m values on the
 driver); every step length's ℓ is computed with the arithmetic of the sequential search. Hence R0
 across partitionings and R1 across block sizes (T-part). Engine code uses Dataset APIs only and runs

@@ -1,5 +1,7 @@
 package pprof.spark.numerics.kernels
 
+import pprof.spark.numerics.ChunkedVector
+
 import pprof.spark.numerics.NeumaierSum
 
 /** Kernels of the logistic fixed-effect model over the rows of one block (Phase 2a specification
@@ -148,7 +150,7 @@ object LogisticFE {
     val p = rows.p
     val pi = new Array[Double](rows.rows)
     val q = new Array[Double](rows.rows)
-    val s = new Accumulator(Moments.packedLength(p))
+    val s = new ChunkedVector(Moments.packedLength(p))
     val r = new Accumulator(p)
     val scoreTerm = new NeumaierSum
     val loglik = new NeumaierSum
@@ -269,7 +271,7 @@ object LogisticFE {
     val p = rows.p
     val pi = new Array[Double](rows.rows)
     val q = new Array[Double](rows.rows)
-    val s = new Accumulator(Moments.packedLength(p))
+    val s = new ChunkedVector(Moments.packedLength(p))
     val r = new Accumulator(p)
     val unused = new NeumaierSum
     val provider = new ProviderSums(p)
@@ -463,7 +465,7 @@ object LogisticFE {
     val p = rows.p
     val pi = new Array[Double](rows.rows)
     val q = new Array[Double](rows.rows)
-    val s = new Accumulator(Moments.packedLength(p))
+    val s = new ChunkedVector(Moments.packedLength(p))
     val r = new Accumulator(p)
     val score = new Accumulator(p)
     val unused = new NeumaierSum
@@ -578,11 +580,12 @@ object LogisticFE {
       xbar: Array[Double],
       pi: Array[Double],
       q: Array[Double],
-      s: Accumulator,
+      s: ChunkedVector,
       r: Accumulator
   ): Unit = {
     val p = rows.p
     val d = new Array[Double](p)
+    val sp = s.pending
     var row = rows.start(k)
     while (row < rows.end(k)) {
       val xs = rows.xs(row)
@@ -597,14 +600,17 @@ object LogisticFE {
       var index = 0
       while (i < p) {
         r.add(i, d(i) * residual)
+        val w = q(row) * d(i)
+        val off = index - i
         j = i
         while (j < p) {
-          s.add(index, q(row) * d(i) * d(j))
-          index += 1
+          sp(off + j) += w * d(j)
           j += 1
         }
+        index += p - i
         i += 1
       }
+      s.endTerm()
       row += 1
     }
   }

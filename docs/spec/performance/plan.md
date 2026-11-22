@@ -256,8 +256,8 @@ Step 1 addresses OI-02 and part of OI-30.
 - **Step 2** addresses OI-38 and OI-104. It brings the study's chunked accumulation into the kernels: plain sums over
   a fixed number of rows, in a layout the JIT vectorizes, with each chunk folded into Neumaier totals. The chunk
   length is fixed in code, so it is not a tuning parameter that could change bits between runs.
-  Design: `docs/spec/performance/step2-chunks.md` (round 177), approved by the maintainer on 2026-11-21; round A
-  in round 178.
+  Design: `docs/spec/performance/step2-chunks.md` (round 177), approved by the maintainer on 2026-11-21; rounds A
+  to D in rounds 178, 180, 181 and 182. Its exit is the cluster's measurement (§4, D-76).
 - **Step 3** specifies the weighted-Gram identity with Efron ties and entry times before any code is written (NN-2),
   with fixtures for Efron ties with truncation.
 - **Step 4** covers gridded times, which addresses OI-03 for them. Continuous times keep the sorted scans planned

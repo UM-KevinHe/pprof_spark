@@ -105,14 +105,18 @@ against the fit's:
 | Item | Plan |
 |---|---|
 | Blocks | As before, plus each row's entry time and, per stratum, the row order by entry time descending |
-| Risk-set sweep | Exit times descending: add rows at their exit time, then remove rows whose entry time is at or above the current event time, before that time's events contribute; removals are Neumaier additions of the negated terms |
+| Risk-set sweep | Exit times descending: add rows at their exit time, then remove rows whose entry time is at or above the current event time, before that time's events contribute; removals add the negated terms, with Neumaier sums for S₀ and S₁ and to S₂'s chunks (first-slice §6) |
 | Baseline | One extra pass at β̂: each block emits its strata's rows; the cumulative sum runs ascending within the stratum with a Neumaier sum. m-scale output stays distributed |
 | Prediction | Spark expressions for η; an as-of join of each row's time to its stratum's baseline (a union with the baseline rows, a window partitioned by stratum and ordered by time, an event time counting as reached) |
 | Cost | Fit unchanged in passes and driver traffic; baseline one pass; prediction one shuffle of the prediction rows and the baseline table |
 | Reproducibility | R0 bitwise per layout; R1 within T-part for the fit and T-base for the baseline |
 
 Subtracting entries can lose relative accuracy when the risk set shrinks far below the mass removed
-from it. The Neumaier compensation bounds this, and a heavily truncated fixture tests it.
+from it. The Neumaier compensation bounds this for S₀ and S₁. Since round 182, S₂'s plain chunks of L = 256 terms
+bound it more loosely, to (L − 1)u times the magnitudes in a chunk. In step 2's probe, after 95% of the rows were
+removed again, chunked sums stayed within 7.3·10⁻¹⁶ of fully compensated ones, scaled, at 180 features. Plain sums
+reached 8.3·10⁻¹⁴ there and 2.4·10⁻¹³ at 50 ([step2-chunks.md §5.4](../performance/step2-chunks.md)). A heavily
+truncated fixture tests it.
 
 ## 7. Edge cases
 

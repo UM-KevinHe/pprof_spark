@@ -54,3 +54,17 @@ deterministic and at least as accurate as the references, which use plain sums (
 `np.bincount` and BLAS products; R pprof's Armadillo sums and BLAS). OI-34 is closed. Whether the
 cascade's lower cost matters is measured by the scale-test kit's kernel benchmarks
 ([docs/spec/scale/plan.md](../spec/scale/plan.md) §7, OI-38).
+
+## Amendment (2026-11-21, round 182; D-78, performance step 2)
+
+Some sums cost p(p+1)/2 additions per row or per event time. They are now chunked compensated sums: plain additions
+over L = 256 terms (`Summation.ChunkLength`), each chunk folded into Neumaier totals in chunk order
+([docs/spec/performance/step2-chunks.md](../spec/performance/step2-chunks.md) §5). They are:
+- the logistic centred Schur complement, in pass A, the variance pass and the score test;
+- the logistic summaries' co-moments;
+- Cox's risk-set sums S₂ and its per-time information.
+
+Every other sum keeps its Neumaier or pairwise algorithm. Chunk boundaries follow the canonical order alone, so R0 holds
+per layout. A sandbox probe ran the S₂ update 3.3 times faster than per-term Neumaier sums, within 10⁻¹⁵ of them
+(§5.4). The change re-baselined the golden runs under D-78 and D-79. D-15's algorithms (ADR-0003) are unchanged for the
+reductions they cover.

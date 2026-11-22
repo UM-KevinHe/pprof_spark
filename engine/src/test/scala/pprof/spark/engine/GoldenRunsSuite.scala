@@ -45,6 +45,18 @@ class GoldenRunsSuite extends SparkSuite {
 
   override val munitTimeout: Duration = Duration(20, "min")
 
+  /** With PPROF_GOLDEN_BASELINE set to a previous manifest (and no write), each run's estimates point is evaluated at
+    * that manifest's estimates, for D-78's comparison (D-79).
+    */
+  private lazy val baseline: Option[Map[String, Run]] =
+    if (sys.env.get(WriteVariable).exists(_.nonEmpty)) None
+    else
+      sys.env.get(BaselineVariable).filter(_.nonEmpty).map { path =>
+        parse(new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8))
+          .map(r => r.name -> r)
+          .toMap
+      }
+
   private lazy val synthetic: Vector[(Run, Run)] = Vector(coxA(), coxB(), logisticA(), logisticB())
   private lazy val computed: Vector[Run] = coxFixtures ++ logisticFixtures ++ synthetic.map(_._1)
 
@@ -53,6 +65,14 @@ class GoldenRunsSuite extends SparkSuite {
       case Some(path) =>
         Files.write(Paths.get(path), render(computed).getBytes(StandardCharsets.UTF_8))
         println(s"$WriteVariable: wrote ${computed.size} golden runs to $path")
+      case None if baseline.nonEmpty =>
+        val (lines, violations) = underD78(baseline.get.values.toVector, computed)
+        println(
+          s"$BaselineVariable: D-78's comparison over ${computed.size} runs:\n" + lines.mkString(
+            "\n"
+          )
+        )
+        assert(violations.isEmpty, violations.mkString("\n"))
       case None =>
         val problems = compare(load(), computed)
         assert(
@@ -69,6 +89,20 @@ class GoldenRunsSuite extends SparkSuite {
       val problems = compare(Vector(one), Vector(seven))
       assert(problems.isEmpty, s"${one.name}:\n" + problems.mkString("\n"))
     }
+  }
+
+  test("D-78's comparison holds values within their bounds and flags the rest (D-79)") {
+    val run = computed.find(_.doubles.contains("at_start_information")).get
+    def scaledBy(key: String, factor: Double) =
+      run.copy(doubles = run.doubles.updated(key, run.doubles(key).map(v => v * (1.0 + factor))))
+    assert(underD78(Vector(run), Vector(scaledBy("at_start_information", 1e-15)))._2.isEmpty)
+    assert(underD78(Vector(run), Vector(scaledBy("at_start_information", 1e-12)))._2.nonEmpty)
+    assert(underD78(Vector(run), Vector(scaledBy("estimates", 1e-12)))._2.isEmpty)
+    assert(underD78(Vector(run), Vector(scaledBy("estimates", 1e-9)))._2.nonEmpty)
+    assert(underD78(Vector(run), Vector(scaledBy("at_start_score", 1e-14)))._2.nonEmpty)
+    val counted =
+      run.copy(integers = run.integers.updated("iterations", run.integers("iterations").map(_ + 1)))
+    assert(underD78(Vector(run), Vector(counted))._2.nonEmpty)
   }
 
   test("the comparison reports a one-ulp change (negative control)") {
@@ -88,11 +122,16 @@ class GoldenRunsSuite extends SparkSuite {
 
   private def coxRun(name: String, df: DataFrame, spec: CoxSpec, options: CoxOptions): Run = {
     val f = CoxPH.fit(df, spec, options)
+    val atEstimates =
+      baseline
+        .flatMap(_.get(name))
+        .map(_.doubles("estimates").toArray)
+        .getOrElse(f.estimates.toArray)
     val points = CoxGoldenPoints.evaluate(
       df,
       spec,
       options,
-      Seq(new Array[Double](spec.features.size), f.estimates.toArray)
+      Seq(new Array[Double](spec.features.size), atEstimates)
     )
     def at(prefix: String, e: Evaluation): Map[String, Vector[Double]] =
       Map(
@@ -124,6 +163,7 @@ class GoldenRunsSuite extends SparkSuite {
       options: LogisticOptions
   ): Run = {
     val f = LogisticFE.fit(df, spec, options)
+    val previous = baseline.flatMap(_.get(name))
     Run(
       name,
       Map(
@@ -139,8 +179,10 @@ class GoldenRunsSuite extends SparkSuite {
         df,
         spec,
         options,
-        f.providers.gamma.toArray,
-        f.coefficients.map(_.estimate).toArray
+        previous.map(_.doubles("gamma").toArray).getOrElse(f.providers.gamma.toArray),
+        previous
+          .map(_.doubles("estimates").toArray)
+          .getOrElse(f.coefficients.map(_.estimate).toArray)
       ),
       Map(
         "iterations" -> Vector(f.iterations.toLong),
@@ -329,6 +371,72 @@ class GoldenRunsSuite extends SparkSuite {
 object GoldenRunsSuite {
 
   val WriteVariable: String = "PPROF_GOLDEN_WRITE"
+  val BaselineVariable: String = "PPROF_GOLDEN_BASELINE"
+
+  /** D-78's bound for a quantity, scaled by its largest element (D-09), as D-79 maps it; None means bit-identical.
+    * Converged values are within T-part: 1e-12 for the log-likelihood and 1e-10 for parameters and their variances.
+    * The fixed points' information, Schur complements and the co-moments are within 1e-13. Their log-likelihoods,
+    * scores, right-hand sides and score terms, and the AUC, are unchanged by step 2 and must be identical.
+    */
+  def bound(key: String): Option[Double] = key match {
+    case "loglik" => Some(1e-12)
+    case "estimates" | "standard_errors" | "information" | "covariance" | "gamma" | "var_gamma" |
+        "var_case_mix" =>
+      Some(1e-10)
+    case k if k.endsWith("_information") || k.endsWith("_schur") || k == "comoments" => Some(1e-13)
+    case _                                                                           => None
+  }
+
+  /** D-78's comparison of the computed runs with a previous manifest (D-79): for each quantity, the largest scaled
+    * difference over the runs and the number of runs that match to the bit, then the violations of its bound. Counts
+    * and flags must match.
+    */
+  def underD78(previous: Vector[Run], computed: Vector[Run]): (Vector[String], Vector[String]) = {
+    val p = previous.map(r => r.name -> r).toMap
+    val c = computed.map(r => r.name -> r).toMap
+    val names = (p.keySet intersect c.keySet).toVector.sorted
+    val unmatched =
+      ((p.keySet ++ c.keySet) -- names).toVector.sorted.map(n => s"$n: in one manifest only")
+    val keys = names.flatMap(n => p(n).doubles.keySet ++ c(n).doubles.keySet).distinct.sorted
+    val doubles = keys.map { k =>
+      val rows = names.flatMap { n =>
+        (p(n).doubles.get(k), c(n).doubles.get(k)) match {
+          case (Some(a), Some(b)) if a.length == b.length =>
+            val scale = math.max(a.map(math.abs).foldLeft(0.0)(math.max), Double.MinPositiveValue)
+            val difference =
+              a.indices.map(i => math.abs(a(i) - b(i))).foldLeft(0.0)(math.max) / scale
+            val identical = a.indices.forall(i =>
+              java.lang.Double.doubleToRawLongBits(a(i)) == java.lang.Double.doubleToRawLongBits(
+                b(i)
+              )
+            )
+            Some((n, difference, identical))
+          case (None, None) => None
+          case _            => Some((n, Double.PositiveInfinity, false))
+        }
+      }
+      val (at, largest, _) = rows.maxBy(_._2)
+      val same = rows.count(_._3)
+      val violated = bound(k) match {
+        case Some(b) => largest > b
+        case None    => same < rows.size
+      }
+      val limit = bound(k).fold("bit-identical")(b => f"bound $b%.0e")
+      (
+        f"$k: largest scaled difference $largest%.3e ($at); $limit; $same of ${rows.size} runs identical",
+        violated
+      )
+    }
+    val integers = names.flatMap { n =>
+      (p(n).integers.keySet ++ c(n).integers.keySet).toVector.sorted.flatMap { k =>
+        if (p(n).integers.get(k) == c(n).integers.get(k)) None
+        else Some(s"$n $k: ${p(n).integers.get(k)} before, ${c(n).integers.get(k)} now")
+      }
+    }
+    val lines =
+      doubles.map(_._1) ++ Vector(s"counts and flags: ${integers.size} differences") ++ integers
+    (lines, unmatched ++ doubles.filter(_._2).map(_._1) ++ integers)
+  }
   val Resource: String = "/golden/runs.json"
 
   /** One golden run: its floating-point outputs and its counts and flags. */

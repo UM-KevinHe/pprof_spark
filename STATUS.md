@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-21, round 181.
+Updated 2026-11-21, round 182.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -212,7 +212,8 @@ through round 100 as the maintainer reported.
 | 178 | Step 2's design note and D-79 approved by the maintainer (2026-11-21). Step 2, round A: the logistic working set stored in records of at most 256 KiB of covariates (`LogisticChunk`), read back as block views; the kernels read rows through a view, with the same arithmetic; every pass takes its blocks' effects in the task (OI-105 closed; OI-122 opened); the covariate tests, provider tests and measures plan as their fit, with the score test's and the exact direct standardization's sums folded in groups; the golden runs unchanged | Merged (8a0cea3) |
 | 179 | S8 recorded: on round 177's build the logistic model fits at 100M rows and 180 features in 3,934.9 s (OI-119 closed); its passes recompute cached partitions (OI-123, new); CI green for rounds 176 to 178 | Merged (86a7d9f) |
 | 180 | Step 2, round B: the Cox working set stored in records (`CoxChunk`), read back as block views; the Cox kernels read rows through `CoxRowsView`; Breslow fits no longer zero the Efron buffers (OI-104 closed) and the Breslow term's means are computed once per time; the golden runs unchanged; OI-124 opened (the Cox tutorials) | Merged (200e7e3) |
-| 181 | Step 2, round C: the golden runs record D-79's fixed points, at each fit's start and its estimates (Cox: log-likelihood, score and information; logistic: pass A's and the variance pass's terms, and the merged co-moments); every recorded value unchanged; `fit`'s summaries and variance pass shared with the new `LogisticFE.fixedPoints` | Delivered as a patch |
+| 181 | Step 2, round C: the golden runs record D-79's fixed points, at each fit's start and its estimates (Cox: log-likelihood, score and information; logistic: pass A's and the variance pass's terms, and the merged co-moments); every recorded value unchanged; `fit`'s summaries and variance pass shared with the new `LogisticFE.fixedPoints` | Merged (cb6f8c1) |
+| 182 | Step 2, round D: chunked compensated sums (L = 256) for the logistic Schur complement and co-moments and for Cox's S₂ and information, after the specifications and ADR-0006 were amended; `GoldenRunsSuite` compares with a previous manifest under D-78's bounds; the manifest re-baselined (largest differences 9.0·10⁻¹⁶ at fixed points, 1.7·10⁻¹⁵ converged; counts identical); OI-38 closed | Delivered as a patch |
 
 ## Decisions and spikes
 

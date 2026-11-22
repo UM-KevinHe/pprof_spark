@@ -291,3 +291,21 @@ The specifications state today's sums. Round D amends them with its evidence:
   bit-identical at 1 and 7 partitions.
 - **Points.** A run's fixed points are evaluated at its fit's own estimates. Round D's comparison evaluates the new
   code at the previous manifest's estimates instead.
+
+**Round D, round 182.**
+- **Amendments first (NN-2).** The Cox specifications (`first-slice.md` §6, `counting-process-baseline.md`,
+  `efron-weights-offsets.md` §5), the logistic specification (`fixed-effect-estimation.md` §11) and ADR-0006 state
+  the chunked sums. Their discrepancy rows stay in class D.
+- **The sums.** `Summation.ChunkLength` is 256 and `ChunkedVector` holds the rule of §5.1. It covers the logistic
+  Schur complement (`centeredInto`, one term per row), the co-moments (`Moments.centredRows`), and Cox's S₂ (one term
+  per row added or removed, read with the pending chunk) and information (one term per event time or Efron step).
+  Each term's arithmetic is unchanged.
+- **D-78's comparison.** `GoldenRunsSuite` compares with a previous manifest named by `PPROF_GOLDEN_BASELINE`,
+  evaluating each run's estimates point at that manifest's estimates. Against round 181's manifest:
+  - every fixed-point log-likelihood, score, right-hand side and score term, the AUC, and every count and flag matched
+    to the bit;
+  - the fixed points' information, Schur complements and co-moments moved by at most 9.0·10⁻¹⁶ scaled, against
+    10⁻¹³;
+  - converged values moved by at most 1.7·10⁻¹⁵, against T-part.
+- **Tests.** The re-baselined manifest replaces round 181's. Numerics' `ChunkedSumsSuite` checks sums over many chunks
+  against exact references, including a truncated Cox stratum and a 1,200-row logistic block.

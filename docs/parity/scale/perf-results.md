@@ -457,6 +457,33 @@ tables are in plan §2.5 and round 149's evidence log.
 | Cox (3 iterations) | 31.5 | 4 evaluations, 15.7 s wall | 12.7 | 5.5 | 1.6 | 7.1 |
 | Logistic (4 iterations) | 48.9 | 4 pass A and 4 pass B, 13.5 s wall | 9.3 | 17.3 | 6.8 | 6.0 |
 
+### Round 182: chunked compensated sums (step 2, round D)
+
+This is a sandbox measurement: one core, local mode, with the working set on disk, the simple design, Cox stratified by
+provider with Breslow ties. Builds alternated, round 181's (`cb6f8c1`) and round 182's, each fit in a fresh JVM. CPU
+is summed over each operation's runs.
+
+| Point | Build | Fit s | Heaviest pass: CPU s (µs per row per pass) | Variance pass CPU s | Summaries CPU s |
+|---|---|---|---|---|---|
+| Logistic, 200,000 rows, 180 features, 320 providers | before | 124.8, 127.0 | Pass A, 5 runs: 36.32, 36.59 (36.5) | 7.37, 7.26 | 7.47, 8.05 |
+| | after | 94.9, 91.0 | 13.34, 13.18 (13.3) | 2.73, 2.74 | 2.98, 2.51 |
+| Logistic, 1,000,000 rows, 20 features, 1,000 providers | before | 45.2, 44.7 | Pass A, 4 runs: 3.52, 3.42 (0.87) | 0.93, 0.96 | 1.12, 1.04 |
+| | after | 42.6, 43.5 | 2.35, 2.30 (0.58) | 0.70, 0.67 | 0.76, 0.70 |
+| Cox, 100,000 rows, 180 features, 160 strata | before | 54.4, 54.5 | Evaluation, 4 runs: 18.62, 18.90 (46.9) | — | 0.58, 0.59 |
+| | after | 42.6, 42.2 | 7.47, 7.62 (18.9) | — | 0.73, 0.55 |
+| Cox, 1,000,000 rows, 20 features, 1,000 strata | before | 31.8, 31.5 | Evaluation, 4 runs: 4.58, 4.51 (1.14) | — | 0.75, 0.71 |
+| | after | 31.1, 28.8 | 3.00, 2.84 (0.73) | — | 0.72, 0.71 |
+
+- **The same results.** The log-likelihood's bits and the iteration counts match across builds at all four points.
+- **At 180 features.**
+  - Logistic pass A's CPU fell 2.75 times, and the variance pass and summaries about 2.7 to 2.8 times.
+  - Cox evaluation fell 2.5 times.
+  - Fits ran 22% to 26% faster.
+- **At 20 features.** These passes fell by about a third, and fits by about 5%, since the p² sums weigh less there.
+- **Unchanged.** Pass B and the provider variances keep their sums, and their CPU did not change.
+- **Against the study's estimate.** Its prototype ran pass A at 4.85 µs per row in its own harness. Here pass A
+  costs 13.3 µs per row with Spark's overheads included. The cluster's measurement is step 2's exit (D-76).
+
 ### Round 180: Cox rows in records (step 2, round B)
 
 This is a sandbox measurement: one core, local mode, with the working set on disk, and the Cox model stratified by

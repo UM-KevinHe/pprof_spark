@@ -15,6 +15,11 @@ package pprof.spark.numerics
   */
 object Summation {
 
+  /** The chunk length of [[ChunkedVector]]: fixed in code, so bits cannot vary between runs; changing it is itself a
+    * change of summation order under D-78 (docs/spec/performance/step2-chunks.md §5.1).
+    */
+  val ChunkLength: Int = 256
+
   /** Longest range that [[pairwise]] sums sequentially instead of splitting. */
   val PairwiseLeafSize: Int = 32
 
@@ -120,4 +125,38 @@ final class NeumaierVector(val length: Int) {
 
   /** The current sums, as a new array. */
   def values: Array[Double] = Array.tabulate(length)(valueAt)
+}
+
+/** A compensated sum of vector terms taken in chunks (docs/spec/performance/step2-chunks.md §5.1, D-78). A term's
+  * elements are added in plain arithmetic, left to right from +0.0, to `pending`, which callers update directly in
+  * loops the JIT can vectorize before calling [[endTerm]]. Every [[Summation.ChunkLength]] terms, and at [[fold]], the
+  * pending sums are added to Neumaier totals and cleared.
+  */
+final class ChunkedVector(val length: Int) {
+  val pending: Array[Double] = new Array[Double](length)
+  private val totals = new NeumaierVector(length)
+  private var terms = 0
+
+  /** Ends one term, folding the pending chunk once it holds [[Summation.ChunkLength]] terms. */
+  def endTerm(): Unit = {
+    terms += 1
+    if (terms == Summation.ChunkLength) fold()
+  }
+
+  /** Adds the pending chunk to the totals and clears it. */
+  def fold(): Unit =
+    if (terms > 0) {
+      totals.add(pending)
+      java.util.Arrays.fill(pending, 0.0)
+      terms = 0
+    }
+
+  /** Element i read as the totals plus the pending chunk, without ending the chunk (Cox's S₂, §5.2). */
+  def readAt(i: Int): Double = totals.valueAt(i) + pending(i)
+
+  /** The sums, after folding the pending chunk. */
+  def values: Array[Double] = {
+    fold()
+    totals.values
+  }
 }

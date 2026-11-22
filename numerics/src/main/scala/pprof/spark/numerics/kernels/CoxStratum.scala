@@ -1,5 +1,7 @@
 package pprof.spark.numerics.kernels
 
+import pprof.spark.numerics.ChunkedVector
+
 import pprof.spark.numerics.{NeumaierSum, NeumaierVector}
 
 /** Compensated totals of log partial likelihood, score and packed information (§6.8). */
@@ -74,7 +76,10 @@ object CoxStratum {
     val q = Moments.packedLength(p)
     val s0 = new NeumaierSum
     val s1 = new NeumaierVector(p)
-    val s2 = new NeumaierVector(q)
+    val s2 = new ChunkedVector(q)
+    val p2 = s2.pending
+    val info = new ChunkedVector(q)
+    val ip = info.pending
     val stratum = new CoxTotals(p)
     val xc = new Array[Double](p)
     val eventSum = new Array[Double](p)
@@ -116,14 +121,16 @@ object CoxStratum {
           while (j < p) {
             val wx = rw * xc(j)
             s1.addAt(j, wx)
+            val off = k - j
             var l = j
             while (l < p) {
-              s2.addAt(k, wx * xc(l))
-              k += 1
+              p2(off + l) += wx * xc(l)
               l += 1
             }
+            k += p - j
             j += 1
           }
+          s2.endTerm()
           if (rows.eventAt(r)) {
             d += 1
             dw += w
@@ -165,14 +172,16 @@ object CoxStratum {
           while (j < p) {
             val wx = rw * (xs(base + j) - center(j))
             s1.addAt(j, -wx)
+            val off = k - j
             var l = j
             while (l < p) {
-              s2.addAt(k, -(wx * (xs(base + l) - center(l))))
-              k += 1
+              p2(off + l) += -(wx * (xs(base + l) - center(l)))
               l += 1
             }
+            k += p - j
             j += 1
           }
+          s2.endTerm()
         }
         removal += 1
       }
@@ -192,12 +201,13 @@ object CoxStratum {
             stratum.score.addAt(j, eventSum(j) - dw * mj)
             var l = j
             while (l < p) {
-              stratum.information.addAt(k, dw * (s2.valueAt(k) / total0 - mj * means(l)))
+              ip(k) += dw * (s2.readAt(k) / total0 - mj * means(l))
               k += 1
               l += 1
             }
             j += 1
           }
+          info.endTerm()
         } else {
           val meanWeight = dw / d
           stratum.value.add(etaEvents)
@@ -222,18 +232,20 @@ object CoxStratum {
             while (j < p) {
               var l = j
               while (l < p) {
-                val c = (s2.valueAt(k) - tied2(k)) + f * tied2(k)
-                stratum.information.addAt(k, meanWeight * (c / a - means(j) * means(l)))
+                val c = (s2.readAt(k) - tied2(k)) + f * tied2(k)
+                ip(k) += meanWeight * (c / a - means(j) * means(l))
                 k += 1
                 l += 1
               }
               j += 1
             }
+            info.endTerm()
             step += 1
           }
         }
       }
     }
+    stratum.information.add(info.values)
     totals.add(stratum)
   }
 

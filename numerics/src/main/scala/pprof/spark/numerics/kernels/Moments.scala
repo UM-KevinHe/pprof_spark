@@ -1,5 +1,7 @@
 package pprof.spark.numerics.kernels
 
+import pprof.spark.numerics.ChunkedVector
+
 import pprof.spark.numerics.{NeumaierVector, Summation}
 
 /** Column sums and cross products of rows stored row-major in a primitive array: the toy kernel of
@@ -116,7 +118,8 @@ object Moments {
       r += 1
     }
     val mean = if (n == 0) new Array[Double](p) else sums.values.map(_ / n)
-    val m2 = new NeumaierVector(packedLength(p))
+    val m2 = new ChunkedVector(packedLength(p))
+    val pending = m2.pending
     val d = new Array[Double](p)
     r = 0
     while (r < n) {
@@ -130,14 +133,17 @@ object Moments {
       var i = 0
       var index = 0
       while (i < p) {
+        val di = d(i)
+        val off = index - i
         j = i
         while (j < p) {
-          m2.addAt(index, d(i) * d(j))
-          index += 1
+          pending(off + j) += di * d(j)
           j += 1
         }
+        index += p - i
         i += 1
       }
+      m2.endTerm()
       r += 1
     }
     Centred(n.toLong, mean, m2.values)

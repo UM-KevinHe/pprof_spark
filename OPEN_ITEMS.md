@@ -1,6 +1,6 @@
 # Open items
 
-Updated 2026-11-21, round 181. Items come from the round-1 review of PROJECT_CONTEXT v2.0
+Updated 2026-11-21, round 182. Items come from the round-1 review of PROJECT_CONTEXT v2.0
 and from the bootstrap work. "Doc fix" means PROJECT_CONTEXT.md is corrected once the related
 decision is approved.
 
@@ -63,7 +63,7 @@ decision is approved.
 | OI-57 | Exact provider tests cost O(nⱼ·min(oⱼ, nⱼ − oⱼ)) per evaluation and the limits need tens of evaluations, so blocks packed by records can be unbalanced | Pack by estimated cost (§6.6) if profiling shows stragglers |
 | OI-58 | pprof_py's standardized measures accept an external standard population (`StandardPopulation.extend`); slice 2d uses the fitted rows (and R's extreme observations) only | Add when a workflow needs it, with its own fixtures |
 | OI-59 | Stage 2 of the three-stage model factorizes a dense Schur complement on the smaller set of levels (hospitals or facilities): (levels)² doubles under the driver budget; at the envelope a sparse factorization or an executor path may be needed | Measure at package scale (D-28); add a sparse Cholesky with a fill-reducing ordering if needed; approved with D-41 |
-| OI-38 | Breslow kernel cost: Neumaier running sums on S₂ add about four flops per entry | Measured by the scale-test kit's kernel benchmarks (docs/spec/scale/plan.md §7, round 83). Performance step 2's note (round 177) chunks S₂ and the per-time information, with a probe of the S₂ update (`step2-chunks.md` §5) Round 180 made the bit-preserving pieces (the Breslow buffer, the per-time means once); the chunked sums are round D. |
+| OI-38 | Breslow kernel cost: Neumaier running sums on S₂ add about four flops per entry | Measured by the scale-test kit's kernel benchmarks (docs/spec/scale/plan.md §7, round 83). Performance step 2's note (round 177) chunks S₂ and the per-time information, with a probe of the S₂ update (`step2-chunks.md` §5) Round 180 made the bit-preserving pieces (the Breslow buffer, the per-time means once); the chunked sums are round D. Closed in round 182: S₂ and the per-time information are chunked compensated sums (step 2's round D); the cluster's measurement is step 2's exit. |
 | OI-20 | Re-verification (§3.4, §5.1): Spark/Scala pairs, DBR 18 facts and pprof_py README claims checked 2026-10-03; §3.4 rows await the pin | DISCREPANCIES.md after D-05 |
 | OI-60 | R pprof 1.0.3's linear fixed-effect functions (`linear_fe`, `summary.linear_fe`, `test.linear_fe`, `confint.linear_fe`, `SM_output.linear_fe`) as references for slices 3a to 3c | Closed in round 67: pure R, no compiled code; read for slice 3b (X-036), whose fixtures will use `test.linear_fe` and `SM_output.linear_fe` |
 | OI-61 | PROJECT_CONTEXT §7.5's TSQR path for ill-conditioned within cross-products is deferred from slice 3a, which records a condition estimate | Revisit if a fixture or the scale test shows trouble |

@@ -228,6 +228,54 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 182 (2026-11-21): chunked compensated sums, re-baselined under D-78 (step 2, round D)
+
+- Round 181 is on `main` as `cb6f8c1`.
+- **Amendments first (NN-2).** The Cox specifications (`first-slice.md` §6, `counting-process-baseline.md`,
+  `efron-weights-offsets.md` §5), the logistic one (`fixed-effect-estimation.md` §11) and ADR-0006 state the chunked
+  sums. Their discrepancy rows stay in class D.
+- **The sums** (`step2-chunks.md` §5).
+  - `Summation.ChunkedVector` adds terms in plain arithmetic to a pending chunk, folded into Neumaier totals every
+    `ChunkLength` = 256 terms.
+  - It covers the logistic Schur complement of pass A, the variance pass and the score test (one term per row, across
+    the block's providers), the co-moments, and Cox's S₂ (one term per row added or removed; reads add the pending
+    chunk) and information (one term per event time or Efron step).
+  - The inner loops index as the probe vectorized. Each term's arithmetic, and every other sum, is unchanged.
+- **Re-baselining under D-78 and D-79.**
+  - **The comparison.** `GoldenRunsSuite` compares with a previous manifest named by `PPROF_GOLDEN_BASELINE`,
+    evaluating each run's estimates point at that manifest's estimates, and checks each quantity's bound. A negative
+    control checks that it flags differences beyond the bounds. Against round 181's manifest:
+    - every fixed-point log-likelihood, score, right-hand side and score term, the AUC, and every count and flag
+      matched to the bit;
+    - the fixed points' information, Schur complements and co-moments moved by at most 9.0·10⁻¹⁶ scaled, against
+      10⁻¹³;
+    - converged values moved by at most 1.7·10⁻¹⁵ (estimates 1.7·10⁻¹⁵, log-likelihood 1.7·10⁻¹⁶), against T-part.
+  - **The new manifest.** It was written with `PPROF_GOLDEN_WRITE` in this commit, and is bit-identical at 1 and 7
+    partitions.
+- **Tests.** Numerics' `ChunkedSumsSuite` (5 tests) checks folds and reads, and sums over many chunks against exact
+  references: co-moments of 1,000 rows, a 1,200-row logistic block, and a truncated Cox stratum of 700 rows.
+- **Measured in the sandbox** (`perf-results.md`, "Round 182"): the log-likelihood's bits and iteration counts match
+  at all four points. At 180 features, logistic pass A's CPU fell 2.75 times (36.5 to 13.3 µs per row per pass), the
+  variance pass and summaries about 2.7 to 2.8 times, and Cox evaluation 2.5 times (46.9 to 18.9 µs); fits ran 22% to
+  26% faster. At 20 features these passes fell by about a third, and fits by about 5%.
+- **Records.** The note's §11 and plan §4 mark step 2's rounds done; OI-38 is closed.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags. scalafmt is clean, and `check-engine-api.sh` passes with its
+  self-test.
+- The D-78 comparison, the manifest's writing, and `GoldenRunsSuite` against the new manifest (4 tests) pass.
+- Every suite passes:
+  - numerics, 112 tests;
+  - engine, 62 suites and 560 tests;
+  - app 38, bench 30 and testkit 28;
+  - the Python tests on PySpark 4.1.0, 47.
+- On Spark 4.0.0's jars, `GoldenRunsSuite` matches the new manifest, 4 tests.
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21, and
+  the Python tests on PySpark 4.0.0.
+
+**Next: step 2's exit on the cluster** (plan §4, D-76): CPU per row per pass against step 0's runs, with peak task
+memory and GC at 50M and 100M rows. Then step 3, the Cox weighted-Gram information, starting with its specification.
+
 ## Round 181 (2026-11-21): the golden runs' fixed points (step 2, round C; D-79)
 
 - Round 180 is on `main` as `200e7e3`. The maintainer will run Cox at 100M rows on it later (OI-118).
