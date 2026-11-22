@@ -309,3 +309,7 @@ The specifications state today's sums. Round D amends them with its evidence:
   - converged values moved by at most 1.7·10⁻¹⁵, against T-part.
 - **Tests.** The re-baselined manifest replaces round 181's. Numerics' `ChunkedSumsSuite` checks sums over many chunks
   against exact references, including a truncated Cox stratum and a 1,200-row logistic block.
+
+**Exit, round 185.** On the cluster, at 180 features, the heaviest pass's CPU per row fell 2.25 to 2.66 times from
+5M to 100M rows. At 100M both models fit (OI-118 closed), with shuffle reads from rebuilt partitions down from 83.9 to
+21.3 GiB in S8 (OI-123 open). Details: `perf-results.md`, "2026-11-22".

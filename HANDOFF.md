@@ -228,6 +228,36 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 185 (2026-11-22): step 2's exit on the cluster
+
+- Round 184 is on `main` as `2f084b5`. The maintainer ran step 2's exit on it: S2–S8 and points 7 and 9, off-heap, on
+  Spark 4.0. Every truth check passed, with max |z| 3.15 or less.
+- **CPU per row of the heaviest pass, at 180 features.**
+  - Logistic pass A: 86.7 → 37.2 µs at 5M, 85.9 → 36.5 at 20M, 83.3 → 31.3 at 50M, and 81.0 → 30.4 at 100M (2.33 to
+    2.66 times less).
+  - Cox evaluation: 127.6 → 55.5 at 5M and 112.5 → 50.1 at 20M (round 163's off-heap runs), then 103.6 → 42.5 at 50M
+    and 101.7 → 48.4 at 100M (round 161's disk-only runs).
+  - At 20 features: 2.6 → 1.6.
+  - The sandbox predicted 2.5 to 2.75.
+- **Fits.** From 20M rows up, fits take 11% to 70% less time:
+  - logistic at 100M: 3,934.9 → 1,195.4 s;
+  - Cox at 100M: 1,677.5 → 986.0 s, so OI-118 is closed.
+
+  At 5M rows wall times do not compare: S2 started on one executor (utilization 0.43), and S3 is small.
+- **At 100M rows, against S8 on round 177's build.**
+  - Shuffle reads fell from 83.9 to 21.3 GiB, and pass A's time outside CPU and GC from 24.9% to 9.2%.
+  - The cache's peak fell from 170.0 to 64.4 GiB.
+  - Partitions are still rebuilt: Cox's evaluations read 23.0 GiB of shuffle (OI-123, open).
+- **Time shares at 100M.** Cox: evaluation 71%, build 21%. Logistic: pass A 37%, build 17%, pass B 14%, variance
+  12%, summaries 10%.
+- **Records.** `perf-results.md` ("2026-11-22"); plan §4; the note's §11; OI-118 (closed) and OI-123; STATUS. Every
+  figure was computed from the reports' JSON, and no cluster-identifying detail was recorded.
+
+Evidence (assistant sandbox): documentation only. The patch applies to a fresh clone of `main` with an identical
+tree; scalafmt is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next: step 3's kernel round** (D-80 §10). The Cox evaluation is now 71% of a 100M fit.
+
 ## Round 184 (2026-11-22): D-80 approved; step 3's fixture, `lt-heavy-ties`
 
 - Round 183 is on `main` as `44b9201`. The maintainer approved step 3's specification as written: D-80 is accepted,

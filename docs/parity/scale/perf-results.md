@@ -11,6 +11,64 @@ Estimates and arithmetic are never entered here; they live in `docs/spec/perform
 
 The scale runs reported on 2026-11-13 used round 81's build (OI-103), so they are not entered.
 
+### 2026-11-22: step 2's exit (build `2f084b5`, round 184)
+
+The exit of plan §4's step 2 (D-76) ran the earlier off-heap points on round 184's build, whose kernels are round
+182's. All runs used off-heap storage, the default, on Spark 4.0, with 180 features and 8,000 providers unless the
+point says otherwise. "Before" means:
+- S2–S7: round 163's build (`ada822d`), off-heap;
+- S8: round 177's (`b92919c`), off-heap;
+- points 7 and 9: round 161's (`82fd37a`), disk-only, so their ratios mix the storage level with the kernels.
+
+The heaviest pass is pass A for the logistic model and the evaluation for Cox.
+
+| Run | Point | Fit s, before → now | Iterations | Executors, utilization | Heaviest pass: CPU µs per row, before → now | Ratio | Outside CPU and GC | Cache | Max \|z\| |
+|---|---|---|---|---|---|---|---|---|---|
+| S2 | Logistic, 5M | 209.8 → 570.2 | 5 | 1 to 5, 0.43 | 86.7 → 37.2 | 2.33 | 15.2% | 1.89 GiB | 2.87 |
+| S3 | Logistic, 5M, 20 features | 18.7 → 23.4 | 4 | 6, 0.38 | 2.6 → 1.6 | 1.61 | 19.6% | 0.27 GiB | 1.67 |
+| S4 | Logistic, 20M | 393.2 → 267.6 | 4 | 6 to 10, 0.74 | 85.9 → 36.5 | 2.36 | 9.9% | 7.56 GiB | 3.15 |
+| S7 | Logistic, 50M | 1,218.9 → 672.7 | 4 | 6 to 10, 0.70 | 83.3 → 31.3 | 2.66 | 9.2% | 18.90 GiB | 2.90 |
+| S8 | Logistic, 100M | 3,934.9 → 1,195.4 | 4 | 6 to 10, 0.86 | 81.0 → 30.4 | 2.66 | 9.2% | 64.41 GiB, 10.22 on disk | 2.86 |
+| S5 | Cox, 5M | 146.2 → 78.0 | 3 | 10, 0.59 | 127.6 → 55.5 | 2.30 | 13.2% | 1.88 GiB | 2.86 |
+| S6 | Cox, 20M | 314.4 → 278.7 | 3 | 6 to 10, 0.65 | 112.5 → 50.1 | 2.25 | 11.4% | 7.52 GiB | 2.38 |
+| Point 7 | Cox, 50M | 1,243.6 → 467.4 | 3 | 6 to 10, 0.82 | 103.6 → 42.5 | 2.44 | 9.1% | 18.77 GiB | 2.86 |
+| Point 9 | Cox, 100M | 1,677.5 → 986.0 | 3 | 6 to 10, 0.89 | 101.7 → 48.4 | 2.10 | 10.8% | 61.39 GiB, 0.97 on disk | 3.00 |
+
+S8 by operation, round 177's build against round 184's. CPU and GC are summed over executors; the shuffle is what
+each pass read.
+
+| Operation | Wall s | CPU s | GC s | Shuffle read |
+|---|---|---|---|---|
+| Pass A, 4 runs | 1,523.8 → 436.8 | 32,391.9 → 12,175.7 (2.66 times less) | 4,703.5 → 1,695.3 | 37.35 → 3.20 GiB |
+| Build | 1,144.1 → 199.5 | 3,660.9 → 3,618.1 | 1,931.3 → 1,187.2 | its own shuffle |
+| Pass B, 4 runs | 298.3 → 167.4 | 6,129.9 → 3,532.5 | 3,193.1 → 1,513.3 | 33.42 → 9.95 GiB |
+| Variance pass | 354.7 → 147.1 | 8,008.3 → 3,172.0 (2.52 times less) | 746.4 → 461.1 | 0 → 0.07 GiB |
+| Summaries | 327.5 → 121.2 | 7,554.2 → 3,564.8 (2.12 times less) | 809.1 → 361.5 | 5.96 GiB → none |
+| Provider variances | 59.0 → 53.1 | 1,086.1 → 879.5 | 662.3 → 496.2 | 5.52 → 7.34 GiB |
+| AUC pass | 55.4 → 37.3 | 561.1 → 496.9 | 491.2 → 311.9 | 1.63 → 0.76 GiB |
+
+Readings:
+- **Step 2's exit is met.** At 180 features the heaviest pass needs 2.25 to 2.66 times less CPU per row at every size.
+  The sandbox measured 2.75 for pass A and 2.5 for Cox's evaluation (round 182). At 20 features it needs 1.61 times
+  less.
+- **Fits.** From 20M rows up, fits take 11% to 70% less time. At 5M rows the comparison is confounded. S2 began on one
+  executor (utilization 0.43), and S3 is too small for its passes to dominate. CPU per row is the comparable measure.
+- **100M rows.** Both models fit: logistic in 1,195.4 s and Cox in 986.0 s (OI-118 is closed). Against S8 on round
+  177's build:
+  - shuffle reads fell from 83.9 to 21.3 GiB;
+  - pass A's time outside CPU and GC fell from 24.9% to 9.2%;
+  - the cache's peak fell from 170.0 to 64.4 GiB, and its part on disk from 36.5 to 10.2 GiB.
+
+  Partitions are still rebuilt (OI-123): Cox's evaluations read 23.0 GiB of shuffle, logistic's pass B 10.0 and the
+  provider variances 7.3.
+- **Where the time now goes, at 100M.**
+  - Cox: evaluation 71% of the fit, build 21%.
+  - Logistic: pass A 37%, build 17%, pass B 14%, the variance pass 12%, the summaries 10%.
+
+  Step 3 is for Cox's evaluation.
+- **Heaps.** Executor heaps peaked at 1.1 to 2.0 GiB of 2.2. The driver's peaked at 7.4 to 8.2 GB, and 0.45 to 0.76
+  GB after GC.
+
 ### 2026-11-21: S8 on round 177's build (`b92919c`)
 
 S8 again: the logistic model with 100M rows, 180 features and 8,000 providers, off-heap storage, on Spark 4.0.

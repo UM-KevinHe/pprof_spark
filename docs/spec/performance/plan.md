@@ -257,7 +257,8 @@ Step 1 addresses OI-02 and part of OI-30.
   a fixed number of rows, in a layout the JIT vectorizes, with each chunk folded into Neumaier totals. The chunk
   length is fixed in code, so it is not a tuning parameter that could change bits between runs.
   Design: `docs/spec/performance/step2-chunks.md` (round 177), approved by the maintainer on 2026-11-21; rounds A
-  to D in rounds 178, 180, 181 and 182. Its exit is the cluster's measurement (§4, D-76).
+  to D in rounds 178, 180, 181 and 182. Exit measured on 2026-11-22 (round 185): the heaviest pass's CPU per row is
+  2.25 to 2.66 times lower at 180 features (`perf-results.md`).
 - **Step 3** specifies the weighted-Gram identity with Efron ties and entry times before any code is written (NN-2),
   with fixtures for Efron ties with truncation. Specification: `docs/spec/cox/weighted-gram.md` (round 183), approved
   as D-80 on 2026-11-22; its fixture in round 184.
