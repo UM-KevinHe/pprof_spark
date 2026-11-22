@@ -6,7 +6,8 @@
    "rc-stratified",
    "rc-stratified-weights-offset",
    "lt-stratified",
-   "lt-weights-offset"
+   "lt-weights-offset",
+   "lt-heavy-ties"
   ],
   "fe-random-cluster": [
    "frc-base",
@@ -79,6 +80,10 @@
   ]
  },
  "files": {
+  "cox/lt-heavy-ties/case.json": "02327729e6cbf50bbc4698a9258227c18654772f23733921bb72550dc0183951",
+  "cox/lt-heavy-ties/input.csv": "51eca44652a812dcfe0d507bfa0419962a5e0da38d3882381d85c1cc8a831ebb",
+  "cox/lt-heavy-ties/pprof_py.json": "cb3a14d29e41059b6bbdeb73906e6a2c792b9b828c1dfadb7a2edcf72cd8fc71",
+  "cox/lt-heavy-ties/r_survival.json": "a071ef775616ff4a864ac3ebbf249e21425d6761ffc50ec6179a42d56fe9c396",
   "cox/lt-stratified/case.json": "4027df3725cbb2a3665829468701f8e33e30392a5d690bb8b92068a30f7f1125",
   "cox/lt-stratified/input.csv": "b2798ed650e04ca38ffaa429d36a7206f578b0c91033576db9b96a527bd8a5ef",
   "cox/lt-stratified/pprof_py.json": "c2838673063e8facef28dd060ce34133e1f073dfb6553543f446e2f4846b60a8",

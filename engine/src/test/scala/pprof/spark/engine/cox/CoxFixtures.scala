@@ -14,7 +14,13 @@ import pprof.spark.testkit.{Fixtures, Tolerances}
 object CoxFixtures {
 
   val Stratified: Seq[String] =
-    Seq("rc-stratified", "rc-stratified-weights-offset", "lt-stratified", "lt-weights-offset")
+    Seq(
+      "rc-stratified",
+      "rc-stratified-weights-offset",
+      "lt-stratified",
+      "lt-weights-offset",
+      "lt-heavy-ties"
+    )
 
   /** Every Cox fixture case, as `CoxPHSuite` and `GoldenRunsSuite` fit them. */
   val Cases: Seq[String] =
@@ -24,7 +30,8 @@ object CoxFixtures {
       "rc-stratified",
       "rc-stratified-weights-offset",
       "lt-stratified",
-      "lt-weights-offset"
+      "lt-weights-offset",
+      "lt-heavy-ties"
     )
 
   val Methods: Seq[Ties] = Seq(Ties.Breslow, Ties.Efron)

@@ -69,7 +69,10 @@ class CoxLayoutSuite extends SparkSuite {
     bits(fit.estimates ++ fit.covariance ++ fit.information ++ baseline :+ fit.logLikelihood)
   }
 
-  for (name <- Seq("rc-stratified-weights-offset", "lt-weights-offset"); ties <- Methods)
+  for (
+    name <- Seq("rc-stratified-weights-offset", "lt-weights-offset", "lt-heavy-ties");
+    ties <- Methods
+  )
     test(
       s"R0: shuffle partitions 1, 4 and 7 and reversed, repartitioned input leave every bit: $name, ${ties.name}"
     ) {

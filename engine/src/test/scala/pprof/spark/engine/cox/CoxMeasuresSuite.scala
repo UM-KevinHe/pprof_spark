@@ -20,7 +20,8 @@ class CoxMeasuresSuite extends SparkSuite {
     "rc-stratified",
     "rc-stratified-weights-offset",
     "lt-stratified",
-    "lt-weights-offset"
+    "lt-weights-offset",
+    "lt-heavy-ties"
   )
   private val methods = Seq[Ties](Ties.Breslow, Ties.Efron)
 
@@ -155,7 +156,7 @@ class CoxMeasuresSuite extends SparkSuite {
     }
 
   test("indirect expected events add up to the observed events") {
-    for (name <- Seq("rc-stratified-weights-offset", "lt-weights-offset")) {
+    for (name <- Seq("rc-stratified-weights-offset", "lt-weights-offset", "lt-heavy-ties")) {
       val fit = CoxPH.fit(frame(name), spec(name))
       val totals = CoxMeasures
         .standardized(frame(name), fit, providerColumn(name))(Standardization.Indirect)

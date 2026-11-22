@@ -62,6 +62,9 @@ CASES = (
      "stratified": True, "weighted": False, "offset": False, "truncated": True},
     {"id": "lt-weights-offset", "seed": 6, "n": 600, "p": 3, "strata": 10, "max_time": 60,
      "stratified": True, "weighted": True, "offset": True, "truncated": True},
+    # Efron ties with truncation, entries on event times (docs/spec/cox/weighted-gram.md §9, D-80).
+    {"id": "lt-heavy-ties", "seed": 7, "n": 600, "p": 3, "strata": 10, "max_time": 8,
+     "stratified": True, "weighted": True, "offset": True, "truncated": True},
 )
 
 # Covariate profiles for prediction fixtures (Phase 1b specification §3).

@@ -2,6 +2,86 @@
   "format" : 1,
   "description" : "NUM-2's golden runs (docs/spec/performance/plan.md §6.1): IEEE-754 bits in hexadecimal",
   "runs" : {
+    "cox/lt-heavy-ties/breslow/default" : {
+      "doubles" : {
+        "at_estimates_information" : ["4082e6367163396a","4035be11b766220f","c05781bfe8f0fd25","40841de40c0e170f","40418bcaa9d8b134","408675ff74b166d0"],
+        "at_estimates_loglik" : ["c09f25f0a8fa00d8"],
+        "at_estimates_score" : ["3e7720d331000000","be46f2492c000000","3e44c90bf8000000"],
+        "at_start_information" : ["40846511fa7c082e","4024e88dac4395ca","c054288a1e2c6544","4084c7e446e424e9","404b2b8bc77e7002","40861f906d9e9741"],
+        "at_start_loglik" : ["c09f970e03414013"],
+        "at_start_score" : ["406468ed5235b246","c05470b7efdc79d5","4038303ec49c2509"],
+        "covariance" : ["3f5bb4362c50853e","bf122e4f3bdcfaa2","3f2d7015be111777","3f5990e1821ece1a","bf16599e9873c925","3f57583fdee78934"],
+        "estimates" : ["3fd16536bff83554","bfc177d302c81b94","3fb36fc8dba7c1e3"],
+        "information" : ["4082e6367163396a","4035be11b766220f","c05781bfe8f0fd25","40841de40c0e170f","40418bcaa9d8b134","408675ff74b166d0"],
+        "loglik" : ["c09f25f0a8fa00d8"],
+        "standard_errors" : ["3fa50dc6f9a4b9c8","3fa439a0c74e0f41","3fa35398e14aae17"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/lt-heavy-ties/breslow/tight" : {
+      "doubles" : {
+        "at_estimates_information" : ["4082e636715e0ce5","4035be11b77337b1","c05781bfe8f8f30c","40841de40c0ca816","40418bcaa9ca068f","408675ff74b1e6cf"],
+        "at_estimates_loglik" : ["c09f25f0a8fa00d7"],
+        "at_estimates_score" : ["bd14000000000000","3cec800000000000","bcd8000000000000"],
+        "at_start_information" : ["40846511fa7c082e","4024e88dac4395ca","c054288a1e2c6544","4084c7e446e424e9","404b2b8bc77e7002","40861f906d9e9741"],
+        "at_start_loglik" : ["c09f970e03414013"],
+        "at_start_score" : ["406468ed5235b246","c05470b7efdc79d5","4038303ec49c2509"],
+        "covariance" : ["3f5bb4362c58b2c6","bf122e4f3beaf325","3f2d7015be22c8aa","3f5990e182209228","bf16599e98669b4d","3f57583fdee75f14"],
+        "estimates" : ["3fd16536c0210e56","bfc177d302d5034a","3fb36fc8dbcd32e5"],
+        "information" : ["4082e636715e0ce5","4035be11b77337b1","c05781bfe8f8f30c","40841de40c0ca816","40418bcaa9ca068f","408675ff74b1e6cf"],
+        "loglik" : ["c09f25f0a8fa00d7"],
+        "standard_errors" : ["3fa50dc6f9a7d547","3fa439a0c74ec210","3fa35398e14a9ca7"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
+    "cox/lt-heavy-ties/efron/default" : {
+      "doubles" : {
+        "at_estimates_information" : ["40826eaafc55b4c6","4039b6b9783d697d","c05ae1086268b92d","4083560dea471a5d","403de0f82539ef8b","40865677e9922c68"],
+        "at_estimates_loglik" : ["c09c1bd3e0bc49e2"],
+        "at_estimates_score" : ["3e9ad3eb2f000000","be6ec4924c000000","3e717a9d9b000000"],
+        "at_start_information" : ["4083f5dd67abb0c6","4024f8537278c51a","c05482e0fe2e454e","40843afff64a185c","4048d12fddbaf015","4085de7789b5a3bf"],
+        "at_start_loglik" : ["c09ce7bf681f36b6"],
+        "at_start_score" : ["406b34c621974beb","c05a7dae163117c2","40404f3336cfebf1"],
+        "covariance" : ["3f5ca25772dc76af","bf16697eee32f894","3f317641997271de","3f5a99d9c31a5175","bf15296311d64a08","3f57a1faa06c55d7"],
+        "estimates" : ["3fd7c358d740f7ad","bfc78e95d1e87726","3fbb572e19f2df54"],
+        "information" : ["40826eaafc55b4c6","4039b6b9783d697d","c05ae1086268b92d","4083560dea471a5d","403de0f82539ef8b","40865677e9922c68"],
+        "loglik" : ["c09c1bd3e0bc49e2"],
+        "standard_errors" : ["3fa56783b6690461","3fa4a1657c156060","3fa37205ea28ff1e"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/lt-heavy-ties/efron/tight" : {
+      "doubles" : {
+        "at_estimates_information" : ["40826eaafc3d88ac","4039b6b97879bcf2","c05ae1086293111f","4083560dea4052b3","403de0f824cf8ae4","40865677e9947037"],
+        "at_estimates_loglik" : ["c09c1bd3e0bc49e2"],
+        "at_estimates_score" : ["bd0c800000000000","bcb8000000000000","bcff000000000000"],
+        "at_start_information" : ["4083f5dd67abb0c6","4024f8537278c51a","c05482e0fe2e454e","40843afff64a185c","4048d12fddbaf015","4085de7789b5a3bf"],
+        "at_start_loglik" : ["c09ce7bf681f36b6"],
+        "at_start_score" : ["406b34c621974beb","c05a7dae163117c2","40404f3336cfebf1"],
+        "covariance" : ["3f5ca2577305ea44","bf16697eee80c2ee","3f31764199a4bb63","3f5a99d9c323a10e","bf15296311ac0856","3f57a1faa06c8ea6"],
+        "estimates" : ["3fd7c358d8072194","bfc78e95d2314c56","3fbb572e1ad4582b"],
+        "information" : ["40826eaafc3d88ac","4039b6b97879bcf2","c05ae1086293111f","4083560dea4052b3","403de0f824cf8ae4","40865677e9947037"],
+        "loglik" : ["c09c1bd3e0bc49e2"],
+        "standard_errors" : ["3fa56783b6788285","3fa4a1657c18fcae","3fa37205ea29167d"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [4]
+      }
+    },
     "cox/lt-stratified/breslow/default" : {
       "doubles" : {
         "at_estimates_information" : ["4078f7f3cd612e80","403fc162c18478d8","c03467d315325c0b","407e4cbdd6f3a123","400ad08a896b5d0a","407e169a24b46492"],

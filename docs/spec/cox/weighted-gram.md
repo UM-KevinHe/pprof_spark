@@ -1,6 +1,6 @@
 # Specification: Cox / the weighted-Gram information
 
-- Status: **Draft** (round 183), for the maintainer's approval as D-80.
+- Status: **Approved** (2026-11-22, the maintainer) as D-80. The fixture is built in round 184 (§13).
 - Decision references:
   - D-75: performance step 3;
   - D-78: the re-baselining rule, which names the weighted-Gram identity among changes of summation order;
@@ -194,3 +194,16 @@ design).
 ## 12. Known discrepancies
 
 None new. First-slice's summation-order row (class D) extends to the weighted-Gram form.
+
+## 13. As built
+
+**Round 184, the fixture.**
+- **Generation.** `lt-heavy-ties` (seed 7, times 1 to 8) was generated with the pinned environment: R 4.3.3 with
+  survival 3.5-8, pprof_py at `9320766`, and the requirements of `reference/fixtures/requirements.txt`. Regenerated in
+  the same run, the 24 files of the six existing cases matched the committed manifest byte for byte.
+- **Late entries.** The generator draws delayed entry for about half the rows, uniformly below exit, as for the other
+  truncated cases. With times from 1 to 8, many draws are 0: 86 rows enter after time 0, 77 of them at an event time of
+  their stratum.
+- **Ties.** Of the case's 54 event times, 38 have two or more tied events; the largest has 38.
+- **Calibration and suites.** `docs/parity/cox-calibration.md` gains its 22 rows, all within their classes. The case
+  joins every Cox suite's list and the golden runs.

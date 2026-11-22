@@ -18,7 +18,8 @@ class CoxBaselineReferenceSuite extends SparkSuite {
     rows.toSeq.map(_.getAs[Double](name))
 
   /** The fixtures with offsets and weights: one right-censored, one with entry times. */
-  private val withOffsets = Seq("rc-stratified-weights-offset", "lt-weights-offset")
+  private val withOffsets =
+    Seq("rc-stratified-weights-offset", "lt-weights-offset", "lt-heavy-ties")
 
   /** R's value at each of our rows, looked up by stratum and time. */
   private def atRows(

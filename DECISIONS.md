@@ -103,9 +103,9 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-80: The Cox weighted-Gram information, performance step 3's specification (Proposed, round 183)
+### D-80: The Cox weighted-Gram information, performance step 3's specification (Accepted: approved by the maintainer, 2026-11-22)
 
-Proposed for the maintainer's approval: `docs/spec/cox/weighted-gram.md`.
+Proposed in round 183 and approved as written on 2026-11-22: `docs/spec/cox/weighted-gram.md`.
 - **The identity.** I(β) = Σᵢ ωᵢxᵢxᵢᵀ − Σₜ Σₛ aₜm̄ₜₛm̄ₜₛᵀ, with ωᵢ = rᵢ(Λᵢ − ψᵢ). Λᵢ is the cumulative hazard over row i's
   at-risk interval, and ψᵢ the Efron correction of tied events, as the martingale residuals compute them. ℓ and U are
   unchanged.
