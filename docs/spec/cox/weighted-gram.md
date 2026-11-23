@@ -229,3 +229,7 @@ None new. First-slice's summation-order row (class D) extends to the weighted-Gr
   identical; every logistic quantity is identical. The new manifest is in this commit.
 - **Measured** in the sandbox (`perf-results.md`, "Round 186"): evaluation's CPU fell 1.28 times with Breslow ties and
   1.38 times with Efron at 180 features. At 20 features it did not change.
+
+**Exit, round 187.** On the cluster (`perf-results.md`, "2026-11-23"), Cox evaluation needs 31.6 to 33.8 µs of CPU per
+row per pass from 5M to 100M rows. That is 1.27 to 1.76 times less than with round 182's kernel, with the same
+log-likelihoods. At 100M the fit took 745.3 s against 986.0.

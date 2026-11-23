@@ -262,6 +262,12 @@ Step 1 addresses OI-02 and part of OI-30.
 - **Step 3** specifies the weighted-Gram identity with Efron ties and entry times before any code is written (NN-2),
   with fixtures for Efron ties with truncation. Specification: `docs/spec/cox/weighted-gram.md` (round 183), approved
   as D-80 on 2026-11-22; its fixture in round 184 and its kernel in round 186.
+  - **Exit, measured 2026-11-23 (round 187).** Cox evaluation's CPU per row is 31.6 to 33.8 µs, 1.27 to 1.76 times
+    less than on round 184's build.
+  - **Parity.** The three levels (PROJECT_CONTEXT §9.2: function-level, lockstep and end-to-end) hold in the Cox
+    fixture suites and the golden runs (round 186).
+  - **Not built.** The ℓ-only evaluation of halved steps (item 6 above) is not built, and no profile has shown a
+    halving (OI-125).
 - **Step 4** covers gridded times, which addresses OI-03 for them. Continuous times keep the sorted scans planned
   under OI-03.
 - **Step 5** follows study §4.3:

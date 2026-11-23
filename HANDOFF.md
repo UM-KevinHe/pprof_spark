@@ -228,6 +228,30 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 187 (2026-11-23): step 3's exit on the cluster
+
+- Round 186 is on `main` as `c3bbc66`. The maintainer ran step 3's exit on it: S5, S6 and points 7 and 9 (Cox, 5M to
+  100M rows, 180 features), off-heap, on Spark 4.0. Every truth check passed, and the log-likelihoods print exactly as
+  on round 184's build.
+- **Cox evaluation's CPU per row.**
+  - 55.5 → 31.6 µs at 5M, 50.1 → 33.8 at 20M, 42.5 → 33.4 at 50M, and 48.4 → 32.2 at 100M: 1.27 to 1.76 times less.
+  - The sandbox measured 1.28 times on data with few ties and no entry times.
+- **Fits.** Cox at 100M took 745.3 s against 986.0, and 438.6 against 467.4 at 50M. S5 ran on one executor and S6 on
+  one to five, so their wall times do not compare.
+- **Rebuilt partitions (OI-123).** At 100M the evaluations read 5.78 GiB of shuffle, against 22.96 before.
+- **Step 3's exit.**
+  - The plan asks for Cox CPU per row, now measured, and parity at the three levels. Those levels are function-level,
+    lockstep and end-to-end (PROJECT_CONTEXT §9.2), and they hold in the Cox fixture suites and the golden runs.
+  - The plan's step 3 also lists the ℓ-only evaluation of halved steps, at low priority. It is not built, and no
+    profile has shown a halving: OI-125, new.
+- **Records.** `perf-results.md` ("2026-11-23"); plan §4; `weighted-gram.md` §13; OI-123 and OI-125; STATUS. Every
+  figure was computed from the reports' JSON, and no cluster-identifying detail was recorded.
+
+Evidence (assistant sandbox): documentation only. The patch applies to a fresh clone of `main` with an identical
+tree; scalafmt is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next: the maintainer's choice on OI-125**, then step 4, per-time aggregates (plan §4).
+
 ## Round 186 (2026-11-22): the Cox weighted-Gram information (step 3's kernel, D-80)
 
 - Round 185 is on `main` as `f18e528`.

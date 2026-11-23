@@ -11,6 +11,33 @@ Estimates and arithmetic are never entered here; they live in `docs/spec/perform
 
 The scale runs reported on 2026-11-13 used round 81's build (OI-103), so they are not entered.
 
+### 2026-11-23: step 3's exit (build `c3bbc66`, round 186)
+
+The exit of plan §4's step 3 ran the Cox points of step 2's exit on round 186's build, with the weighted-Gram
+information (D-80). All four used off-heap storage on Spark 4.0, with 180 features and 8,000 providers, and Breslow
+ties. "Before" is step 2's exit, on round 184's build (2026-11-22, below). The shuffle read is the evaluations'.
+
+| Run | Point | Fit s, before → now | Iterations | Executors, utilization | Evaluation: CPU µs per row, before → now | Ratio | GC, share of CPU | Outside CPU and GC | Shuffle read | Cache | Max \|z\| |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| S5 | Cox, 5M | 78.0 → 301.2 | 3 | 1, 0.86 | 55.5 → 31.6 | 1.76 | 1.9% | 10.4% | 0.00 GiB | 1.88 GiB | 2.86 |
+| S6 | Cox, 20M | 278.7 → 928.9 | 3 | 1 to 5, 0.50 | 50.1 → 33.8 | 1.48 | 5.6% | 14.4% | 0.00 GiB | 9.97 GiB, 2.18 on disk | 2.38 |
+| Point 7 | Cox, 50M | 467.4 → 438.6 | 3 | 7 to 8, 0.86 | 42.5 → 33.4 | 1.27 | 7.3% | 8.7% | 2.34 GiB | 21.18 GiB | 2.86 |
+| Point 9 | Cox, 100M | 986.0 → 745.3 | 3 | 8 to 10, 0.89 | 48.4 → 32.2 | 1.50 | 13.0% | 8.9% | 5.78 GiB | 43.40 GiB, 0.37 on disk | 3.00 |
+
+Readings:
+- **Step 3's measurement.** Cox evaluation needs 31.6 to 33.8 µs of CPU per row per pass at every size from 5M to 100M
+  rows. That is 1.27 to 1.76 times less than on round 184's build. The log-likelihoods print exactly as before, and
+  every truth check passed.
+- **Against the sandbox.** It measured 1.28 times with these data's few ties and no entry times (round 186). The
+  cluster's gain is larger at 5M and 100M rows, and about the same at 50M.
+- **Fits.**
+  - Cox at 100M rows took 745.3 s against 986.0, 24% less; at 50M, 438.6 s against 467.4.
+  - At 5M and 20M rows, wall times do not compare: S5 ran on one executor, and S6 started on one and reached five
+    (utilization 0.50).
+- **Rebuilt partitions (OI-123).** At 100M the evaluations read 5.78 GiB of shuffle against 22.96 on round 184's build.
+  At 50M they read 2.34 GiB and wrote 1.20, so a map stage of the build ran again.
+- **Where the time goes at 100M.** Evaluation is 66% of the fit, the build 25% and the summaries 6%.
+
 ### 2026-11-22: step 2's exit (build `2f084b5`, round 184)
 
 The exit of plan §4's step 2 (D-76) ran the earlier off-heap points on round 184's build, whose kernels are round
