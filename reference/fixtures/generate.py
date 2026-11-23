@@ -65,6 +65,9 @@ CASES = (
     # Efron ties with truncation, entries on event times (docs/spec/cox/weighted-gram.md §9, D-80).
     {"id": "lt-heavy-ties", "seed": 7, "n": 600, "p": 3, "strata": 10, "max_time": 8,
      "stratified": True, "weighted": True, "offset": True, "truncated": True},
+    # Unstratified on a grid of days with truncation, to span many blocks (docs/spec/cox/per-time-aggregates.md §8, D-81).
+    {"id": "lt-unstratified", "seed": 8, "n": 5000, "p": 3, "strata": 1, "max_time": 60,
+     "stratified": False, "weighted": True, "offset": True, "truncated": True},
 )
 
 # Covariate profiles for prediction fixtures (Phase 1b specification §3).

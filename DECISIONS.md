@@ -103,9 +103,10 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-81: Cox per-time aggregates for strata larger than a block, performance step 4's specification (Proposed, round 188)
+### D-81: Cox per-time aggregates for strata larger than a block, performance step 4's specification (Accepted: approved by the maintainer, 2026-11-23)
 
-Proposed for the maintainer's approval: `docs/spec/cox/per-time-aggregates.md`.
+Proposed in round 188 and approved as written on 2026-11-23: `docs/spec/cox/per-time-aggregates.md`. The approval
+message read "D-8", taken as D-81, the decision asked about.
 - **The rule.** A stratum is aggregated when its rows exceed one block and the per-time totals of every aggregated
   stratum fit the driver's budget: Σ K_s·w·8 bytes, with w = p + 3 under Breslow and 2p + 4 under Efron. Otherwise it
   keeps the sweep, and a stratum too large for its block is refused with a message.

@@ -70,7 +70,12 @@ class CoxLayoutSuite extends SparkSuite {
   }
 
   for (
-    name <- Seq("rc-stratified-weights-offset", "lt-weights-offset", "lt-heavy-ties");
+    name <- Seq(
+      "rc-stratified-weights-offset",
+      "lt-weights-offset",
+      "lt-heavy-ties",
+      "lt-unstratified"
+    );
     ties <- Methods
   )
     test(

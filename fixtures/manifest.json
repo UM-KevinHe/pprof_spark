@@ -7,7 +7,8 @@
    "rc-stratified-weights-offset",
    "lt-stratified",
    "lt-weights-offset",
-   "lt-heavy-ties"
+   "lt-heavy-ties",
+   "lt-unstratified"
   ],
   "fe-random-cluster": [
    "frc-base",
@@ -88,6 +89,10 @@
   "cox/lt-stratified/input.csv": "b2798ed650e04ca38ffaa429d36a7206f578b0c91033576db9b96a527bd8a5ef",
   "cox/lt-stratified/pprof_py.json": "c2838673063e8facef28dd060ce34133e1f073dfb6553543f446e2f4846b60a8",
   "cox/lt-stratified/r_survival.json": "89a7b1c1f0a0337a76b6c5cac18802e257faa901bf3d4cd169ff1d24dc0a92c6",
+  "cox/lt-unstratified/case.json": "261bff76079fe5335a692e59d933fdb6628cbbb022312ea98c3cfc7c45edcab2",
+  "cox/lt-unstratified/input.csv": "a0face45054c52b976fdead5a40cbdf8805c472f7007885b327d684441170350",
+  "cox/lt-unstratified/pprof_py.json": "95bee1296139f5c8433be45f4ad764f6e4122905d20f3579a22fe22b8e68809a",
+  "cox/lt-unstratified/r_survival.json": "df6a6d700e72e76d1aec106f2bec7a7a6c59adf3e84d17fcb13edf0c65e9cc0d",
   "cox/lt-weights-offset/case.json": "5a08e9f53eb2bd4d27189eacd862431079390220a81c7262ac934675b679fe15",
   "cox/lt-weights-offset/input.csv": "2c475b0f83cddc99a94e1b2c9148a95741b44789072c5c478b1cc411a6bdfa07",
   "cox/lt-weights-offset/pprof_py.json": "a5d8c5f3d6470159e33e502eb226b6a4a66e9b942adc63cb512d624ec62bff04",

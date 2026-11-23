@@ -1,6 +1,6 @@
 # Specification: Cox / per-time aggregates for strata larger than a block
 
-- Status: **Draft** (round 188), for the maintainer's approval as D-81.
+- Status: **Approved** (2026-11-23, the maintainer) as D-81. The fixture is built in round 189 (§11).
 - Decision references:
   - D-75: performance step 4;
   - D-78: the re-baselining rule, which names per-time aggregates among changes of summation order;
@@ -152,3 +152,14 @@ specified.
 3. **The outputs (§6).** The baseline, residuals and robust variance are built in step 4; anything else refuses
    aggregated strata.
 4. **Validation and rounds** (§8, §9).
+
+## 11. As built
+
+**Round 189, the fixture.**
+- **Generation.** `lt-unstratified` (seed 8) holds 5,000 rows, 3 features, one stratum, times 1 to 60, weights,
+  offsets and truncation. It was generated with the pinned environment: R 4.3.3 with survival 3.5-8, and pprof_py at
+  `9320766`. In the same run, the 28 files of the seven existing Cox cases matched the committed manifest byte for byte.
+- **What it holds.** Its grid has 60 times: 60 exit times and 50 entry times, all on the grid. It has 56 event times
+  and 3,675 events; the largest tie has 401. 1,914 rows enter after time 0.
+- **Calibration and suites.** `docs/parity/cox-calibration.md` gains its 22 rows, all within class. The case joins
+  every Cox suite's list that holds the unstratified cases, and the golden runs. The present sweep passes it.

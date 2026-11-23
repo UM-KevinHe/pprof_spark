@@ -162,6 +162,86 @@
         "iterations" : [3]
       }
     },
+    "cox/lt-unstratified/breslow/default" : {
+      "doubles" : {
+        "at_estimates_information" : ["40b44ee80136ea9a","408145f0aeefb468","c0657c300b829834","40b6f21c003a0119","405c1cf1a09affa4","40b75bd02a1c1f28"],
+        "at_estimates_loglik" : ["c0e0b4d77a85bd83"],
+        "at_estimates_score" : ["3e39bb68a0000000","be138f6b40000000","3e06e69f10000000"],
+        "at_start_information" : ["40b4fc8c8872a79a","407bf2881cdbf7f3","c058ea435d6f6610","40b70cf22d4a1f01","40579ec4ea9dee96","40b76f19b35c75de"],
+        "at_start_loglik" : ["c0e10412aeeff696"],
+        "at_start_score" : ["40a176afd7f7f966","c091384682c28d84","407e725ecdf7a76e"],
+        "covariance" : ["3f297e6ae2fe0cb3","bef34f7f472c1e27","3ed8e6ce6c2d0574","3f268cd2d7a351b5","becf9492590b34e8","3f25f362cddf0c21"],
+        "estimates" : ["3fdc232dce4a17ab","bfccf31b39435c66","3fb866c3984cf9ed"],
+        "information" : ["40b44ee80136ea9a","408145f0aeefb468","c0657c300b829834","40b6f21c003a0119","405c1cf1a09affa4","40b75bd02a1c1f28"],
+        "loglik" : ["c0e0b4d77a85bd83"],
+        "standard_errors" : ["3f8c8fefb0fe2c37","3f8adcd7d514bfbf","3f8a80d6354b8ddd"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/lt-unstratified/breslow/tight" : {
+      "doubles" : {
+        "at_estimates_information" : ["40b44ee80136ea9a","408145f0aeefb468","c0657c300b829834","40b6f21c003a0119","405c1cf1a09affa4","40b75bd02a1c1f28"],
+        "at_estimates_loglik" : ["c0e0b4d77a85bd83"],
+        "at_estimates_score" : ["3e39bb68a0000000","be138f6b40000000","3e06e69f10000000"],
+        "at_start_information" : ["40b4fc8c8872a79a","407bf2881cdbf7f3","c058ea435d6f6610","40b70cf22d4a1f01","40579ec4ea9dee96","40b76f19b35c75de"],
+        "at_start_loglik" : ["c0e10412aeeff696"],
+        "at_start_score" : ["40a176afd7f7f966","c091384682c28d84","407e725ecdf7a76e"],
+        "covariance" : ["3f297e6ae2fe0cb3","bef34f7f472c1e27","3ed8e6ce6c2d0574","3f268cd2d7a351b5","becf9492590b34e8","3f25f362cddf0c21"],
+        "estimates" : ["3fdc232dce4a17ab","bfccf31b39435c66","3fb866c3984cf9ed"],
+        "information" : ["40b44ee80136ea9a","408145f0aeefb468","c0657c300b829834","40b6f21c003a0119","405c1cf1a09affa4","40b75bd02a1c1f28"],
+        "loglik" : ["c0e0b4d77a85bd83"],
+        "standard_errors" : ["3f8c8fefb0fe2c37","3f8adcd7d514bfbf","3f8a80d6354b8ddd"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/lt-unstratified/efron/default" : {
+      "doubles" : {
+        "at_estimates_information" : ["40b43d13c6bed958","40821a4d7a98b27a","c068092acc71c356","40b6f3f85085b64e","405ff3bc68a190ae","40b75b776d4457b7"],
+        "at_estimates_loglik" : ["c0e08fb60c9fa54e"],
+        "at_estimates_score" : ["3e23f41c10da0000","be0724e990b40000","3df6d5ba55e98000"],
+        "at_start_information" : ["40b4cfd6a1eb2bda","407d29949cd5659e","c05c4be72153381f","40b705ad554796e4","4059bd0f8f1246ca","40b76c76d85f532f"],
+        "at_start_loglik" : ["c0e0e7e8a8759ede"],
+        "at_start_score" : ["40a2570531920cf3","c092150117946572","408009b0a13f82d3"],
+        "covariance" : ["3f299d839cd484e1","bef45af1cb2bf209","3edc1988768112f2","3f2691ceb1b04f50","bed20e39e0e54484","3f25f5ed14ab38bd"],
+        "estimates" : ["3fddc7c5b98a4500","bfceb90b8193d4c5","3fba334178ece576"],
+        "information" : ["40b43d13c6bed958","40821a4d7a98b27a","c068092acc71c356","40b6f3f85085b64e","405ff3bc68a190ae","40b75b776d4457b7"],
+        "loglik" : ["c0e08fb60c9fa54e"],
+        "standard_errors" : ["3f8ca155d4b7e62d","3f8adfcf980dbe9b","3f8a825ebc371598"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/lt-unstratified/efron/tight" : {
+      "doubles" : {
+        "at_estimates_information" : ["40b43d13c6bed958","40821a4d7a98b27a","c068092acc71c356","40b6f3f85085b64e","405ff3bc68a190ae","40b75b776d4457b7"],
+        "at_estimates_loglik" : ["c0e08fb60c9fa54e"],
+        "at_estimates_score" : ["3e23f41c10da0000","be0724e990b40000","3df6d5ba55e98000"],
+        "at_start_information" : ["40b4cfd6a1eb2bda","407d29949cd5659e","c05c4be72153381f","40b705ad554796e4","4059bd0f8f1246ca","40b76c76d85f532f"],
+        "at_start_loglik" : ["c0e0e7e8a8759ede"],
+        "at_start_score" : ["40a2570531920cf3","c092150117946572","408009b0a13f82d3"],
+        "covariance" : ["3f299d839cd484e1","bef45af1cb2bf209","3edc1988768112f2","3f2691ceb1b04f50","bed20e39e0e54484","3f25f5ed14ab38bd"],
+        "estimates" : ["3fddc7c5b98a4500","bfceb90b8193d4c5","3fba334178ece576"],
+        "information" : ["40b43d13c6bed958","40821a4d7a98b27a","c068092acc71c356","40b6f3f85085b64e","405ff3bc68a190ae","40b75b776d4457b7"],
+        "loglik" : ["c0e08fb60c9fa54e"],
+        "standard_errors" : ["3f8ca155d4b7e62d","3f8adfcf980dbe9b","3f8a825ebc371598"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
     "cox/lt-weights-offset/breslow/default" : {
       "doubles" : {
         "at_estimates_information" : ["40800ba06a4421ca","c032ace7008a78c7","404131e1f0138f12","4082de20cabf4ab4","4041087033857501","408189a2b558f7f6"],

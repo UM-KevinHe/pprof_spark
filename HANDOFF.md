@@ -228,6 +228,42 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 189 (2026-11-23): D-81 approved; step 4's fixture, `lt-unstratified`
+
+- Round 188 is on `main` as `64c8247`. The maintainer approved step 4's specification. His message read "D-8", taken
+  as D-81, the decision asked about. D-81 is accepted, and the specification is marked approved.
+- **The fixture** (`per-time-aggregates.md` §8 and §11).
+  - **Generation.** `lt-unstratified` (seed 8) holds 5,000 rows, one stratum, times 1 to 60, weights, offsets and
+    truncation. It was generated with the pinned environment.
+  - **Reproducibility.** In the same run, the 28 files of the seven existing Cox cases matched the manifest byte for
+    byte. Only the new case's four files and its manifest entries were added.
+  - **What it holds.** A grid of 60 times; 56 event times and 3,675 events, the largest tie 401; 1,914 late entries.
+- **Calibration.** The case adds 22 rows to `docs/parity/cox-calibration.md`, all within class, and every family
+  passes.
+- **Suites.** The case joins `CoxFixtures.Cases`, the lists of the baseline, measures, provider-test, residual and
+  robust suites, and the weighted-with-offsets lists of the measures, layout and baseline-reference suites. Every Cox suite passes with it: 11 suites, 280
+  tests.
+- **Golden runs.** Four new runs: two tie methods at default and tight options. The manifest was written with `PPROF_GOLDEN_WRITE`: every value of the 44
+  recorded runs is unchanged, and the suite passes against it.
+- **Mistakes caught in the sandbox, not in the patch.**
+  - A first edit of the suite lists failed, because `CoxFixtures` holds the same pattern twice.
+  - A scalafmt call without file arguments reformatted seven probe files under `docs`. They were reverted, so the patch
+    leaves them unchanged.
+  - The test chain was stopped and restarted, so its results come from the final files.
+- **Records.** D-81; the specification's status and §11; plan §4; the parity matrix; STATUS.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- The engine's tests compile with the build's flags. scalafmt is clean, and `check-engine-api.sh` passes with its
+  self-test.
+- Every Cox suite passes: 11 suites, 280 tests. `GoldenRunsSuite` passes in write mode and against the new manifest,
+  4 tests each, and the testkit suites pass, 28.
+- No module's main code changed, so the other modules' suites were not rerun.
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21, Spark
+  4.0.0's jars, and the Python tests.
+
+**Next: step 4's build round** (D-81 §9). The specification amendments come first, then the planner's time counts and
+stratum splitting, the two passes, the driver's per-time evaluation, the outputs, the tests and new golden runs.
+
 ## Round 188 (2026-11-23): step 4's specification, Cox per-time aggregates (D-81 proposed)
 
 - Round 187 is on `main` as `1ba99f6`.

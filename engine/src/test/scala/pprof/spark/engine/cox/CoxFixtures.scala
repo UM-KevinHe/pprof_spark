@@ -31,7 +31,8 @@ object CoxFixtures {
       "rc-stratified-weights-offset",
       "lt-stratified",
       "lt-weights-offset",
-      "lt-heavy-ties"
+      "lt-heavy-ties",
+      "lt-unstratified"
     )
 
   val Methods: Seq[Ties] = Seq(Ties.Breslow, Ties.Efron)
