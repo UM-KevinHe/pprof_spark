@@ -28,10 +28,14 @@ final class CoxTotals(val p: Int) {
   * sums, then removes every row whose entry time is at or after that time (rows are at risk on
   * (entry, exit], Phase 1b specification §1 and §6), before that time's events contribute, so tied
   * events share one risk set. `entryOrder` lists the stratum's row indices by entry time descending;
-  * removals add the negated terms to the same Neumaier sums. With every entry below every exit time
-  * of an event nothing is removed, and the sums are exactly those of right-censored data. Running sums and
-  * the stratum's contributions are Neumaier sums in sweep order; the per-time event sums are plain
-  * sums in the same order. The stratum total is added to `totals` once, so the result depends only
+  * removals subtract from S₀ and S₁ with the same Neumaier sums. With every entry below every exit
+  * time of an event nothing is removed, and the sums are exactly those of right-censored data. The
+  * running sums and the stratum's contributions to ℓ and U are Neumaier sums in sweep order; the
+  * per-time event sums are plain sums in the same order. The information is computed in the
+  * weighted-Gram form (docs/spec/cox/weighted-gram.md, D-80): the sweep adds each event time's
+  * rank-one terms to a chunked compensated sum M, and a second pass over the stratum's rows adds
+  * each row's Gram term to a chunked compensated sum G, weighted by its risk score times its
+  * cumulative hazard while at risk, less the Efron correction of a tied event. The stratum total is added to `totals` once, so the result depends only
   * on the canonical order (R0).
   */
 object CoxStratum {
@@ -76,17 +80,36 @@ object CoxStratum {
     val q = Moments.packedLength(p)
     val s0 = new NeumaierSum
     val s1 = new NeumaierVector(p)
-    val s2 = new ChunkedVector(q)
-    val p2 = s2.pending
-    val info = new ChunkedVector(q)
-    val ip = info.pending
+    val subtractive = new ChunkedVector(q)
+    val mp = subtractive.pending
     val stratum = new CoxTotals(p)
     val xc = new Array[Double](p)
     val eventSum = new Array[Double](p)
     val tied1 = new Array[Double](p)
-    val tied2 = new Array[Double](q)
     val means = new Array[Double](p)
     val riskScore = new Array[Double](until - from)
+    val times = Array.newBuilder[Double]
+    val hazards = Array.newBuilder[Double]
+    val corrections = Array.newBuilder[Double]
+
+    // One step's rank-one term a·m̄m̄ᵀ, added to M (weighted-gram.md §4).
+    def rankOne(a: Double): Unit = {
+      var j = 0
+      var k = 0
+      while (j < p) {
+        val am = a * means(j)
+        val off = k - j
+        var l = j
+        while (l < p) {
+          mp(off + l) += am * means(l)
+          l += 1
+        }
+        k += p - j
+        j += 1
+      }
+      subtractive.endTerm()
+    }
+
     var removal = from
     var r = from
     while (r < until) {
@@ -96,10 +119,7 @@ object CoxStratum {
       var etaEvents = 0.0
       var tied0 = 0.0
       java.util.Arrays.fill(eventSum, 0.0)
-      if (efron) {
-        java.util.Arrays.fill(tied1, 0.0)
-        java.util.Arrays.fill(tied2, 0.0)
-      }
+      if (efron) java.util.Arrays.fill(tied1, 0.0)
       while (r < until && rows.timeAt(r) == t) {
         val w = rows.weightAt(r)
         if (w > 0.0) {
@@ -117,20 +137,10 @@ object CoxStratum {
           riskScore(r - from) = rw
           s0.add(rw)
           j = 0
-          var k = 0
           while (j < p) {
-            val wx = rw * xc(j)
-            s1.addAt(j, wx)
-            val off = k - j
-            var l = j
-            while (l < p) {
-              p2(off + l) += wx * xc(l)
-              l += 1
-            }
-            k += p - j
+            s1.addAt(j, rw * xc(j))
             j += 1
           }
-          s2.endTerm()
           if (rows.eventAt(r)) {
             d += 1
             dw += w
@@ -143,16 +153,8 @@ object CoxStratum {
             if (efron) {
               tied0 += rw
               j = 0
-              k = 0
               while (j < p) {
-                val wx = rw * xc(j)
-                tied1(j) += wx
-                var l = j
-                while (l < p) {
-                  tied2(k) += wx * xc(l)
-                  k += 1
-                  l += 1
-                }
+                tied1(j) += rw * xc(j)
                 j += 1
               }
             }
@@ -168,20 +170,10 @@ object CoxStratum {
           val xs = rows.xs(i)
           val base = rows.xBase(i)
           var j = 0
-          var k = 0
           while (j < p) {
-            val wx = rw * (xs(base + j) - center(j))
-            s1.addAt(j, -wx)
-            val off = k - j
-            var l = j
-            while (l < p) {
-              p2(off + l) += -(wx * (xs(base + l) - center(l)))
-              l += 1
-            }
-            k += p - j
+            s1.addAt(j, -(rw * (xs(base + j) - center(j))))
             j += 1
           }
-          s2.endTerm()
         }
         removal += 1
       }
@@ -195,19 +187,14 @@ object CoxStratum {
             j += 1
           }
           j = 0
-          var k = 0
           while (j < p) {
-            val mj = means(j)
-            stratum.score.addAt(j, eventSum(j) - dw * mj)
-            var l = j
-            while (l < p) {
-              ip(k) += dw * (s2.readAt(k) / total0 - mj * means(l))
-              k += 1
-              l += 1
-            }
+            stratum.score.addAt(j, eventSum(j) - dw * means(j))
             j += 1
           }
-          info.endTerm()
+          rankOne(dw)
+          times += t
+          hazards += dw / total0
+          corrections += 0.0
         } else {
           val meanWeight = dw / d
           stratum.value.add(etaEvents)
@@ -216,6 +203,8 @@ object CoxStratum {
             stratum.score.addAt(j, eventSum(j))
             j += 1
           }
+          var hazard = 0.0
+          var dying = 0.0
           var step = 1
           while (step <= d) {
             val f = step.toDouble / d
@@ -227,25 +216,99 @@ object CoxStratum {
               stratum.score.addAt(j, -meanWeight * means(j))
               j += 1
             }
-            j = 0
-            var k = 0
-            while (j < p) {
-              var l = j
-              while (l < p) {
-                val c = (s2.readAt(k) - tied2(k)) + f * tied2(k)
-                ip(k) += meanWeight * (c / a - means(j) * means(l))
-                k += 1
-                l += 1
-              }
-              j += 1
-            }
-            info.endTerm()
+            rankOne(meanWeight)
+            val increment = meanWeight / a
+            hazard += increment
+            dying += f * increment
             step += 1
           }
+          times += t
+          hazards += hazard
+          corrections += hazard - dying
         }
       }
     }
-    stratum.information.add(info.values)
+    // Cumulative hazards over the event times in ascending time, their sums and compensations apart (§4).
+    val ts = times.result().reverse
+    val hs = hazards.result().reverse
+    val psi = corrections.result().reverse
+    val events = ts.length
+    val hSum = new Array[Double](events)
+    val hComp = new Array[Double](events)
+    var sum = 0.0
+    var compensation = 0.0
+    var e = 0
+    while (e < events) {
+      val h = hs(e)
+      val next = sum + h
+      if (java.lang.Double.isFinite(next)) {
+        if (math.abs(sum) >= math.abs(h)) compensation += (sum - next) + h
+        else compensation += (h - next) + sum
+      }
+      sum = next
+      hSum(e) = sum
+      hComp(e) = compensation
+      e += 1
+    }
+    def lastAtOrBefore(v: Double): Int = {
+      var lo = 0
+      var hi = events - 1
+      var found = -1
+      while (lo <= hi) {
+        val mid = (lo + hi) >>> 1
+        if (ts(mid) <= v) {
+          found = mid
+          lo = mid + 1
+        } else hi = mid - 1
+      }
+      found
+    }
+    val gram = new ChunkedVector(q)
+    val gp = gram.pending
+    r = from
+    while (r < until) {
+      if (rows.weightAt(r) > 0.0) {
+        val b = lastAtOrBefore(rows.timeAt(r))
+        val a = lastAtOrBefore(rows.entryAt(r))
+        val lambda = ((if (b >= 0) hSum(b) else 0.0) - (if (a >= 0) hSum(a) else 0.0)) +
+          ((if (b >= 0) hComp(b) else 0.0) - (if (a >= 0) hComp(a) else 0.0))
+        val hazard = if (rows.eventAt(r) && b >= 0) lambda - psi(b) else lambda
+        if (hazard != 0.0) {
+          val omega = riskScore(r - from) * hazard
+          val xs = rows.xs(r)
+          val base = rows.xBase(r)
+          var j = 0
+          while (j < p) {
+            xc(j) = xs(base + j) - center(j)
+            j += 1
+          }
+          j = 0
+          var k = 0
+          while (j < p) {
+            val wx = omega * xc(j)
+            val off = k - j
+            var l = j
+            while (l < p) {
+              gp(off + l) += wx * xc(l)
+              l += 1
+            }
+            k += p - j
+            j += 1
+          }
+        }
+        gram.endTerm()
+      }
+      r += 1
+    }
+    val g = gram.values
+    val m = subtractive.values
+    val information = new Array[Double](q)
+    var k = 0
+    while (k < q) {
+      information(k) = g(k) - m(k)
+      k += 1
+    }
+    stratum.information.add(information)
     totals.add(stratum)
   }
 

@@ -515,6 +515,29 @@ tables are in plan §2.5 and round 149's evidence log.
 | Cox (3 iterations) | 31.5 | 4 evaluations, 15.7 s wall | 12.7 | 5.5 | 1.6 | 7.1 |
 | Logistic (4 iterations) | 48.9 | 4 pass A and 4 pass B, 13.5 s wall | 9.3 | 17.3 | 6.8 | 6.0 |
 
+### Round 186: the Cox weighted-Gram information (step 3's kernel)
+
+This is a sandbox measurement: one core, local mode, with the working set on disk, the simple design, and Cox stratified
+by provider. PerfJob's times are whole days, so some deaths tie, and its data have no entry times. Builds alternated,
+round 185's (`f18e528`, with round 182's Cox kernel) and round 186's, each fit in a fresh JVM.
+
+| Point | Build | Fit s | Evaluation, 4 passes: CPU s (µs per row per pass) | GC s |
+|---|---|---|---|---|
+| Cox, 100,000 rows, 180 features, 160 strata, Breslow | before | 33.6, 35.0 | 6.46, 6.69 (16.4) | 0.19, 0.42 |
+| | after | 31.9, 35.8 | 4.96, 5.32 (12.9) | 0.38, 0.28 |
+| The same, Efron | before | 36.6, 34.8 | 7.88, 7.91 (19.7) | 0.17, 0.21 |
+| | after | 33.4, 42.3 | 5.30, 6.15 (14.3) | 0.21, 0.26 |
+| Cox, 1,000,000 rows, 20 features, 1,000 strata, Breslow | before | 28.6, 29.5 | 2.78, 2.80 (0.70) | 0.13, 0.14 |
+| | after | 30.9, 30.4 | 3.34, 2.62 (0.75) | 0.14, 0.12 |
+
+- **The same results.** The log-likelihood's bits and the iteration counts match across builds at all three points.
+- **At 180 features.** Evaluation's CPU fell 1.28 times with Breslow ties and 1.38 times with Efron. PerfJob's data tie
+  fewer deaths than the probe's and have no entry times. So the probe's larger gains for heavy ties and truncation,
+  up to 2.4 times (`weighted-gram.md` §7), are not exercised here.
+- **At 20 features.** No change beyond noise. The second pass's per-row work weighs about as much as the S₂ sweep it
+  replaces.
+- **Fit times.** These stayed within noise. One Efron fit, at 42.3 s, was slow in every operation, a sandbox outlier.
+
 ### Round 182: chunked compensated sums (step 2, round D)
 
 This is a sandbox measurement: one core, local mode, with the working set on disk, the simple design, Cox stratified by

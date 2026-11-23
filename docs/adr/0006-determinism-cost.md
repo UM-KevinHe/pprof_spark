@@ -68,3 +68,13 @@ Every other sum keeps its Neumaier or pairwise algorithm. Chunk boundaries follo
 per layout. A sandbox probe ran the S₂ update 3.3 times faster than per-term Neumaier sums, within 10⁻¹⁵ of them
 (§5.4). The change re-baselined the golden runs under D-78 and D-79. D-15's algorithms (ADR-0003) are unchanged for the
 reductions they cover.
+
+## Amendment (2026-11-22, round 186; D-80, performance step 3)
+
+Cox's information is now computed in the weighted-Gram form ([docs/spec/cox/weighted-gram.md](../spec/cox/weighted-gram.md)):
+I = G − M.
+- G, the weighted Gram over the stratum's rows, and M, one rank-one term per event time or Efron step, are chunked
+  compensated sums as above.
+- S₂ is gone.
+- The cumulative hazards are Neumaier sums whose sum and compensation are kept apart, so that each row's hazard is a
+  compensated difference.

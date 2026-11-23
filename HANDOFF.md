@@ -228,6 +228,54 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 186 (2026-11-22): the Cox weighted-Gram information (step 3's kernel, D-80)
+
+- Round 185 is on `main` as `f18e528`.
+- **Specifications first (NN-2).** These now state the weighted-Gram information:
+  - first-slice §6 (with its summation-order discrepancy row);
+  - efron-weights-offsets §5, which needs no D₂;
+  - counting-process-baseline, where removals touch only S₀ and S₁;
+  - ADR-0006, in a new amendment.
+- **`CoxStratum.add`** (`weighted-gram.md` §4 and §13).
+  - **Pass 1** keeps the operations behind ℓ and U. It keeps no S₂ or D₂, adds each step's rank-one term a·m̄m̄ᵀ to
+    a chunked sum M, and records each event time's hazard and Efron correction, computed as the residuals do.
+  - **The hazards.** Cumulative hazards keep their Neumaier sums and compensations apart.
+  - **Pass 2** takes each row's Λᵢ as a compensated difference and adds ωᵢxᵢxᵢᵀ to a chunked sum G; I = G − M.
+  - **Zero hazards.** A row whose hazard is exactly zero adds nothing, so an overflowed risk score in an event-free
+    stratum cannot turn 0 × ∞ into NaN.
+- **Tests.**
+  - Round 182's kernel stays in the test tree as `CoxStratumS2`. `CoxGramSuite` (3 tests) finds ℓ and U identical to
+    it to the bit, and the information within 10⁻¹³ scaled, over ten configurations.
+  - Against exact BigDecimal references, Breslow and Efron with late entries, including short late intervals in a
+    long stratum, the information is within 10⁻¹³.
+  - The existing Cox kernel tests pass unchanged: finite differences, truncation, centring, records.
+- **D-78's comparison** with round 185's manifest: every fixed-point log-likelihood and
+  score of the 30 Cox runs is identical to the bit, and their information within 1.5·10⁻¹⁵ scaled, against 10⁻¹³.
+  Converged values are within 1.2·10⁻¹⁵, the converged log-likelihood identical in all 44 runs; counts and flags are
+  identical; every logistic quantity is identical. The new manifest is in this commit.
+- **Measured in the sandbox** (`perf-results.md`, "Round 186"): evaluation's CPU per row fell 1.28 times with
+  Breslow ties (16.4 to 12.9 µs) and 1.38 times with Efron (19.7 to 14.3 µs) at 180 features, with identical
+  log-likelihood bits; at 20 features it did not change beyond noise. PerfJob's data have few ties and no entry times;
+  the probe's larger gains for heavy ties and truncation (up to 2.4 times) are not exercised here.
+- **Records.** The specifications and ADR-0006; `weighted-gram.md` §13; plan §4; STATUS.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags. scalafmt is clean, and `check-engine-api.sh` passes with its
+  self-test.
+- Every suite passes:
+  - numerics, 115 tests, among them `CoxGramSuite`;
+  - engine, 62 suites and 593 tests;
+  - app 38, bench 30 and testkit 28;
+  - the Python tests on PySpark 4.1.0, 47.
+- `GoldenRunsSuite` passes its D-78 comparison with round 185's manifest, its write, and its check against the new
+  manifest, 4 tests each.
+- On Spark 4.0.0's jars, `GoldenRunsSuite` and `CoxGramSuite` pass, 7 tests.
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21, and
+  the Python tests on PySpark 4.0.0.
+
+**Next: step 3's exit on the cluster** (plan §4): Cox evaluation's CPU per row, and parity at all three levels. Then
+step 4, per-time aggregates.
+
 ## Round 185 (2026-11-22): step 2's exit on the cluster
 
 - Round 184 is on `main` as `2f084b5`. The maintainer ran step 2's exit on it: S2–S8 and points 7 and 9, off-heap, on

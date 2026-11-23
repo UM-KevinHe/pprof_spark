@@ -1,6 +1,7 @@
 # Specification: Cox / the weighted-Gram information
 
-- Status: **Approved** (2026-11-22, the maintainer) as D-80. The fixture is built in round 184 (§13).
+- Status: **Approved** (2026-11-22, the maintainer) as D-80. The fixture is built in round 184, the kernel in
+  round 186 (§13).
 - Decision references:
   - D-75: performance step 3;
   - D-78: the re-baselining rule, which names the weighted-Gram identity among changes of summation order;
@@ -207,3 +208,24 @@ None new. First-slice's summation-order row (class D) extends to the weighted-Gr
 - **Ties.** Of the case's 54 event times, 38 have two or more tied events; the largest has 38.
 - **Calibration and suites.** `docs/parity/cox-calibration.md` gains its 22 rows, all within their classes. The case
   joins every Cox suite's list and the golden runs.
+
+**Round 186, the kernel.**
+- **Specifications first (NN-2).** First-slice §6, efron-weights-offsets §5, counting-process-baseline and ADR-0006
+  state the weighted-Gram information.
+- **`CoxStratum.add`.**
+  - Pass 1 keeps the operations behind ℓ and U, keeps no S₂ or D₂, and adds each step's rank-one term to M.
+  - The cumulative hazards keep their Neumaier sums and compensations apart.
+  - Pass 2 takes each row's Λᵢ as their compensated difference, and adds ωᵢxᵢxᵢᵀ to G; a row whose hazard is
+    exactly zero ends its term without adding, so 0 × ∞ cannot make NaN.
+- **Tests.**
+  - Round 182's kernel is kept in the test tree as `CoxStratumS2`. Against it, `CoxGramSuite` finds ℓ and U
+    identical to the bit and the information within 10⁻¹³ scaled, over ten configurations of ties, late entries, zero
+    weights, offsets and 3 to 8 features.
+  - Against exact BigDecimal references, Breslow and Efron, with late entries and a long stratum of short late
+    intervals, the information is within 10⁻¹³.
+- **D-78's comparison** with round 185's manifest: every fixed-point log-likelihood and
+  score of the 30 Cox runs is identical to the bit, and their information within 1.5·10⁻¹⁵ scaled, against 10⁻¹³.
+  Converged values are within 1.2·10⁻¹⁵, the converged log-likelihood identical in all 44 runs; counts and flags are
+  identical; every logistic quantity is identical. The new manifest is in this commit.
+- **Measured** in the sandbox (`perf-results.md`, "Round 186"): evaluation's CPU fell 1.28 times with Breslow ties and
+  1.38 times with Efron at 180 features. At 20 features it did not change.

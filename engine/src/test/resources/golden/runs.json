@@ -4,17 +4,17 @@
   "runs" : {
     "cox/lt-heavy-ties/breslow/default" : {
       "doubles" : {
-        "at_estimates_information" : ["4082e6367163396a","4035be11b766220f","c05781bfe8f0fd25","40841de40c0e170f","40418bcaa9d8b134","408675ff74b166d0"],
+        "at_estimates_information" : ["4082e6367163396c","4035be11b766220c","c05781bfe8f0fd22","40841de40c0e170f","40418bcaa9d8b136","408675ff74b166cf"],
         "at_estimates_loglik" : ["c09f25f0a8fa00d8"],
-        "at_estimates_score" : ["3e7720d331000000","be46f2492c000000","3e44c90bf8000000"],
-        "at_start_information" : ["40846511fa7c082e","4024e88dac4395ca","c054288a1e2c6544","4084c7e446e424e9","404b2b8bc77e7002","40861f906d9e9741"],
+        "at_estimates_score" : ["3e7720d307000000","be46f24984000000","3e44c90a10000000"],
+        "at_start_information" : ["40846511fa7c0830","4024e88dac4395cc","c054288a1e2c6541","4084c7e446e424e8","404b2b8bc77e6fff","40861f906d9e9741"],
         "at_start_loglik" : ["c09f970e03414013"],
         "at_start_score" : ["406468ed5235b246","c05470b7efdc79d5","4038303ec49c2509"],
-        "covariance" : ["3f5bb4362c50853e","bf122e4f3bdcfaa2","3f2d7015be111777","3f5990e1821ece1a","bf16599e9873c925","3f57583fdee78934"],
-        "estimates" : ["3fd16536bff83554","bfc177d302c81b94","3fb36fc8dba7c1e3"],
-        "information" : ["4082e6367163396a","4035be11b766220f","c05781bfe8f0fd25","40841de40c0e170f","40418bcaa9d8b134","408675ff74b166d0"],
+        "covariance" : ["3f5bb4362c50853c","bf122e4f3bdcfa9f","3f2d7015be111770","3f5990e1821ece1a","bf16599e9873c927","3f57583fdee78934"],
+        "estimates" : ["3fd16536bff83554","bfc177d302c81b94","3fb36fc8dba7c1e4"],
+        "information" : ["4082e6367163396c","4035be11b766220c","c05781bfe8f0fd22","40841de40c0e170f","40418bcaa9d8b136","408675ff74b166cf"],
         "loglik" : ["c09f25f0a8fa00d8"],
-        "standard_errors" : ["3fa50dc6f9a4b9c8","3fa439a0c74e0f41","3fa35398e14aae17"]
+        "standard_errors" : ["3fa50dc6f9a4b9c7","3fa439a0c74e0f41","3fa35398e14aae17"]
       },
       "integers" : {
         "converged" : [1],
@@ -24,15 +24,15 @@
     },
     "cox/lt-heavy-ties/breslow/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["4082e636715e0ce5","4035be11b77337b1","c05781bfe8f8f30c","40841de40c0ca816","40418bcaa9ca068f","408675ff74b1e6cf"],
+        "at_estimates_information" : ["4082e636715e0ce5","4035be11b77337af","c05781bfe8f8f30d","40841de40c0ca815","40418bcaa9ca068e","408675ff74b1e6cf"],
         "at_estimates_loglik" : ["c09f25f0a8fa00d7"],
         "at_estimates_score" : ["bd14000000000000","3cec800000000000","bcd8000000000000"],
-        "at_start_information" : ["40846511fa7c082e","4024e88dac4395ca","c054288a1e2c6544","4084c7e446e424e9","404b2b8bc77e7002","40861f906d9e9741"],
+        "at_start_information" : ["40846511fa7c0830","4024e88dac4395cc","c054288a1e2c6541","4084c7e446e424e8","404b2b8bc77e6fff","40861f906d9e9741"],
         "at_start_loglik" : ["c09f970e03414013"],
         "at_start_score" : ["406468ed5235b246","c05470b7efdc79d5","4038303ec49c2509"],
-        "covariance" : ["3f5bb4362c58b2c6","bf122e4f3beaf325","3f2d7015be22c8aa","3f5990e182209228","bf16599e98669b4d","3f57583fdee75f14"],
+        "covariance" : ["3f5bb4362c58b2c6","bf122e4f3beaf324","3f2d7015be22c8ac","3f5990e182209228","bf16599e98669b4d","3f57583fdee75f14"],
         "estimates" : ["3fd16536c0210e56","bfc177d302d5034a","3fb36fc8dbcd32e5"],
-        "information" : ["4082e636715e0ce5","4035be11b77337b1","c05781bfe8f8f30c","40841de40c0ca816","40418bcaa9ca068f","408675ff74b1e6cf"],
+        "information" : ["4082e636715e0ce5","4035be11b77337af","c05781bfe8f8f30d","40841de40c0ca815","40418bcaa9ca068e","408675ff74b1e6cf"],
         "loglik" : ["c09f25f0a8fa00d7"],
         "standard_errors" : ["3fa50dc6f9a7d547","3fa439a0c74ec210","3fa35398e14a9ca7"]
       },
@@ -44,17 +44,17 @@
     },
     "cox/lt-heavy-ties/efron/default" : {
       "doubles" : {
-        "at_estimates_information" : ["40826eaafc55b4c6","4039b6b9783d697d","c05ae1086268b92d","4083560dea471a5d","403de0f82539ef8b","40865677e9922c68"],
+        "at_estimates_information" : ["40826eaafc55b4c6","4039b6b9783d6979","c05ae1086268b92f","4083560dea471a5e","403de0f82539ef8b","40865677e9922c69"],
         "at_estimates_loglik" : ["c09c1bd3e0bc49e2"],
         "at_estimates_score" : ["3e9ad3eb2f000000","be6ec4924c000000","3e717a9d9b000000"],
-        "at_start_information" : ["4083f5dd67abb0c6","4024f8537278c51a","c05482e0fe2e454e","40843afff64a185c","4048d12fddbaf015","4085de7789b5a3bf"],
+        "at_start_information" : ["4083f5dd67abb0c7","4024f8537278c504","c05482e0fe2e454f","40843afff64a185c","4048d12fddbaf016","4085de7789b5a3c0"],
         "at_start_loglik" : ["c09ce7bf681f36b6"],
         "at_start_score" : ["406b34c621974beb","c05a7dae163117c2","40404f3336cfebf1"],
-        "covariance" : ["3f5ca25772dc76af","bf16697eee32f894","3f317641997271de","3f5a99d9c31a5175","bf15296311d64a08","3f57a1faa06c55d7"],
+        "covariance" : ["3f5ca25772dc76b0","bf16697eee32f892","3f317641997271e0","3f5a99d9c31a5175","bf15296311d64a08","3f57a1faa06c55d7"],
         "estimates" : ["3fd7c358d740f7ad","bfc78e95d1e87726","3fbb572e19f2df54"],
-        "information" : ["40826eaafc55b4c6","4039b6b9783d697d","c05ae1086268b92d","4083560dea471a5d","403de0f82539ef8b","40865677e9922c68"],
+        "information" : ["40826eaafc55b4c6","4039b6b9783d6979","c05ae1086268b92f","4083560dea471a5e","403de0f82539ef8b","40865677e9922c69"],
         "loglik" : ["c09c1bd3e0bc49e2"],
-        "standard_errors" : ["3fa56783b6690461","3fa4a1657c156060","3fa37205ea28ff1e"]
+        "standard_errors" : ["3fa56783b6690462","3fa4a1657c156060","3fa37205ea28ff1e"]
       },
       "integers" : {
         "converged" : [1],
@@ -64,17 +64,17 @@
     },
     "cox/lt-heavy-ties/efron/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["40826eaafc3d88ac","4039b6b97879bcf2","c05ae1086293111f","4083560dea4052b3","403de0f824cf8ae4","40865677e9947037"],
+        "at_estimates_information" : ["40826eaafc3d88ab","4039b6b97879bcf4","c05ae1086293111e","4083560dea4052b2","403de0f824cf8ae6","40865677e9947038"],
         "at_estimates_loglik" : ["c09c1bd3e0bc49e2"],
         "at_estimates_score" : ["bd0c800000000000","bcb8000000000000","bcff000000000000"],
-        "at_start_information" : ["4083f5dd67abb0c6","4024f8537278c51a","c05482e0fe2e454e","40843afff64a185c","4048d12fddbaf015","4085de7789b5a3bf"],
+        "at_start_information" : ["4083f5dd67abb0c7","4024f8537278c504","c05482e0fe2e454f","40843afff64a185c","4048d12fddbaf016","4085de7789b5a3c0"],
         "at_start_loglik" : ["c09ce7bf681f36b6"],
         "at_start_score" : ["406b34c621974beb","c05a7dae163117c2","40404f3336cfebf1"],
-        "covariance" : ["3f5ca2577305ea44","bf16697eee80c2ee","3f31764199a4bb63","3f5a99d9c323a10e","bf15296311ac0856","3f57a1faa06c8ea6"],
+        "covariance" : ["3f5ca2577305ea44","bf16697eee80c2f1","3f31764199a4bb63","3f5a99d9c323a111","bf15296311ac085b","3f57a1faa06c8ea6"],
         "estimates" : ["3fd7c358d8072194","bfc78e95d2314c56","3fbb572e1ad4582b"],
-        "information" : ["40826eaafc3d88ac","4039b6b97879bcf2","c05ae1086293111f","4083560dea4052b3","403de0f824cf8ae4","40865677e9947037"],
+        "information" : ["40826eaafc3d88ab","4039b6b97879bcf4","c05ae1086293111e","4083560dea4052b2","403de0f824cf8ae6","40865677e9947038"],
         "loglik" : ["c09c1bd3e0bc49e2"],
-        "standard_errors" : ["3fa56783b6788285","3fa4a1657c18fcae","3fa37205ea29167d"]
+        "standard_errors" : ["3fa56783b6788285","3fa4a1657c18fcaf","3fa37205ea29167d"]
       },
       "integers" : {
         "converged" : [1],
@@ -84,15 +84,15 @@
     },
     "cox/lt-stratified/breslow/default" : {
       "doubles" : {
-        "at_estimates_information" : ["4078f7f3cd612e80","403fc162c18478d8","c03467d315325c0b","407e4cbdd6f3a123","400ad08a896b5d0a","407e169a24b46492"],
+        "at_estimates_information" : ["4078f7f3cd612e81","403fc162c18478d7","c03467d315325c08","407e4cbdd6f3a124","400ad08a896b5d0e","407e169a24b46493"],
         "at_estimates_loglik" : ["c09174acac424fbf"],
-        "at_estimates_score" : ["3e1a390960000000","be22f17558000000","3e11125b00000000"],
-        "at_start_information" : ["4079ca8bab6e0cc3","4038f771d5b6b480","3fea4de12dea36b2","407fa0e3971878d5","400826423def793a","407d99b7ad64d38f"],
+        "at_estimates_score" : ["3e1a3906e0000000","be22f17478000000","3e11125900000000"],
+        "at_start_information" : ["4079ca8bab6e0cc4","4038f771d5b6b47e","3fea4de12dea36f6","407fa0e3971878d4","400826423def791e","407d99b7ad64d38f"],
         "at_start_loglik" : ["c0923c1a5553cfc4"],
         "at_start_score" : ["40671e5e5686a7ca","c054518589410e9a","401990ca8d2b0d9a"],
-        "covariance" : ["3f64a8b75dc8a73f","bf25bfdc13b7ae11","3f1c53096e865a61","3f60fcf26331e448","bef683cdb5cbde18","3f610e2a1a3d4bd4"],
-        "estimates" : ["3fdd6b551efc1637","bfc84a45ec53b679","3f97a42b0fa8ff43"],
-        "information" : ["4078f7f3cd612e80","403fc162c18478d8","c03467d315325c0b","407e4cbdd6f3a123","400ad08a896b5d0a","407e169a24b46492"],
+        "covariance" : ["3f64a8b75dc8a73f","bf25bfdc13b7ae11","3f1c53096e865a5e","3f60fcf26331e448","bef683cdb5cbde19","3f610e2a1a3d4bd4"],
+        "estimates" : ["3fdd6b551efc1637","bfc84a45ec53b679","3f97a42b0fa8ff45"],
+        "information" : ["4078f7f3cd612e81","403fc162c18478d7","c03467d315325c08","407e4cbdd6f3a124","400ad08a896b5d0e","407e169a24b46493"],
         "loglik" : ["c09174acac424fbf"],
         "standard_errors" : ["3fa9b62f71cf2fbf","3fa750ccc71646c0","3fa75c9a84c2a4a2"]
       },
@@ -104,17 +104,17 @@
     },
     "cox/lt-stratified/breslow/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["4078f7f3cd6100cd","403fc162c1855095","c03467d31533573b","407e4cbdd6f377ac","400ad08a896fe867","407e169a24b4682b"],
+        "at_estimates_information" : ["4078f7f3cd6100cd","403fc162c1855092","c03467d31533573e","407e4cbdd6f377ad","400ad08a896fe869","407e169a24b4682c"],
         "at_estimates_loglik" : ["c09174acac424fbf"],
         "at_estimates_score" : ["bcf8a00000000000","bcb8000000000000","3cd8000000000000"],
-        "at_start_information" : ["4079ca8bab6e0cc3","4038f771d5b6b480","3fea4de12dea36b2","407fa0e3971878d5","400826423def793a","407d99b7ad64d38f"],
+        "at_start_information" : ["4079ca8bab6e0cc4","4038f771d5b6b47e","3fea4de12dea36f6","407fa0e3971878d4","400826423def791e","407d99b7ad64d38f"],
         "at_start_loglik" : ["c0923c1a5553cfc4"],
         "at_start_score" : ["40671e5e5686a7ca","c054518589410e9a","401990ca8d2b0d9a"],
-        "covariance" : ["3f64a8b75dc8d01f","bf25bfdc13b88f71","3f1c53096e87f7a7","3f60fcf26331fd28","bef683cdb5cf29a0","3f610e2a1a3d4ae6"],
+        "covariance" : ["3f64a8b75dc8d01f","bf25bfdc13b88f6e","3f1c53096e87f7ab","3f60fcf26331fd26","bef683cdb5cf299f","3f610e2a1a3d4ae6"],
         "estimates" : ["3fdd6b551efd4664","bfc84a45ec5660bd","3f97a42b0fb30792"],
-        "information" : ["4078f7f3cd6100cd","403fc162c1855095","c03467d31533573b","407e4cbdd6f377ac","400ad08a896fe867","407e169a24b4682b"],
+        "information" : ["4078f7f3cd6100cd","403fc162c1855092","c03467d31533573e","407e4cbdd6f377ad","400ad08a896fe869","407e169a24b4682c"],
         "loglik" : ["c09174acac424fbf"],
-        "standard_errors" : ["3fa9b62f71cf492f","3fa750ccc71657d2","3fa75c9a84c2a3ff"]
+        "standard_errors" : ["3fa9b62f71cf492f","3fa750ccc71657d0","3fa75c9a84c2a3ff"]
       },
       "integers" : {
         "converged" : [1],
@@ -124,15 +124,15 @@
     },
     "cox/lt-stratified/efron/default" : {
       "doubles" : {
-        "at_estimates_information" : ["4078cb1958e802ca","403f5041bc7ba58b","c035cdf60c9e074a","407e5dc732403cdc","3ff19f6c9866c51c","407e1be56ede468b"],
+        "at_estimates_information" : ["4078cb1958e802ca","403f5041bc7ba590","c035cdf60c9e074c","407e5dc732403cdc","3ff19f6c9866c52e","407e1be56ede468a"],
         "at_estimates_loglik" : ["c09126742e80a9fe"],
         "at_estimates_score" : ["3e0d5bab40000000","be19051850000000","3e0648c100000000"],
-        "at_start_information" : ["4079844515abed01","40388e0ce724d44e","3fbf1b35a8bdf760","407fb9ec6ad08881","3ff35c9365580b48","407d9b808803a568"],
+        "at_start_information" : ["4079844515abed01","40388e0ce724d451","3fbf1b35a8bdfb40","407fb9ec6ad08883","3ff35c9365580b44","407d9b808803a568"],
         "at_start_loglik" : ["c09200d783819b6b"],
         "at_start_score" : ["406824bd1e82c454","c05529ba019335b5","4015b9fd85549bbf"],
-        "covariance" : ["3f64cf0482de2bcd","bf257df37c4b23e5","3f1e3cad22293c30","3f60f294c02dbb63","bee97bcf92722797","3f610c42da96e966"],
+        "covariance" : ["3f64cf0482de2bcd","bf257df37c4b23e9","3f1e3cad22293c32","3f60f294c02dbb63","bee97bcf927227a6","3f610c42da96e966"],
         "estimates" : ["3fdeeae7b82bf33f","bfc9308ef9221bd0","3f96441a32357fe5"],
-        "information" : ["4078cb1958e802ca","403f5041bc7ba58b","c035cdf60c9e074a","407e5dc732403cdc","3ff19f6c9866c51c","407e1be56ede468b"],
+        "information" : ["4078cb1958e802ca","403f5041bc7ba590","c035cdf60c9e074c","407e5dc732403cdc","3ff19f6c9866c52e","407e1be56ede468a"],
         "loglik" : ["c09126742e80a9fe"],
         "standard_errors" : ["3fa9cdfa09fdb664","3fa749aeac2e66ac","3fa75b4cc6688817"]
       },
@@ -144,15 +144,15 @@
     },
     "cox/lt-stratified/efron/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["4078cb1958e802ca","403f5041bc7ba58b","c035cdf60c9e074a","407e5dc732403cdc","3ff19f6c9866c51c","407e1be56ede468b"],
+        "at_estimates_information" : ["4078cb1958e802ca","403f5041bc7ba590","c035cdf60c9e074c","407e5dc732403cdc","3ff19f6c9866c52e","407e1be56ede468a"],
         "at_estimates_loglik" : ["c09126742e80a9fe"],
         "at_estimates_score" : ["3e0d5bab40000000","be19051850000000","3e0648c100000000"],
-        "at_start_information" : ["4079844515abed01","40388e0ce724d44e","3fbf1b35a8bdf760","407fb9ec6ad08881","3ff35c9365580b48","407d9b808803a568"],
+        "at_start_information" : ["4079844515abed01","40388e0ce724d451","3fbf1b35a8bdfb40","407fb9ec6ad08883","3ff35c9365580b44","407d9b808803a568"],
         "at_start_loglik" : ["c09200d783819b6b"],
         "at_start_score" : ["406824bd1e82c454","c05529ba019335b5","4015b9fd85549bbf"],
-        "covariance" : ["3f64cf0482de2bcd","bf257df37c4b23e5","3f1e3cad22293c30","3f60f294c02dbb63","bee97bcf92722797","3f610c42da96e966"],
+        "covariance" : ["3f64cf0482de2bcd","bf257df37c4b23e9","3f1e3cad22293c32","3f60f294c02dbb63","bee97bcf927227a6","3f610c42da96e966"],
         "estimates" : ["3fdeeae7b82bf33f","bfc9308ef9221bd0","3f96441a32357fe5"],
-        "information" : ["4078cb1958e802ca","403f5041bc7ba58b","c035cdf60c9e074a","407e5dc732403cdc","3ff19f6c9866c51c","407e1be56ede468b"],
+        "information" : ["4078cb1958e802ca","403f5041bc7ba590","c035cdf60c9e074c","407e5dc732403cdc","3ff19f6c9866c52e","407e1be56ede468a"],
         "loglik" : ["c09126742e80a9fe"],
         "standard_errors" : ["3fa9cdfa09fdb664","3fa749aeac2e66ac","3fa75b4cc6688817"]
       },
@@ -164,17 +164,17 @@
     },
     "cox/lt-weights-offset/breslow/default" : {
       "doubles" : {
-        "at_estimates_information" : ["40800ba06a4421c9","c032ace7008a78cb","404131e1f0138f14","4082de20cabf4ab4","40410870338574fc","408189a2b558f7f5"],
+        "at_estimates_information" : ["40800ba06a4421ca","c032ace7008a78c7","404131e1f0138f12","4082de20cabf4ab4","4041087033857501","408189a2b558f7f6"],
         "at_estimates_loglik" : ["c0999bb984205c87"],
         "at_estimates_score" : ["3e435936e0000000","3e15060b80000000","be204f2ce0000000"],
-        "at_start_information" : ["40802971643d1ada","c039b15ddc805605","40347cb6b772e918","40839deb52749b5c","4029952e6903865a","4081a9a0136068d8"],
+        "at_start_information" : ["40802971643d1ada","c039b15ddc805607","40347cb6b772e918","40839deb52749b5b","4029952e69038659","4081a9a0136068d8"],
         "at_start_loglik" : ["c09a787a1c3d771d"],
         "at_start_score" : ["406c57a07503feec","c04cb6737ae61022","40548e62e26be344"],
-        "covariance" : ["3f600afe4ab091e8","3f11b710598878a1","bf20445c9ef534c3","3f5b448eea7663c9","bf1b9194e6f9c891","3f5d6c6d738eda20"],
+        "covariance" : ["3f600afe4ab091e8","3f11b7105988789e","bf20445c9ef534c0","3f5b448eea7663c9","bf1b9194e6f9c896","3f5d6c6d738eda1d"],
         "estimates" : ["3fdae88b2edd9b06","bfb4e571bcf50cd8","3fc036d9f9c67255"],
-        "information" : ["40800ba06a4421c9","c032ace7008a78cb","404131e1f0138f14","4082de20cabf4ab4","40410870338574fc","408189a2b558f7f5"],
+        "information" : ["40800ba06a4421ca","c032ace7008a78c7","404131e1f0138f12","4082de20cabf4ab4","4041087033857501","408189a2b558f7f6"],
         "loglik" : ["c0999bb984205c87"],
-        "standard_errors" : ["3fa6a863125afdbc","3fa4e32edce0b0e3","3fa5b288224e334f"]
+        "standard_errors" : ["3fa6a863125afdbc","3fa4e32edce0b0e3","3fa5b288224e334e"]
       },
       "integers" : {
         "converged" : [1],
@@ -184,17 +184,17 @@
     },
     "cox/lt-weights-offset/breslow/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["40800ba06a43bfcf","c032ace7008ae17f","404131e1f014aff0","4082de20cabf2c10","404108703386208b","408189a2b558fa2d"],
+        "at_estimates_information" : ["40800ba06a43bfd0","c032ace7008ae17e","404131e1f014aff4","4082de20cabf2c10","4041087033862088","408189a2b558fa2c"],
         "at_estimates_loglik" : ["c0999bb984205c87"],
         "at_estimates_score" : ["bcf3000000000000","3d03000000000000","bce6000000000000"],
-        "at_start_information" : ["40802971643d1ada","c039b15ddc805605","40347cb6b772e918","40839deb52749b5c","4029952e6903865a","4081a9a0136068d8"],
+        "at_start_information" : ["40802971643d1ada","c039b15ddc805607","40347cb6b772e918","40839deb52749b5b","4029952e69038659","4081a9a0136068d8"],
         "at_start_loglik" : ["c09a787a1c3d771d"],
         "at_start_score" : ["406c57a07503feec","c04cb6737ae61022","40548e62e26be344"],
-        "covariance" : ["3f600afe4ab0f704","3f11b71059898f55","bf20445c9ef6abf3","3f5b448eea7692fe","bf1b9194e6fb20fd","3f5d6c6d738eddbd"],
+        "covariance" : ["3f600afe4ab0f703","3f11b71059898f52","bf20445c9ef6abf6","3f5b448eea7692fe","bf1b9194e6fb20f9","3f5d6c6d738eddbd"],
         "estimates" : ["3fdae88b2ee28b0d","bfb4e571bcf1ebfe","3fc036d9f9c3e2f9"],
-        "information" : ["40800ba06a43bfcf","c032ace7008ae17f","404131e1f014aff0","4082de20cabf2c10","404108703386208b","408189a2b558fa2d"],
+        "information" : ["40800ba06a43bfd0","c032ace7008ae17e","404131e1f014aff4","4082de20cabf2c10","4041087033862088","408189a2b558fa2c"],
         "loglik" : ["c0999bb984205c87"],
-        "standard_errors" : ["3fa6a863125b4522","3fa4e32edce0c2f8","3fa5b288224e34a4"]
+        "standard_errors" : ["3fa6a863125b4521","3fa4e32edce0c2f8","3fa5b288224e34a4"]
       },
       "integers" : {
         "converged" : [1],
@@ -204,15 +204,15 @@
     },
     "cox/lt-weights-offset/efron/default" : {
       "doubles" : {
-        "at_estimates_information" : ["407ffbbc7061f3df","c0344b36bf2925e0","4041318b77d9db5f","4082cc932a1e0442","4043a89108f81ff6","40815f18c0a68cb8"],
+        "at_estimates_information" : ["407ffbbc7061f3df","c0344b36bf2925e1","4041318b77d9db5f","4082cc932a1e0442","4043a89108f81ff7","40815f18c0a68cb8"],
         "at_estimates_loglik" : ["c09932ce45b031f6"],
         "at_estimates_score" : ["3e5d1fa2f8000000","3e29287900000000","be3819d910000000"],
-        "at_start_information" : ["40800a80c7426bbe","c03ac8f641491ff6","40339b34fcfc1534","4083979e0c701971","40302039ea3386d7","40818ae71204b42c"],
+        "at_start_information" : ["40800a80c7426bbd","c03ac8f641491fee","40339b34fcfc152d","4083979e0c701971","40302039ea3386db","40818ae71204b42c"],
         "at_start_loglik" : ["c09a234531758249"],
         "at_start_score" : ["406d864566f44363","c04d31801cf88ecc","40558de6047ec94f"],
-        "covariance" : ["3f601a375c5698a0","3f138e6bb4958976","bf20a10a33320283","3f5b687efe3fba91","bf201cf6ed019f24","3f5dbea18551ad37"],
+        "covariance" : ["3f601a375c5698a0","3f138e6bb4958976","bf20a10a33320283","3f5b687efe3fba91","bf201cf6ed019f26","3f5dbea18551ad37"],
         "estimates" : ["3fdc1d94e6dca5ab","bfb5333a5c1a9c85","3fc13b616a9a0943"],
-        "information" : ["407ffbbc7061f3df","c0344b36bf2925e0","4041318b77d9db5f","4082cc932a1e0442","4043a89108f81ff6","40815f18c0a68cb8"],
+        "information" : ["407ffbbc7061f3df","c0344b36bf2925e1","4041318b77d9db5f","4082cc932a1e0442","4043a89108f81ff7","40815f18c0a68cb8"],
         "loglik" : ["c09932ce45b031f6"],
         "standard_errors" : ["3fa6b3207acb88d6","3fa4f0ee04bea28b","3fa5d0c231ebb764"]
       },
@@ -224,17 +224,17 @@
     },
     "cox/lt-weights-offset/efron/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["407ffbbc705f9c0b","c0344b36bf2a78d6","4041318b77dd64ec","4082cc932a1da394","4043a89108fa4bfa","40815f18c0a68ab5"],
+        "at_estimates_information" : ["407ffbbc705f9c0b","c0344b36bf2a78d3","4041318b77dd64ef","4082cc932a1da395","4043a89108fa4bfa","40815f18c0a68ab4"],
         "at_estimates_loglik" : ["c09932ce45b031f6"],
         "at_estimates_score" : ["3d08800000000000","bce8000000000000","3cd0000000000000"],
-        "at_start_information" : ["40800a80c7426bbe","c03ac8f641491ff6","40339b34fcfc1534","4083979e0c701971","40302039ea3386d7","40818ae71204b42c"],
+        "at_start_information" : ["40800a80c7426bbd","c03ac8f641491fee","40339b34fcfc152d","4083979e0c701971","40302039ea3386db","40818ae71204b42c"],
         "at_start_loglik" : ["c09a234531758249"],
         "at_start_score" : ["406d864566f44363","c04d31801cf88ecc","40558de6047ec94f"],
-        "covariance" : ["3f601a375c57d0ec","3f138e6bb4993c48","bf20a10a3336b5fa","3f5b687efe4052b9","bf201cf6ed03eae0","3f5dbea18551c9f4"],
+        "covariance" : ["3f601a375c57d0ec","3f138e6bb4993c46","bf20a10a3336b5fe","3f5b687efe4052b9","bf201cf6ed03eae1","3f5dbea18551c9f7"],
         "estimates" : ["3fdc1d94e6eb8ed1","bfb5333a5c123db9","3fc13b616a92588b"],
-        "information" : ["407ffbbc705f9c0b","c0344b36bf2a78d6","4041318b77dd64ec","4082cc932a1da394","4043a89108fa4bfa","40815f18c0a68ab5"],
+        "information" : ["407ffbbc705f9c0b","c0344b36bf2a78d3","4041318b77dd64ef","4082cc932a1da395","4043a89108fa4bfa","40815f18c0a68ab4"],
         "loglik" : ["c09932ce45b031f6"],
-        "standard_errors" : ["3fa6b3207acc64f6","3fa4f0ee04bedcac","3fa5d0c231ebc1ee"]
+        "standard_errors" : ["3fa6b3207acc64f6","3fa4f0ee04bedcac","3fa5d0c231ebc1ef"]
       },
       "integers" : {
         "converged" : [1],
@@ -244,15 +244,15 @@
     },
     "cox/rc-stratified-weights-offset/breslow/default" : {
       "doubles" : {
-        "at_estimates_information" : ["4081b45e0573a487","4054021c2bf75ab1","3ffd1d36fd0510e8","4083bd9ed1e63fd3","c03f600db5028280","4081c08246f16aa9"],
+        "at_estimates_information" : ["4081b45e0573a487","4054021c2bf75ab1","3ffd1d36fd0510e0","4083bd9ed1e63fd3","c03f600db502827e","4081c08246f16aa9"],
         "at_estimates_loglik" : ["c095905f70ecabdc"],
-        "at_estimates_score" : ["3e8858da0a400000","be7d02f4f2e00000","3e6f9712f3000000"],
-        "at_start_information" : ["40832966dfcc972e","40504b4a98a3a10a","4034dcf4d3d502db","4084e2f46cca5cbd","c037483810d346a3","4082a73ef3527f31"],
+        "at_estimates_score" : ["3e8858da0b400000","be7d02f4e7e00000","3e6f9712d5000000"],
+        "at_start_information" : ["40832966dfcc972e","40504b4a98a3a109","4034dcf4d3d502de","4084e2f46cca5cbd","c037483810d346a3","4082a73ef3527f31"],
         "at_start_loglik" : ["c096d7439dfa80d7"],
         "at_start_score" : ["4070c97264392606","c061eb06198b78e1","403da30914eb32ab"],
-        "covariance" : ["3f5d73020ec608e7","bf2df7d27d18b974","bef3475fd371ce9e","3f5a7bee266e6188","3f1798a3b4e923b3","3f5cec9c41d7b2c5"],
-        "estimates" : ["3fde4f72d37650da","bfd12265109c7e85","3f9c9b5cbb036b18"],
-        "information" : ["4081b45e0573a487","4054021c2bf75ab1","3ffd1d36fd0510e8","4083bd9ed1e63fd3","c03f600db5028280","4081c08246f16aa9"],
+        "covariance" : ["3f5d73020ec608e7","bf2df7d27d18b974","bef3475fd371ce9b","3f5a7bee266e6188","3f1798a3b4e923b2","3f5cec9c41d7b2c5"],
+        "estimates" : ["3fde4f72d37650da","bfd12265109c7e85","3f9c9b5cbb036b19"],
+        "information" : ["4081b45e0573a487","4054021c2bf75ab1","3ffd1d36fd0510e0","4083bd9ed1e63fd3","c03f600db502827e","4081c08246f16aa9"],
         "loglik" : ["c095905f70ecabdc"],
         "standard_errors" : ["3fa5b4f5204aaefc","3fa495c7ffdeb9ce","3fa58333f33cf3a8"]
       },
@@ -264,15 +264,15 @@
     },
     "cox/rc-stratified-weights-offset/breslow/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["4081b45e0565c243","4054021c2c09bc15","3ffd1d36f7ea44b5","4083bd9ed1ddfee0","c03f600db4eed39a","4081c08246ec13b0"],
+        "at_estimates_information" : ["4081b45e0565c243","4054021c2c09bc14","3ffd1d36f7ea44e8","4083bd9ed1ddfee0","c03f600db4eed397","4081c08246ec13b0"],
         "at_estimates_loglik" : ["c095905f70ecabdc"],
-        "at_estimates_score" : ["bce6000000000000","bd02900000000000","bcf1600000000000"],
-        "at_start_information" : ["40832966dfcc972e","40504b4a98a3a10a","4034dcf4d3d502db","4084e2f46cca5cbd","c037483810d346a3","4082a73ef3527f31"],
+        "at_estimates_score" : ["bcee000000000000","bd05100000000000","bce8c00000000000"],
+        "at_start_information" : ["40832966dfcc972e","40504b4a98a3a109","4034dcf4d3d502de","4084e2f46cca5cbd","c037483810d346a3","4082a73ef3527f31"],
         "at_start_loglik" : ["c096d7439dfa80d7"],
         "at_start_score" : ["4070c97264392606","c061eb06198b78e1","403da30914eb32ab"],
-        "covariance" : ["3f5d73020edead9e","bf2df7d27d581574","bef3475fd2815c8b","3f5a7bee267ad52c","3f1798a3b4e458bc","3f5cec9c41e0468f"],
-        "estimates" : ["3fde4f72d3d66faa","bfd1226510d675df","3f9c9b5cbc92d354"],
-        "information" : ["4081b45e0565c243","4054021c2c09bc15","3ffd1d36f7ea44b5","4083bd9ed1ddfee0","c03f600db4eed39a","4081c08246ec13b0"],
+        "covariance" : ["3f5d73020edead9e","bf2df7d27d581570","bef3475fd2815c93","3f5a7bee267ad52c","3f1798a3b4e458bb","3f5cec9c41e0468f"],
+        "estimates" : ["3fde4f72d3d66faa","bfd1226510d675df","3f9c9b5cbc92d353"],
+        "information" : ["4081b45e0565c243","4054021c2c09bc14","3ffd1d36f7ea44e8","4083bd9ed1ddfee0","c03f600db4eed397","4081c08246ec13b0"],
         "loglik" : ["c095905f70ecabdc"],
         "standard_errors" : ["3fa5b4f52053c40b","3fa495c7ffe3909f","3fa58333f3402438"]
       },
@@ -284,15 +284,15 @@
     },
     "cox/rc-stratified-weights-offset/efron/default" : {
       "doubles" : {
-        "at_estimates_information" : ["4081a983ec4a83f3","4054f3403d2b8546","4015f935798d63a0","4083b486e95d5ffa","c03d54d9d5bf388f","4081ad5e4dc01efc"],
+        "at_estimates_information" : ["4081a983ec4a83f3","4054f3403d2b8544","4015f935798d639d","4083b486e95d5ffa","c03d54d9d5bf388f","4081ad5e4dc01efc"],
         "at_estimates_loglik" : ["c095313ed0cb22c9"],
         "at_estimates_score" : ["3e86bd9465200000","be7f0bd3d9a00000","3e700f217ba00000"],
-        "at_start_information" : ["408318327f4ec3c2","4050ec2e230cddb4","4038a3f03ddc2adc","4084d9bedd1f95be","c035ec48ca70ec7d","4082975fb4d4be6c"],
+        "at_start_information" : ["408318327f4ec3c2","4050ec2e230cddb4","4038a3f03ddc2adb","4084d9bedd1f95be","c035ec48ca70ec7f","4082975fb4d4be6c"],
         "at_start_loglik" : ["c0968d695730646a"],
         "at_start_score" : ["40715047b8630c35","c062587402917564","403c7a1365a0013f"],
-        "covariance" : ["3f5d945d6af4f19d","bf2fa1b31fcd98c5","beff817573bf7c52","3f5a93099d9977a7","3f16a959079aaa7a","3f5d0ac3e3e0497a"],
+        "covariance" : ["3f5d945d6af4f19d","bf2fa1b31fcd98c1","beff817573bf7c4f","3f5a93099d9977a7","3f16a959079aaa7a","3f5d0ac3e3e0497a"],
         "estimates" : ["3fdf64f44b4e62e0","bfd1c4fb0861278a","3f97592c9c2bf16d"],
-        "information" : ["4081a983ec4a83f3","4054f3403d2b8546","4015f935798d63a0","4083b486e95d5ffa","c03d54d9d5bf388f","4081ad5e4dc01efc"],
+        "information" : ["4081a983ec4a83f3","4054f3403d2b8544","4015f935798d639d","4083b486e95d5ffa","c03d54d9d5bf388f","4081ad5e4dc01efc"],
         "loglik" : ["c095313ed0cb22c9"],
         "standard_errors" : ["3fa5c13ccee118ce","3fa49ec0fa15e8a7","3fa58e67c8ca4f0a"]
       },
@@ -304,17 +304,17 @@
     },
     "cox/rc-stratified-weights-offset/efron/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["4081a983ec3d41ef","4054f3403d3ed344","4015f9357856c1f2","4083b486e955079f","c03d54d9d5a60ec9","4081ad5e4dbabfe1"],
+        "at_estimates_information" : ["4081a983ec3d41ee","4054f3403d3ed345","4015f9357856c1fb","4083b486e955079f","c03d54d9d5a60ecb","4081ad5e4dbabfe1"],
         "at_estimates_loglik" : ["c095313ed0cb22c9"],
         "at_estimates_score" : ["3d06000000000000","3d0f900000000000","bd02900000000000"],
-        "at_start_information" : ["408318327f4ec3c2","4050ec2e230cddb4","4038a3f03ddc2adc","4084d9bedd1f95be","c035ec48ca70ec7d","4082975fb4d4be6c"],
+        "at_start_information" : ["408318327f4ec3c2","4050ec2e230cddb4","4038a3f03ddc2adb","4084d9bedd1f95be","c035ec48ca70ec7f","4082975fb4d4be6c"],
         "at_start_loglik" : ["c0968d695730646a"],
         "at_start_score" : ["40715047b8630c35","c062587402917564","403c7a1365a0013f"],
-        "covariance" : ["3f5d945d6b0cd0d8","bf2fa1b3200feb63","beff817572e44257","3f5a93099da639b2","3f16a9590791d357","3f5d0ac3e3e8eb5f"],
+        "covariance" : ["3f5d945d6b0cd0db","bf2fa1b3200feb66","beff817572e44261","3f5a93099da639b2","3f16a9590791d35a","3f5d0ac3e3e8eb5f"],
         "estimates" : ["3fdf64f44ba9a56f","bfd1c4fb089e896e","3f97592c9dbbf895"],
-        "information" : ["4081a983ec3d41ef","4054f3403d3ed344","4015f9357856c1f2","4083b486e955079f","c03d54d9d5a60ec9","4081ad5e4dbabfe1"],
+        "information" : ["4081a983ec3d41ee","4054f3403d3ed345","4015f9357856c1fb","4083b486e955079f","c03d54d9d5a60ecb","4081ad5e4dbabfe1"],
         "loglik" : ["c095313ed0cb22c9"],
-        "standard_errors" : ["3fa5c13ccee9e01d","3fa49ec0fa1adbc8","3fa58e67c8cd832e"]
+        "standard_errors" : ["3fa5c13ccee9e01e","3fa49ec0fa1adbc8","3fa58e67c8cd832e"]
       },
       "integers" : {
         "converged" : [1],
@@ -324,15 +324,15 @@
     },
     "cox/rc-stratified/breslow/default" : {
       "doubles" : {
-        "at_estimates_information" : ["4077f2fb0030792b","401f5482a4fcba75","4023737756b92468","407c098bacd0017a","bff46795b5d416e5","407fc775fdafeb1a"],
+        "at_estimates_information" : ["4077f2fb0030792b","401f5482a4fcba80","4023737756b92464","407c098bacd0017a","bff46795b5d416d3","407fc775fdafeb1b"],
         "at_estimates_loglik" : ["c08e3f9ca00846eb"],
         "at_estimates_score" : ["3e5b1f34e5800000","be59147874000000","be2cd5b7d0000000"],
-        "at_start_information" : ["4078e68e9b0816a5","c031f156ae58d92b","401a58bbaf5ebadd","407cc492344f7d2b","bfdab164426b40ae","407fb72c5fdee7ea"],
+        "at_start_information" : ["4078e68e9b0816a4","c031f156ae58d92a","401a58bbaf5ebad9","407cc492344f7d2b","bfdab164426b409e","407fb72c5fdee7eb"],
         "at_start_loglik" : ["c08fab3f79f827a1"],
         "at_start_score" : ["4066596095444d30","c05252b7439e9cd4","403b85675d0c8392"],
-        "covariance" : ["3f65658e9c258826","bf07fbf9168d5a83","bf0a40b06e49fa29","3f6244a183838772","3edb2107276c455a","3f601e8233349960"],
+        "covariance" : ["3f65658e9c258826","bf07fbf9168d5a8c","bf0a40b06e49fa22","3f6244a183838772","3edb2107276c4545","3f601e8233349960"],
         "estimates" : ["3fdc6f9621be00bb","bfc3cd6201429aae","3fa76c7db724fd24"],
-        "information" : ["4077f2fb0030792b","401f5482a4fcba75","4023737756b92468","407c098bacd0017a","bff46795b5d416e5","407fc775fdafeb1a"],
+        "information" : ["4077f2fb0030792b","401f5482a4fcba80","4023737756b92464","407c098bacd0017a","bff46795b5d416d3","407fc775fdafeb1b"],
         "loglik" : ["c08e3f9ca00846eb"],
         "standard_errors" : ["3faa2aaae75bf9d6","3fa82d95b7cc13d4","3fa6b626ccd9baf2"]
       },
@@ -344,15 +344,15 @@
     },
     "cox/rc-stratified/breslow/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["4077f2fb002d6197","401f5482a555120c","4023737756b84589","407c098bacce545a","bff46795b5fc6f94","407fc775fdaf4c5a"],
+        "at_estimates_information" : ["4077f2fb002d6196","401f5482a5551212","4023737756b84589","407c098bacce545a","bff46795b5fc6fa9","407fc775fdaf4c5a"],
         "at_estimates_loglik" : ["c08e3f9ca00846eb"],
         "at_estimates_score" : ["bccf000000000000","3ced000000000000","3cf1000000000000"],
-        "at_start_information" : ["4078e68e9b0816a5","c031f156ae58d92b","401a58bbaf5ebadd","407cc492344f7d2b","bfdab164426b40ae","407fb72c5fdee7ea"],
+        "at_start_information" : ["4078e68e9b0816a4","c031f156ae58d92a","401a58bbaf5ebad9","407cc492344f7d2b","bfdab164426b409e","407fb72c5fdee7eb"],
         "at_start_loglik" : ["c08fab3f79f827a1"],
         "at_start_score" : ["4066596095444d30","c05252b7439e9cd4","403b85675d0c8392"],
-        "covariance" : ["3f65658e9c2856fc","bf07fbf916d58004","bf0a40b06e4d0de9","3f6244a18384a8f9","3edb210727a78390","3f601e823334ea2f"],
+        "covariance" : ["3f65658e9c2856fc","bf07fbf916d58009","bf0a40b06e4d0de9","3f6244a18384a8f9","3edb210727a783a8","3f601e823334ea2f"],
         "estimates" : ["3fdc6f9621d07a4e","bfc3cd62015fe2f8","3fa76c7db71359b8"],
-        "information" : ["4077f2fb002d6197","401f5482a555120c","4023737756b84589","407c098bacce545a","bff46795b5fc6f94","407fc775fdaf4c5a"],
+        "information" : ["4077f2fb002d6196","401f5482a5551212","4023737756b84589","407c098bacce545a","bff46795b5fc6fa9","407fc775fdaf4c5a"],
         "loglik" : ["c08e3f9ca00846eb"],
         "standard_errors" : ["3faa2aaae75db161","3fa82d95b7ccd36d","3fa6b626ccd9f3e0"]
       },
@@ -364,17 +364,17 @@
     },
     "cox/rc-stratified/efron/default" : {
       "doubles" : {
-        "at_estimates_information" : ["4077c51ec5299dd1","40242d62f6cf487c","401d707cf6b320cb","407be266d190f081","bfd549d71185ef89","407fdddc9e418ff3"],
+        "at_estimates_information" : ["4077c51ec5299dd0","40242d62f6cf487b","401d707cf6b320e2","407be266d190f081","bfd549d71185ee6b","407fdddc9e418ff2"],
         "at_estimates_loglik" : ["c08dd509d2644a4d"],
         "at_estimates_score" : ["3e62fcfdd0400000","be61ea3dce100000","be314951fe000000"],
-        "at_start_information" : ["4078b89bc9723203","c0312b50a8aeecf2","4013f723ed4f7f1e","407cb296c06681d6","bfd593f7eb7a8d2d","407fc2fe91726dfd"],
+        "at_start_information" : ["4078b89bc9723203","c0312b50a8aeecf2","4013f723ed4f7f19","407cb296c06681d5","bfd593f7eb7a8d42","407fc2fe91726dfd"],
         "at_start_loglik" : ["c08f57155f7ed914"],
         "at_start_score" : ["4066eac8557a890d","c052d6129781c077","403d0cc841119521"],
-        "covariance" : ["3f658f086130b4ab","bf0f37028caae692","bf03efde559616fd","3f625f612ca86ead","3ec37baaf5d99125","3f60124b7c1d8bb6"],
+        "covariance" : ["3f658f086130b4ac","bf0f37028caae692","bf03efde5596170e","3f625f612ca86ead","3ec37baaf5d99087","3f60124b7c1d8bb6"],
         "estimates" : ["3fdd622496228320","bfc4a21c084676d2","3fa9b1c88cffd466"],
-        "information" : ["4077c51ec5299dd1","40242d62f6cf487c","401d707cf6b320cb","407be266d190f081","bfd549d71185ef89","407fdddc9e418ff3"],
+        "information" : ["4077c51ec5299dd0","40242d62f6cf487b","401d707cf6b320e2","407be266d190f081","bfd549d71185ee6b","407fdddc9e418ff2"],
         "loglik" : ["c08dd509d2644a4d"],
-        "standard_errors" : ["3faa43fb0daafc72","3fa83f42be35849d","3fa6ad8a6f3d0516"]
+        "standard_errors" : ["3faa43fb0daafc73","3fa83f42be35849d","3fa6ad8a6f3d0516"]
       },
       "integers" : {
         "converged" : [1],
@@ -384,17 +384,17 @@
     },
     "cox/rc-stratified/efron/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["4077c51ec5253a82","40242d62f70e6081","401d707cf6ab4d4a","407be266d18e82bc","bfd549d7122ca800","407fdddc9e409d57"],
+        "at_estimates_information" : ["4077c51ec5253a82","40242d62f70e6082","401d707cf6ab4d54","407be266d18e82bc","bfd549d7122ca72e","407fdddc9e409d56"],
         "at_estimates_loglik" : ["c08dd509d2644a4d"],
         "at_estimates_score" : ["3cf5000000000000","3cf9180000000000","3ce6800000000000"],
-        "at_start_information" : ["4078b89bc9723203","c0312b50a8aeecf2","4013f723ed4f7f1e","407cb296c06681d6","bfd593f7eb7a8d2d","407fc2fe91726dfd"],
+        "at_start_information" : ["4078b89bc9723203","c0312b50a8aeecf2","4013f723ed4f7f19","407cb296c06681d5","bfd593f7eb7a8d42","407fc2fe91726dfd"],
         "at_start_loglik" : ["c08f57155f7ed914"],
         "at_start_score" : ["4066eac8557a890d","c052d6129781c077","403d0cc841119521"],
-        "covariance" : ["3f658f086134c4a3","bf0f37028d152d17","bf03efde55955eac","3f625f612caa1ad8","3ec37baaf65203ab","3f60124b7c1e05c3"],
+        "covariance" : ["3f658f086134c4a3","bf0f37028d152d18","bf03efde55955eb4","3f625f612caa1ad8","3ec37baaf6520336","3f60124b7c1e05c4"],
         "estimates" : ["3fdd6224963caf7f","bfc4a21c0870c521","3fa9b1c88ceb568c"],
-        "information" : ["4077c51ec5253a82","40242d62f70e6081","401d707cf6ab4d4a","407be266d18e82bc","bfd549d7122ca800","407fdddc9e409d57"],
+        "information" : ["4077c51ec5253a82","40242d62f70e6082","401d707cf6ab4d54","407be266d18e82bc","bfd549d7122ca72e","407fdddc9e409d56"],
         "loglik" : ["c08dd509d2644a4d"],
-        "standard_errors" : ["3faa43fb0dad75f5","3fa83f42be369f26","3fa6ad8a6f3d5b32"]
+        "standard_errors" : ["3faa43fb0dad75f5","3fa83f42be369f26","3fa6ad8a6f3d5b33"]
       },
       "integers" : {
         "converged" : [1],
@@ -404,17 +404,17 @@
     },
     "cox/rc-unstratified/breslow/default" : {
       "doubles" : {
-        "at_estimates_information" : ["40753defd8eb9e23","403afd8adcffeef5","c043e006f3744fa5","40790e11bffd60a6","4024c150fc86ec44","4078448a1bd56a55"],
+        "at_estimates_information" : ["40753defd8eb9e20","403afd8adcffeee7","c043e006f3744fac","40790e11bffd60ae","4024c150fc86ec47","4078448a1bd56a56"],
         "at_estimates_loglik" : ["c097bae0daec447c"],
         "at_estimates_score" : ["3e65562f4b000000","be16259e50000000","be3473940c000000"],
-        "at_start_information" : ["407511999f850bf2","40025fa80fd1d724","c03db78a356fc1f8","407a17ebce580b5b","4022730ae6af50bc","40798f46bd8833c9"],
+        "at_start_information" : ["407511999f850bf0","40025fa80fd1d6d0","c03db78a356fc1fc","407a17ebce580b5d","4022730ae6af50bf","40798f46bd8833be"],
         "at_start_loglik" : ["c0989c725f17b198"],
         "at_start_score" : ["4065742c74753b7a","c0534a68170bf3f3","4047d61fdaff1372"],
-        "covariance" : ["3f6889f5b55e3fda","bf2b7e780239d7dc","3f3476f08f987e1c","3f6491ce813e0594","bf1738bb29763ca8","3f6561168cec9e7e"],
+        "covariance" : ["3f6889f5b55e3fdb","bf2b7e780239d7c7","3f3476f08f987e22","3f6491ce813e058c","bf1738bb29763c9f","3f6561168cec9e7c"],
         "estimates" : ["3fe0b5336c55de8f","bfcb1ce58f6f7d50","3fc5f6e8a5031a42"],
-        "information" : ["40753defd8eb9e23","403afd8adcffeef5","c043e006f3744fa5","40790e11bffd60a6","4024c150fc86ec44","4078448a1bd56a55"],
+        "information" : ["40753defd8eb9e20","403afd8adcffeee7","c043e006f3744fac","40790e11bffd60ae","4024c150fc86ec47","4078448a1bd56a56"],
         "loglik" : ["c097bae0daec447c"],
-        "standard_errors" : ["3fac05b065f7ffac","3fa9a7e9dd30c60b","3faa27ef35750663"]
+        "standard_errors" : ["3fac05b065f7ffad","3fa9a7e9dd30c606","3faa27ef35750662"]
       },
       "integers" : {
         "converged" : [1],
@@ -424,17 +424,17 @@
     },
     "cox/rc-unstratified/breslow/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["40753defd8e923b3","403afd8add0a2f82","c043e006f374e9df","40790e11bffc1f88","4024c150fc91550a","4078448a1bd52909"],
+        "at_estimates_information" : ["40753defd8e923b5","403afd8add0a2f89","c043e006f374e9e4","40790e11bffc1f8a","4024c150fc91550d","4078448a1bd52908"],
         "at_estimates_loglik" : ["c097bae0daec447c"],
         "at_estimates_score" : ["bcf1800000000000","3d00600000000000","3d07800000000000"],
-        "at_start_information" : ["407511999f850bf2","40025fa80fd1d724","c03db78a356fc1f8","407a17ebce580b5b","4022730ae6af50bc","40798f46bd8833c9"],
+        "at_start_information" : ["407511999f850bf0","40025fa80fd1d6d0","c03db78a356fc1fc","407a17ebce580b5d","4022730ae6af50bf","40798f46bd8833be"],
         "at_start_loglik" : ["c0989c725f17b198"],
         "at_start_score" : ["4065742c74753b7a","c0534a68170bf3f3","4047d61fdaff1372"],
-        "covariance" : ["3f6889f5b5614ddd","bf2b7e7802494673","3f3476f08f9c358d","3f6491ce813f2e44","bf1738bb2983a021","3f6561168ceceb95"],
+        "covariance" : ["3f6889f5b5614ddc","bf2b7e7802494674","3f3476f08f9c3591","3f6491ce813f2e43","bf1738bb2983a024","3f6561168ceceb95"],
         "estimates" : ["3fe0b5336c661062","bfcb1ce58f759ec3","3fc5f6e8a50327f7"],
-        "information" : ["40753defd8e923b3","403afd8add0a2f82","c043e006f374e9df","40790e11bffc1f88","4024c150fc91550a","4078448a1bd52909"],
+        "information" : ["40753defd8e923b5","403afd8add0a2f89","c043e006f374e9e4","40790e11bffc1f8a","4024c150fc91550d","4078448a1bd52908"],
         "loglik" : ["c097bae0daec447c"],
-        "standard_errors" : ["3fac05b065f9be2f","3fa9a7e9dd317f12","3faa27ef3575358b"]
+        "standard_errors" : ["3fac05b065f9be2e","3fa9a7e9dd317f11","3faa27ef3575358b"]
       },
       "integers" : {
         "converged" : [1],
@@ -444,17 +444,17 @@
     },
     "cox/rc-unstratified/efron/default" : {
       "doubles" : {
-        "at_estimates_information" : ["407523b3499fe98c","403d70b7dd9e6689","c044f9a43fbb9b1f","4078fe5735489fac","402454bc1096a5e2","40782d9786ecd79a"],
+        "at_estimates_information" : ["407523b3499fe98a","403d70b7dd9e6684","c044f9a43fbb9b24","4078fe5735489fae","402454bc1096a5e3","40782d9786ecd79c"],
         "at_estimates_loglik" : ["c097822b8c3d4b63"],
-        "at_estimates_score" : ["3e6efcfd9d040000","3e31a5a0d4400000","be4e5e7b30520000"],
-        "at_start_information" : ["4074dee55d570d8c","400906003a390f39","c03ec5577ddb506f","407a0def1a9d1c44","4022346451f9ef67","407986ed9407633e"],
+        "at_estimates_score" : ["3e6efcfc08ea0000","3e31a5a18c700000","be4e5e7acff50000"],
+        "at_start_information" : ["4074dee55d570d90","400906003a390e78","c03ec5577ddb506f","407a0def1a9d1c4e","4022346451f9ef70","407986ed9407633c"],
         "at_start_loglik" : ["c09875a2b99e1aa3"],
         "at_start_score" : ["40662b4cb0e52b24","c053ecded9db7f2a","4048ab4463765b34"],
-        "covariance" : ["3f68b927cf6d5fbd","bf2e3b8ba287a6ef","3f35d867c9d69259","3f64a4b6f9a8c06d","bf17ea6780d96ad5","3f657df062678b7d"],
-        "estimates" : ["3fe170a0d5a2728e","bfcc615ab08131ea","3fc726da8aad243a"],
-        "information" : ["407523b3499fe98c","403d70b7dd9e6689","c044f9a43fbb9b1f","4078fe5735489fac","402454bc1096a5e2","40782d9786ecd79a"],
+        "covariance" : ["3f68b927cf6d5fc1","bf2e3b8ba287a6ec","3f35d867c9d6925e","3f64a4b6f9a8c06a","bf17ea6780d96ad0","3f657df062678b7c"],
+        "estimates" : ["3fe170a0d5a2728f","bfcc615ab08131ea","3fc726da8aad243a"],
+        "information" : ["407523b3499fe98a","403d70b7dd9e6684","c044f9a43fbb9b24","4078fe5735489fae","402454bc1096a5e3","40782d9786ecd79c"],
         "loglik" : ["c097822b8c3d4b63"],
-        "standard_errors" : ["3fac209612971425","3fa9b3b1dc272e8a","3faa398f4ab86ff6"]
+        "standard_errors" : ["3fac209612971428","3fa9b3b1dc272e89","3faa398f4ab86ff5"]
       },
       "integers" : {
         "converged" : [1],
@@ -464,17 +464,17 @@
     },
     "cox/rc-unstratified/efron/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["407523b3499c7c5e","403d70b7dda9cee2","c044f9a43fbbdc5b","4078fe573546cd6d","402454bc10aa0634","40782d9786ecfc80"],
+        "at_estimates_information" : ["407523b3499c7c5b","403d70b7dda9cedd","c044f9a43fbbdc54","4078fe573546cd71","402454bc10aa0637","40782d9786ecfc7f"],
         "at_estimates_loglik" : ["c097822b8c3d4b63"],
-        "at_estimates_score" : ["3ce5060000000000","bcda6c0000000000","bccf9a0000000000"],
-        "at_start_information" : ["4074dee55d570d8c","400906003a390f39","c03ec5577ddb506f","407a0def1a9d1c44","4022346451f9ef67","407986ed9407633e"],
+        "at_estimates_score" : ["bcf35b0000000000","bd08a60000000000","bd009df000000000"],
+        "at_start_information" : ["4074dee55d570d90","400906003a390e78","c03ec5577ddb506f","407a0def1a9d1c4e","4022346451f9ef70","407986ed9407633c"],
         "at_start_loglik" : ["c09875a2b99e1aa3"],
         "at_start_score" : ["40662b4cb0e52b24","c053ecded9db7f2a","4048ab4463765b34"],
-        "covariance" : ["3f68b927cf71a03d","bf2e3b8ba29b6ed3","3f35d867c9db0776","3f64a4b6f9aa6fc4","bf17ea6780ef9ad8","3f657df062678488"],
-        "estimates" : ["3fe170a0d5b99c66","bfcc615ab0821ce0","3fc726da8aa31dbe"],
-        "information" : ["407523b3499c7c5e","403d70b7dda9cee2","c044f9a43fbbdc5b","4078fe573546cd6d","402454bc10aa0634","40782d9786ecfc80"],
+        "covariance" : ["3f68b927cf71a03f","bf2e3b8ba29b6ecb","3f35d867c9db076f","3f64a4b6f9aa6fc1","bf17ea6780ef9ad5","3f657df062678488"],
+        "estimates" : ["3fe170a0d5b99c66","bfcc615ab0821cdf","3fc726da8aa31dbe"],
+        "information" : ["407523b3499c7c5b","403d70b7dda9cedd","c044f9a43fbbdc54","4078fe573546cd71","402454bc10aa0637","40782d9786ecfc7f"],
         "loglik" : ["c097822b8c3d4b63"],
-        "standard_errors" : ["3fac209612997f55","3fa9b3b1dc283b0f","3faa398f4ab86bb7"]
+        "standard_errors" : ["3fac209612997f56","3fa9b3b1dc283b0d","3faa398f4ab86bb7"]
       },
       "integers" : {
         "converged" : [1],
@@ -484,17 +484,17 @@
     },
     "cox/synthetic-a" : {
       "doubles" : {
-        "at_estimates_information" : ["4084313c4c9e5e49","c03079a8ab65d42f","c044379927366397","4081f466ddba9bd6","4017df90e361f191","40810424689c9c5b"],
+        "at_estimates_information" : ["4084313c4c9e5e49","c03079a8ab65d423","c044379927366397","4081f466ddba9bd5","4017df90e361f198","40810424689c9c5a"],
         "at_estimates_loglik" : ["c0a1388441639c4f"],
-        "at_estimates_score" : ["3e58e325d4000000","3df8958e80000000","3e5e702bec000000"],
-        "at_start_information" : ["408312ad10481cb2","401c8878b6677e94","c032bfe44e5071d5","408261c9720241ba","403157bd3196e068","40822ab874e66b76"],
+        "at_estimates_score" : ["3e58e32590000000","3df8963800000000","3e5e702c5c000000"],
+        "at_start_information" : ["408312ad10481cb1","401c8878b6677e84","c032bfe44e5071d3","408261c9720241b9","403157bd3196e06d","40822ab874e66b75"],
         "at_start_loglik" : ["c0a1e00b0821782b"],
         "at_start_score" : ["406f88f30e2574f2","c064819db43cf5e6","4057073b391c655e"],
-        "covariance" : ["3f597e05c130593d","3f06c3daeb023eab","3f1e29ba136d587f","3f5c8a10d12bf5c5","bef0a3997e94c514","3f5e3b5a4f5e2a5a"],
-        "estimates" : ["3fda0c2fe279558b","bfd2029db753feca","3fc847b077da067e"],
-        "information" : ["4084313c4c9e5e49","c03079a8ab65d42f","c044379927366397","4081f466ddba9bd6","4017df90e361f191","40810424689c9c5b"],
+        "covariance" : ["3f597e05c130593d","3f06c3daeb023e9a","3f1e29ba136d5882","3f5c8a10d12bf5c5","bef0a3997e94c51f","3f5e3b5a4f5e2a5d"],
+        "estimates" : ["3fda0c2fe279558b","bfd2029db753fecb","3fc847b077da067e"],
+        "information" : ["4084313c4c9e5e49","c03079a8ab65d423","c044379927366397","4081f466ddba9bd5","4017df90e361f198","40810424689c9c5a"],
         "loglik" : ["c0a1388441639c4f"],
-        "standard_errors" : ["3fa43229cb05b795","3fa55e6f08343643","3fa5fe4f520f123c"]
+        "standard_errors" : ["3fa43229cb05b795","3fa55e6f08343643","3fa5fe4f520f123d"]
       },
       "integers" : {
         "converged" : [1],
@@ -504,15 +504,15 @@
     },
     "cox/synthetic-b" : {
       "doubles" : {
-        "at_estimates_information" : ["408a7d4a5f933789","c040d97631117537","c032f96e0dd37a4a","c02175d745fa1da3","40892d3f6fd52656","403747d1b0c3d0b9","c03be2559c40690b","40654dcc3f5b66fe","c00604177876e252","406c90305c5f99a9"],
+        "at_estimates_information" : ["408a7d4a5f93378a","c040d97631117539","c032f96e0dd37a4c","c02175d745fa1da0","40892d3f6fd52656","403747d1b0c3d0bb","c03be2559c40690a","40654dcc3f5b66fe","c00604177876e24e","406c90305c5f99a9"],
         "at_estimates_loglik" : ["c0a7686b42eacec4"],
-        "at_estimates_score" : ["3e4ef42be8000000","3e54e40d9c000000","be6a8165bb000000","3e282bad00000000"],
-        "at_start_information" : ["408b62cbf0a96e74","c035682d60efdbad","c0314f2b202ffd69","c02083e576e6f74c","408ac2e852687795","403e23877683414c","c03a11feca41e371","40689c18879d8119","c00a20a2f37aea1a","406cf2ed65f4705c"],
+        "at_estimates_score" : ["3e4ef42c28000000","3e54e40dc2000000","be6a816632000000","3e282bac80000000"],
+        "at_start_information" : ["408b62cbf0a96e74","c035682d60efdbb0","c0314f2b202ffd69","c02083e576e6f74c","408ac2e852687795","403e23877683414c","c03a11feca41e36e","40689c18879d8117","c00a20a2f37aea01","406cf2ed65f4705d"],
         "at_start_loglik" : ["c0a8838882cfc244"],
         "at_start_score" : ["406d6c7401b2c1a9","4078420e6cdb42c5","c04d1cd80bc602b7","40447121d86df2d8"],
-        "covariance" : ["3f536a2d196e2af5","3f09075092e3783f","3f208c65127b390e","3f0b965b2cb557e6","3f54886ec29cd7ae","bf256b06ed73e2bc","3f24069ea8cbd921","3f782f94d90fd63a","3f0d5bc7b200887d","3f72033349992721"],
-        "estimates" : ["3fd1f4dab9f51819","3fdf519b446a7420","bfd69844d3ba241e","3fce98f4e0c5d937"],
-        "information" : ["408a7d4a5f933789","c040d97631117537","c032f96e0dd37a4a","c02175d745fa1da3","40892d3f6fd52656","403747d1b0c3d0b9","c03be2559c40690b","40654dcc3f5b66fe","c00604177876e252","406c90305c5f99a9"],
+        "covariance" : ["3f536a2d196e2af5","3f09075092e37841","3f208c65127b390f","3f0b965b2cb557e0","3f54886ec29cd7ae","bf256b06ed73e2bf","3f24069ea8cbd921","3f782f94d90fd63a","3f0d5bc7b2008874","3f72033349992721"],
+        "estimates" : ["3fd1f4dab9f51819","3fdf519b446a7420","bfd69844d3ba241d","3fce98f4e0c5d937"],
+        "information" : ["408a7d4a5f93378a","c040d97631117539","c032f96e0dd37a4c","c02175d745fa1da0","40892d3f6fd52656","403747d1b0c3d0bb","c03be2559c40690a","40654dcc3f5b66fe","c00604177876e24e","406c90305c5f99a9"],
         "loglik" : ["c0a7686b42eacec4"],
         "standard_errors" : ["3fa19ff76bc2fb2b","3fa22014a388ecb8","3fb3abf14c41335b","3fb0f9f8f2f6b6ed"]
       },
@@ -524,15 +524,15 @@
     },
     "cox/tiny-ties/breslow/default" : {
       "doubles" : {
-        "at_estimates_information" : ["40027d70c67336f8"],
+        "at_estimates_information" : ["40027d70c67336f9"],
         "at_estimates_loglik" : ["c022c3ca264c162c"],
-        "at_estimates_score" : ["bcae000000000000"],
-        "at_start_information" : ["4002631c71c71c72"],
+        "at_estimates_score" : ["bca8000000000000"],
+        "at_start_information" : ["4002631c71c71c71"],
         "at_start_loglik" : ["c022d52f8e914bd4"],
         "at_start_score" : ["bfd9555555555555"],
         "covariance" : ["3fdbb0cdd0e0175b"],
-        "estimates" : ["bfc5f42257679790"],
-        "information" : ["40027d70c67336f8"],
+        "estimates" : ["bfc5f42257679791"],
+        "information" : ["40027d70c67336f9"],
         "loglik" : ["c022c3ca264c162c"],
         "standard_errors" : ["3fe50c7b75521742"]
       },
@@ -544,15 +544,15 @@
     },
     "cox/tiny-ties/breslow/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["40027d70c67336f8"],
+        "at_estimates_information" : ["40027d70c67336f9"],
         "at_estimates_loglik" : ["c022c3ca264c162c"],
-        "at_estimates_score" : ["bcae000000000000"],
-        "at_start_information" : ["4002631c71c71c72"],
+        "at_estimates_score" : ["bca8000000000000"],
+        "at_start_information" : ["4002631c71c71c71"],
         "at_start_loglik" : ["c022d52f8e914bd4"],
         "at_start_score" : ["bfd9555555555555"],
         "covariance" : ["3fdbb0cdd0e0175b"],
-        "estimates" : ["bfc5f42257679790"],
-        "information" : ["40027d70c67336f8"],
+        "estimates" : ["bfc5f42257679791"],
+        "information" : ["40027d70c67336f9"],
         "loglik" : ["c022c3ca264c162c"],
         "standard_errors" : ["3fe50c7b75521742"]
       },
@@ -564,7 +564,7 @@
     },
     "cox/tiny-ties/efron/default" : {
       "doubles" : {
-        "at_estimates_information" : ["4001f5539f541da1"],
+        "at_estimates_information" : ["4001f5539f541da0"],
         "at_estimates_loglik" : ["c021ec002c41ff03"],
         "at_estimates_score" : ["bca0000000000000"],
         "at_start_information" : ["4001d64ef2a605ce"],
@@ -572,7 +572,7 @@
         "at_start_score" : ["bfd90c30c30c30c3"],
         "covariance" : ["3fdc82aef7855006"],
         "estimates" : ["bfc65cd2cbeee660"],
-        "information" : ["4001f5539f541da1"],
+        "information" : ["4001f5539f541da0"],
         "loglik" : ["c021ec002c41ff03"],
         "standard_errors" : ["3fe55bab569eeec9"]
       },
@@ -584,7 +584,7 @@
     },
     "cox/tiny-ties/efron/tight" : {
       "doubles" : {
-        "at_estimates_information" : ["4001f5539f541da1"],
+        "at_estimates_information" : ["4001f5539f541da0"],
         "at_estimates_loglik" : ["c021ec002c41ff03"],
         "at_estimates_score" : ["bca0000000000000"],
         "at_start_information" : ["4001d64ef2a605ce"],
@@ -592,7 +592,7 @@
         "at_start_score" : ["bfd90c30c30c30c3"],
         "covariance" : ["3fdc82aef7855006"],
         "estimates" : ["bfc65cd2cbeee660"],
-        "information" : ["4001f5539f541da1"],
+        "information" : ["4001f5539f541da0"],
         "loglik" : ["c021ec002c41ff03"],
         "standard_errors" : ["3fe55bab569eeec9"]
       },

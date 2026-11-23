@@ -53,10 +53,10 @@ event has a positive weight (X-012).
 ## 5. Algorithm
 
 The kernel of first-slice §6 carries a weight and an offset per row. Within a time group it adds
-rᵢ, rᵢxᵢ and rᵢxᵢxᵢᵀ to the running sums (Neumaier for the first two, chunked compensated for the third since
-round 182; first-slice §6); for events with positive weight it also adds them to plain per-time sums D₀, D₁, D₂ and
-counts d. Contributions of §2 are added to the stratum's totals in sweep order, the Efron terms for k = 1 to d: ℓ and U
-with Neumaier sums, I with a chunked compensated sum, one term per Efron step. Canonical order adds weight and
+rᵢ and rᵢxᵢ to the running Neumaier sums. For events with positive weight it also adds them to plain per-time sums D₀
+and D₁, and counts d. The contributions of §2 to ℓ and U are added to the stratum's Neumaier totals in sweep order, the
+Efron terms for k = 1 to d. Since round 186 the information follows [weighted-gram.md](weighted-gram.md) (D-80), which
+needs no D₂. Canonical order adds weight and
 offset to the final tie-breakers, and the data fingerprint covers them.
 
 ## 6. Edge cases

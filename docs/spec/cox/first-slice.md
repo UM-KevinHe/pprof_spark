@@ -108,13 +108,15 @@ models keep a single `rowId` column; for them, an `xxhash64` column of the key d
 6. After convergence, factor I(β̂) once more for the covariance.
 
 Kernel per stratum (pure, in `numerics`): sweep rows in canonical order, keeping S₀ and S₁ as
-running Neumaier-compensated sums and the packed S₂ as a running chunked compensated sum (since round 182, D-78;
-[step2-chunks.md §5](../performance/step2-chunks.md)): each row's terms are added in plain arithmetic to a pending
-chunk, folded into Neumaier totals every L = 256 rows, and S₂ is read as the totals plus the pending chunk. At each
-distinct event time, add that time's rows to the sums first (ties share one risk set), then add the time's
-contributions to ℓ, U and I. The contributions of a stratum's event times are accumulated in time order, with Neumaier
-sums for ℓ and U and a chunked compensated sum for I, one term per event time, its last chunk ending with the stratum;
-strata within a block in key order. e^{ηᵢ} uses `StrictMath.exp`. A non-finite e^{ηᵢ} or S₀ makes
+running Neumaier-compensated sums. At each distinct event time, add that time's rows to the sums first (ties share one
+risk set), then add the time's contributions to ℓ and U, accumulated with Neumaier sums in time order. Since round 186
+(D-80) the information is computed in the weighted-Gram form of [weighted-gram.md](weighted-gram.md):
+- the sweep adds each event time's rank-one terms to a chunked compensated sum
+  ([step2-chunks.md §5](../performance/step2-chunks.md));
+- a second pass over the stratum's rows adds each row's Gram term, weighted by its risk score and cumulative hazard;
+- S₂ is not kept.
+
+Strata within a block are taken in key order. e^{ηᵢ} uses `StrictMath.exp`. A non-finite e^{ηᵢ} or S₀ makes
 the evaluation non-finite, which step halving then treats as a decrease.
 
 ## 7. Inference
@@ -218,4 +220,4 @@ and pprof_py's and R's tight Breslow fits differ there by at most 2.4e-9 in rela
 | X-010 | B | Step-control order | Proposed: change from bug-compatible to corrected (§10) |
 | X-011 | C | Aliased or constant covariates fail instead of returning pseudo-inverse estimates | Proposed |
 | X-012 | C | No events at all fails instead of returning β̂ = 0 with a NumPy warning | Proposed |
-| — | D | Summation order (Neumaier running sums; chunked compensated sums for S₂ and I since round 182), Cholesky instead of LU, `StrictMath` | Within T-fn, T-iter and T-coef by design |
+| — | D | Summation order (Neumaier running sums; chunked compensated sums since round 182; the weighted-Gram information since round 186), Cholesky instead of LU, `StrictMath` | Within T-fn, T-iter and T-coef by design |
