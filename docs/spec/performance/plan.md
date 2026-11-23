@@ -269,7 +269,7 @@ Step 1 addresses OI-02 and part of OI-30.
   - **Not built.** The ℓ-only evaluation of halved steps (item 6 above) is not built, and no profile has shown a
     halving (OI-125).
 - **Step 4** covers gridded times, which addresses OI-03 for them. Continuous times keep the sorted scans planned
-  under OI-03.
+  under OI-03. Specification: `docs/spec/cox/per-time-aggregates.md` (round 188), proposed as D-81.
 - **Step 5** follows study §4.3:
   - interior intercepts are solved in the tasks, and bounded providers are held at the bound;
   - the β step comes from SerBIN's reduced system;

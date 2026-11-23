@@ -228,6 +228,30 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 188 (2026-11-23): step 4's specification, Cox per-time aggregates (D-81 proposed)
+
+- Round 187 is on `main` as `1ba99f6`.
+- **OI-125.** The maintainer deferred it to step 6 (2026-11-23). Step 4 goes ahead.
+- **`docs/spec/cox/per-time-aggregates.md`** (Draft), for approval as D-81. It follows study §4.2:
+  - **The rule.** A stratum larger than a block is aggregated when its per-time totals fit the driver's budget, at
+    p + 3 numbers per time under Breslow and 2p + 4 under Efron. The events' Σwη and Σwx are summed once per stratum,
+    not per time.
+  - **The layout.** Its rows split over blocks by row identifier, with no sort.
+  - **The evaluation.** Pass 1 sums net exits minus entries, and the events, by time. The totals fold in groups, then
+    by a shuffle keyed by stratum and time. The driver takes the suffix sums, ℓ, U, the hazards and M. Pass 2 forms
+    the weighted Gram from the broadcast cumulative hazards (D-80).
+  - **Outputs.** The baseline, residuals and robust variance are built in step 4. Anything else needing a whole
+    stratum refuses aggregated strata.
+  - **Validation.** Function-level agreement with the sweep within T-fn; every Cox fixture with aggregation forced; a
+    new unstratified, gridded, truncated fixture; new golden runs, the existing ones keeping their bits. The exit is
+    an unstratified 20M-row fit on the cluster.
+- **Records.** D-81 (Proposed); plan §4; OI-03, OI-30 and OI-125; STATUS.
+
+Evidence (assistant sandbox): documentation only. The patch applies to a fresh clone of `main` with an identical
+tree; scalafmt is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next: the maintainer's review of D-81.** Then step 4's fixture round.
+
 ## Round 187 (2026-11-23): step 3's exit on the cluster
 
 - Round 186 is on `main` as `c3bbc66`. The maintainer ran step 3's exit on it: S5, S6 and points 7 and 9 (Cox, 5M to

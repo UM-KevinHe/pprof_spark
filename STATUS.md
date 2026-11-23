@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-23, round 187.
+Updated 2026-11-23, round 188.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -219,6 +219,7 @@ through round 100 as the maintainer reported.
 | 185 | Step 2's exit recorded: on round 184's build, the heaviest pass's CPU per row is 2.25 to 2.66 times lower at 180 features (logistic pass A 30.4 to 37.2 µs, Cox evaluation 42.5 to 55.5 µs); at 100M rows logistic fits in 1,195.4 s and Cox in 986.0 s (OI-118 closed); rebuilt partitions reduced (OI-123 open) | Merged (f18e528) |
 | 186 | Step 3's kernel: the Cox information in the weighted-Gram form (D-80), after the specifications and ADR-0006 were amended; round 182's kernel kept as a test reference (ℓ and U identical, information within 1e-13); exact-reference tests; the golden runs re-baselined under D-78 | Merged (c3bbc66) |
 | 187 | Step 3's exit recorded: on round 186's build Cox evaluation needs 31.6 to 33.8 µs of CPU per row from 5M to 100M rows, 1.27 to 1.76 times less than on round 184's; Cox at 100M fits in 745.3 s (986.0 before); OI-125 opened (ℓ-only halvings, not built) | Delivered as a patch |
+| 188 | Step 4's specification, Cox per-time aggregates for strata larger than a block (`docs/spec/cox/per-time-aggregates.md`), proposed as D-81; OI-125 deferred to step 6 by the maintainer | Delivered as a patch |
 
 ## Decisions and spikes
 

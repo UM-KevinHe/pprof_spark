@@ -103,6 +103,25 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-81: Cox per-time aggregates for strata larger than a block, performance step 4's specification (Proposed, round 188)
+
+Proposed for the maintainer's approval: `docs/spec/cox/per-time-aggregates.md`.
+- **The rule.** A stratum is aggregated when its rows exceed one block and the per-time totals of every aggregated
+  stratum fit the driver's budget: Σ K_s·w·8 bytes, with w = p + 3 under Breslow and 2p + 4 under Efron. Otherwise it
+  keeps the sweep, and a stratum too large for its block is refused with a message.
+- **The layout.** An aggregated stratum's rows are split over blocks of the target size by their row identifier, with
+  no sort; within a block they keep canonical order.
+- **The evaluation.**
+  - Pass 1 sums Δ₀ and Δ₁ (exits minus entries), D, d, and Efron's T₀ and T₁, by time. It folds them in block order
+    within groups, then by a shuffle keyed by stratum and time.
+  - The driver takes the suffix sums, ℓ, U, the hazards and the rank-one sum M.
+  - Pass 2 forms the weighted Gram G from the broadcast cumulative hazards (D-80), and I = G − M.
+- **Outputs.** The baseline, residuals and robust variance of aggregated strata are built in step 4. Anything else that
+  needs a stratum in one block refuses aggregated strata.
+- **Validation.** Aggregated against swept within T-fn; every Cox fixture with aggregation forced; a new unstratified,
+  gridded, truncated fixture; new golden runs; and the exit's unstratified 20M-row fit on the cluster.
+- **Rounds.** The fixture, the build, the cluster's measurement.
+
 ### D-80: The Cox weighted-Gram information, performance step 3's specification (Accepted: approved by the maintainer, 2026-11-22)
 
 Proposed in round 183 and approved as written on 2026-11-22: `docs/spec/cox/weighted-gram.md`.
