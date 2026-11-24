@@ -1,6 +1,7 @@
 # Specification: Cox / per-time aggregates for strata larger than a block
 
-- Status: **Approved** (2026-11-23, the maintainer) as D-81. The fixture is built in round 189 (§11).
+- Status: **Approved** (2026-11-23, the maintainer) as D-81. The fixture is built in round 189, the evaluation in
+  round 190 (§11).
 - Decision references:
   - D-75: performance step 4;
   - D-78: the re-baselining rule, which names per-time aggregates among changes of summation order;
@@ -163,3 +164,30 @@ specified.
   and 3,675 events; the largest tie has 401. 1,914 rows enter after time 0.
 - **Calibration and suites.** `docs/parity/cox-calibration.md` gains its 22 rows, all within class. The case joins
   every Cox suite's list that holds the unstratified cases, and the golden runs. The present sweep passes it.
+
+**Round 190, the evaluation.**
+- **Planning.** One job counts the distinct exit and entry times of every stratum with more rows than a block
+  (`cox.grid-counts`). Strata are taken in key order while their per-time totals fit `driverBudgetBytes`, and a
+  second job collects their grids (`cox.grid`).
+- **Layout.**
+  - A split stratum takes ⌈rows / target⌉ blocks, ahead of the shared ones.
+  - Its rows reach them by `xxhash64` of their content and identifier. That is §3's "row identifier", extended
+    because identifiers are 0 without `rowId` or `rowKey`.
+  - The layout summary gives split blocks the plan's even estimate of their rows.
+- **Evaluation** (`CoxAggregation`).
+  - Pass 1 (`cox.evaluate`) emits each reduction group's swept partial and its aggregated strata's totals, in records
+    of 256 grid times. A shuffle folds those by stratum and record, in group order.
+  - The driver evaluates each stratum (`CoxAggregates.evaluate`). Pass 2 (`cox.gram`) forms G.
+  - The sum takes the swept partials in group order, then the aggregated strata in group order.
+  - A fit without aggregated strata takes the earlier path, bit for bit.
+- **The summary.** A split stratum counts once among strata without events.
+- **Departures from §2 and §6, until round 191.**
+  - A robust or clustered fit is not aggregated: it keeps today's whole-stratum layout and its guard, rather than
+    refusing.
+  - The baseline, residuals, reference point and measures build their working sets as before, with whole strata.
+- **The budget.** The swept partials and the per-time totals are each bounded by `driverBudgetBytes`, so one pass
+  may bring up to twice the budget to the driver.
+- **A departure from §5 (OI-126).** Pass 1 adds each row to the per-time totals with Neumaier sums per element, where §5
+  describes plain sums per block folded with Neumaier sums. That is more accurate and slower.
+- **Measured** in the sandbox (`perf-results.md`, "Round 190"): the log-likelihood's bits match the one-block sweep. On
+  one core the two passes cost 2.2 to 2.4 times its CPU.

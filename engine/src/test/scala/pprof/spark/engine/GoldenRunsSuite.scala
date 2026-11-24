@@ -33,7 +33,8 @@ import pprof.spark.numerics.Evaluation
 import pprof.spark.testkit.SparkSuite
 
 /** NUM-2's golden runs (docs/spec/performance/plan.md §6.1, D-75). Every Cox and logistic fixture case, at default
-  * and tight options, and two multi-block synthetic cases per model, are recorded as the IEEE-754 bit patterns of
+  * and tight options, two multi-block synthetic cases per model, and two unstratified Cox cases spread over many
+  * blocks and evaluated from per-time aggregates (D-81), are recorded as the IEEE-754 bit patterns of
   * their outputs in `golden/runs.json`. Any difference fails: a change meant to preserve bits must leave the manifest
   * as it is, and one that reorders sums replaces it under the re-baselining rule of plan §6.3 (D-78). Each run also
   * records, under D-79, the values step 2's chunked sums touch at the fit's start and at its estimates
@@ -57,7 +58,15 @@ class GoldenRunsSuite extends SparkSuite {
           .toMap
       }
 
-  private lazy val synthetic: Vector[(Run, Run)] = Vector(coxA(), coxB(), logisticA(), logisticB())
+  private lazy val synthetic: Vector[(Run, Run)] =
+    Vector(
+      coxA(),
+      coxB(),
+      coxAggregated("lt-unstratified", Ties.Efron),
+      coxAggregated("rc-unstratified", Ties.Breslow),
+      logisticA(),
+      logisticB()
+    )
   private lazy val computed: Vector[Run] = coxFixtures ++ logisticFixtures ++ synthetic.map(_._1)
 
   test("every golden run matches its recorded bits (NUM-2)") {
@@ -279,6 +288,19 @@ class GoldenRunsSuite extends SparkSuite {
     (
       coxRun("cox/synthetic-a", df.repartition(1), spec, options),
       coxRun("cox/synthetic-a", df.repartition(7, col("id")), spec, options)
+    )
+  }
+
+  /** An unstratified fixture case on blocks of 2 KB, 36 rows each at p = 3: its one stratum spreads over many blocks
+    * and is evaluated from per-time aggregates (docs/spec/cox/per-time-aggregates.md, D-81).
+    */
+  private def coxAggregated(name: String, ties: Ties): (Run, Run) = {
+    val df = CoxFixtures.frame(spark, name)
+    val spec = CoxFixtures.spec(name)
+    val options = CoxOptions(ties = ties, blocks = BlockOptions(targetBlockBytes = 2048L))
+    (
+      coxRun(s"cox/aggregated-$name", df.repartition(1), spec, options),
+      coxRun(s"cox/aggregated-$name", df.repartition(7), spec, options)
     )
   }
 

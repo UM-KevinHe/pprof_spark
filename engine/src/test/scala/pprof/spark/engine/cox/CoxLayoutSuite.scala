@@ -131,17 +131,23 @@ class CoxLayoutSuite extends SparkSuite {
       )
     )
 
-  test("skewed strata: an oversized stratum gets its own block, and the fit is reproducible") {
-    // 2048 / (8 (p + 4)) = 42 rows per block at p = 2: the 400-row stratum is oversized and the
-    // other 560 rows fill ceil(560 / 42) = 14 shared blocks.
+  test(
+    "skewed strata: an oversized stratum spreads over blocks of its own (D-81), and the fit is reproducible"
+  ) {
+    // 2048 / (8 (p + 4)) = 42 rows per block at p = 2: the 400-row stratum is oversized, so it is evaluated from
+    // per-time aggregates over ceil(400 / 42) = 10 blocks, and the other 560 rows fill ceil(560 / 42) = 14 shared
+    // blocks. A robust fit keeps it whole, in one block of its own, until round 191.
     val options = CoxOptions(blocks = manyBlocks)
     val many = CoxPH.fit(skewed(), skewedSpec, options)
     assert(many.converged, many.message)
     assertEquals(many.layout.targetRowsPerBlock, 42)
     assertEquals(many.layout.oversizedGroups, 1)
-    assertEquals(many.layout.largestBlockRows, 400L)
-    assertEquals(many.layout.blockCount, 15)
+    assertEquals(many.layout.blockCount, 24)
+    assert(many.layout.largestBlockRows < 400L, s"${many.layout}")
     assert(many.layout.smallestBlockRows > 0L, s"${many.layout}")
+    val robust = CoxPH.fit(skewed(), skewedSpec, options.copy(robust = true))
+    assertEquals(robust.layout.blockCount, 15)
+    assertEquals(robust.layout.largestBlockRows, 400L)
     val shuffled = withSqlConf("spark.sql.shuffle.partitions" -> "7")(
       CoxPH.fit(skewed(reverse = true).repartition(5), skewedSpec, options)
     )
@@ -151,6 +157,7 @@ class CoxLayoutSuite extends SparkSuite {
     )
     val one = CoxPH.fit(skewed(), skewedSpec)
     assertEquals(one.layout.blockCount, 1)
+    assertEquals(many.strataWithoutEvents, one.strataWithoutEvents)
     assert(
       Tolerances("T-part.parameters")
         .worstRatio(many.estimates.toArray, one.estimates.toArray) <= 1.0

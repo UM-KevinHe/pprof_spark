@@ -6,7 +6,7 @@ import org.apache.spark.sql.functions.{broadcast, col}
 import pprof.spark.engine.backend.Storage._
 import pprof.spark.engine.backend.{BlockOptions, OrderedReduction, PlanFrames}
 import pprof.spark.engine.data.Validation
-import pprof.spark.engine.layout.{GroupFold, GroupSizes, LayoutPlan, ReductionGroups}
+import pprof.spark.engine.layout.{GroupFold, GroupKey, GroupSizes, LayoutPlan, ReductionGroups}
 import pprof.spark.engine.metadata.SoftwareInfo
 import pprof.spark.engine.skeleton.LayoutSummary
 import pprof.spark.numerics.{
@@ -137,80 +137,82 @@ object CoxPH {
   private val log = org.slf4j.LoggerFactory.getLogger(getClass)
 
   def fit(df: DataFrame, spec: CoxSpec, options: CoxOptions = CoxOptions()): CoxFit =
-    withWorkingSet(df, spec, options) { prepared =>
-      val p = spec.features.size
-      val result =
-        try
-          Newton.maximize(
-            beta => evaluate(prepared, beta, options.ties),
-            new Array[Double](p),
-            options.newton
+    // A robust fit keeps whole strata until the robust variance of aggregated strata is built (D-81 §6, round 191).
+    withWorkingSet(df, spec, options, aggregate = !(options.robust || spec.cluster.isDefined)) {
+      prepared =>
+        val p = spec.features.size
+        val result =
+          try
+            Newton.maximize(
+              beta => evaluate(prepared, beta, options.ties),
+              new Array[Double](p),
+              options.newton
+            )
+          catch {
+            case e: AliasedException => throw new CoxAliasingException(e.columns.map(spec.features))
+          }
+        val factor = Cholesky.factor(result.evaluation.information, p, options.aliasTolerance)
+        if (!factor.isFullRank) throw new CoxAliasingException(factor.aliased.map(spec.features))
+        val naive = factor.inversePacked
+        val robust = options.robust || spec.cluster.isDefined
+        val (covariance, clusters) =
+          if (!robust) (naive, 0L)
+          else {
+            val (meat, units) =
+              robustMeat(prepared, result.beta.toArray, options.ties, spec.cluster.isDefined)
+            (sandwich(naive, meat, p), units)
+          }
+        val quantile = Normal.upperQuantile((1.0 - options.confidenceLevel) / 2.0)
+        val coefficients = spec.features.indices.map { j =>
+          val estimate = result.beta(j)
+          val se = math.sqrt(covariance(Moments.packedIndex(j, j, p)))
+          val z = estimate / se
+          CoxCoefficient(
+            spec.features(j),
+            estimate,
+            se,
+            z,
+            Normal.twoSidedPValue(z),
+            estimate - quantile * se,
+            estimate + quantile * se
           )
-        catch {
-          case e: AliasedException => throw new CoxAliasingException(e.columns.map(spec.features))
-        }
-      val factor = Cholesky.factor(result.evaluation.information, p, options.aliasTolerance)
-      if (!factor.isFullRank) throw new CoxAliasingException(factor.aliased.map(spec.features))
-      val naive = factor.inversePacked
-      val robust = options.robust || spec.cluster.isDefined
-      val (covariance, clusters) =
-        if (!robust) (naive, 0L)
-        else {
-          val (meat, units) =
-            robustMeat(prepared, result.beta.toArray, options.ties, spec.cluster.isDefined)
-          (sandwich(naive, meat, p), units)
-        }
-      val quantile = Normal.upperQuantile((1.0 - options.confidenceLevel) / 2.0)
-      val coefficients = spec.features.indices.map { j =>
-        val estimate = result.beta(j)
-        val se = math.sqrt(covariance(Moments.packedIndex(j, j, p)))
-        val z = estimate / se
-        CoxCoefficient(
-          spec.features(j),
-          estimate,
-          se,
-          z,
-          Normal.twoSidedPValue(z),
-          estimate - quantile * se,
-          estimate + quantile * se
+        }.toVector
+        val warnings =
+          (if (result.converged) Vector.empty[String]
+           else Vector(s"the Cox fit did not converge: ${result.message}")) ++
+            (if (robust && spec.cluster.isEmpty && spec.entry.isDefined)
+               Vector(
+                 "robust variance treats each row as its own cluster, but the data have entry times, " +
+                   "so a subject's rows count as independent; set CoxSpec.cluster to the subject " +
+                   "identifier (R requires cluster or id here)"
+               )
+             else Vector.empty[String])
+        warnings.foreach(w => log.warn(w))
+        CoxFit(
+          coefficients,
+          covariance.toVector,
+          result.evaluation.information.toVector,
+          result.evaluation.value,
+          result.initial.value,
+          result.iterations,
+          result.halvings,
+          result.converged,
+          result.message,
+          prepared.rows,
+          prepared.events,
+          prepared.plan.groupCount,
+          prepared.strataWithoutEvents,
+          warnings,
+          result.log,
+          spec,
+          options,
+          SoftwareInfo.capture(df.sparkSession),
+          LayoutSummary.of(prepared.plan, prepared.workingSet.groups),
+          prepared.fingerprint,
+          naiveCovariance = naive.toVector,
+          robust = robust,
+          clusters = clusters
         )
-      }.toVector
-      val warnings =
-        (if (result.converged) Vector.empty[String]
-         else Vector(s"the Cox fit did not converge: ${result.message}")) ++
-          (if (robust && spec.cluster.isEmpty && spec.entry.isDefined)
-             Vector(
-               "robust variance treats each row as its own cluster, but the data have entry times, " +
-                 "so a subject's rows count as independent; set CoxSpec.cluster to the subject " +
-                 "identifier (R requires cluster or id here)"
-             )
-           else Vector.empty[String])
-      warnings.foreach(w => log.warn(w))
-      CoxFit(
-        coefficients,
-        covariance.toVector,
-        result.evaluation.information.toVector,
-        result.evaluation.value,
-        result.initial.value,
-        result.iterations,
-        result.halvings,
-        result.converged,
-        result.message,
-        prepared.rows,
-        prepared.events,
-        prepared.plan.groupCount,
-        prepared.strataWithoutEvents,
-        warnings,
-        result.log,
-        spec,
-        options,
-        SoftwareInfo.capture(df.sparkSession),
-        LayoutSummary.of(prepared.plan, prepared.workingSet.groups),
-        prepared.fingerprint,
-        naiveCovariance = naive.toVector,
-        robust = robust,
-        clusters = clusters
-      )
     }
 
   /** Log partial likelihood, score and information at `beta`: one pass, for function-level
@@ -222,7 +224,9 @@ object CoxPH {
       beta: Array[Double],
       options: CoxOptions = CoxOptions()
   ): Evaluation =
-    withWorkingSet(df, spec, options)(prepared => evaluate(prepared, beta, options.ties))
+    withWorkingSet(df, spec, options, aggregate = true)(prepared =>
+      evaluate(prepared, beta, options.ties)
+    )
 
   /** Fails unless `df` is the data `fit` was fitted to (API-3). */
   private[cox] def requireFittedData(df: DataFrame, fit: CoxFit): Unit =
@@ -370,21 +374,46 @@ object CoxPH {
       rows: Long,
       events: Long,
       strataWithoutEvents: Int,
-      fingerprint: Long
+      fingerprint: Long,
+      aggregation: CoxAggregation = CoxAggregation.Empty
   )
 
-  private[cox] def withWorkingSet[A](df: DataFrame, spec: CoxSpec, options: CoxOptions)(
+  /** Validates, plans, builds and summarizes the working set, then runs `body`. With `aggregate`, strata with more rows
+    * than a block are evaluated from per-time aggregates when their totals fit the driver's budget (D-81); without it,
+    * as for the outputs that need whole strata, every stratum keeps one block.
+    */
+  private[cox] def withWorkingSet[A](
+      df: DataFrame,
+      spec: CoxSpec,
+      options: CoxOptions,
+      aggregate: Boolean = false
+  )(
       body: Prepared => A
   ): A = {
     val input = CoxValidation.validate(df, spec)
     val p = spec.features.size
     // Blocks stay at the target size; their partials are reduced in groups (docs/spec/performance/step1-reduction.md).
-    val plan = LayoutPlan.create(
-      GroupSizes.collectGroupSizes(input.frame, options.blocks),
-      options.blocks.targetRowsPerBlock(p + 2)
+    val target = options.blocks.targetRowsPerBlock(p + 2)
+    val sizes = GroupSizes.collectGroupSizes(input.frame, options.blocks)
+    val grids =
+      if (!aggregate) Map.empty[GroupKey, Array[Double]]
+      else
+        CoxAggregation.choose(
+          input,
+          sizes.filter(_._2 > target),
+          p,
+          options.ties == Ties.Efron,
+          options.blocks.driverBudgetBytes
+        )
+    val plan = LayoutPlan.create(sizes, target, grids.keySet)
+    val aggregation = CoxAggregation(
+      plan.placements.collect {
+        case g if grids.contains(g.key) => g.groupIndex -> grids(g.key)
+      }.toMap
     )
     val rowBytes = 8L * (p + 4)
     plan.placements
+      .filter(_.parts == 1)
       .find(g => g.rows > options.maxStratumRows || g.rows * rowBytes > options.maxStratumBytes)
       .foreach { g =>
         throw new IllegalArgumentException(
@@ -399,12 +428,15 @@ object CoxPH {
       ReductionGroups.plan(plan.blockCount, 8L * (2L + p + Moments.packedLength(p)), options.blocks)
     val workingSet = CoxWorkingSet.build(input, plan, groups, options.blocks)
     try {
+      val split = aggregation.ordinal
+      val splits = aggregation.strata.size
       val summaries = workingSet.records
         .mapPartitions((records: Iterator[CoxChunk]) =>
           GroupFold(CoxBlocks.assemble(records), (block: CoxBlock) => block.blockId, groups)(
-            new SummarySum(p)
-          )((sum, block) => sum.add(CoxKernel.summary(block))).map { case (group, sum) =>
-            sum.summary(group)
+            new SummarySum(p, splits)
+          )((sum, block) => sum.add(CoxKernel.summary(block, split, splits))).map {
+            case (group, sum) =>
+              sum.summary(group)
           }
         )(Encoders.product[CoxBlockSummary])
         .collectAs("cox.summarize")
@@ -417,6 +449,8 @@ object CoxPH {
             s"${input.eventCount}"
         )
       val sums = OrderedReduction.reduce(summaries.toSeq.map(s => s.blockId -> s.columnSums), p)
+      val splitEvents = new Array[Long](splits)
+      summaries.foreach(s => s.splitEvents.indices.foreach(k => splitEvents(k) += s.splitEvents(k)))
       body(
         Prepared(
           input.strataKeyIsText,
@@ -425,8 +459,9 @@ object CoxPH {
           sums.map(_ / rows.toDouble),
           rows,
           events,
-          summaries.iterator.map(_.strataWithoutEvents).sum,
-          summaries.iterator.map(_.fingerprint).sum
+          summaries.iterator.map(_.strataWithoutEvents).sum + splitEvents.count(_ == 0L),
+          summaries.iterator.map(_.fingerprint).sum,
+          aggregation
         )
       )
     } finally workingSet.release()
@@ -516,8 +551,13 @@ object CoxPH {
     out
   }
 
+  /** ℓ, U and I at `beta`: one pass when every stratum is swept, as before; two when strata are aggregated (D-81). */
+  private[cox] def evaluate(prepared: Prepared, beta: Array[Double], ties: Ties): Evaluation =
+    if (prepared.aggregation.isEmpty) evaluateSwept(prepared, beta, ties)
+    else CoxAggregation.evaluate(prepared, beta, ties == Ties.Efron)
+
   /** One pass: block partials combined in block order (ADR-0003). */
-  private[cox] def evaluate(prepared: Prepared, beta: Array[Double], ties: Ties): Evaluation = {
+  private def evaluateSwept(prepared: Prepared, beta: Array[Double], ties: Ties): Evaluation = {
     val p = prepared.center.length
     val b = beta.clone()
     val c = prepared.center.clone()

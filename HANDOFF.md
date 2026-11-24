@@ -228,6 +228,71 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 190 (2026-11-23): Cox per-time aggregates, the evaluation (step 4's build, D-81)
+
+- Round 189 is on `main` as `b89f0d2`.
+- **The build is split in two.**
+  - This round: strata larger than a block in the fit and in function-level evaluation.
+  - Round 191: their baseline, residuals and robust variance.
+- **Specifications first (NN-2).** These record it: first-slice §6, an amendment to ADR-0004, and
+  `per-time-aggregates.md` §11 as built. PROJECT_CONTEXT §6.6's "until TimeRange exists" is noted on OI-30, for its
+  next revision.
+- **Numerics.** `CoxTimeTotals` holds a stratum's per-time Δ₀, Δ₁, D, d, T₀ and T₁, as Neumaier sums per element, and
+  its events' Σwη and Σwx. `CoxAggregates.evaluate` is the driver's step: suffix sums, ℓ, U, M, hazards, and cumulative
+  hazards with sums and compensations apart. `CoxAggregates.gram` is pass 2.
+- **Planning and layout.**
+  - **The grids.** For each stratum with more rows than a block, one job counts distinct exit and entry times. Strata
+    are taken in key order while their totals fit `driverBudgetBytes`, and a second job collects their grids.
+  - **The plan.** `LayoutPlan.create` takes a `split` set, empty by default; a split stratum takes ⌈rows / target⌉
+    blocks ahead of the shared ones.
+  - **Placement.** A split stratum's rows reach those blocks by `xxhash64` of their content and identifier, because
+    identifiers are 0 without `rowId` or `rowKey`.
+  - **Unchanged.** Every other plan and every fit without a split stratum is as before, bit for bit.
+- **The evaluation** (`CoxAggregation`).
+  - Pass 1 (`cox.evaluate`) emits each reduction group's swept partial, and per-time totals in records of 256 grid
+    times. A shuffle folds those by stratum and record, in group order.
+  - The driver evaluates each stratum, and pass 2 (`cox.gram`) forms G.
+  - The sum takes swept partials in group order, then aggregated strata.
+  - The summary counts a split stratum once among strata without events.
+- **Until round 191.** A robust or clustered fit, and the baseline, residuals, reference point and measures, keep
+  whole strata, so nothing that works today refuses.
+- **Tests.**
+  - **Numerics.** `CoxAggregatesSuite` (3): split into 1, 3 or 7 parts, it matches the sweep within 10⁻¹².
+  - **`CoxAggregationSuite` (10).**
+    - The unstratified cases on 2 KB blocks, spread over up to 139 blocks, match pprof_py and R at their classes.
+    - Aggregated and swept evaluations agree within 10⁻¹².
+    - Fits are identical to the bit across partitions and reversed input.
+    - The budget's fallback is identical to the default fit.
+  - **`LayoutPlanSuite`.** One new test for split plans.
+  - **`CoxLayoutSuite`.** Its skewed-strata test now expects D-81's layout: 24 blocks, with a robust fit keeping 15.
+- **Golden runs.** Against round 189's manifest every existing run matched to the bit, and the only differences were
+  the two new aggregated runs: `lt-unstratified` under Efron and `rc-unstratified` under Breslow, on 2 KB blocks at 1
+  and 7 partitions. The manifest goes from 48 to 50 runs, with no existing value changed. The suite passes against it.
+- **Measured in the sandbox** (`perf-results.md`, "Round 190"): one stratum of 200,000 rows at 20 features,
+  Breslow and Efron, and 50,000 rows at 180 features, against round 189's one-block sweep.
+  - The log-likelihood's bits match.
+  - On one core the two passes cost 2.2 to 2.4 times the sweep's CPU, fits take 45% to 60% longer, and planning adds
+    about 2 s. The gain, every block's task instead of one, needs the cluster: step 4's exit.
+  - Pass 1 costs about as much as the whole sweep at 180 features. It uses Neumaier sums per element where §5
+    describes plain per-block sums, and it subtracts entries at time 0 needlessly: OI-126, new.
+- **Records.** The specifications, ADR-0004, plan §4, OI-03, OI-30 and OI-126 (new), STATUS.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags. scalafmt is clean, and `check-engine-api.sh` passes with its
+  self-test.
+- Every suite passes:
+  - numerics, 118 tests;
+  - engine, 635 tests in seven batches;
+  - app 38, bench 30 and testkit 28;
+  - the Python tests on PySpark 4.1.0, 47.
+- `GoldenRunsSuite`: against round 189's manifest, the only differences were the two new runs. Then the write and the
+  check against the new manifest, 4 tests each.
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21, Spark
+  4.0.0's jars, and the Python tests on PySpark 4.0.0.
+
+**Next: round 191**, the baseline, residuals and robust variance of aggregated strata (D-81 §6). Then step 4's exit on
+the cluster: an unstratified 20M-row fit.
+
 ## Round 189 (2026-11-23): D-81 approved; step 4's fixture, `lt-unstratified`
 
 - Round 188 is on `main` as `64c8247`. The maintainer approved step 4's specification. His message read "D-8", taken

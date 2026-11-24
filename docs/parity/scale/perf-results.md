@@ -542,6 +542,35 @@ tables are in plan §2.5 and round 149's evidence log.
 | Cox (3 iterations) | 31.5 | 4 evaluations, 15.7 s wall | 12.7 | 5.5 | 1.6 | 7.1 |
 | Logistic (4 iterations) | 48.9 | 4 pass A and 4 pass B, 13.5 s wall | 9.3 | 17.3 | 6.8 | 6.0 |
 
+### Round 190: Cox per-time aggregates, the evaluation (step 4's build)
+
+This is a sandbox measurement: one core, local mode, with the working set on disk, the simple design, and one Cox
+stratum, `--strata none`. PerfJob's times are whole days. Builds alternated, each fit in a fresh JVM:
+- round 189's (`b89f0d2`), which sweeps the stratum in one block, as one task;
+- round 190's, which spreads it over blocks of the default size and evaluates it from per-time aggregates.
+
+| Point | Build | Fit s | Evaluation, 4 runs: CPU s (pass 1 + pass 2) | Planning jobs, wall s |
+|---|---|---|---|---|
+| Cox, 200,000 rows, 20 features, unstratified, Breslow | before | 16.7, 15.2 | 0.70, 0.73 | — |
+| | after | 24.7, 24.7 | 1.17 + 0.53, 1.18 + 0.53 | 2.2, 2.1 |
+| The same, Efron | before | 15.6, 14.7 | 0.79, 0.82 | — |
+| | after | 23.7, 24.3 | 1.29 + 0.53, 1.32 + 0.53 | 1.9, 2.0 |
+| Cox, 50,000 rows, 180 features, unstratified, Breslow | before | 31.5, 30.4 | 2.73, 2.60 | — |
+| | after | 47.4, 44.8 | 2.99 + 2.95, 3.03 + 3.05 | 2.3, 2.0 |
+
+- **The same results.** The log-likelihood's bits and the iteration counts match across builds at all three points.
+- **On one core, the aggregated evaluation costs 2.2 to 2.4 times the sweep's CPU.**
+  - Pass 1 sums every row into its stratum's per-time totals and shuffles them. At 180 features it costs about as much
+    as the whole sweep.
+  - Pass 2 costs about as much again.
+  - Fits take 45% to 60% longer, and planning adds about 2 s.
+- **What it buys.** The sweep is one task whatever the cluster's size, while the aggregated evaluation runs on every
+  block's task. Step 4's exit measures that on the cluster.
+- **Pass 1's cost (OI-126).**
+  - Pass 1 adds rows with Neumaier sums per element. `per-time-aggregates.md` §5 describes plain sums per block, folded
+    with Neumaier sums.
+  - Rows without late entry still subtract at entry time 0, which no event time can see.
+
 ### Round 186: the Cox weighted-Gram information (step 3's kernel)
 
 This is a sandbox measurement: one core, local mode, with the working set on disk, the simple design, and Cox stratified

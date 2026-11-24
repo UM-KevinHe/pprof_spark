@@ -2,6 +2,46 @@
   "format" : 1,
   "description" : "NUM-2's golden runs (docs/spec/performance/plan.md §6.1): IEEE-754 bits in hexadecimal",
   "runs" : {
+    "cox/aggregated-lt-unstratified" : {
+      "doubles" : {
+        "at_estimates_information" : ["40b43d13c6bed959","40821a4d7a98b27b","c068092acc71c356","40b6f3f85085b64e","405ff3bc68a190a5","40b75b776d4457b7"],
+        "at_estimates_loglik" : ["c0e08fb60c9fa54e"],
+        "at_estimates_score" : ["3e23f467415c0000","be0725201ff90000","3df6d68315108000"],
+        "at_start_information" : ["40b4cfd6a1eb2bda","407d29949cd5659c","c05c4be72153381e","40b705ad554796e5","4059bd0f8f1246cc","40b76c76d85f532d"],
+        "at_start_loglik" : ["c0e0e7e8a8759edd"],
+        "at_start_score" : ["40a2570531920cee","c092150117946574","408009b0a13f82dd"],
+        "covariance" : ["3f299d839cd484e1","bef45af1cb2bf20a","3edc1988768112f2","3f2691ceb1b04f50","bed20e39e0e54480","3f25f5ed14ab38bd"],
+        "estimates" : ["3fddc7c5b98a44f8","bfceb90b8193d4c6","3fba334178ece582"],
+        "information" : ["40b43d13c6bed959","40821a4d7a98b27b","c068092acc71c356","40b6f3f85085b64e","405ff3bc68a190a5","40b75b776d4457b7"],
+        "loglik" : ["c0e08fb60c9fa54e"],
+        "standard_errors" : ["3f8ca155d4b7e62d","3f8adfcf980dbe9b","3f8a825ebc371598"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
+    "cox/aggregated-rc-unstratified" : {
+      "doubles" : {
+        "at_estimates_information" : ["40753defd8eb9e22","403afd8adcffeef3","c043e006f3744fa6","40790e11bffd60a9","4024c150fc86ec4c","4078448a1bd56a54"],
+        "at_estimates_loglik" : ["c097bae0daec447c"],
+        "at_estimates_score" : ["3e65562ec4800000","be16259de2000000","be34739437000000"],
+        "at_start_information" : ["407511999f850bf2","40025fa80fd1d708","c03db78a356fc1f9","407a17ebce580b5f","4022730ae6af50b8","40798f46bd8833c6"],
+        "at_start_loglik" : ["c0989c725f17b198"],
+        "at_start_score" : ["4065742c74753b7b","c0534a68170bf3f2","4047d61fdaff1372"],
+        "covariance" : ["3f6889f5b55e3fda","bf2b7e780239d7d4","3f3476f08f987e1d","3f6491ce813e0590","bf1738bb29763caa","3f6561168cec9e7e"],
+        "estimates" : ["3fe0b5336c55de90","bfcb1ce58f6f7d4f","3fc5f6e8a5031a42"],
+        "information" : ["40753defd8eb9e22","403afd8adcffeef3","c043e006f3744fa6","40790e11bffd60a9","4024c150fc86ec4c","4078448a1bd56a54"],
+        "loglik" : ["c097bae0daec447c"],
+        "standard_errors" : ["3fac05b065f7ffac","3fa9a7e9dd30c609","3faa27ef35750663"]
+      },
+      "integers" : {
+        "converged" : [1],
+        "halvings" : [0],
+        "iterations" : [3]
+      }
+    },
     "cox/lt-heavy-ties/breslow/default" : {
       "doubles" : {
         "at_estimates_information" : ["4082e6367163396c","4035be11b766220c","c05781bfe8f0fd22","40841de40c0e170f","40418bcaa9d8b136","408675ff74b166cf"],

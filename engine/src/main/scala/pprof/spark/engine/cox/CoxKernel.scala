@@ -1,7 +1,10 @@
 package pprof.spark.engine.cox
 
-import pprof.spark.numerics.{NeumaierSum, NeumaierVector}
+import pprof.spark.numerics.{ChunkedVector, NeumaierSum, NeumaierVector}
 import pprof.spark.numerics.kernels.{
+  CoxAggregateEvaluation,
+  CoxAggregates,
+  CoxTimeTotals,
   CoxMeasures => MeasureKernels,
   CoxResiduals,
   CoxStratum,
@@ -70,26 +73,40 @@ final case class CoxBlockSummary(
     events: Long,
     strataWithoutEvents: Int,
     columnSums: Array[Double],
-    fingerprint: Long
+    fingerprint: Long,
+    splitEvents: Array[Long] = Array.emptyLongArray
 )
 
 /** Executor-side work on Cox blocks: pure functions of a block and small arguments. */
 object CoxKernel {
 
-  def summary(block: CoxBlock): CoxBlockSummary = {
+  /** The block's rows, events, strata without events, column sums and fingerprint. A stratum split over blocks
+    * (per-time-aggregates.md §3) is not counted per block: its events of positive weight go to `splitEvents` at its
+    * position in `split`, and the driver counts it once.
+    */
+  def summary(
+      block: CoxBlock,
+      split: Map[Int, Int] = Map.empty,
+      splits: Int = 0
+  ): CoxBlockSummary = {
     val p = block.p
     val values = new Array[Double](p + 6)
     var events = 0L
     var withoutEvents = 0
     var fingerprint = 0L
+    val splitEvents = new Array[Long](splits)
     var g = 0
     while (g < block.groupCount) {
       var any = false
+      val ordinal = split.getOrElse(block.groupIndex(g), -1)
       var r = block.groupStart(g)
       while (r < block.groupEnd(g)) {
         if (block.event(r)) {
           events += 1
-          if (block.weight(r) > 0.0) any = true
+          if (block.weight(r) > 0.0) {
+            any = true
+            if (ordinal >= 0) splitEvents(ordinal) += 1
+          }
         }
         values(0) = block.time(r)
         values(1) = if (block.event(r)) 1.0 else 0.0
@@ -103,7 +120,7 @@ object CoxKernel {
         fingerprint += Fingerprint.row(block.groupIndex(g), block.rowId(r), values, 0, p + 6)
         r += 1
       }
-      if (!any) withoutEvents += 1
+      if (!any && ordinal < 0) withoutEvents += 1
       g += 1
     }
     CoxBlockSummary(
@@ -112,7 +129,8 @@ object CoxKernel {
       events,
       withoutEvents,
       Moments.columnSumsRows(block.rowCount, p, block.rows.xs, block.rows.xBase),
-      fingerprint
+      fingerprint,
+      splitEvents
     )
   }
 
@@ -138,6 +156,64 @@ object CoxKernel {
       g += 1
     }
     CoxPartial(block.blockId, totals.value.value, totals.score.values, totals.information.values)
+  }
+
+  /** Pass 1 with aggregated strata (per-time-aggregates.md §4): the block's strata in stratum order, each either
+    * swept into the returned partial or, when `aggregated`, added to its per-time totals.
+    */
+  def partialAggregated(
+      block: CoxBlock,
+      beta: Array[Double],
+      center: Array[Double],
+      efron: Boolean,
+      aggregated: Int => Boolean,
+      totalsOf: Int => CoxTimeTotals
+  ): CoxPartial = {
+    val totals = new CoxTotals(block.p)
+    var g = 0
+    while (g < block.groupCount) {
+      val stratum = block.groupIndex(g)
+      if (aggregated(stratum))
+        totalsOf(stratum).add(block.rows, block.groupStart(g), block.groupEnd(g), beta, center)
+      else
+        CoxStratum.add(
+          block.rows,
+          block.groupStart(g),
+          block.groupEnd(g),
+          beta,
+          center,
+          efron,
+          totals
+        )
+      g += 1
+    }
+    CoxPartial(block.blockId, totals.value.value, totals.score.values, totals.information.values)
+  }
+
+  /** Pass 2 (§4): the Gram terms ωᵢxᵢxᵢᵀ of the block's rows in aggregated strata, one chunked sum for the block. */
+  def gram(
+      block: CoxBlock,
+      beta: Array[Double],
+      center: Array[Double],
+      evaluations: Map[Int, CoxAggregateEvaluation]
+  ): Array[Double] = {
+    val gram = new ChunkedVector(Moments.packedLength(block.p))
+    var g = 0
+    while (g < block.groupCount) {
+      evaluations.get(block.groupIndex(g)).foreach { e =>
+        CoxAggregates.gram(
+          block.rows,
+          block.groupStart(g),
+          block.groupEnd(g),
+          beta,
+          center,
+          e,
+          gram
+        )
+      }
+      g += 1
+    }
+    gram.values
   }
 
   /** The baseline hazard rows of the block's strata at `beta`: increments, their running Neumaier

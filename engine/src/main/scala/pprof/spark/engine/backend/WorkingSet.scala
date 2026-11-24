@@ -80,4 +80,26 @@ object PlanFrames {
     val rows = plan.placements.map(g => Row(GroupKey.value(g.key), g.groupIndex, g.blockId))
     spark.createDataFrame(rows.asJava, schema)
   }
+
+  /** The number of blocks a group spreads over (per-time-aggregates.md §3). */
+  val PartsColumn = "__pprof_parts"
+
+  /** As [[placements]], with each group's first block and its number of blocks, for layouts that split groups. */
+  def placementsWithParts(spark: SparkSession, plan: LayoutPlan, keyIsText: Boolean): DataFrame = {
+    val schema = StructType(
+      Seq(
+        StructField(
+          Validation.GroupColumn,
+          if (keyIsText) StringType else LongType,
+          nullable = false
+        ),
+        StructField(GroupIndexColumn, IntegerType, nullable = false),
+        StructField(BlockIdColumn, IntegerType, nullable = false),
+        StructField(PartsColumn, IntegerType, nullable = false)
+      )
+    )
+    val rows =
+      plan.placements.map(g => Row(GroupKey.value(g.key), g.groupIndex, g.blockId, g.parts))
+    spark.createDataFrame(rows.asJava, schema)
+  }
 }

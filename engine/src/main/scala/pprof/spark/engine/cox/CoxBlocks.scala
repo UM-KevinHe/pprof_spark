@@ -3,7 +3,7 @@ package pprof.spark.engine.cox
 import scala.jdk.CollectionConverters._
 
 import org.apache.spark.sql.{Dataset, Encoders, Row}
-import org.apache.spark.sql.functions.{broadcast, col}
+import org.apache.spark.sql.functions.{broadcast, col, pmod, xxhash64}
 import org.apache.spark.sql.types.{IntegerType, LongType, StructField, StructType}
 
 import pprof.spark.engine.backend.BlockOptions
@@ -323,7 +323,7 @@ object CoxWorkingSet {
     val p = input.spec.features.size
     val recordRows = RowRecords.rowsPerRecord(p)
     val spark = input.frame.sparkSession
-    val placements = PlanFrames.placements(spark, plan, input.strataKeyIsText)
+    val placements = PlanFrames.placementsWithParts(spark, plan, input.strataKeyIsText)
     val keys = PartitionKeys.forPartitions(spark, groups.groups)
     val blockKeys = spark.createDataFrame(
       (0 until plan.blockCount).map(b => Row(b, keys(groups.groupOf(b)))).asJava,
@@ -334,8 +334,28 @@ object CoxWorkingSet {
         )
       )
     )
-    val placed = input.frame
-      .join(broadcast(placements), Seq(Validation.GroupColumn))
+    val joined = input.frame.join(broadcast(placements), Seq(Validation.GroupColumn))
+    // A split stratum's rows reach its blocks by a hash of their content, identifier included, so placement depends
+    // on neither the input's order nor its partitioning (per-time-aggregates.md §3, DIST-6).
+    val spread =
+      if (plan.splitGroups.isEmpty) joined
+      else
+        joined.withColumn(
+          PlanFrames.BlockIdColumn,
+          (col(PlanFrames.BlockIdColumn) + pmod(
+            xxhash64(
+              col(Validation.RowIdColumn),
+              col(CoxValidation.TimeColumn),
+              col(CoxValidation.EntryColumn),
+              col(CoxValidation.EventColumn),
+              col(CoxValidation.WeightColumn),
+              col(CoxValidation.OffsetColumn),
+              col(Validation.FeaturesColumn)
+            ),
+            col(PlanFrames.PartsColumn).cast(LongType)
+          )).cast(IntegerType)
+        )
+    val placed = spread
       .join(broadcast(blockKeys), Seq(PlanFrames.BlockIdColumn))
       .select(
         col(PartitionKeyColumn),

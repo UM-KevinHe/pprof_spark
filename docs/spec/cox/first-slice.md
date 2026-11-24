@@ -116,7 +116,11 @@ risk set), then add the time's contributions to ℓ and U, accumulated with Neum
 - a second pass over the stratum's rows adds each row's Gram term, weighted by its risk score and cumulative hazard;
 - S₂ is not kept.
 
-Strata within a block are taken in key order. e^{ηᵢ} uses `StrictMath.exp`. A non-finite e^{ηᵢ} or S₀ makes
+Strata within a block are taken in key order.
+
+Since round 190 (D-81), a stratum with more rows than a block, whose per-time totals fit the driver's budget,
+spreads over blocks of its own and is evaluated from per-time aggregates
+([per-time-aggregates.md](per-time-aggregates.md)). A robust fit keeps it whole until round 191. e^{ηᵢ} uses `StrictMath.exp`. A non-finite e^{ηᵢ} or S₀ makes
 the evaluation non-finite, which step halving then treats as a decrease.
 
 ## 7. Inference

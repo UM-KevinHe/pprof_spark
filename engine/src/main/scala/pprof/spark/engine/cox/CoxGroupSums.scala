@@ -22,7 +22,8 @@ private[cox] final class EvaluationSum(p: Int) {
     CoxPartial(group, value.value, score.values, information.values)
 }
 
-private[cox] final class SummarySum(p: Int) {
+private[cox] final class SummarySum(p: Int, splits: Int = 0) {
+  private val splitEvents = new Array[Long](splits)
   private var rows = 0L
   private var events = 0L
   private var strataWithoutEvents = 0
@@ -35,10 +36,19 @@ private[cox] final class SummarySum(p: Int) {
     strataWithoutEvents += s.strataWithoutEvents
     fingerprint += s.fingerprint
     columnSums.add(s.columnSums)
+    s.splitEvents.indices.foreach(k => splitEvents(k) += s.splitEvents(k))
   }
 
   def summary(group: Int): CoxBlockSummary =
-    CoxBlockSummary(group, rows, events, strataWithoutEvents, columnSums.values, fingerprint)
+    CoxBlockSummary(
+      group,
+      rows,
+      events,
+      strataWithoutEvents,
+      columnSums.values,
+      fingerprint,
+      splitEvents.clone()
+    )
 }
 
 /** A group's sums of the reference point's block partials (`CoxReference`), 3 + 3p values each. */

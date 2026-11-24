@@ -14,7 +14,11 @@ object CoxGoldenPoints {
       options: CoxOptions,
       betas: Seq[Array[Double]]
   ): Seq[Evaluation] =
-    CoxPH.withWorkingSet(df, spec, options)(prepared =>
-      betas.map(b => CoxPH.evaluate(prepared, b, options.ties))
-    )
+    // As the fit evaluates: strata larger than a block from per-time aggregates unless the fit is robust (D-81).
+    CoxPH.withWorkingSet(
+      df,
+      spec,
+      options,
+      aggregate = !(options.robust || spec.cluster.isDefined)
+    )(prepared => betas.map(b => CoxPH.evaluate(prepared, b, options.ties)))
 }

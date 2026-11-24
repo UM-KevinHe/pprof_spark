@@ -29,6 +29,23 @@ class LayoutPlanSuite extends munit.FunSuite {
     assertEquals(plan.blockCount, 4) // 1 dedicated + ceil(129 / 50) shared
   }
 
+  test(
+    "a split group spreads over consecutive blocks of its own (D-81); an empty split changes nothing"
+  ) {
+    val plan =
+      LayoutPlan.create(sizes, targetRowsPerBlock = 50, split = Set(Integral(9), Integral(1)))
+    // Integral(9) has 120 rows: ceil(120 / 50) = 3 blocks, first. Integral(1), not oversized, stays whole.
+    val nine = plan.placements.find(_.key == Integral(9)).get
+    assertEquals((nine.blockId, nine.parts), (0, 3))
+    assertEquals(plan.placements.find(_.key == Integral(1)).map(_.parts), Some(1))
+    assertEquals(plan.splitGroups.map(_.key), Vector[GroupKey](Integral(9)))
+    assertEquals(plan.blockCount, 6) // 3 for the split group + ceil(129 / 50) shared
+    assert(plan.placements.filter(_.parts == 1).forall(_.blockId >= 3), s"${plan.placements}")
+    assertEquals(plan.blockRows.take(3), Vector(40L, 40L, 40L))
+    assert(plan.blockRows.forall(_ > 0))
+    assertEquals(LayoutPlan.create(sizes, 50, Set.empty), LayoutPlan.create(sizes, 50))
+  }
+
   test("largest group first, each to the least-loaded block, ties to the lowest block") {
     val plan = LayoutPlan.create(sizes, targetRowsPerBlock = 50)
     val blockOf = plan.placements.map(g => g.key -> g.blockId).toMap

@@ -55,3 +55,11 @@ option; and a bit-exact save and load (PERS-1).
 - Groups larger than a block are not split yet: TimeRange (OI-03, OI-30).
 - m-scale results are bounded by the driver limits until distributed result tables exist
   (OI-29); per-iteration reduction volume at large p is OI-02.
+
+## Amendment (2026-11-23, round 190; D-81, performance step 4)
+
+A Cox stratum larger than a block is split when its times lie on a grid: its per-time totals must fit
+`BlockOptions.driverBudgetBytes`. It spreads over ⌈rows / target⌉ blocks of its own, its rows placed by a hash of
+their content, and it is evaluated from per-time aggregates
+([docs/spec/cox/per-time-aggregates.md](../spec/cox/per-time-aggregates.md)). Other models' groups keep one block, as
+do Cox strata whose per-time totals exceed the budget and the strata of robust fits (OI-30).
