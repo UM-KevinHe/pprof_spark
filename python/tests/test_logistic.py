@@ -140,3 +140,8 @@ def test_add_providers_as_pprof_py(spark):
     assert len(tests) == len(keys) and tests[keys[0]]["flag"] == -1 and tests[keys[1]]["flag"] == 1
     exact = {r["provider"]: r for r in model.provider_tests(kept).collect()}
     assert exact[keys[0]]["z_raw"] == 0.0 and exact[keys[0]]["p_value"] == 1.0
+
+
+def test_newton_reaches_the_fit_options():
+    model = LogisticFixedEffect("y", ["x1"], "provider", newton="profile")
+    assert model.options["newton"] == "profile"

@@ -24,7 +24,7 @@ object PerfJob {
   val Usage: String =
     "usage: PerfJob --model cox|logistic --path <dir> [--rows n] [--providers m] [--features p] " +
       "[--design simple|correlated] [--seed s] [--strata provider|none] [--ties breslow|efron] " +
-      "[--block-bytes b] [--budget-bytes b] [--aggregate-above-bytes b] [--storage-level level] [--partitions k] [--check-partitions k] " +
+      "[--block-bytes b] [--budget-bytes b] [--aggregate-above-bytes b] [--newton serbin|profile] [--storage-level level] [--partitions k] [--check-partitions k] " +
       "[--verify true|false] " +
       "[--plans true|false] [--report <dir>]"
 
@@ -41,6 +41,7 @@ object PerfJob {
     "block-bytes",
     "budget-bytes",
     "aggregate-above-bytes",
+    "newton",
     "storage-level",
     "partitions",
     "check-partitions",
@@ -188,7 +189,8 @@ object PerfJob {
       )
     } else {
       val spec = LogisticSpec("y", d.features, "provider", rowId = Some("id"))
-      val f = LogisticFE.fit(data, spec, LogisticOptions(blocks = blocks))
+      val newton = options.getOrElse("newton", LogisticOptions.SerbinMethod)
+      val f = LogisticFE.fit(data, spec, LogisticOptions(blocks = blocks, newton = newton))
       Outcome(
         f.coefficients.map(_.estimate),
         f.coefficients.map(_.standardError),
@@ -281,6 +283,12 @@ object PerfJob {
             .put("converged", o.converged)
             .put("loglik", o.loglik)
             .put("layout", o.layout)
+          // The estimates and their standard errors, so that fits of one point by two methods can be compared
+          // (docs/spec/logistic/profile-newton.md §9, round 199).
+          val estimates = node.putArray("estimates")
+          o.estimates.foreach(v => estimates.add(v))
+          val errors = node.putArray("standard_errors")
+          o.errors.foreach(v => errors.add(v))
           // The reduction groups the fit used (docs/spec/performance/step1-reduction.md §2), as its layout records
           // them since round 174 (OI-117); before, the report recomputed them with the engine's rule.
           node

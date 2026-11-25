@@ -30,7 +30,8 @@ final case class LogisticOptions(
     correlationThreshold: Double = 0.9,
     maxProvidersOnDriver: Int = LogisticOptions.DefaultMaxProvidersOnDriver,
     aliasTolerance: Double = Cholesky.DefaultTolerance,
-    blocks: BlockOptions = BlockOptions()
+    blocks: BlockOptions = BlockOptions(),
+    newton: String = LogisticOptions.SerbinMethod
 ) {
   require(minRecords >= 0L, s"minRecords must be non-negative, got $minRecords")
   require(
@@ -43,6 +44,11 @@ final case class LogisticOptions(
     s"correlationThreshold must lie in [0, 1], got $correlationThreshold"
   )
 
+  require(
+    LogisticOptions.NewtonMethods.contains(newton),
+    s"newton must be one of ${LogisticOptions.NewtonMethods.toSeq.sorted.mkString(", ")}, got $newton"
+  )
+
   def serbin: SerbinOptions = SerbinOptions(tol, maxIter, bound, backtrack)
 }
 
@@ -52,6 +58,14 @@ object LogisticOptions {
     * (specification §11; OI-50).
     */
   val DefaultMaxProvidersOnDriver: Int = 10000000
+
+  /** SerBIN, the default (Phase 2a specification §6). */
+  val SerbinMethod: String = "serbin"
+
+  /** The profile-likelihood Newton through SerBIN's reduced system (docs/spec/logistic/profile-newton.md, D-83). */
+  val ProfileMethod: String = "profile"
+
+  val NewtonMethods: Set[String] = Set(SerbinMethod, ProfileMethod)
 }
 
 /** One covariate's test (Phase 2b §6): `method` is `wald`, `wald-robust`, `lr` or `score`; the interval is
@@ -150,7 +164,9 @@ final case class LogisticFit(
     robustCovariance: Option[Vector[Double]] = None,
     clusters: Long = 0L,
     auc: Option[Double] = None,
-    added: LogisticAddedProviders = LogisticAddedProviders.empty
+    added: LogisticAddedProviders = LogisticAddedProviders.empty,
+    innerSteps: Long = 0L,
+    cappedSolves: Int = 0
 ) {
 
   /** This fit with providers added after fitting (pprof_py's `add_providers`; specification §8a,

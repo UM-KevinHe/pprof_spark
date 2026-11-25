@@ -104,6 +104,11 @@ of +50 and −30) and needs no p×m matrix. The difference is rounding (class D)
 1/(1 + exp(−η)); log(1 + e^η) is η + log1p(e^−η) for η > 0 and log1p(e^η) otherwise, as numpy's
 `logaddexp(0, η)`.
 
+**The profile method** (round 199, D-83). With `newton = "profile"`, the fit takes the profile-likelihood Newton of
+[profile-newton.md](profile-newton.md) instead of these steps. That method reaches the same fixed point by other
+iterates: each provider's intercept is solved in its task, and Δβ = S⁻¹r. SerBIN, `newton = "serbin"`, is the
+default.
+
 ## 7. Inference
 
 Model-based only in this slice: §5's variances and the Wald test for β. Covariate likelihood-ratio
@@ -238,6 +243,16 @@ driver); every step length's ℓ is computed with the arithmetic of the sequenti
 across partitionings and R1 across block sizes (T-part). Engine code uses Dataset APIs only and runs
 under Spark Connect (PLAT-2).
 
+**With `newton = "profile"`** (round 199, D-83), each iteration is one pass, `logistic.profile`, plus one per
+rejected trial:
+- per block, the providers' intercepts are solved in the task and pass A's sums taken at them, folded in reduction
+  groups as pass A's are;
+- the solved intercepts come back in block order: m doubles, as pass B's Δγ do now;
+- there is no pass B.
+
+The intercepts that the bound held are set to the final median ∓ the bound after the last pass (profile-newton.md
+§12).
+
 ## 12. Validation plan
 
 **Fixtures** (`fixtures/logistic/`, synthetic, exact text inputs as ADR-0005: features on a 1/64
@@ -297,3 +312,10 @@ provider with at most 10 records added: the fit of the others unchanged within T
 6. The pairwise-correlation warning of §4 (X-021, D-32): centred co-moments of the fitted rows from
    the summary pass, merged in block order; `LogisticOptions.correlationThreshold` (0.9) is saved
    from format version 2, and version-1 fits load with 0.9 (round 29).
+
+**Round 199: the profile method** (D-83).
+- `numerics`' `ProfileNewton` runs the iteration over `ProfilePasses`. `kernels.LogisticFE.profile` solves a block's
+  intercepts, then calls `schur` at them.
+- The engine's `SparkProfilePasses` makes the pass.
+- `LogisticOptions.newton` chooses the method, and `LogisticFitIO` (format 6) keeps it with the fit's inner-step
+  counts.

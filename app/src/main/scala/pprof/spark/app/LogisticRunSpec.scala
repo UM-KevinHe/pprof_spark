@@ -236,6 +236,7 @@ object LogisticRunSpec {
         "maxIter",
         "bound",
         "backtrack",
+        "newton",
         "screen",
         "minRecords",
         "confidenceLevel",
@@ -261,6 +262,8 @@ object LogisticRunSpec {
           maxIter = integer(fit, "maxIter", "fit").map(_.toInt).getOrElse(d.maxIter),
           bound = number(fit, "bound", "fit").getOrElse(d.bound),
           backtrack = booleanOption("backtrack", d.backtrack),
+          newton =
+            choice(fit, "newton", "fit", LogisticOptions.NewtonMethods.toSeq.sorted, d.newton),
           screen = booleanOption("screen", d.screen),
           minRecords = integer(fit, "minRecords", "fit").getOrElse(d.minRecords),
           confidenceLevel = number(fit, "confidenceLevel", "fit").getOrElse(d.confidenceLevel),

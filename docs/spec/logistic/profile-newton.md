@@ -99,6 +99,8 @@ reached the bound. In the study's case their reported effects were up to 2.4 sho
 stopped.
 - This method reports the bound itself, which is also what SerBIN reports at a tighter tolerance.
 - β differed by 1.5·10⁻⁹, within the tolerance.
+- The variances computed at the effects differ too: Var(β̂), the standard errors, and the held providers'
+  Var(γ̂ⱼ). This addendum to X-051 was confirmed by the maintainer in round 199.
 - The numbers of iterations differ.
 
 These differences are registered as X-051 in the discrepancy round (§10). Interior providers' effects and β agree
@@ -218,7 +220,49 @@ total of inner Newton steps and the number of solves that reached the 100-step c
   (its C35), and SerBIN's code already does the same. The specification's text named only the second clause and is
   corrected.
 - **Calibration and suites.** `docs/parity/logistic-calibration.md` gains the case's 36 rows, all within class.
-  Every logistic fixed-effect suite takes the case from the manifest, and SerBIN passes it.
+  Every logistic fixed-effect suite takes the case from the manifest. The twelve suites run in round 197 passed it
+  with SerBIN. `LogisticProviderTestsMoreSuite` was not among them, and one of its assertions failed on the case
+  until round 199 fixed it (below).
 
 **Round 198, the discrepancy.** X-051 is registered, class C, as proposed, with `lfe-zero-events`' measurements, for
 the maintainer's sign-off. The default-tolerance comparisons of §9 are stated as the build's tests will make them.
+
+**Round 199, the build.**
+- **Numerics.**
+  - `kernels.LogisticFE.profile` solves a block's intercepts as §3 says. Its inner Newton runs on the provider's rows
+    with xᵀβ computed once; the information is floored at 10⁻²⁰, steps are clipped and halved, and solves stop at
+    10⁻¹²·max(1, |γ|) or after 100 steps. It then calls `schur` at the solved intercepts, so its sums are pass A's to
+    the bit.
+  - `ProfileNewton.fit` runs the loop over `ProfilePasses`, with SerBIN's Armijo test, noise level and stopping rule,
+    and returns SerBIN's result type with the inner counts.
+- **Two choices made in the build.**
+  - **The settle.** A pass bounds intercepts by the previous pass's median. So after the last pass, the intercepts
+    the bound held are set to the median of the last pass's intercepts ∓ the bound, as SerBIN's clip leaves them.
+    Without that step they sat 10⁻⁹ (tight) to 6·10⁻⁹ (default) from that bound. Held intercepts are extremes, so the
+    median does not move.
+  - **The shrink cap.** One trial shrinks at most 60 times, then its last pass is accepted. SerBIN's ladder ends
+    because λ > 0, which a zero r would not give.
+- **Engine.**
+  - `LogisticOptions.newton`, `"serbin"` or `"profile"`, validated.
+  - `SparkProfilePasses` makes the `logistic.profile` pass. Its group partials carry pass A's sums and the blocks'
+    intercepts.
+  - `LogisticFit` gains `innerSteps` and `cappedSolves`. `LogisticFitIO`, at format 6, keeps them with the method;
+    versions 1 to 5 read as SerBIN with none.
+  - The run specification's `fit.newton`, Python's `newton` and PerfJob's `--newton` choose the method.
+- **Tests.**
+  - `ProfileNewtonSuite`: SerBIN's fixed point at 10⁻¹²; pass A's sums to the bit; interior scores within 10⁻¹⁰·hⱼ;
+    the bound at the default tolerance; fewer passes.
+  - `LogisticProfileSuite`, over every logistic case:
+    - at 10⁻¹³ against pprof_py's tight fit;
+    - at the default against its default fit, with X-051's handling;
+    - R0 and DIST-6 to the bit;
+    - persistence and validation.
+  - New golden runs pin the method.
+- **A test fixed** (found by round 199's full run).
+  - `LogisticProviderTestsMoreSuite` compares exact-test z with R's. Where R's exact tails are unreliable (X-024),
+    beyond |z| = 5.2, it then required our |z| to exceed 37, assuming such values are extreme.
+  - On `lfe-zero-events`, provider 446 has z of 5.53 to 5.90 by the alternative. Ours, pprof_py's and R's agree to six
+    digits or more there.
+  - The assertion now requires |z| > 37 only where R's z is infinite. Where R's z is finite it requires z beyond the
+    reliable tail, with R's sign. The test fits with SerBIN, whose fits round 199's golden runs show unchanged to the
+    bit, so the failure had been on `main` since round 197.

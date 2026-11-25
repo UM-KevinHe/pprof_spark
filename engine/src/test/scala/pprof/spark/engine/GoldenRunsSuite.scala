@@ -65,6 +65,7 @@ class GoldenRunsSuite extends SparkSuite {
       coxAggregated("lt-unstratified", Ties.Efron),
       coxAggregated("rc-unstratified", Ties.Breslow),
       logisticA(),
+      logisticA(LogisticOptions.ProfileMethod),
       logisticB()
     )
   private lazy val computed: Vector[Run] = coxFixtures ++ logisticFixtures ++ synthetic.map(_._1)
@@ -221,7 +222,10 @@ class GoldenRunsSuite extends SparkSuite {
       name <- LogisticFixtures.Cases
       (label, options) <- Seq(
         "default" -> LogisticOptions(),
-        "tight" -> LogisticOptions(tol = 1e-13)
+        "tight" -> LogisticOptions(tol = 1e-13),
+        // The profile-likelihood Newton (D-83).
+        "profile-default" -> LogisticOptions(newton = LogisticOptions.ProfileMethod),
+        "profile-tight" -> LogisticOptions(tol = 1e-13, newton = LogisticOptions.ProfileMethod)
       )
     } yield logisticRun(
       s"logistic/$name/$label",
@@ -339,7 +343,7 @@ class GoldenRunsSuite extends SparkSuite {
   }
 
   /** 2,400 rows of binomial outcomes with 1 to 5 trials, 30 providers; blocks of 4 KB. */
-  private def logisticA(): (Run, Run) = {
+  private def logisticA(newton: String = LogisticOptions.SerbinMethod): (Run, Run) = {
     val rows = (0 until 2400).map { i =>
       val rng = new SplittableRandom(mix(21L, i.toLong))
       val provider = (i % 30).toLong
@@ -354,11 +358,14 @@ class GoldenRunsSuite extends SparkSuite {
       Seq("id" -> LongType, "provider" -> LongType, "y" -> IntegerType, "n" -> IntegerType) ++
         features(3).map(_ -> DoubleType)
     val spec = LogisticSpec("y", features(3), "provider", trials = Some("n"), rowId = Some("id"))
-    val options = LogisticOptions(blocks = BlockOptions(targetBlockBytes = 4096L))
+    val options = LogisticOptions(blocks = BlockOptions(targetBlockBytes = 4096L), newton = newton)
     val df = frame(rows, columns)
+    val name =
+      if (newton == LogisticOptions.SerbinMethod) "logistic/synthetic-a"
+      else s"logistic/synthetic-a-$newton"
     (
-      logisticRun("logistic/synthetic-a", df.repartition(1), spec, options),
-      logisticRun("logistic/synthetic-a", df.repartition(7, col("id")), spec, options)
+      logisticRun(name, df.repartition(1), spec, options),
+      logisticRun(name, df.repartition(7, col("id")), spec, options)
     )
   }
 

@@ -595,6 +595,28 @@ compared estimates for 100 features against the truth for 200. Round 152 makes t
 
 ## Sandbox measurements
 
+### Round 199: logistic, SerBIN and the profile-likelihood Newton (step 5)
+
+**Setup.** One core, Spark 4.1.0 in local mode, round 199's build. Each method ran twice, alternating
+`--newton profile` with the default. The figures are medians; iteration CPU is the passes' executor CPU.
+
+| Point | Method | Iterations | Passes | Iteration CPU | Fit |
+|---|---|---|---|---|---|
+| 200,000 × 180, 320 providers | SerBIN | 5 | 10 (5 A, 5 B) | 16.6 s | 92.4 s |
+| | profile | 4 | 5 | 12.5 s | 79.7 s |
+| 1,000,000 × 20, 1,000 providers | SerBIN | 4 | 8 (4 A, 4 B) | 5.3 s | 42.3 s |
+| | profile | 4 | 5 | 3.9 s | 39.0 s |
+
+- **Cost.** The iterations took 1.32 and 1.34 times less CPU, and the fits were 14% and 8% shorter. The profile
+  method makes one pass per iteration, plus the pass at its start; no trial was rejected.
+- **Where it comes from.** At 180 features a profile pass cost 12.5 µs per row, against pass A's 13.6 and pass B's
+  3.8 (each method's first run). So the intercepts' solve costs little, and the gain comes from dropping pass B and,
+  at 180 features, one iteration.
+- **The same fit.** The log-likelihood is identical to the bit at both points. The largest |β̂ − β|/SE against the
+  generating coefficients agrees within 3·10⁻¹⁴ relative.
+- **Not compared here: the estimates themselves.** These reports did not carry them. PerfJob now writes `estimates`
+  and `standard_errors`, so the cluster's exit can compare the methods within T-coef.
+
 ### Round 149: one-core profile by call site
 
 This was measured with `local[1]`, the `02_scale.py` design, 200,000 rows, 320 providers and 100 features. The full

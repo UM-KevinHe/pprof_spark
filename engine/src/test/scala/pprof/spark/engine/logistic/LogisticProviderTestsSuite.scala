@@ -90,10 +90,17 @@ abstract class LogisticProviderTestsBase(cases: Seq[String]) extends SparkSuite 
             ) <= UpperReliable)
           }
           check("T-test", s"$key z vs R", finite.map(z), finite.map(theirs).toArray)
+          // Outside the compared region R's z is infinite, where ours must be extreme, or finite beyond the
+          // reliable tail (X-024), where ours must be beyond it too, with R's sign: lfe-zero-events (round 197) has
+          // a provider at z ≈ 5.6, past the threshold but far from extreme (found in round 199).
           assert(
             theirs.indices
               .filterNot(finite.contains)
-              .forall(i => math.signum(z(i)) == math.signum(theirs(i)) && math.abs(z(i)) > 37.0)
+              .forall { i =>
+                math.signum(z(i)) == math.signum(theirs(i)) &&
+                math.abs(z(i)) > (if (theirs(i).isInfinite) 37.0 else UpperReliable)
+              },
+            s"$key vs R: a provider outside the compared region"
           )
           checkFlags(
             s"$key vs R",

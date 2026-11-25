@@ -29,14 +29,15 @@ import pprof.spark.numerics.SerbinStep
   */
 object LogisticFitIO {
 
-  val FormatVersion: Int = 5
+  val FormatVersion: Int = 6
 
   /** Version 1 lacks `correlationThresholdBits` (its fits load with the default threshold); versions 1
     * and 2 lack slice 2b's cluster column, robust variances and AUC; versions 1 to 3 lack providers
     * added after fitting (§8a), and read as having none; versions 1 to 4 lack the reduction groups,
-    * read as one block per group (round 174, OI-117).
+    * read as one block per group (round 174, OI-117); versions 1 to 5 lack the Newton method and the profile
+    * method's inner counts, read as SerBIN with none (round 199, D-83).
     */
-  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4, 5)
+  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4, 5, 6)
   val Kind: String = "pprof.spark.engine.logistic.LogisticFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -115,7 +116,10 @@ object LogisticFitIO {
       field("robustCovarianceBits", Longs, nullable = true),
       field("clusters", LongType, nullable = true),
       field("aucBits", LongType, nullable = true),
-      field("added", IntegerType, nullable = true)
+      field("added", IntegerType, nullable = true),
+      field("newton", StringType, nullable = true),
+      field("innerSteps", LongType, nullable = true),
+      field("cappedSolves", IntegerType, nullable = true)
     )
   )
 
@@ -219,7 +223,10 @@ object LogisticFitIO {
       fit.robustCovariance.map(v => bits(v)).orNull,
       fit.clusters,
       fit.auc.map(v => java.lang.Long.valueOf(bit(v))).orNull,
-      Integer.valueOf(fit.added.size)
+      Integer.valueOf(fit.added.size),
+      fit.options.newton,
+      java.lang.Long.valueOf(fit.innerSteps),
+      Integer.valueOf(fit.cappedSolves)
     )
     spark
       .createDataFrame(java.util.List.of(record), MetadataSchema)
@@ -338,7 +345,10 @@ object LogisticFitIO {
         r.getAs[Int]("maxGroupsOnDriver"),
         r.getAs[Long]("driverBudgetBytes"),
         r.getAs[String]("storageLevel")
-      )
+      ),
+      newton = Option(r.getAs[Any]("newton"))
+        .map(_.asInstanceOf[String])
+        .getOrElse(LogisticOptions.SerbinMethod)
     )
     val count = r.getAs[Int]("providers")
     if (count > options.maxProvidersOnDriver)
@@ -429,7 +439,9 @@ object LogisticFitIO {
       clusters = Option(r.get(r.fieldIndex("clusters"))).map(_.asInstanceOf[Long]).getOrElse(0L),
       auc = Option(r.get(r.fieldIndex("aucBits"))).map(v =>
         java.lang.Double.longBitsToDouble(v.asInstanceOf[Long])
-      )
+      ),
+      innerSteps = Option(r.getAs[Any]("innerSteps")).map(_.asInstanceOf[Long]).getOrElse(0L),
+      cappedSolves = Option(r.getAs[Any]("cappedSolves")).map(_.asInstanceOf[Int]).getOrElse(0)
     )
   }
 }

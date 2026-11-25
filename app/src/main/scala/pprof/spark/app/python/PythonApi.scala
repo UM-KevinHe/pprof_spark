@@ -295,6 +295,7 @@ object PythonApi {
         "maxIter",
         "bound",
         "backtrack",
+        "newton",
         "screen",
         "minRecords",
         "confidenceLevel",
@@ -390,6 +391,8 @@ object PythonApi {
             bound = value("bound", number, _.asDouble, "a number").getOrElse(defaults.bound),
             backtrack =
               value("backtrack", boolean, _.asBoolean, "a boolean").getOrElse(defaults.backtrack),
+            newton = value("newton", (v: JsonNode) => v.isTextual, _.asText, "a string")
+              .getOrElse(defaults.newton),
             screen = value("screen", boolean, _.asBoolean, "a boolean").getOrElse(defaults.screen),
             minRecords =
               value("minRecords", integer, _.asLong, "an integer").getOrElse(defaults.minRecords),

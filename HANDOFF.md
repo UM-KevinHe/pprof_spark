@@ -228,6 +228,67 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 199 (2026-11-25): X-051 approved; step 5's build, the profile-likelihood Newton (D-83)
+
+- Round 198 is on `main` as `1ae77cf`. The maintainer signed off X-051 as proposed, and then confirmed an addendum
+  found in the build: the variances computed at the reported effects differ too. On `lfe-zero-events`, pprof_py's
+  default against its tight fit differs by 6.1·10⁻⁶ in Var(β̂), 1.7·10⁻⁶ in the standard errors, and up to 75% in the
+  held providers' Var(γ̂ⱼ).
+- **Specifications (NN-2).** fixed-effect-estimation.md §6, §11 and §14; profile-newton.md §5 and §12.
+- **Numerics.**
+  - `kernels.LogisticFE.profile` solves the intercepts by safeguarded scalar Newton, then calls pass A's `schur` at
+    them, so its sums are pass A's to the bit.
+  - `ProfileNewton.fit` uses SerBIN's Armijo test, noise level and stopping rule.
+  - `InMemoryProfilePasses` serves the tests.
+- **Two choices made in the build** (profile-newton.md §12).
+  - **The settle.** The bound's held intercepts are set to the final median ∓ the bound after the last pass. A pass
+    uses the previous pass's median, so they would otherwise sit 10⁻⁹ to 6·10⁻⁹ from it.
+  - **The shrink cap.** At most 60 shrinks per trial.
+- **Engine.**
+  - `LogisticOptions.newton` (`"serbin"` by default, or `"profile"`).
+  - `SparkProfilePasses`, the `logistic.profile` pass, its group partials carrying pass A's sums and the intercepts.
+  - `LogisticFit.innerSteps` and `cappedSolves`. `LogisticFitIO` writes format 6; versions 1 to 5 read as SerBIN.
+  - `fit.newton` in the run specification and Python's API, Python's `newton`, and PerfJob's `--newton`.
+- **Tests.**
+  - `ProfileNewtonSuite` (4): SerBIN's fixed point at 10⁻¹²; pass A's sums to the bit; interior scores within
+    10⁻¹⁰·hⱼ; the bound at the default tolerance; fewer passes.
+  - `LogisticProfileSuite` (9): every logistic case at 10⁻¹³ against pprof_py's tight fit, and at the default against
+    its default fit with X-051's handling; R0 and DIST-6 to the bit; persistence; validation.
+  - The Python option test.
+- **A test fixed, failing on `main` since round 197.** `LogisticProviderTestsMoreSuite` assumed that an exact-test z
+  beyond X-024's reliable tail (|z| > 5.2) is extreme (> 37).
+  - On `lfe-zero-events`, provider 446 has z of 5.53 to 5.90, and ours, pprof_py's and R's agree to six digits or
+    more. The assertion now asks for |z| > 37 only where R's z is infinite, and otherwise for z beyond the reliable
+    tail with R's sign.
+  - Round 197 ran twelve logistic suites and not this one, so its records' claim that every logistic suite passed the
+    case was wrong. It is corrected in profile-newton.md §12.
+- **Golden runs.** Against `main`'s manifest, every recorded run kept its bits, and the only differences were the 15 new profile
+  runs: `profile-default` and `profile-tight` for the 7 logistic cases, and `synthetic-a-profile` at 1 and 7
+  partitions (R0). Written with `PPROF_GOLDEN_WRITE`, the manifest goes from 52 to 67 runs, with no existing
+  value changed, and the suite passes against it.
+- **Measured in the sandbox** (`perf-results.md`, "Round 199"): One core, medians of two runs each.
+  - **200,000 × 180.** SerBIN takes 5 iterations, 10 passes and 16.6 s of iteration CPU; the profile method 4,
+    5 and 12.5 s, 1.32 times less. Fits are 92.4 and 79.7 s.
+  - **1M × 20.** SerBIN takes 4 iterations, 8 passes and 5.3 s; the profile method 4, 5 and 3.9 s, 1.34 times
+    less. Fits are 42.3 and 39.0 s.
+  - **The same fit.** Log-likelihoods are identical to the bit.
+  - **For the cluster.** PerfJob's reports now carry the estimates and standard errors, so the exit can compare
+    the methods within T-coef.
+- **Records.** `DISCREPANCIES.md` (X-051 approved, with its addendum); the specifications; plan §4; STATUS.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- **numerics** 124 tests;
+- **engine** 661 tests in seven batches;
+- **app** 38, **bench** 30 (rerun after the report change), **testkit** 28;
+- **Python** 49 on PySpark 4.1.0;
+- **GoldenRunsSuite** 4 of 4 against the new manifest.
+
+scalafmt is clean, and `check-engine-api.sh` passes with its self-test. The patch applies to a fresh clone of
+`main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21 and Spark 4.0.0's jars.
+
+**Next: step 5's exit on the cluster** (plan §4): passes and CPU per fit against step 2, and converged estimates
+within T-coef of SerBIN's, with `--newton profile` against SerBIN on the same points.
+
 ## Round 198 (2026-11-25): X-051 proposed, step 5's discrepancy
 
 - Round 197 is on `main` as `6e8dce7`.

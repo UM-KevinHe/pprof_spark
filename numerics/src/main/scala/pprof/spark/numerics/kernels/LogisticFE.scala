@@ -165,6 +165,113 @@ object LogisticFE {
     Schur(s.values, r.values, scoreTerm.value, loglik.value)
   }
 
+  /** One block's part of a profile-likelihood pass (docs/spec/logistic/profile-newton.md §3, D-83): the providers'
+    * solved intercepts, which of them the bound held (−1 at the lower end, +1 at the upper, 0 inside), the inner
+    * Newton steps taken, the solves that reached the step cap, and pass A's sums at the solved intercepts.
+    */
+  final case class ProfileBlock(
+      schur: Schur,
+      gamma: Array[Double],
+      held: Array[Int],
+      innerSteps: Long,
+      capped: Int
+  )
+
+  /** An inner solve stops when its step is at most this, relative to max(1, |γ|) (§3). */
+  val ProfileStepTolerance: Double = 1e-12
+
+  /** Inner Newton steps allowed per provider and pass (§3). */
+  val ProfileMaxSteps: Int = 100
+
+  /** Each provider's intercept maximizes its log-likelihood over [median − bound, median + bound] from its warm start
+    * `gamma(k)`: at the lower end with no events, at the upper end with only events, else by scalar Newton with the
+    * information floored as everywhere (§5), each step clipped to the interval and halved while the provider's
+    * log-likelihood falls. Then pass A at the solved intercepts, so its sums are SerBIN's pass A's to the bit.
+    */
+  def profile(
+      rows: RowsView,
+      gamma: Array[Double],
+      beta: Array[Double],
+      median: Double,
+      bound: Double
+  ): ProfileBlock = {
+    val lower = median - bound
+    val upper = median + bound
+    def clip(v: Double): Double = math.min(math.max(v, lower), upper)
+    val solved = new Array[Double](rows.providers)
+    val held = new Array[Int](rows.providers)
+    var innerSteps = 0L
+    var capped = 0
+    var k = 0
+    while (k < rows.providers) {
+      val from = rows.start(k)
+      val until = rows.end(k)
+      val linear = new Array[Double](until - from)
+      var events = 0.0
+      var trials = 0.0
+      var r = from
+      while (r < until) {
+        linear(r - from) = eta(rows, r, 0.0, beta)
+        events += rows.yAt(r)
+        trials += rows.nAt(r)
+        r += 1
+      }
+      def loglikAt(g: Double): Double = {
+        val sum = new NeumaierSum
+        var i = from
+        while (i < until) {
+          sum.add(rowLoglik(rows.yAt(i), rows.nAt(i), g + linear(i - from)))
+          i += 1
+        }
+        sum.value
+      }
+      if (events <= 0.0) solved(k) = lower
+      else if (events >= trials) solved(k) = upper
+      else {
+        var g = clip(gamma(k))
+        var current = loglikAt(g)
+        var steps = 0
+        var done = false
+        while (!done && steps < ProfileMaxSteps) {
+          val score = new NeumaierSum
+          val info = new NeumaierSum
+          var i = from
+          while (i < until) {
+            val pi = sigmoid(g + linear(i - from))
+            val n = rows.nAt(i)
+            score.add(rows.yAt(i) - n * pi)
+            info.add(math.max(n * pi * (1.0 - pi), 1e-20))
+            i += 1
+          }
+          var delta = score.value / info.value
+          var candidate = clip(g + delta)
+          if (candidate == g) done = true
+          else {
+            var value = loglikAt(candidate)
+            var halvings = 0
+            while (value < current && halvings < 60) {
+              delta /= 2.0
+              candidate = clip(g + delta)
+              value = loglikAt(candidate)
+              halvings += 1
+            }
+            val moved = math.abs(candidate - g)
+            g = candidate
+            current = value
+            steps += 1
+            if (moved <= ProfileStepTolerance * math.max(1.0, math.abs(g))) done = true
+          }
+        }
+        if (!done) capped += 1
+        innerSteps += steps
+        solved(k) = g
+      }
+      held(k) = if (solved(k) == lower) -1 else if (solved(k) == upper) 1 else 0
+      k += 1
+    }
+    ProfileBlock(schur(rows, solved, beta), solved, held, innerSteps, capped)
+  }
+
   /** Pass B (§6, steps 3 and 5): Δγⱼ = gⱼ/hⱼ − x̄ⱼᵀΔβ for the block's providers and ℓ at
     * (γ + vΔγ, β + vΔβ) for each step length v.
     */

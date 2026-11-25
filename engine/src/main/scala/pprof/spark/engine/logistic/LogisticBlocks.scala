@@ -94,6 +94,22 @@ final case class LogisticSchurPartial(
     loglik: Double
 )
 
+/** A reduction group's profile pass (docs/spec/logistic/profile-newton.md §6, D-83): pass A's sums at the solved
+  * intercepts, and its blocks with their providers' solved intercepts and held flags, in block order.
+  */
+final case class LogisticProfilePartial(
+    blockId: Int,
+    packed: Array[Double],
+    rhs: Array[Double],
+    scoreTerm: Double,
+    loglik: Double,
+    blocks: Array[Int],
+    gamma: Array[Double],
+    held: Array[Int],
+    innerSteps: Long,
+    capped: Int
+)
+
 final case class LogisticTrialPartial(
     blockId: Int,
     deltaGamma: Array[Double],

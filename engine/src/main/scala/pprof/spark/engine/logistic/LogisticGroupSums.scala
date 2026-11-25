@@ -25,6 +25,46 @@ private[logistic] final class SchurSum(p: Int) {
     LogisticSchurPartial(group, packed.values, rhs.values, term.value, loglik.value)
 }
 
+/** A reduction group's profile pass: pass A's sums as `SchurSum` adds them, and its blocks' intercepts in block order. */
+private[logistic] final class ProfileSum(p: Int) {
+  private val schur = new SchurSum(p)
+  private val blocks = Vector.newBuilder[(Int, Array[Double], Array[Int])]
+  private var innerSteps = 0L
+  private var capped = 0
+
+  def add(blockId: Int, part: pprof.spark.numerics.kernels.LogisticFE.ProfileBlock): Unit = {
+    schur.add(
+      LogisticSchurPartial(
+        blockId,
+        part.schur.packed,
+        part.schur.rhs,
+        part.schur.scoreTerm,
+        part.schur.loglik
+      )
+    )
+    blocks += ((blockId, part.gamma, part.held))
+    innerSteps += part.innerSteps
+    capped += part.capped
+  }
+
+  def partial(group: Int): LogisticProfilePartial = {
+    val s = schur.partial(group)
+    val parts = blocks.result()
+    LogisticProfilePartial(
+      group,
+      s.packed,
+      s.rhs,
+      s.scoreTerm,
+      s.loglik,
+      parts.map(_._1).toArray,
+      parts.flatMap(_._2).toArray,
+      parts.flatMap(_._3).toArray,
+      innerSteps,
+      capped
+    )
+  }
+}
+
 private[logistic] final class VarianceSum(p: Int) {
   private val packed = new NeumaierVector(Moments.packedLength(p))
   private val loglik = new NeumaierSum

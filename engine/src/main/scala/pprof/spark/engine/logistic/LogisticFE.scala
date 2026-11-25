@@ -25,6 +25,9 @@ import pprof.spark.numerics.{
   NeumaierSum,
   NeumaierVector,
   Normal,
+  ProfileNewton,
+  ProfilePass,
+  ProfilePasses,
   Serbin,
   SerbinPasses
 }
@@ -130,16 +133,31 @@ object LogisticFE {
         j <- i + 1 until p
         if math.abs(correlations(Moments.packedIndex(i, j, p))) > options.correlationThreshold
       } yield s"(${spec.features(i)}, ${spec.features(j)})"
-      val passes = new SparkPasses(workingSet.records, providersOfBlock, p, workingSet.groups)
-      val result =
+      val start = Array.fill(m)(StrictMath.log(yBar / (1.0 - yBar)))
+      // SerBIN, or the profile-likelihood Newton through its reduced system (D-83).
+      val (result, innerSteps, cappedSolves) =
         try
-          Serbin.fit(
-            Array.fill(m)(StrictMath.log(yBar / (1.0 - yBar))),
-            new Array[Double](p),
-            passes,
-            options.serbin,
-            options.aliasTolerance
-          )
+          if (options.newton == LogisticOptions.ProfileMethod) {
+            val profile = ProfileNewton.fit(
+              start,
+              new Array[Double](p),
+              new SparkProfilePasses(workingSet.records, providersOfBlock, p, workingSet.groups),
+              options.serbin,
+              options.aliasTolerance
+            )
+            (profile.result, profile.innerSteps, profile.capped)
+          } else
+            (
+              Serbin.fit(
+                start,
+                new Array[Double](p),
+                new SparkPasses(workingSet.records, providersOfBlock, p, workingSet.groups),
+                options.serbin,
+                options.aliasTolerance
+              ),
+              0L,
+              0
+            )
         catch {
           case e: AliasedException =>
             throw new LogisticAliasingException(e.columns.map(spec.features))
@@ -253,13 +271,19 @@ object LogisticFE {
       if (excluded.nonEmpty)
         warnings += s"${excluded.size} out of ${sizes.size} providers have at most ${options.minRecords} " +
           "records and were not fitted"
+      val method =
+        if (options.newton == LogisticOptions.ProfileMethod) "profile-likelihood Newton"
+        else "SerBIN"
       if (!result.converged)
-        warnings += s"the SerBIN fit did not converge in ${result.iterations} steps (criterion " +
+        warnings += s"the $method fit did not converge in ${result.iterations} steps (criterion " +
           s"${result.criterion}, tol ${options.tol})"
       else if (result.shortened)
         warnings += s"the line search shortened the last step to ${result.lastStep} while the Newton " +
           s"beta step was ${result.lastNewtonBetaStep} (tol ${options.tol}); the estimates may not be " +
           "at the maximum"
+      if (cappedSolves > 0)
+        warnings += s"$cappedSolves inner solves of provider intercepts reached ${Kernel.ProfileMaxSteps} steps; " +
+          "their last values were used (D-83 §8)"
       val degenerateCount = degenerate.count(identity)
       if (degenerateCount > 0)
         warnings += s"$degenerateCount providers have no events or only events; their effects have no " +
@@ -301,7 +325,9 @@ object LogisticFE {
         summaries.iterator.map(_.fingerprint).sum,
         robustCovariance = robust.map(_._1),
         clusters = robust.map(_._2).getOrElse(0L),
-        auc = auc
+        auc = auc,
+        innerSteps = innerSteps,
+        cappedSolves = cappedSolves
       )
     } finally workingSet.release()
   }
@@ -1008,6 +1034,76 @@ object LogisticFE {
       val sums = Array.fill(v.length)(new NeumaierSum)
       parts.foreach(part => part.loglik.indices.foreach(t => sums(t).add(part.loglik(t))))
       Kernel.Trial(deltaGamma, sums.map(_.value))
+    }
+  }
+
+  /** The profile pass (docs/spec/logistic/profile-newton.md §6): per block, the intercepts solved in the task and pass
+    * A's sums at them, folded in reduction groups as pass A's partials are; the intercepts come back in block order.
+    */
+  private final class SparkProfilePasses(
+      records: Dataset[LogisticChunk],
+      providersOfBlock: Array[Array[Int]],
+      p: Int,
+      groups: ReductionGroups
+  ) extends ProfilePasses {
+
+    def solve(
+        gamma: Array[Double],
+        beta: Array[Double],
+        median: Double,
+        bound: Double
+    ): ProfilePass = {
+      val b = beta.clone()
+      val effects = LogisticBlocks.effects(providersOfBlock, gamma)
+      val (folds, width, med, limit) = (groups, p, median, bound)
+      val parts = records
+        .mapPartitions((chunks: Iterator[LogisticChunk]) =>
+          GroupFold(
+            LogisticBlocks.assemble(chunks),
+            (block: LogisticBlock) => block.blockId,
+            folds
+          )(
+            new ProfileSum(width)
+          ) { (sum, block) =>
+            sum
+              .add(block.blockId, Kernel.profile(block.rows, effects(block.blockId), b, med, limit))
+          }.map { case (group, sum) => sum.partial(group) }
+        )(Encoders.product[LogisticProfilePartial])
+        .collectAs("logistic.profile")
+        .sortBy(_.blockId)
+        .toSeq
+      val term = new NeumaierSum
+      val loglik = new NeumaierSum
+      parts.foreach { part =>
+        term.add(part.scoreTerm)
+        loglik.add(part.loglik)
+      }
+      val solved = new Array[Double](gamma.length)
+      val held = new Array[Int](gamma.length)
+      parts.foreach { part =>
+        var offset = 0
+        part.blocks.foreach { blockId =>
+          val ids = providersOfBlock(blockId)
+          ids.indices.foreach { i =>
+            solved(ids(i)) = part.gamma(offset + i)
+            held(ids(i)) = part.held(offset + i)
+          }
+          offset += ids.length
+        }
+      }
+      ProfilePass(
+        Kernel.Schur(
+          OrderedReduction
+            .reduce(parts.map(part => part.blockId -> part.packed), Moments.packedLength(p)),
+          OrderedReduction.reduce(parts.map(part => part.blockId -> part.rhs), p),
+          term.value,
+          loglik.value
+        ),
+        solved,
+        held,
+        parts.map(_.innerSteps).sum,
+        parts.map(_.capped).sum
+      )
     }
   }
 }
