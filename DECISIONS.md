@@ -103,6 +103,21 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-83: Logistic profile-likelihood Newton through SerBIN's reduced system, performance step 5's specification (Proposed, round 196)
+
+Proposed for the maintainer's approval: `docs/spec/logistic/profile-newton.md`.
+- **The method.** One pass per iteration solves each provider's intercept in its task, by scalar Newton within the
+  previous pass's median ∓ `bound`; providers without events, or with only events, are held at the bound. The pass
+  returns SerBIN's pass A sums and the solved γ. The driver steps Δβ = S⁻¹r, SerBIN's reduced right-hand side, with
+  SerBIN's line search and convergence on the profile log-likelihood.
+- **The same fixed point as SerBIN's.** The study matched pprof_py within 9·10⁻¹⁷ in β at a tolerance of 10⁻¹².
+  Lockstep parity does not apply (accepted 2026-11-13); converged parity does.
+- **An option.** `LogisticOptions.newton = "profile"`; SerBIN stays the default until step 5's exit.
+- **X-051**, to register: at the default tolerance, providers without events report the bound, where SerBIN can stop
+  short of it.
+- **Rounds.** A fixture `lfe-zero-events` (30,000 rows, 600 providers, about 12% without events); the discrepancy;
+  the build; the cluster's measurement.
+
 ### D-82: Aggregate only strata above a size threshold, a refinement of D-81 §2 (Accepted: approved by the maintainer, 2026-11-25)
 
 Proposed in round 194 and approved as written on 2026-11-25; built in round 195: `docs/spec/cox/per-time-aggregates.md`

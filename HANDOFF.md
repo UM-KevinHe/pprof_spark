@@ -228,6 +228,39 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 196 (2026-11-25): step 5's specification, logistic profile-likelihood Newton (D-83 proposed)
+
+- Round 195 is on `main` as `c3883fa`. The maintainer asked for step 5's specification next.
+- **`docs/spec/logistic/profile-newton.md`** (Draft), for approval as D-83, following study §4.3.
+  - **The pass.** Each provider's intercept is solved in its task, by scalar Newton with halving, within the previous
+    pass's median ∓ `bound`. Providers without events, or with only events, are held at the bound. The pass returns
+    SerBIN's pass A sums (S, r, ℓ) and the solved γ.
+  - **The driver.** Δβ = S⁻¹r, SerBIN's reduced right-hand side, not the plain profile score: bounded providers make
+    them differ, and the study found the plain score converging outside T-coef. SerBIN's line search and convergence
+    run on ℓₚ.
+  - **Passes.** One per iteration, plus one per rejected trial, against SerBIN's two plus one per eight rejected step
+    lengths.
+  - **The fixed point is SerBIN's,** so converged parity holds. Lockstep parity does not apply, as the maintainer
+    accepted on 2026-11-13.
+  - **X-051, to register.** At the default tolerance, providers without events report the bound, where SerBIN can
+    stop up to 2.4 short of it.
+  - **An option**, `LogisticOptions.newton = "profile"`. SerBIN stays the default until step 5's exit.
+  - **Rounds.** The fixture `lfe-zero-events` (30,000 rows, 600 providers, about 12% without events, from the pinned
+    environment); the discrepancy; the build; the cluster's measurement.
+- **What was read:**
+  - plan §4's step 5 and §6.3, on comparing changed iterates at convergence;
+  - study §4.3;
+  - fixed-effect-estimation.md §2, §5, §6, §9 and §11;
+  - the logistic fixtures, which carry pprof_py references at the default and a tight tolerance;
+  - `LogisticOptions`;
+  - the discrepancy register, which ends at X-050.
+- **Records.** D-83 (Proposed); plan §4; STATUS.
+
+Evidence (assistant sandbox): documentation only. The patch applies to a fresh clone of `main` with an identical
+tree; scalafmt is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next: the maintainer's review of D-83.** Then step 5's fixture round.
+
 ## Round 195 (2026-11-25): D-82 approved and built, a threshold for Cox aggregation
 
 - Round 194 is on `main` as `3a6c921`. The maintainer approved D-82 as written.
