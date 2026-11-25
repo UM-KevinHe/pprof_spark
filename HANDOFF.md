@@ -228,6 +228,33 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 193 (2026-11-25): step 4's exit complete, agreement with the sweep
+
+- Round 192 is on `main` as `6da406d`. The maintainer ran the agreement points on round 191's build: two
+  unstratified points, each aggregated and in one block.
+- **The budget.** The first one-block runs used `--budget-bytes 1000`, as the previous reply advised, and stopped at
+  once: the budget also bounds each reduction group's partial (1,856 bytes at 20 features, 131,776 at 180). The
+  budgets were then checked in the sandbox and rerun:
+  - 100,000 bytes at 20 features;
+  - 1,000,000 at 180.
+- **Agreement.** The log-likelihoods print identically, and max |z| agrees within 2·10⁻¹⁴:
+  - 1M × 20: 46 blocks against 1;
+  - 250,000 × 180: 88 blocks against 1.
+- **Step 4's exit is complete.** It took this and round 192's unstratified 20M-row fit on every executor.
+- **The cost at these sizes (OI-126).** On one executor, the aggregated evaluation needed 4.9 and 3.1 times the
+  sweep's CPU per row, and the fits took 48% and 21% longer. Each reduction group shuffles a stratum's whole per-time
+  totals, whatever its size, so D-81 §2's rule is generous for strata an executor could sweep. A refinement would be
+  the maintainer's change to D-81.
+- **Records.** `perf-results.md`; plan §4; `per-time-aggregates.md` §11; OI-126; STATUS. Every figure was computed
+  from the reports' JSON, and no cluster-identifying detail was recorded.
+
+Evidence (assistant sandbox): documentation only, apart from four sandbox PerfJob fits that checked the budgets. The
+patch applies to a fresh clone of `main` with an identical tree; scalafmt is clean, and `check-engine-api.sh` passes
+with its self-test.
+
+**Next: step 5** (plan §4): logistic profile-likelihood Newton stepping through SerBIN's reduced system, specified
+first (NN-2). Alternatively, OI-126's refinement of D-81 §2.
+
 ## Round 192 (2026-11-25): step 4's exit, the unstratified fit
 
 - Round 191 is on `main` as `0814d9a`. The maintainer ran step 4's exit fit on it: `--model cox --rows 2e7 --features

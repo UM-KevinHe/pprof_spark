@@ -214,3 +214,10 @@ specified.
 **Exit, round 192.** On the cluster (`perf-results.md`, "2026-11-25"), one Cox stratum of 20M rows at 180 features
 fit in 704.7 s over 7,021 blocks and up to ten executors. An evaluation took 42.0 µs of CPU per row: 6.7 in pass 1 and
 35.3 in pass 2. Pass 1's shuffle was 1.24 GiB per evaluation, as §7 estimated.
+
+**Exit complete, round 193.** On the cluster, one stratum aggregated over 46 and 88 blocks gave the same
+log-likelihood as one block, at 1M rows × 20 features and 250,000 × 180.
+
+At those sizes the aggregated evaluation cost 4.9 and 3.1 times the sweep's CPU per row (OI-126). Each reduction group
+shuffles a stratum's whole per-time totals, whatever its size, so §2's rule, which aggregates any stratum larger than a
+block, is generous for strata an executor could sweep.

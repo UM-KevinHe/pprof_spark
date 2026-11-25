@@ -11,6 +11,36 @@ Estimates and arithmetic are never entered here; they live in `docs/spec/perform
 
 The scale runs reported on 2026-11-13 used round 81's build (OI-103), so they are not entered.
 
+### 2026-11-25: step 4's exit, agreement with the sweep (build `0814d9a`, round 191)
+
+The exit's second condition is agreement with the stratum sweep at a size both can run. Each point was run twice,
+unstratified, on round 191's build, off-heap on Spark 4.0, with Breslow ties:
+- as it is, the stratum aggregated over blocks;
+- with a driver budget too small for the stratum's per-time totals, which keeps it in one block and sweeps it.
+
+Every run had one executor.
+
+| Point | Budget | Blocks | Fit s | Evaluation: CPU µs per row per pass | Utilization | ℓ | Max \|z\| |
+|---|---|---|---|---|---|---|---|
+| 1M rows, 20 features | default | 46 | 30.3 | 3.0 + 1.7 = 4.7 | 0.55 | −3812460.6236221213 | 1.939501825356209 |
+| | 100,000 bytes | 1 | 20.5 | 0.95 | 0.22 | −3812460.6236221213 | 1.9395018253561744 |
+| 250,000 rows, 180 features | default | 88 | 39.5 | 20.4 + 34.7 = 55.1 | 0.57 | −490209.9312356898 | 3.0966634634464305 |
+| | 1,000,000 bytes | 1 | 32.7 | 17.8 | 0.25 | −490209.9312356898 | 3.0966634634464323 |
+
+Readings:
+- **Agreement.** At both points the log-likelihoods print identically, far inside T-fn. The truth checks' max |z|
+  agree within 2·10⁻¹⁴, relative. This and the 20M-row fit complete step 4's exit.
+- **The cost at these sizes (OI-126).** The aggregated evaluation needed 4.9 times the sweep's CPU per row at 20
+  features and 3.1 times at 180, and the fits took 48% and 21% longer.
+  - Each reduction group shuffles its strata's whole per-time totals, whatever the stratum's size: 13.7 MB per
+    evaluation at 1M × 20, and 171 MB at 250,000 × 180.
+  - At 20M rows the same cost was spread over 80 times the rows, and pass 1 was 16% of the evaluation.
+- **Parallelism.** On the one executor, the aggregated runs used its cores (utilization 0.55 and 0.57); the sweep used
+  one (0.22 and 0.25).
+- **A first attempt** at the one-block runs used a budget of 1,000 bytes and stopped at once. The budget also bounds
+  each reduction group's partial: 1,856 bytes at 20 features, 131,776 at 180. The budgets above were checked in the
+  sandbox first.
+
 ### 2026-11-25: step 4's exit, the unstratified fit (build `0814d9a`, round 191)
 
 The exit of plan §4's step 4 ran one Cox stratum of 20M rows on round 191's build: `--model cox --rows 2e7 --features

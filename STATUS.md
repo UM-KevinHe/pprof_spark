@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-25, round 192.
+Updated 2026-11-25, round 193.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -223,7 +223,8 @@ through round 100 as the maintainer reported.
 | 189 | D-81 approved (2026-11-23). Step 4's fixture: `lt-unstratified` (5,000 rows, unstratified, 60 days, truncation, weights, offsets), generated with the pinned reference environment, the existing Cox fixtures reproduced byte for byte; the case joins the Cox suites, the calibration (22 rows, all within class) and the golden runs (new runs, every recorded value unchanged) | Merged (b89f0d2) |
 | 190 | Step 4's evaluation (D-81): Cox strata larger than a block on gridded times spread over blocks of their own and are evaluated from per-time aggregates in two passes; robust fits keep whole strata until round 191; specifications and ADR-0004 amended; existing golden runs unchanged, two aggregated runs added; OI-126 opened (pass 1's cost) | Merged (c74247a) |
 | 191 | The baseline, residuals and robust variance of aggregated strata (D-81 §6): per-time totals on the driver give the baseline and each stratum's residual tables; blocks compute their rows' residuals from them; robust and clustered fits now aggregate, the budget counting residual tables | Merged (0814d9a) |
-| 192 | Step 4's exit recorded: on round 191's build an unstratified 20M-row Cox fit at 180 features ran over 7,021 blocks and up to ten executors in 704.7 s (42.0 µs of CPU per row per evaluation, 1.24 times the stratified sweep); agreement with the sweep on the cluster awaits two runs | Delivered as a patch |
+| 192 | Step 4's exit recorded: on round 191's build an unstratified 20M-row Cox fit at 180 features ran over 7,021 blocks and up to ten executors in 704.7 s (42.0 µs of CPU per row per evaluation, 1.24 times the stratified sweep); agreement with the sweep on the cluster awaits two runs | Merged (6da406d) |
+| 193 | Step 4's exit complete: on the cluster, one unstratified stratum aggregated over 46 and 88 blocks gave the same log-likelihood as one block (1M × 20, 250,000 × 180); at those sizes aggregation cost 3.1 to 4.9 times the sweep's CPU per row (OI-126) | Delivered as a patch |
 
 ## Decisions and spikes
 
