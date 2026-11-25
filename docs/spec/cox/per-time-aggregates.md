@@ -41,7 +41,7 @@ Continuous times keep the sweep and OI-03's planned route.
 
 At 180 features and 1,826 daily times, one stratum's totals are 2.7 MB under Breslow and 5.3 MB under Efron.
 
-## 2a. The threshold (D-82, proposed in round 194)
+## 2a. The threshold (D-82, approved 2026-11-25; built in round 195)
 
 **Why.** Step 4's exit (`perf-results.md`, 2026-11-25) shows aggregation paying only where a stratum cannot be swept
 well in one block. One stratum was measured on one executor:
@@ -259,3 +259,15 @@ log-likelihood as one block, at 1M rows × 20 features and 250,000 × 180.
 At those sizes the aggregated evaluation cost 4.9 and 3.1 times the sweep's CPU per row (OI-126). Each reduction group
 shuffles a stratum's whole per-time totals, whatever its size, so §2's rule, which aggregates any stratum larger than a
 block, is generous for strata an executor could sweep.
+
+**Round 195, the threshold (D-82).**
+- **The option.** `CoxOptions.aggregateAboveBytes`, default 256 MiB, must not be negative. Planning counts a stratum as
+  a candidate only when its rows exceed one block and rows · 8(p + 4) exceeds the option.
+- **Where it is set.** `CoxFitIO` writes it in format version 7 as a nullable field, and versions 1 to 6 read the
+  default. The run specification's `fit.aggregateAboveBytes`, Python's `aggregate_above_bytes` and PerfJob's
+  `--aggregate-above-bytes` all set it.
+- **The tests.**
+  - The tests and golden runs that force aggregation with small blocks set it to 0, so their bits and coverage stay.
+  - Two new tests check that the default keeps a fixture-sized stratum in one block, with the default fit's bits, and
+    that aggregation starts exactly above the threshold.
+  - With the default, the skewed-strata test's 400-row stratum keeps one block.

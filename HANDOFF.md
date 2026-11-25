@@ -228,6 +228,40 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 195 (2026-11-25): D-82 approved and built, a threshold for Cox aggregation
+
+- Round 194 is on `main` as `3a6c921`. The maintainer approved D-82 as written.
+- **`CoxOptions.aggregateAboveBytes`.** It defaults to 256 MiB and must not be negative. Planning counts a stratum as
+  a candidate for per-time aggregates only when its rows exceed one block and rows · 8(p + 4) exceeds the option.
+  Smaller strata keep one block, as before step 4.
+- **Where it is set.**
+  - `CoxFitIO` writes format version 7, and versions 1 to 6 read the default.
+  - `RunSpec` reads `fit.aggregateAboveBytes`, Python's `CoxPH` takes `aggregate_above_bytes`, and PerfJob takes
+    `--aggregate-above-bytes`.
+- **Tests.**
+  - `CoxAggregationSuite`, the golden runs' aggregated pairs and `CoxLayoutSuite`'s many-block tests force aggregation
+    with small blocks, so they set the option to 0. Their bits and coverage stay.
+  - New tests: the default keeps `lt-unstratified` in one block, with the default fit's bits; aggregation starts
+    exactly above the threshold; a negative value is refused; with the default, the skewed-strata test's 400-row
+    stratum keeps one block (15 blocks); and the Python option reaches the fit options.
+- **Records.** D-82 (Accepted); `per-time-aggregates.md` §2a and §11; plan §4; OI-126; STATUS.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags. scalafmt is clean, and `check-engine-api.sh` passes with its
+  self-test.
+- Every suite passes:
+  - numerics, 120 tests;
+  - engine, 645 tests in seven batches;
+  - app 38, bench 30 and testkit 28;
+  - the Python tests on PySpark 4.1.0, 48.
+- `GoldenRunsSuite` passes against the existing manifest, 4 tests: the aggregated pairs now set the threshold to 0, so
+  their bits stay.
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21, Spark
+  4.0.0's jars, and the Python tests on PySpark 4.0.0.
+
+**Next: step 5** (plan §4): logistic profile-likelihood Newton stepping through SerBIN's reduced system, specified
+first (NN-2).
+
 ## Round 194 (2026-11-25): a threshold for aggregation (D-82 proposed)
 
 - Round 193 is on `main` as `3daa2a5`. The maintainer left the next step to the assistant. This refinement comes

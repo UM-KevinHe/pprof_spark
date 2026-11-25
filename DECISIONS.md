@@ -103,9 +103,10 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-82: Aggregate only strata above a size threshold, a refinement of D-81 §2 (Proposed, round 194)
+### D-82: Aggregate only strata above a size threshold, a refinement of D-81 §2 (Accepted: approved by the maintainer, 2026-11-25)
 
-Proposed for the maintainer's approval: `docs/spec/cox/per-time-aggregates.md` §2a.
+Proposed in round 194 and approved as written on 2026-11-25; built in round 195: `docs/spec/cox/per-time-aggregates.md`
+§2a.
 - **The rule.** A Cox stratum is evaluated from per-time aggregates only when three conditions hold: it exceeds one
   block, its per-time totals fit the driver's budget (D-81 §2), and its covariates, rows · 8(p + 4) bytes, exceed
   `CoxOptions.aggregateAboveBytes`. Strata between one block and the threshold keep one block and are swept, as before

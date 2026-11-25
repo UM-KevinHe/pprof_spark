@@ -246,6 +246,9 @@ object RunSpec {
         number(fit, "maxStratumRows", "fit").map(_.toLong).getOrElse(defaults.maxStratumRows),
       maxStratumBytes =
         number(fit, "maxStratumBytes", "fit").map(_.toLong).getOrElse(defaults.maxStratumBytes),
+      aggregateAboveBytes = number(fit, "aggregateAboveBytes", "fit")
+        .map(_.toLong)
+        .getOrElse(defaults.aggregateAboveBytes),
       blocks = blockOptions,
       robust = flag(fit, "robust", "fit")
     )

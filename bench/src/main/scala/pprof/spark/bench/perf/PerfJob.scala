@@ -24,7 +24,7 @@ object PerfJob {
   val Usage: String =
     "usage: PerfJob --model cox|logistic --path <dir> [--rows n] [--providers m] [--features p] " +
       "[--design simple|correlated] [--seed s] [--strata provider|none] [--ties breslow|efron] " +
-      "[--block-bytes b] [--budget-bytes b] [--storage-level level] [--partitions k] [--check-partitions k] " +
+      "[--block-bytes b] [--budget-bytes b] [--aggregate-above-bytes b] [--storage-level level] [--partitions k] [--check-partitions k] " +
       "[--verify true|false] " +
       "[--plans true|false] [--report <dir>]"
 
@@ -40,6 +40,7 @@ object PerfJob {
     "ties",
     "block-bytes",
     "budget-bytes",
+    "aggregate-above-bytes",
     "storage-level",
     "partitions",
     "check-partitions",
@@ -166,7 +167,13 @@ object PerfJob {
         rowId = Some("id")
       )
       val ties = Ties.fromName(options.getOrElse("ties", "breslow"))
-      val f = CoxPH.fit(data, spec, CoxOptions(ties = ties, blocks = blocks))
+      val aggregateAboveBytes =
+        options.get("aggregate-above-bytes").fold(CoxOptions().aggregateAboveBytes)(count)
+      val f = CoxPH.fit(
+        data,
+        spec,
+        CoxOptions(ties = ties, blocks = blocks, aggregateAboveBytes = aggregateAboveBytes)
+      )
       Outcome(
         f.estimates,
         f.standardErrors,

@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-25, round 194.
+Updated 2026-11-25, round 195.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -225,7 +225,8 @@ through round 100 as the maintainer reported.
 | 191 | The baseline, residuals and robust variance of aggregated strata (D-81 §6): per-time totals on the driver give the baseline and each stratum's residual tables; blocks compute their rows' residuals from them; robust and clustered fits now aggregate, the budget counting residual tables | Merged (0814d9a) |
 | 192 | Step 4's exit recorded: on round 191's build an unstratified 20M-row Cox fit at 180 features ran over 7,021 blocks and up to ten executors in 704.7 s (42.0 µs of CPU per row per evaluation, 1.24 times the stratified sweep); agreement with the sweep on the cluster awaits two runs | Merged (6da406d) |
 | 193 | Step 4's exit complete: on the cluster, one unstratified stratum aggregated over 46 and 88 blocks gave the same log-likelihood as one block (1M × 20, 250,000 × 180); at those sizes aggregation cost 3.1 to 4.9 times the sweep's CPU per row (OI-126) | Merged (3daa2a5) |
-| 194 | D-82 proposed: aggregate a Cox stratum only when its covariates exceed `CoxOptions.aggregateAboveBytes` (default 256 MiB), from step 4's exit measurements (`per-time-aggregates.md` §2a) | Delivered as a patch |
+| 194 | D-82 proposed: aggregate a Cox stratum only when its covariates exceed `CoxOptions.aggregateAboveBytes` (default 256 MiB), from step 4's exit measurements (`per-time-aggregates.md` §2a) | Merged (3a6c921) |
+| 195 | D-82 approved and built: `CoxOptions.aggregateAboveBytes` (default 256 MiB), persisted in `CoxFitIO` format 7, and set by the run specification, Python and PerfJob; aggregation starts only above it; tests and golden runs that force aggregation set it to 0 | Delivered as a patch |
 
 ## Decisions and spikes
 

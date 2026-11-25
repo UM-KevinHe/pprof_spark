@@ -98,6 +98,9 @@ models keep a single `rowId` column; for them, an `xxhash64` column of the key d
    stratum larger than the block target gets a block of its own; one larger than
    `maxStratumBytes` (an estimate of its arrays; 4 GiB by default since round 83, D-49) or an explicit
    `maxStratumRows` fails with a message that TimeRange is needed (Phase 1b).
+   Since rounds 190 and 195 (D-81, D-82), a stratum larger than both a block and `aggregateAboveBytes`
+   (256 MiB by default), whose per-time totals fit the driver's budget, spreads over blocks of its own
+   instead and is evaluated from per-time aggregates; these guards apply to the strata that keep one block.
 4. Build the working set once (one shuffle): per block, strata in key order; within a stratum rows
    in canonical order — exit time descending, then event before censoring, then row identifier,
    then values — with times, events and covariates in primitive arrays.

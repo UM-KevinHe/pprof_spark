@@ -27,15 +27,16 @@ import pprof.spark.engine.backend.Operations._
   */
 object CoxFitIO {
 
-  val FormatVersion: Int = 6
+  val FormatVersion: Int = 7
 
   /** Versions this release reads: 1 lacks `entryCol` and `hasBaseline`; 1 and 2 lack the robust
     * fields, so their fits load as model-based.; 1 to 3 lack
     * `maxStratumBytes`, read as its default (round 83); 1 to 4 lack
     * `rowKeyCols`, read as no row key (round 87); 1 to 5 lack the reduction groups, read as one
-    * block per group (round 174, OI-117)
+    * block per group (round 174, OI-117); 1 to 6 lack `aggregateAboveBytes`, read as its default (round
+    * 195, D-82)
     */
-  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4, 5, 6)
+  val ReadableVersions: Set[Int] = Set(1, 2, 3, 4, 5, 6, 7)
   val Kind: String = "pprof.spark.engine.cox.CoxFit"
 
   private def field(name: String, dataType: DataType, nullable: Boolean = false) =
@@ -82,6 +83,7 @@ object CoxFitIO {
       field("confidenceLevelBits", LongType),
       field("maxStratumRows", LongType),
       field("maxStratumBytes", LongType, nullable = true),
+      field("aggregateAboveBytes", LongType, nullable = true),
       field("targetBlockBytes", LongType),
       field("maxGroupsOnDriver", IntegerType),
       field("driverBudgetBytes", LongType),
@@ -162,6 +164,7 @@ object CoxFitIO {
       bit(o.confidenceLevel),
       o.maxStratumRows,
       o.maxStratumBytes,
+      o.aggregateAboveBytes,
       o.blocks.targetBlockBytes,
       o.blocks.maxGroupsOnDriver,
       o.blocks.driverBudgetBytes,
@@ -268,7 +271,10 @@ object CoxFitIO {
       Option(r.getAs[Any]("robustOption")).contains(true),
       maxStratumBytes = Option(r.getAs[Any]("maxStratumBytes"))
         .map(_.asInstanceOf[Long])
-        .getOrElse(CoxOptions().maxStratumBytes)
+        .getOrElse(CoxOptions().maxStratumBytes),
+      aggregateAboveBytes = Option(r.getAs[Any]("aggregateAboveBytes"))
+        .map(_.asInstanceOf[Long])
+        .getOrElse(CoxOptions().aggregateAboveBytes)
     )
     val (estimate, se, z, p, lower, upper) = (
       doubles("estimateBits"),

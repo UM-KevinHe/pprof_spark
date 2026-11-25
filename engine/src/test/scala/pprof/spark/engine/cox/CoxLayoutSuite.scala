@@ -26,7 +26,7 @@ class CoxLayoutSuite extends SparkSuite {
     test(
       s"many blocks: function-level values and tight fits match pprof_py and R: $name, ${ties.name}"
     ) {
-      val options = CoxOptions(ties = ties, blocks = manyBlocks)
+      val options = CoxOptions(ties = ties, blocks = manyBlocks, aggregateAboveBytes = 0L)
       for (point <- Seq("beta_zero", "beta_fixed")) {
         val beta = doubles(reference(name, "pprof_py", ties).get(point), "beta")
         val e = CoxPH.evaluateAt(frame(spark, name), spec(name), beta, options)
@@ -38,7 +38,11 @@ class CoxLayoutSuite extends SparkSuite {
           check("T-fn", s"$what information", e.information.toSeq, doubles(node, "information"))
         }
       }
-      val fit = CoxPH.fit(frame(spark, name), spec(name), tight(ties).copy(blocks = manyBlocks))
+      val fit = CoxPH.fit(
+        frame(spark, name),
+        spec(name),
+        tight(ties).copy(blocks = manyBlocks, aggregateAboveBytes = 0L)
+      )
       assert(fit.converged, fit.message)
       assert(fit.layout.blockCount > 1, s"expected several blocks: ${fit.layout}")
       for (source <- Seq("pprof_py", "r_survival")) {
@@ -53,7 +57,11 @@ class CoxLayoutSuite extends SparkSuite {
 
   /** Every bit of a fit with per-row robust variance and of its baseline hazard. */
   private def everything(df: DataFrame, name: String, ties: Ties): Seq[Long] = {
-    val fit = CoxPH.fit(df, spec(name), CoxOptions(ties = ties, blocks = manyBlocks, robust = true))
+    val fit = CoxPH.fit(
+      df,
+      spec(name),
+      CoxOptions(ties = ties, blocks = manyBlocks, aggregateAboveBytes = 0L, robust = true)
+    )
     val baseline = CoxPH
       .baseline(df, fit)
       .orderBy("stratum", "time")
@@ -137,7 +145,7 @@ class CoxLayoutSuite extends SparkSuite {
     // 2048 / (8 (p + 4)) = 42 rows per block at p = 2: the 400-row stratum is oversized, so it is evaluated from
     // per-time aggregates over ceil(400 / 42) = 10 blocks, and the other 560 rows fill ceil(560 / 42) = 14 shared
     // blocks. A robust fit aggregates it too, its robust variance from residual tables (round 191).
-    val options = CoxOptions(blocks = manyBlocks)
+    val options = CoxOptions(blocks = manyBlocks, aggregateAboveBytes = 0L)
     val many = CoxPH.fit(skewed(), skewedSpec, options)
     assert(many.converged, many.message)
     assertEquals(many.layout.targetRowsPerBlock, 42)
@@ -148,6 +156,10 @@ class CoxLayoutSuite extends SparkSuite {
     val robust = CoxPH.fit(skewed(), skewedSpec, options.copy(robust = true))
     assertEquals(robust.layout.blockCount, 24)
     assert(robust.layout.largestBlockRows < 400L, s"${robust.layout}")
+    // With the default threshold (D-82) the 400-row stratum keeps one block of its own, as before step 4.
+    val whole = CoxPH.fit(skewed(), skewedSpec, CoxOptions(blocks = manyBlocks))
+    assertEquals(whole.layout.blockCount, 15)
+    assertEquals(whole.layout.largestBlockRows, 400L)
     val shuffled = withSqlConf("spark.sql.shuffle.partitions" -> "7")(
       CoxPH.fit(skewed(reverse = true).repartition(5), skewedSpec, options)
     )
@@ -189,7 +201,7 @@ class CoxLayoutSuite extends SparkSuite {
     val name = "rc-stratified"
     val p = features(name).size
     val partial = 8L * (2L + p + p * (p + 1) / 2)
-    val requested = CoxOptions(blocks = manyBlocks)
+    val requested = CoxOptions(blocks = manyBlocks, aggregateAboveBytes = 0L)
     val before = CoxPH.fit(frame(spark, name), spec(name), requested)
     assert(before.layout.blockCount >= 4, s"${before.layout}")
     val options = requested.copy(blocks =

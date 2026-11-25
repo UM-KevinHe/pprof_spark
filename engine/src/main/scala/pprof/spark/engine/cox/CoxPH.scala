@@ -41,9 +41,11 @@ object Ties {
       )
 }
 
-/** Fit options (Cox specification §5); defaults are pprof_py's and R's. One task holds a whole stratum
-  * (no TimeRange layout, OI-03), so `maxStratumBytes` caps a stratum's estimated size, 8 (p + 4) bytes a
-  * row; `maxStratumRows`, unlimited by default, can cap its rows as well (issue C3, D-49).
+/** Fit options (Cox specification §5); defaults are pprof_py's and R's. A stratum whose estimated size,
+  * 8 (p + 4) bytes a row, exceeds both one block and `aggregateAboveBytes` is evaluated from per-time
+  * aggregates over many blocks when its per-time totals fit the driver's budget (D-81, D-82). Any other
+  * stratum is one task's, and `maxStratumBytes` caps its size; `maxStratumRows`, unlimited by default,
+  * can cap its rows as well (issue C3, D-49).
   */
 final case class CoxOptions(
     ties: Ties = Ties.Breslow,
@@ -55,7 +57,8 @@ final case class CoxOptions(
     maxStratumRows: Long = Long.MaxValue,
     blocks: BlockOptions = BlockOptions(),
     robust: Boolean = false,
-    maxStratumBytes: Long = 4L * 1024 * 1024 * 1024
+    maxStratumBytes: Long = 4L * 1024 * 1024 * 1024,
+    aggregateAboveBytes: Long = 256L * 1024 * 1024
 ) {
   require(
     confidenceLevel > 0.0 && confidenceLevel < 1.0,
@@ -63,6 +66,10 @@ final case class CoxOptions(
   )
   require(maxStratumRows >= 1, s"maxStratumRows must be positive, got $maxStratumRows")
   require(maxStratumBytes >= 1, s"maxStratumBytes must be positive, got $maxStratumBytes")
+  require(
+    aggregateAboveBytes >= 0,
+    s"aggregateAboveBytes must not be negative, got $aggregateAboveBytes"
+  )
 
   val newton: NewtonOptions = NewtonOptions(maxIterations, eps, maxHalvings, aliasTolerance)
 }
@@ -432,7 +439,9 @@ object CoxPH {
       else
         CoxAggregation.choose(
           input,
-          sizes.filter(_._2 > target),
+          sizes.filter { case (_, rows) =>
+            rows > target && rows * (8L * (p + 4)) > options.aggregateAboveBytes
+          },
           CoxAggregation.width(p, options.ties == Ties.Efron, tables),
           options.blocks.driverBudgetBytes
         )

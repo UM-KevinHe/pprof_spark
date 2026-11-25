@@ -25,7 +25,7 @@ class CoxAggregationSuite extends SparkSuite {
     test(
       s"aggregated: function-level values and tight fits match pprof_py and R: $name, ${ties.name}"
     ) {
-      val options = CoxOptions(ties = ties, blocks = tiny)
+      val options = CoxOptions(ties = ties, blocks = tiny, aggregateAboveBytes = 0L)
       for (point <- Seq("beta_zero", "beta_fixed")) {
         val beta = doubles(reference(name, "pprof_py", ties).get(point), "beta")
         val e = CoxPH.evaluateAt(frame(spark, name), spec(name), beta, options)
@@ -37,7 +37,11 @@ class CoxAggregationSuite extends SparkSuite {
           check("T-fn", s"$what information", e.information.toSeq, doubles(node, "information"))
         }
       }
-      val fit = CoxPH.fit(frame(spark, name), spec(name), tight(ties).copy(blocks = tiny))
+      val fit = CoxPH.fit(
+        frame(spark, name),
+        spec(name),
+        tight(ties).copy(blocks = tiny, aggregateAboveBytes = 0L)
+      )
       assert(fit.converged, fit.message)
       assertEquals(fit.layout.oversizedGroups, 1)
       assert(fit.layout.blockCount > 10, s"expected the stratum over many blocks: ${fit.layout}")
@@ -60,7 +64,7 @@ class CoxAggregationSuite extends SparkSuite {
           frame(spark, name),
           spec(name),
           beta,
-          CoxOptions(ties = ties, blocks = tiny)
+          CoxOptions(ties = ties, blocks = tiny, aggregateAboveBytes = 0L)
         )
       val dv = math.abs(aggregated.value - swept.value) / math.abs(swept.value)
       assert(dv <= 1e-12, s"loglik scaled difference $dv")
@@ -81,7 +85,8 @@ class CoxAggregationSuite extends SparkSuite {
       s"aggregated baseline and residuals agree with the whole stratum's within 1e-12, scaled: $name, ${ties.name}"
     ) {
       val df = frame(spark, name)
-      val fit = CoxPH.fit(df, spec(name), CoxOptions(ties = ties, blocks = tiny))
+      val fit =
+        CoxPH.fit(df, spec(name), CoxOptions(ties = ties, blocks = tiny, aggregateAboveBytes = 0L))
       assert(fit.layout.blockCount > 10, s"expected the stratum over many blocks: ${fit.layout}")
       // The same estimates on default blocks, where the stratum is whole and swept.
       val whole = fit.copy(options = fit.options.copy(blocks = BlockOptions()))
@@ -110,7 +115,11 @@ class CoxAggregationSuite extends SparkSuite {
       s"an aggregated robust fit agrees with the whole stratum's within 1e-9, scaled: $name, ${ties.name}"
     ) {
       val options = CoxOptions(ties = ties, robust = true)
-      val aggregated = CoxPH.fit(frame(spark, name), spec(name), options.copy(blocks = tiny))
+      val aggregated = CoxPH.fit(
+        frame(spark, name),
+        spec(name),
+        options.copy(blocks = tiny, aggregateAboveBytes = 0L)
+      )
       val whole = CoxPH.fit(frame(spark, name), spec(name), options)
       assert(
         aggregated.layout.blockCount > 10,
@@ -126,7 +135,7 @@ class CoxAggregationSuite extends SparkSuite {
     "an aggregated fit is reproducible to the bit across shuffle partitions and input order (R0, DIST-6)"
   ) {
     val name = "lt-unstratified"
-    val options = CoxOptions(ties = Ties.Efron, blocks = tiny)
+    val options = CoxOptions(ties = Ties.Efron, blocks = tiny, aggregateAboveBytes = 0L)
     val fit = CoxPH.fit(frame(spark, name), spec(name), options)
     val other = withSqlConf("spark.sql.shuffle.partitions" -> "7")(
       CoxPH.fit(frame(spark, name, reverse = true).repartition(5), spec(name), options)
@@ -137,13 +146,45 @@ class CoxAggregationSuite extends SparkSuite {
     )
   }
 
+  test(
+    "the default threshold keeps a stratum below 256 MiB in one block, as before step 4 (D-82)"
+  ) {
+    val name = "lt-unstratified"
+    val fit = CoxPH.fit(frame(spark, name), spec(name), CoxOptions(blocks = tiny))
+    assertEquals(fit.layout.blockCount, 1)
+    val default = CoxPH.fit(frame(spark, name), spec(name))
+    assertEquals(
+      bits(fit.estimates ++ fit.covariance :+ fit.logLikelihood),
+      bits(default.estimates ++ default.covariance :+ default.logLikelihood)
+    )
+  }
+
+  test("a stratum is aggregated exactly when its covariates exceed aggregateAboveBytes (D-82)") {
+    val name = "lt-unstratified"
+    // 5,000 rows at 8 (p + 4) bytes with p = 3: 280,000 bytes.
+    val bytes = 5000L * 8L * (spec(name).features.size + 4)
+    val above = CoxPH.fit(
+      frame(spark, name),
+      spec(name),
+      CoxOptions(blocks = tiny, aggregateAboveBytes = bytes - 1)
+    )
+    assert(above.layout.blockCount > 10, s"expected the stratum over many blocks: ${above.layout}")
+    val at = CoxPH.fit(
+      frame(spark, name),
+      spec(name),
+      CoxOptions(blocks = tiny, aggregateAboveBytes = bytes)
+    )
+    assertEquals(at.layout.blockCount, 1)
+    intercept[IllegalArgumentException](CoxOptions(aggregateAboveBytes = -1L))
+  }
+
   test("a stratum whose per-time totals exceed the driver's budget keeps one block, as before") {
     val name = "lt-unstratified"
     // 60 grid times at w = p + 3 = 6 numbers take 2,880 bytes, more than this budget.
     val fallback = CoxPH.fit(
       frame(spark, name),
       spec(name),
-      CoxOptions(blocks = tiny.copy(driverBudgetBytes = 2048L))
+      CoxOptions(blocks = tiny.copy(driverBudgetBytes = 2048L), aggregateAboveBytes = 0L)
     )
     assertEquals(fallback.layout.blockCount, 1)
     val default = CoxPH.fit(frame(spark, name), spec(name))

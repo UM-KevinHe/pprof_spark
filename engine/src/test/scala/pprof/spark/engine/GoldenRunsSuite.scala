@@ -297,7 +297,11 @@ class GoldenRunsSuite extends SparkSuite {
   private def coxAggregated(name: String, ties: Ties): (Run, Run) = {
     val df = CoxFixtures.frame(spark, name)
     val spec = CoxFixtures.spec(name)
-    val options = CoxOptions(ties = ties, blocks = BlockOptions(targetBlockBytes = 2048L))
+    val options = CoxOptions(
+      ties = ties,
+      blocks = BlockOptions(targetBlockBytes = 2048L),
+      aggregateAboveBytes = 0L
+    )
     (
       coxRun(s"cox/aggregated-$name", df.repartition(1), spec, options),
       coxRun(s"cox/aggregated-$name", df.repartition(7), spec, options)

@@ -129,3 +129,8 @@ def test_composite_row_key(spark):
     residuals = model.residuals(df)
     assert residuals.columns[:2] == ["patient", "start"]
     assert residuals.count() == len(rows)
+
+
+def test_aggregate_above_bytes_reaches_the_fit_options():
+    model = CoxPH("time", "event", ["x1"], aggregate_above_bytes=0)
+    assert model.options["aggregateAboveBytes"] == 0
