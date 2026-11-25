@@ -41,6 +41,44 @@ Continuous times keep the sweep and OI-03's planned route.
 
 At 180 features and 1,826 daily times, one stratum's totals are 2.7 MB under Breslow and 5.3 MB under Efron.
 
+## 2a. The threshold (D-82, proposed in round 194)
+
+**Why.** Step 4's exit (`perf-results.md`, 2026-11-25) shows aggregation paying only where a stratum cannot be swept
+well in one block. One stratum was measured on one executor:
+
+| Point | Covariates | Aggregated | One block, swept |
+|---|---|---|---|
+| 1M rows, 20 features | 192 MB | 4.7 µs per row, fit 30.3 s | 0.95 µs, fit 20.5 s; heap 1.13 GB |
+| 250,000 rows, 180 features | 368 MB | 55.1 µs per row, fit 39.5 s | 17.8 µs, fit 32.7 s; heap 1.73 GB |
+| 20M rows, 180 features | 29 GB | 42.0 µs per row, fit 704.7 s on ten executors | cannot run |
+
+Each reduction group shuffles its stratum's whole per-time totals, whatever the stratum's size, so a mid-sized stratum
+pays the shuffle without needing the parallelism. Swept whole, a stratum's block costs its executor about five times
+its covariates in heap. That limits whole blocks to roughly 400 MB on 2.2 GB heaps.
+
+**The rule.** §2's rule gains a third condition. A stratum is aggregated when all three hold:
+- its rows exceed one block;
+- its per-time totals fit the driver's budget, as before;
+- its covariates, rows · 8(p + 4) bytes in the guard's unit, exceed `CoxOptions.aggregateAboveBytes`.
+
+A stratum between one block and the threshold keeps one block and is swept, as before step 4.
+
+**The default: 256 MiB.**
+- It keeps a whole block's heap well under 2.2 GB, about 1.3 to 1.6 GB by the measurements above.
+- It is about 182,000 rows at 180 features and 1.4M rows at 20.
+- So 1M × 20 would be swept, and 250,000 × 180 and 20M × 180 aggregated.
+- On a cluster with many idle executors, a mid-sized stratum could still finish sooner aggregated. A fit can lower the
+  threshold for that, down to 0 for every stratum larger than a block, or raise it.
+
+**The option.**
+- `aggregateAboveBytes` joins `maxStratumBytes` in `CoxOptions`. It is persisted by `CoxFitIO` as a nullable field,
+  which older fits read as its default (as round 83 did).
+- PerfJob gains `--aggregate-above-bytes`.
+- The tests and golden runs that force aggregation with small blocks set it to 0, so their bits stay.
+
+**Complementary.** OI-126's cheaper pass 1 (plain sums per block; no subtraction for entries below the first event
+time) lowers the per-row cost above the threshold. It does not remove each group's shuffle of totals.
+
 ## 3. Layout
 
 - **Splitting.** An aggregated stratum's rows are split over ⌈rows / target rows⌉ blocks by a fixed function of the

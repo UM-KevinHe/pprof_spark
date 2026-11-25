@@ -275,6 +275,7 @@ Step 1 addresses OI-02 and part of OI-30.
     704.7 s, 42.0 µs of CPU per row per evaluation.
   - **Agreement with the sweep, on the cluster (round 193).** At 1M rows × 20 features and 250,000 × 180, a
     stratum aggregated over 46 and 88 blocks gave the same log-likelihood as one block. Step 4 is complete.
+  - **A refinement.** Aggregating only strata above a size threshold is proposed as D-82 (round 194).
 - **Step 5** follows study §4.3:
   - interior intercepts are solved in the tasks, and bounded providers are held at the bound;
   - the β step comes from SerBIN's reduced system;

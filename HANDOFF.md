@@ -228,6 +228,31 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 194 (2026-11-25): a threshold for aggregation (D-82 proposed)
+
+- Round 193 is on `main` as `3daa2a5`. The maintainer left the next step to the assistant. This refinement comes
+  before step 5: it removes the mid-size slowdown step 4 introduced, and it is small.
+- **`per-time-aggregates.md` §2a** (proposed as D-82). A stratum is aggregated only when its covariates, rows ·
+  8(p + 4) bytes, exceed `CoxOptions.aggregateAboveBytes`, default 256 MiB, in addition to D-81 §2's conditions.
+  Smaller strata keep one block and are swept, as before step 4.
+- **The evidence: step 4's exit, on one executor.**
+  - At 192 MB and 368 MB, aggregation cost 4.9 and 3.1 times the sweep's CPU per row, and the fits took 48% and 21%
+    longer.
+  - The sweep's heap reached 1.13 and 1.73 GB of 2.2.
+  - At 29 GB only aggregation runs.
+  - The default keeps whole blocks near 1.3 to 1.6 GB of heap. It is about 182,000 rows at 180 features and 1.4M at
+    20.
+- **The option**, when built:
+  - persisted by `CoxFitIO` as a nullable field, defaulted for older fits;
+  - PerfJob's `--aggregate-above-bytes`;
+  - tests and golden runs that force aggregation set it to 0, so their bits stay.
+- **Records.** D-82 (Proposed); plan §4; OI-126; STATUS.
+
+Evidence (assistant sandbox): documentation only. The patch applies to a fresh clone of `main` with an identical
+tree; scalafmt is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next: the maintainer's review of D-82**, then its build (one round), then step 5.
+
 ## Round 193 (2026-11-25): step 4's exit complete, agreement with the sweep
 
 - Round 192 is on `main` as `6da406d`. The maintainer ran the agreement points on round 191's build: two

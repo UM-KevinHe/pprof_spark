@@ -103,6 +103,24 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-82: Aggregate only strata above a size threshold, a refinement of D-81 §2 (Proposed, round 194)
+
+Proposed for the maintainer's approval: `docs/spec/cox/per-time-aggregates.md` §2a.
+- **The rule.** A Cox stratum is evaluated from per-time aggregates only when three conditions hold: it exceeds one
+  block, its per-time totals fit the driver's budget (D-81 §2), and its covariates, rows · 8(p + 4) bytes, exceed
+  `CoxOptions.aggregateAboveBytes`. Strata between one block and the threshold keep one block and are swept, as before
+  step 4.
+- **The default: 256 MiB.** That is about 182,000 rows at 180 features and 1.4M at 20.
+- **The evidence: step 4's exit, on one executor.**
+  - At 192 MB and 368 MB of covariates, aggregation cost 4.9 and 3.1 times the sweep's CPU per row, and the fits took
+    48% and 21% longer.
+  - The sweep's executor heap reached 1.13 and 1.73 GB of 2.2.
+  - At 29 GB only aggregation runs.
+- **The option.**
+  - `aggregateAboveBytes` is persisted by `CoxFitIO` as a nullable field, which older fits read as its default.
+  - PerfJob gains `--aggregate-above-bytes`.
+  - Tests and golden runs that force aggregation set it to 0, keeping their bits.
+
 ### D-81: Cox per-time aggregates for strata larger than a block, performance step 4's specification (Accepted: approved by the maintainer, 2026-11-23)
 
 Proposed in round 188 and approved as written on 2026-11-23: `docs/spec/cox/per-time-aggregates.md`. The approval
