@@ -228,6 +228,31 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 198 (2026-11-25): X-051 proposed, step 5's discrepancy
+
+- Round 197 is on `main` as `6e8dce7`.
+- **pprof_py's `at_bound`** (`pprof_py/inference/standardized.py`, at `9320766`).
+  - It flags every provider without events or with only events, and any within 0.1 of the clamp (its C35).
+  - SerBIN's code already does the same (`LogisticFE`, `degenerate || |γ − med| ≥ bound − 0.1`). That is why all 22
+    providers are flagged at the default tolerance although they are short of the bound.
+  - fixed-effect-estimation.md §5 described only the second clause and is corrected, as is profile-newton.md §3.
+- **X-051**, in `DISCREPANCIES.md`, class C, proposed. At the default tolerance, the references' SerBIN can stop before
+  providers without events reach the bound, and the profile method reports the bound.
+  - **Measured on `lfe-zero-events`.** Both references stop after 9 iterations: pprof_py's 0.61 to 1.40 short, R
+    pprof's up to 1.3988. Their tight fits reach the bound in 13.
+  - **Between pprof_py's default and tight fits.** ℓ differs by 0.0064 (8·10⁻⁷ relative), AIC and BIC by 0.013, β by
+    4.8·10⁻¹⁰, and the other providers' effects by 1.2·10⁻⁹.
+  - **Proposed handling.** With `newton = "profile"`, the default-tolerance tests take the degenerate providers'
+    effects, ℓ, AIC and BIC from the tight references, compare the rest with the default references, and skip
+    iteration counts. SerBIN keeps the references' default behaviour.
+- **Records.** `DISCREPANCIES.md`; fixed-effect-estimation.md §5; profile-newton.md §3, §5, §9 and §12; plan §4;
+  STATUS.
+
+Evidence (assistant sandbox): documentation only. The patch applies to a fresh clone of `main` with an identical
+tree; scalafmt is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next: the maintainer's sign-off on X-051.** Then step 5's build.
+
 ## Round 197 (2026-11-25): D-83 approved; step 5's fixture, `lfe-zero-events`
 
 - Round 196 is on `main` as `dd6b96b`. The maintainer approved step 5's specification; the message read "D-8", taken

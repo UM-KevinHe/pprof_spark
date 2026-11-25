@@ -67,8 +67,9 @@ The pass returns:
 - **Convergence.** Stop when the accepted step satisfies ‖vΔβ‖∞ < `tol` (10⁻⁸), as SerBIN's. The iteration cap and
   the non-convergence warnings are SerBIN's, counting outer iterations.
 
-**After convergence.** The fit's γ is the accepted pass's, at the final β. `at_bound` is |γⱼ − med(γ)| ≥ B − 0.1, as
-now. The variance pass is SerBIN's, with π clipped to [10⁻¹⁰, 1 − 10⁻¹⁰] (§5).
+**After convergence.** The fit's γ is the accepted pass's, at the final β. `at_bound` flags, as now, every provider
+without events or with only events, and any within 0.1 of the bound: pprof_py's rule since its C35. The variance
+pass is SerBIN's, with π clipped to [10⁻¹⁰, 1 − 10⁻¹⁰] (§5).
 
 ## 4. Why the β step is SerBIN's reduced system
 
@@ -102,6 +103,14 @@ stopped.
 
 These differences are registered as X-051 in the discrepancy round (§10). Interior providers' effects and β agree
 within the classes.
+
+**Measured on `lfe-zero-events`** (round 198). Between pprof_py's default and tight fits:
+- the 22 providers without events differ by 0.61 to 1.40;
+- ℓ differs by 0.0064 (8·10⁻⁷ relative), and AIC and BIC by 0.013;
+- β differs by 4.8·10⁻¹⁰, and the other providers' effects by 1.2·10⁻⁹.
+
+R pprof's SerBIN stops short in the same way, by up to 1.3988. The `at_bound` flags agree, since they include every
+provider without events.
 
 ## 6. Distributed plan
 
@@ -148,8 +157,9 @@ total of inner Newton steps and the number of solves that reached the 100-step c
 - **Converged parity** (plan §6.3), on every logistic fixture case:
   - at the tight tolerance, against pprof_py's and R's references, within T-coef and T-var, β, γ and the variances
     included;
-  - at the default tolerance, against pprof_py's default references. β agrees within T-coef, and so do the interior
-    providers' effects. Providers without events differ as X-051 registers.
+  - at the default tolerance, against pprof_py's default references: β, the interior providers' effects and
+    `at_bound` within their classes. The degenerate providers' effects, ℓ, AIC and BIC are taken from the tight
+    references instead, and iteration counts are not compared (X-051).
 - **Lockstep parity.** It does not apply, because the iterates differ (plan §6.3). SerBIN's lockstep tests stay for
   SerBIN.
 - **Golden runs.** New runs pin the method on the fixture cases and on a synthetic multi-block case, with R0 at 1 and
@@ -203,7 +213,12 @@ total of inner Newton steps and the number of solves that reached the 100-step c
 - **Departs from §9.** §9 expected about 12% of providers without events; the case has 22 of 600.
 - **Earlier designs that failed.** Designating 73 providers without events, at 20 to 80 rows or at 11, did not show
   X-051: pprof_py's default reached the bound. The study's low event rates are what leave them short.
-- **For the discrepancy round.** pprof_py flags all 22 `at_bound` at the default tolerance, although they are short
-  of the bound. Its rule is to be read from its source before X-051 is written.
+- **The `at_bound` question, resolved in round 198.** pprof_py flags all 22 `at_bound` at the default tolerance,
+  although they are short of the bound. Its `at_bound` includes every provider without events or with only events
+  (its C35), and SerBIN's code already does the same. The specification's text named only the second clause and is
+  corrected.
 - **Calibration and suites.** `docs/parity/logistic-calibration.md` gains the case's 36 rows, all within class.
   Every logistic fixed-effect suite takes the case from the manifest, and SerBIN passes it.
+
+**Round 198, the discrepancy.** X-051 is registered, class C, as proposed, with `lfe-zero-events`' measurements, for
+the maintainer's sign-off. The default-tolerance comparisons of §9 are stated as the build's tests will make them.
