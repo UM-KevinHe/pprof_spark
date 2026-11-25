@@ -271,6 +271,10 @@ Step 1 addresses OI-02 and part of OI-30.
 - **Step 4** covers gridded times, which addresses OI-03 for them. Continuous times keep the sorted scans planned
   under OI-03. Specification: `docs/spec/cox/per-time-aggregates.md` (round 188), approved as D-81 on
   2026-11-23; its fixture in round 189, its evaluation in round 190 and its outputs in round 191.
+  - **Exit, measured 2026-11-25 (round 192).** An unstratified 20M-row fit at 180 features ran on every executor:
+    704.7 s, 42.0 µs of CPU per row per evaluation.
+  - **Agreement with the sweep.** Shown in the sandbox. On the cluster it waits for two runs of one point, with
+    and without `--budget-bytes 1000`, which keeps the stratum in one block.
 - **Step 5** follows study §4.3:
   - interior intercepts are solved in the tasks, and bounded providers are held at the bound;
   - the β step comes from SerBIN's reduced system;

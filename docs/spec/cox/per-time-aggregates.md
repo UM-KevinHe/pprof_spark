@@ -210,3 +210,7 @@ specified.
     10⁻¹² (`CoxAggregatesSuite`).
   - On many blocks, the unstratified cases' baseline and residuals match the whole stratum's within 10⁻¹², and their
     robust covariance within 10⁻⁹ (`CoxAggregationSuite`).
+
+**Exit, round 192.** On the cluster (`perf-results.md`, "2026-11-25"), one Cox stratum of 20M rows at 180 features
+fit in 704.7 s over 7,021 blocks and up to ten executors. An evaluation took 42.0 µs of CPU per row: 6.7 in pass 1 and
+35.3 in pass 2. Pass 1's shuffle was 1.24 GiB per evaluation, as §7 estimated.

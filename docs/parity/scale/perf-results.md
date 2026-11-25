@@ -11,6 +11,39 @@ Estimates and arithmetic are never entered here; they live in `docs/spec/perform
 
 The scale runs reported on 2026-11-13 used round 81's build (OI-103), so they are not entered.
 
+### 2026-11-25: step 4's exit, the unstratified fit (build `0814d9a`, round 191)
+
+The exit of plan §4's step 4 ran one Cox stratum of 20M rows on round 191's build: `--model cox --rows 2e7 --features
+180 --providers 8000 --strata none`, Breslow ties, off-heap storage, Spark 4.0. Before step 4 that stratum was one block
+of 29 GB of covariates, and the fit could not run.
+
+**The fit.**
+- 704.7 s, 3 iterations, converged, ℓ = −5.383551576712093·10⁷, max |z| 2.73.
+- Executors 1 to 10, utilization 0.48 (the autoscaler began with one). The data were generated first, in 168.6 s.
+- **Layout.** The stratum spread over 7,021 blocks of 2,849 rows, in 502 reduction groups of 14. The cache held
+  7.55 GiB, all in memory.
+
+| Operation | Wall s (share of fit) | CPU s | µs per row per pass | GC s | Shuffle | To the driver |
+|---|---|---|---|---|---|---|
+| Build | 248.6 (35.3%) | 907.3 | — | 123.8 | 7.36 GiB | — |
+| Pass 1, 4 runs | 103.3 (14.7%) | 534.8 | 6.7 | 119.0 | 4.95 GiB, 1.24 per run | 5.3 MB per run |
+| Pass 2, 4 runs | 287.2 (40.8%) | 2,822.8 | 35.3 | 137.7 | — | 68.1 MB per run |
+| Summaries | 27.5 (3.9%) | 166.1 | — | 22.1 | — | — |
+| Validation | 31.4 (4.5%) | 97.1 | — | 0.1 | — | — |
+| Planning, the grid's two jobs | 2.0 | 3.9 | — | — | — | — |
+
+Readings:
+- **The exit's fit runs.** One stratum of 20M rows at 180 features is evaluated on every executor, from per-time
+  aggregates over 7,021 blocks.
+- **Cost per row.** An evaluation needs 42.0 µs of CPU per row, 6.7 in pass 1 and 35.3 in pass 2. That is 1.24
+  times the stratified sweep at 20M rows (33.8 µs, step 3's exit).
+- **Pass 1** is 16% of the evaluation's CPU on the cluster, far less than in the sandbox (OI-126). Its shuffle, 1.24
+  GiB per evaluation, is what §7 of the specification estimated.
+- **Memory.** Peak task memory was 256 MiB, in pass 1's fold. Executor heaps peaked at 1.79 GiB of 2.2, the driver's
+  at 7.05 GB (0.56 GB after GC).
+- **Not yet run.** Agreement with the stratum sweep on the cluster, at a size both can run. The sandbox found the
+  log-likelihood's bits identical at 200,000 × 20 and 50,000 × 180 rows (round 190).
+
 ### 2026-11-23: step 3's exit (build `c3bbc66`, round 186)
 
 The exit of plan §4's step 3 ran the Cox points of step 2's exit on round 186's build, with the weighted-Gram

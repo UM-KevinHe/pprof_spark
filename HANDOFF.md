@@ -228,6 +228,29 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 192 (2026-11-25): step 4's exit, the unstratified fit
+
+- Round 191 is on `main` as `0814d9a`. The maintainer ran step 4's exit fit on it: `--model cox --rows 2e7 --features
+  180 --providers 8000 --strata none`, off-heap, on Spark 4.0.
+- **The fit.** 704.7 s, 3 iterations, converged, max |z| 2.73. Its one stratum spread over 7,021 blocks in 502 groups,
+  on up to ten executors (utilization 0.48). Before step 4 that stratum was one 29 GB block and could not run.
+- **Per row per evaluation.** 42.0 µs of CPU: 6.7 in pass 1 and 35.3 in pass 2, 1.24 times the stratified sweep at
+  20M rows.
+  - Pass 1's shuffle was 1.24 GiB per evaluation, as the specification estimated.
+  - Peak task memory was 256 MiB; executor heaps reached 1.79 GiB of 2.2.
+- **Where the time went.** Pass 2 took 41% of the fit, the build 35% and pass 1 15%.
+- **OI-126.** Pass 1 is 16% of the evaluation on the cluster, so its sandbox cost matters less.
+- **Still to run** for step 4's exit: agreement with the stratum sweep on the cluster, at a size both can run. That is
+  the same point twice, once as it is and once with `--budget-bytes 1000`, which keeps the stratum in one block and
+  sweeps it.
+- **Records.** `perf-results.md` ("2026-11-25"); plan §4; `per-time-aggregates.md` §11; OI-03 and OI-126; STATUS.
+  Every figure was computed from the report's JSON, and no cluster-identifying detail was recorded.
+
+Evidence (assistant sandbox): documentation only. The patch applies to a fresh clone of `main` with an identical
+tree; scalafmt is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next: the two agreement runs on the cluster.** Then step 5, per plan §4.
+
 ## Round 191 (2026-11-23): the baseline, residuals and robust variance of aggregated strata (step 4, D-81)
 
 - Round 190 is on `main` as `c74247a`.
