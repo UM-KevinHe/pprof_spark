@@ -70,6 +70,58 @@ class CoxAggregationSuite extends SparkSuite {
       assert(di <= 1e-12, s"information scaled difference $di")
     }
 
+  /** The largest scaled difference over the columns of two equally shaped tables. */
+  private def columnsScaled(a: Seq[Seq[Double]], b: Seq[Seq[Double]]): Double = {
+    assertEquals(a.size, b.size)
+    a.head.indices.map(c => scaled(a.map(_(c)).toArray, b.map(_(c)).toArray)).max
+  }
+
+  for (name <- unstratified; ties <- Methods)
+    test(
+      s"aggregated baseline and residuals agree with the whole stratum's within 1e-12, scaled: $name, ${ties.name}"
+    ) {
+      val df = frame(spark, name)
+      val fit = CoxPH.fit(df, spec(name), CoxOptions(ties = ties, blocks = tiny))
+      assert(fit.layout.blockCount > 10, s"expected the stratum over many blocks: ${fit.layout}")
+      // The same estimates on default blocks, where the stratum is whole and swept.
+      val whole = fit.copy(options = fit.options.copy(blocks = BlockOptions()))
+      def baselineOf(f: CoxFit): Seq[Seq[Double]] =
+        CoxPH.baseline(df, f).orderBy("time").collect().toSeq.map { r =>
+          Seq("time", "hazard_increment", "cumulative_hazard", "survival")
+            .map(c => r.getAs[Double](c))
+        }
+      val (a, b) = (baselineOf(fit), baselineOf(whole))
+      assertEquals(a.map(_.head), b.map(_.head))
+      val db = columnsScaled(a.map(_.tail), b.map(_.tail))
+      assert(db <= 1e-12, s"baseline scaled difference $db")
+      def residualsOf(f: CoxFit): Seq[Seq[Double]] =
+        CoxPH
+          .residuals(df, f)
+          .orderBy("id")
+          .collect()
+          .toSeq
+          .map(r => (1 until r.length).map(r.getDouble))
+      val dr = columnsScaled(residualsOf(fit), residualsOf(whole))
+      assert(dr <= 1e-12, s"residuals scaled difference $dr")
+    }
+
+  for (name <- unstratified; ties <- Methods)
+    test(
+      s"an aggregated robust fit agrees with the whole stratum's within 1e-9, scaled: $name, ${ties.name}"
+    ) {
+      val options = CoxOptions(ties = ties, robust = true)
+      val aggregated = CoxPH.fit(frame(spark, name), spec(name), options.copy(blocks = tiny))
+      val whole = CoxPH.fit(frame(spark, name), spec(name), options)
+      assert(
+        aggregated.layout.blockCount > 10,
+        s"expected the stratum over many blocks: ${aggregated.layout}"
+      )
+      assertEquals(whole.layout.blockCount, 1)
+      val d = scaled(aggregated.covariance.toArray, whole.covariance.toArray)
+      assert(d <= 1e-9, s"robust covariance scaled difference $d")
+      assertEquals(aggregated.clusters, whole.clusters)
+    }
+
   test(
     "an aggregated fit is reproducible to the bit across shuffle partitions and input order (R0, DIST-6)"
   ) {

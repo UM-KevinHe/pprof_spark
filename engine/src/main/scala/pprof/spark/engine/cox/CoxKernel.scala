@@ -4,6 +4,7 @@ import pprof.spark.numerics.{ChunkedVector, NeumaierSum, NeumaierVector}
 import pprof.spark.numerics.kernels.{
   CoxAggregateEvaluation,
   CoxAggregates,
+  CoxResidualTables,
   CoxTimeTotals,
   CoxMeasures => MeasureKernels,
   CoxResiduals,
@@ -219,45 +220,86 @@ object CoxKernel {
   /** The baseline hazard rows of the block's strata at `beta`: increments, their running Neumaier
     * total in ascending time, and exp(−total) (Phase 1b specification §2 and §6).
     */
-  def baseline(block: CoxBlock, beta: Array[Double], efron: Boolean): Seq[CoxBaselineRow] = {
+  def baseline(
+      block: CoxBlock,
+      beta: Array[Double],
+      efron: Boolean,
+      skip: Int => Boolean = _ => false
+  ): Seq[CoxBaselineRow] = {
     val rows = Vector.newBuilder[CoxBaselineRow]
     var g = 0
-    while (g < block.groupCount) {
-      val (times, increments) = CoxStratum.baseline(
-        block.rows,
-        block.groupStart(g),
-        block.groupEnd(g),
-        beta,
-        efron
-      )
-      val total = new NeumaierSum
-      var k = 0
-      while (k < times.length) {
-        total.add(increments(k))
-        val cumulative = total.value
-        rows += CoxBaselineRow(
-          block.groupIndex(g),
-          times(k),
-          increments(k),
-          cumulative,
-          StrictMath.exp(-cumulative)
+    while (g < block.groupCount)
+      if (skip(block.groupIndex(g))) g += 1
+      else {
+        val (times, increments) = CoxStratum.baseline(
+          block.rows,
+          block.groupStart(g),
+          block.groupEnd(g),
+          beta,
+          efron
         )
-        k += 1
+        val total = new NeumaierSum
+        var k = 0
+        while (k < times.length) {
+          total.add(increments(k))
+          val cumulative = total.value
+          rows += CoxBaselineRow(
+            block.groupIndex(g),
+            times(k),
+            increments(k),
+            cumulative,
+            StrictMath.exp(-cumulative)
+          )
+          k += 1
+        }
+        g += 1
       }
-      g += 1
-    }
     rows.result()
   }
 
   /** The residuals of the block's rows at `beta`; dfbeta is wᵢ·Uᵢ·V with V the packed model-based
     * covariance (Phase 1c specification §1).
     */
+  /** The residuals of group `g` of the block: from its stratum's tables when the stratum is aggregated
+    * (per-time-aggregates.md §6, D-81), else from the stratum's sweep.
+    */
+  private def residualsOfGroup(
+      block: CoxBlock,
+      g: Int,
+      beta: Array[Double],
+      center: Array[Double],
+      efron: Boolean,
+      tables: Map[Int, CoxResidualTables]
+  ): (Array[Double], Array[Double]) =
+    tables.get(block.groupIndex(g)) match {
+      case Some(t) =>
+        CoxAggregates.residuals(
+          block.rows,
+          block.groupStart(g),
+          block.groupEnd(g),
+          beta,
+          center,
+          efron,
+          t
+        )
+      case None =>
+        CoxResiduals.stratum(
+          block.rows,
+          block.groupStart(g),
+          block.groupEnd(g),
+          beta,
+          center,
+          efron
+        )
+    }
+
   def residuals(
       block: CoxBlock,
       beta: Array[Double],
       center: Array[Double],
       efron: Boolean,
-      covariance: Array[Double]
+      covariance: Array[Double],
+      tables: Map[Int, CoxResidualTables] = Map.empty
   ): Seq[CoxResidualRow] = {
     val p = block.p
     val rows = Vector.newBuilder[CoxResidualRow]
@@ -265,14 +307,7 @@ object CoxKernel {
     while (g < block.groupCount) {
       val from = block.groupStart(g)
       val until = block.groupEnd(g)
-      val (martingale, score) = CoxResiduals.stratum(
-        block.rows,
-        from,
-        until,
-        beta,
-        center,
-        efron
-      )
+      val (martingale, score) = residualsOfGroup(block, g, beta, center, efron, tables)
       var i = 0
       while (i < until - from) {
         val u = java.util.Arrays.copyOfRange(score, i * p, (i + 1) * p)
@@ -301,17 +336,11 @@ object CoxKernel {
       block: CoxBlock,
       beta: Array[Double],
       center: Array[Double],
-      efron: Boolean
+      efron: Boolean,
+      tables: Map[Int, CoxResidualTables]
   ) =
     (0 until block.groupCount).map { g =>
-      val (_, score) = CoxResiduals.stratum(
-        block.rows,
-        block.groupStart(g),
-        block.groupEnd(g),
-        beta,
-        center,
-        efron
-      )
+      val (_, score) = residualsOfGroup(block, g, beta, center, efron, tables)
       block.groupStart(g) -> score
     }
 
@@ -320,10 +349,11 @@ object CoxKernel {
       block: CoxBlock,
       beta: Array[Double],
       center: Array[Double],
-      efron: Boolean
+      efron: Boolean,
+      tables: Map[Int, CoxResidualTables] = Map.empty
   ): Seq[CoxScoreRow] = {
     val p = block.p
-    residualsOf(block, beta, center, efron).flatMap { case (from, score) =>
+    residualsOf(block, beta, center, efron, tables).flatMap { case (from, score) =>
       (0 until score.length / p).map { i =>
         val r = from + i
         val w = block.weight(r)
@@ -342,11 +372,12 @@ object CoxKernel {
       block: CoxBlock,
       beta: Array[Double],
       center: Array[Double],
-      efron: Boolean
+      efron: Boolean,
+      tables: Map[Int, CoxResidualTables] = Map.empty
   ): CoxRobustPartial = {
     val p = block.p
     val outer = new NeumaierVector(Moments.packedLength(p))
-    residualsOf(block, beta, center, efron).foreach { case (from, score) =>
+    residualsOf(block, beta, center, efron, tables).foreach { case (from, score) =>
       (0 until score.length / p).foreach { i =>
         val w = block.weight(from + i)
         var k = 0

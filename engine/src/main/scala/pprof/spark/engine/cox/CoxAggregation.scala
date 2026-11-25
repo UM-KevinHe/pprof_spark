@@ -52,8 +52,13 @@ private[cox] object CoxAggregation {
   /** Grid times per record of pass 1. */
   val ChunkTimes: Int = 256
 
-  /** Numbers per grid time on the driver (§2): Δ₀, Δ₁, D and d, and under Efron T₀ and T₁. */
-  def width(p: Int, efron: Boolean): Long = if (efron) 2L * p + 4L else p + 3L
+  /** Numbers per grid time on the driver (§2): Δ₀, Δ₁, D and d, and under Efron T₀ and T₁; with `tables`, for the
+    * residuals and robust variance (§6), at least the 4p + 5 of a stratum's residual tables.
+    */
+  def width(p: Int, efron: Boolean, tables: Boolean = false): Long = {
+    val totals = if (efron) 2L * p + 4L else p + 3L
+    if (tables) math.max(totals, 4L * p + 5L) else totals
+  }
 
   /** The strata to aggregate among `candidates`, the strata with more rows than a block, and their grids (§2). One job
     * counts each candidate's distinct exit and entry times; strata are then taken in key order while the per-time
@@ -62,8 +67,7 @@ private[cox] object CoxAggregation {
   def choose(
       input: CoxInput,
       candidates: Seq[(GroupKey, Long)],
-      p: Int,
-      efron: Boolean,
+      width: Long,
       budgetBytes: Long
   ): Map[GroupKey, Array[Double]] =
     if (candidates.isEmpty) Map.empty
@@ -81,10 +85,9 @@ private[cox] object CoxAggregation {
         .collectAs("cox.grid-counts")
         .map(row => GroupKey.of(row.get(0)) -> row.getLong(1))
         .toMap
-      val w = width(p, efron)
       var used = 0L
       val chosen = candidates.map(_._1).sorted.filter { key =>
-        val bytes = counts(key) * w * 8L
+        val bytes = counts(key) * width * 8L
         val fits = used + bytes <= budgetBytes
         if (fits) used += bytes
         fits
@@ -176,6 +179,75 @@ private[cox] object CoxAggregation {
       )
     }
 
+  /** Each aggregated stratum's per-time totals, in group order, from the folded chunks of pass 1. */
+  private def assemble(
+      folded: Array[CoxPassOne],
+      aggregation: CoxAggregation,
+      p: Int,
+      efron: Boolean
+  ): Vector[(Int, CoxTimeTotals)] = {
+    val chunks = folded.filter(_.kind == 1).groupBy(_.stratum)
+    aggregation.strata.map { stratum =>
+      val grid = aggregation.grids(stratum)
+      val parts = chunks.getOrElse(stratum, Array.empty[CoxPassOne]).sortBy(_.chunk)
+      val expected = (grid.length + ChunkTimes - 1) / ChunkTimes
+      if (parts.length != expected || parts.indices.exists(i => parts(i).chunk != i))
+        throw new IllegalStateException(
+          s"aggregated stratum $stratum returned ${parts.length} chunks of per-time totals; its grid needs $expected"
+        )
+      val totals = new CoxTimeTotals(grid, p, efron)
+      totals.addValues(
+        Array.concat(parts.map(_.net).toSeq: _*),
+        Array.concat(parts.map(_.eventWeight).toSeq: _*),
+        Array.concat(parts.map(_.eventCount).toSeq: _*),
+        Array.concat(parts.map(_.tied).toSeq: _*),
+        parts.head.events
+      )
+      stratum -> totals
+    }
+  }
+
+  /** The aggregated strata's per-time totals at `beta` with covariates centred by `center`, for the outputs of §6: the
+    * per-time records of pass 1 alone, folded by the same shuffle.
+    */
+  def totals(
+      prepared: CoxPH.Prepared,
+      beta: Array[Double],
+      center: Array[Double],
+      efron: Boolean,
+      operation: String
+  ): Vector[(Int, CoxTimeTotals)] = {
+    val p = prepared.center.length
+    val b = beta.clone()
+    val c = center.clone()
+    val groups = prepared.workingSet.groups
+    val grids = prepared.aggregation.grids
+    val folded = prepared.workingSet.records
+      .mapPartitions((records: Iterator[CoxChunk]) =>
+        GroupFold(CoxBlocks.assemble(records), (block: CoxBlock) => block.blockId, groups)(
+          new PassOneSum(p, efron, grids)
+        ) { (sum, block) =>
+          var g = 0
+          while (g < block.groupCount) {
+            val stratum = block.groupIndex(g)
+            if (grids.contains(stratum))
+              sum.totalsOf(stratum).add(block.rows, block.groupStart(g), block.groupEnd(g), b, c)
+            g += 1
+          }
+        }.flatMap { case (group, sum) => sum.records(group).filter(_.kind == 1) }
+      )(Encoders.product[CoxPassOne])
+      .groupByKey((r: CoxPassOne) => (r.kind, r.stratum, r.chunk))(
+        Encoders.tuple(Encoders.scalaInt, Encoders.scalaInt, Encoders.scalaInt)
+      )
+      .mapGroups((_: (Int, Int, Int), parts: Iterator[CoxPassOne]) =>
+        fold(parts.toVector.sortBy(_.group))
+      )(
+        Encoders.product[CoxPassOne]
+      )
+      .collectAs(operation)
+    assemble(folded, prepared.aggregation, p, efron)
+  }
+
   /** ℓ, U and I at `beta` with aggregated strata (§4): pass 1 with its shuffle, the driver's step for each aggregated
     * stratum, pass 2's Gram, then the sum: the swept strata's partials in group order, then the aggregated strata in
     * group order, their information G − M.
@@ -208,25 +280,10 @@ private[cox] object CoxAggregation {
       )
       .collectAs("cox.evaluate")
     val swept = folded.filter(_.kind == 0).sortBy(_.group).toSeq
-    val chunks = folded.filter(_.kind == 1).groupBy(_.stratum)
-    val evaluations: Vector[(Int, CoxAggregateEvaluation)] = aggregation.strata.map { stratum =>
-      val grid = grids(stratum)
-      val parts = chunks.getOrElse(stratum, Array.empty[CoxPassOne]).sortBy(_.chunk)
-      val expected = (grid.length + ChunkTimes - 1) / ChunkTimes
-      if (parts.length != expected || parts.indices.exists(i => parts(i).chunk != i))
-        throw new IllegalStateException(
-          s"aggregated stratum $stratum returned ${parts.length} chunks of per-time totals; its grid needs $expected"
-        )
-      val totals = new CoxTimeTotals(grid, p, efron)
-      totals.addValues(
-        Array.concat(parts.map(_.net).toSeq: _*),
-        Array.concat(parts.map(_.eventWeight).toSeq: _*),
-        Array.concat(parts.map(_.eventCount).toSeq: _*),
-        Array.concat(parts.map(_.tied).toSeq: _*),
-        parts.head.events
-      )
-      stratum -> CoxAggregates.evaluate(totals)
-    }
+    val evaluations: Vector[(Int, CoxAggregateEvaluation)] =
+      assemble(folded, aggregation, p, efron).map { case (stratum, totals) =>
+        stratum -> CoxAggregates.evaluate(totals)
+      }
     val forGram = evaluations.map { case (stratum, e) =>
       stratum -> e.copy(subtractive = Array.emptyDoubleArray)
     }.toMap

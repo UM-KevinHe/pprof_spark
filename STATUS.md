@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-23, round 190.
+Updated 2026-11-23, round 191.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -221,7 +221,8 @@ through round 100 as the maintainer reported.
 | 187 | Step 3's exit recorded: on round 186's build Cox evaluation needs 31.6 to 33.8 µs of CPU per row from 5M to 100M rows, 1.27 to 1.76 times less than on round 184's; Cox at 100M fits in 745.3 s (986.0 before); OI-125 opened (ℓ-only halvings, not built) | Merged (1ba99f6) |
 | 188 | Step 4's specification, Cox per-time aggregates for strata larger than a block (`docs/spec/cox/per-time-aggregates.md`), proposed as D-81; OI-125 deferred to step 6 by the maintainer | Merged (64c8247) |
 | 189 | D-81 approved (2026-11-23). Step 4's fixture: `lt-unstratified` (5,000 rows, unstratified, 60 days, truncation, weights, offsets), generated with the pinned reference environment, the existing Cox fixtures reproduced byte for byte; the case joins the Cox suites, the calibration (22 rows, all within class) and the golden runs (new runs, every recorded value unchanged) | Merged (b89f0d2) |
-| 190 | Step 4's evaluation (D-81): Cox strata larger than a block on gridded times spread over blocks of their own and are evaluated from per-time aggregates in two passes; robust fits keep whole strata until round 191; specifications and ADR-0004 amended; existing golden runs unchanged, two aggregated runs added; OI-126 opened (pass 1's cost) | Delivered as a patch |
+| 190 | Step 4's evaluation (D-81): Cox strata larger than a block on gridded times spread over blocks of their own and are evaluated from per-time aggregates in two passes; robust fits keep whole strata until round 191; specifications and ADR-0004 amended; existing golden runs unchanged, two aggregated runs added; OI-126 opened (pass 1's cost) | Merged (c74247a) |
+| 191 | The baseline, residuals and robust variance of aggregated strata (D-81 §6): per-time totals on the driver give the baseline and each stratum's residual tables; blocks compute their rows' residuals from them; robust and clustered fits now aggregate, the budget counting residual tables | Delivered as a patch |
 
 ## Decisions and spikes
 

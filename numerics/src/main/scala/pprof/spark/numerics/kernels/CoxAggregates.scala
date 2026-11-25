@@ -159,6 +159,23 @@ final case class CoxAggregateEvaluation(
     corrections: Array[Double]
 )
 
+/** A stratum's residual tables (Phase 1c specification §1) from its per-time totals, as `CoxResiduals` records them in
+  * its sweep: per event time, ascending, the time, the tied count, the hazard h and Efron's c₀, and p-vectors g, c₁ and
+  * the mean, row-major; then the running totals H and G, Neumaier sums in ascending time.
+  */
+final case class CoxResidualTables(
+    p: Int,
+    eventTimes: Array[Double],
+    tied: Array[Long],
+    hazard: Array[Double],
+    dying: Array[Double],
+    g: Array[Double],
+    c1: Array[Double],
+    means: Array[Double],
+    hTotal: Array[Double],
+    gTotal: Array[Double]
+)
+
 object CoxAggregates {
 
   /** The driver's step (per-time-aggregates.md §4): suffix sums of the totals give S₀ and S₁ at each event time, as
@@ -366,5 +383,227 @@ object CoxAggregates {
       }
       r += 1
     }
+  }
+
+  /** The baseline hazard's event times and increments (§6), as `CoxStratum.baseline` computes them, from totals
+    * accumulated with the centre at zero: Breslow D/S₀, Efron (D/d)·Σₖ 1/((S₀ − T₀) + (k/d)·T₀).
+    */
+  def baseline(totals: CoxTimeTotals): (Array[Double], Array[Double]) = {
+    val width = totals.p + 1
+    val net = totals.net.values
+    val eventWeight = totals.eventWeight.values
+    val tied = totals.tied.values
+    val s0 = new NeumaierSum
+    val times = Array.newBuilder[Double]
+    val increments = Array.newBuilder[Double]
+    var k = totals.times - 1
+    while (k >= 0) {
+      s0.add(net(k * width))
+      val d = totals.eventCount(k)
+      if (d > 0) {
+        val total0 = s0.value
+        val dw = eventWeight(k)
+        val increment =
+          if (!totals.efron || d == 1) dw / total0
+          else {
+            val tied0 = tied(k * width)
+            var sum = 0.0
+            var i = 1L
+            while (i <= d) {
+              sum += 1.0 / ((total0 - tied0) + (i.toDouble / d) * tied0)
+              i += 1
+            }
+            (dw / d) * sum
+          }
+        times += totals.grid(k)
+        increments += increment
+      }
+      k -= 1
+    }
+    (times.result().reverse, increments.result().reverse)
+  }
+
+  /** The residual tables of a stratum (§6), with the arithmetic of `CoxResiduals.stratum` on S₀, S₁, T₀ and T₁ taken
+    * from the totals' suffix sums.
+    */
+  def residualTables(totals: CoxTimeTotals): CoxResidualTables = {
+    val p = totals.p
+    val width = p + 1
+    val net = totals.net.values
+    val eventWeight = totals.eventWeight.values
+    val tied = totals.tied.values
+    val s0 = new NeumaierSum
+    val s1 = new NeumaierVector(p)
+    val times = Array.newBuilder[Double]
+    val counts = Array.newBuilder[Long]
+    val h = Array.newBuilder[Double]
+    val c0 = Array.newBuilder[Double]
+    val g = Array.newBuilder[Array[Double]]
+    val c1 = Array.newBuilder[Array[Double]]
+    val means = Array.newBuilder[Array[Double]]
+    var k = totals.times - 1
+    while (k >= 0) {
+      val base = k * width
+      s0.add(net(base))
+      var j = 0
+      while (j < p) {
+        s1.addAt(j, net(base + 1 + j))
+        j += 1
+      }
+      val d = totals.eventCount(k)
+      if (d > 0) {
+        val total0 = s0.value
+        val total1 = s1.values
+        val dw = eventWeight(k)
+        val gt = new Array[Double](p)
+        val ct = new Array[Double](p)
+        val mt = new Array[Double](p)
+        if (!totals.efron || d == 1) {
+          val hazard = dw / total0
+          j = 0
+          while (j < p) {
+            mt(j) = total1(j) / total0
+            gt(j) = hazard * mt(j)
+            ct(j) = gt(j)
+            j += 1
+          }
+          h += hazard
+          c0 += hazard
+        } else {
+          val d0 = tied(base)
+          val m = dw / d
+          var hazard = 0.0
+          var dying = 0.0
+          var i = 1L
+          while (i <= d) {
+            val f = i.toDouble / d
+            val a = (total0 - d0) + f * d0
+            val step = m / a
+            hazard += step
+            dying += f * step
+            j = 0
+            while (j < p) {
+              val mean = ((total1(j) - tied(base + 1 + j)) + f * tied(base + 1 + j)) / a
+              gt(j) += step * mean
+              ct(j) += f * step * mean
+              mt(j) += mean / d
+              j += 1
+            }
+            i += 1
+          }
+          h += hazard
+          c0 += dying
+        }
+        times += totals.grid(k)
+        counts += d
+        g += gt
+        c1 += ct
+        means += mt
+      }
+      k -= 1
+    }
+    val ts = times.result().reverse
+    val hs = h.result().reverse
+    val gs = g.result().reverse
+    val events = ts.length
+    val hTotal = new Array[Double](events)
+    val gTotal = new Array[Double](events * p)
+    val hSum = new NeumaierSum
+    val gSum = new NeumaierVector(p)
+    var e = 0
+    while (e < events) {
+      hSum.add(hs(e))
+      gSum.add(gs(e))
+      hTotal(e) = hSum.value
+      var j = 0
+      while (j < p) {
+        gTotal(e * p + j) = gSum.valueAt(j)
+        j += 1
+      }
+      e += 1
+    }
+    def flat(rows: Array[Array[Double]]): Array[Double] = Array.concat(rows.toSeq: _*)
+    CoxResidualTables(
+      p,
+      ts,
+      counts.result().reverse,
+      hs,
+      c0.result().reverse,
+      flat(gs),
+      flat(c1.result().reverse),
+      flat(means.result().reverse),
+      hTotal,
+      gTotal
+    )
+  }
+
+  /** Martingale (one per row) and score (row-major, p per row) residuals of rows [from, until) of a stratum, from its
+    * tables, with the per-row arithmetic of `CoxResiduals.stratum`.
+    */
+  def residuals(
+      rows: CoxRowsView,
+      from: Int,
+      until: Int,
+      beta: Array[Double],
+      center: Array[Double],
+      efron: Boolean,
+      tables: CoxResidualTables
+  ): (Array[Double], Array[Double]) = {
+    val p = rows.p
+    require(tables.p == p && beta.length == p && center.length == p, "dimension mismatch")
+    val n = until - from
+    val ts = tables.eventTimes
+    val events = ts.length
+    def lastAtOrBefore(v: Double): Int = {
+      var lo = 0
+      var hi = events - 1
+      var found = -1
+      while (lo <= hi) {
+        val mid = (lo + hi) >>> 1
+        if (ts(mid) <= v) {
+          found = mid
+          lo = mid + 1
+        } else hi = mid - 1
+      }
+      found
+    }
+    val martingale = new Array[Double](n)
+    val score = new Array[Double](n * p)
+    var r = from
+    while (r < until) {
+      val i = r - from
+      val xs = rows.xs(r)
+      val base = rows.xBase(r)
+      var j = 0
+      var linear = 0.0
+      while (j < p) {
+        linear += (xs(base + j) - center(j)) * beta(j)
+        j += 1
+      }
+      val rr = StrictMath.exp(linear + rows.offsetAt(r))
+      val kb = lastAtOrBefore(rows.timeAt(r))
+      val ka = lastAtOrBefore(rows.entryAt(r))
+      val lambda =
+        (if (kb >= 0) tables.hTotal(kb) else 0.0) - (if (ka >= 0) tables.hTotal(ka) else 0.0)
+      val dies = rows.eventAt(r) && rows.weightAt(r) > 0.0
+      val corrected = dies && efron && tables.tied(kb) >= 2
+      martingale(i) = (if (dies) 1.0 else 0.0) - rr * lambda +
+        (if (corrected) rr * (tables.hazard(kb) - tables.dying(kb)) else 0.0)
+      j = 0
+      while (j < p) {
+        val xc = xs(base + j) - center(j)
+        val gamma = (if (kb >= 0) tables.gTotal(kb * p + j) else 0.0) -
+          (if (ka >= 0) tables.gTotal(ka * p + j) else 0.0)
+        var u = -rr * (xc * lambda - gamma)
+        if (dies) u += xc - tables.means(kb * p + j)
+        if (corrected)
+          u += rr * (xc * (tables.hazard(kb) - tables.dying(kb)) - (tables.g(kb * p + j) - tables
+            .c1(kb * p + j)))
+        score(i * p + j) = u
+        j += 1
+      }
+      r += 1
+    }
+    (martingale, score)
   }
 }

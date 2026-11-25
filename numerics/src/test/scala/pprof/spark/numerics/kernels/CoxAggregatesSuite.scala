@@ -109,6 +109,81 @@ class CoxAggregatesSuite extends FunSuite {
     }
   }
 
+  private def totalsOf(
+      parts: Seq[CoxRows],
+      grid: Array[Double],
+      p: Int,
+      beta: Array[Double],
+      center: Array[Double],
+      efron: Boolean
+  ): CoxTimeTotals = {
+    val totals = new CoxTimeTotals(grid, p, efron)
+    parts.foreach { part =>
+      val local = new CoxTimeTotals(grid, p, efron)
+      local.add(part, 0, part.rows, beta, center)
+      totals.merge(local)
+    }
+    totals
+  }
+
+  test("the baseline from parts matches the sweep's within 1e-12, Breslow and Efron (§6)") {
+    for {
+      (n, p, distinct, late, seed, k) <- Seq((600, 3, 40, 0.5, 21L, 3), (900, 4, 12, 0.6, 22L, 7))
+      efron <- Seq(false, true)
+    } {
+      val rows = draw(n, p, distinct, late, seed)
+      val grid = (rows.map(_.time) ++ rows.map(_.entry)).distinct.sorted.toArray
+      val beta = Array.tabulate(p)(j => 0.15 * ((j % 5) - 2))
+      val (wholeTimes, wholeIncrements) = CoxStratum.baseline(rowsOf(rows, p), 0, n, beta, efron)
+      val parts = (0 until k).map(part =>
+        rowsOf(rows.zipWithIndex.collect { case (r, i) if i % k == part => r }, p)
+      )
+      val (times, increments) =
+        CoxAggregates.baseline(totalsOf(parts, grid, p, beta, new Array[Double](p), efron))
+      assertEquals(times.toSeq, wholeTimes.toSeq)
+      val d = scaled(increments, wholeIncrements)
+      assert(d <= 1e-12, s"n $n, efron $efron: increments scaled difference $d")
+    }
+  }
+
+  test("residuals from parts match the sweep's within 1e-12, Breslow and Efron (§6)") {
+    for {
+      (n, p, distinct, late, seed, k) <- Seq(
+        (600, 3, 40, 0.5, 23L, 3),
+        (900, 4, 12, 0.6, 24L, 7),
+        (400, 3, 300, 0.4, 25L, 1)
+      )
+      efron <- Seq(false, true)
+    } {
+      val rows = draw(n, p, distinct, late, seed)
+      val grid = (rows.map(_.time) ++ rows.map(_.entry)).distinct.sorted.toArray
+      val beta = Array.tabulate(p)(j => 0.15 * ((j % 5) - 2))
+      val center = Array.tabulate(p)(j => 0.05 * j)
+      val (wholeMartingale, wholeScore) =
+        CoxResiduals.stratum(rowsOf(rows, p), 0, n, beta, center, efron)
+      val parts = (0 until k).map(part =>
+        rows.zipWithIndex.collect { case (r, i) if i % k == part => (r, i) }
+      )
+      val partRows = parts.map(part => rowsOf(part.map(_._1), p))
+      val tables = CoxAggregates.residualTables(totalsOf(partRows, grid, p, beta, center, efron))
+      val martingale = new Array[Double](n)
+      val score = new Array[Double](n * p)
+      parts.zip(partRows).foreach { case (part, rowsOfPart) =>
+        val (m, u) =
+          CoxAggregates.residuals(rowsOfPart, 0, rowsOfPart.rows, beta, center, efron, tables)
+        part.map(_._2).zipWithIndex.foreach { case (row, at) =>
+          martingale(row) = m(at)
+          (0 until p).foreach(j => score(row * p + j) = u(at * p + j))
+        }
+      }
+      val label = s"n $n, $k parts, efron $efron"
+      val dm = scaled(martingale, wholeMartingale)
+      assert(dm <= 1e-12, s"$label: martingale scaled difference $dm")
+      val du = scaled(score, wholeScore)
+      assert(du <= 1e-12, s"$label: score scaled difference $du")
+    }
+  }
+
   test("totals merged in the same order give the same bits") {
     val rows = draw(500, 3, 30, 0.4, 15L)
     val grid = (rows.map(_.time) ++ rows.map(_.entry)).distinct.sorted.toArray

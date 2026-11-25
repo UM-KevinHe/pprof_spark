@@ -1,7 +1,7 @@
 # Specification: Cox / per-time aggregates for strata larger than a block
 
 - Status: **Approved** (2026-11-23, the maintainer) as D-81. The fixture is built in round 189, the evaluation in
-  round 190 (§11).
+  round 190 and the outputs in round 191 (§11).
 - Decision references:
   - D-75: performance step 4;
   - D-78: the re-baselining rule, which names per-time aggregates among changes of summation order;
@@ -191,3 +191,22 @@ specified.
   describes plain sums per block folded with Neumaier sums. That is more accurate and slower.
 - **Measured** in the sandbox (`perf-results.md`, "Round 190"): the log-likelihood's bits match the one-block sweep. On
   one core the two passes cost 2.2 to 2.4 times its CPU.
+
+**Round 191, the outputs.**
+- **The baseline.** One pass gathers each aggregated stratum's per-time totals at β̂, with the centre at zero
+  (`cox.baseline-totals`). The driver computes the increments, as `CoxStratum.baseline` does (`CoxAggregates.baseline`),
+  and their running total and survival. The rows join the table; the strata's blocks add none of their own.
+- **Residuals and robust variance.** One pass gathers the totals at β̂ with the fit's centre (`cox.residual-totals`,
+  `cox.robust-totals`). The driver forms each stratum's residual tables (`CoxAggregates.residualTables`). Every block
+  computes its rows' residuals from them with the per-row arithmetic of `CoxResiduals` (`CoxAggregates.residuals`);
+  the robust variance uses those residuals.
+- **The budget.** For robust fits and residuals it counts the residual tables, 4p + 5 numbers per event time, so a
+  stratum whose tables exceed `driverBudgetBytes` keeps one block.
+- **Round 190's departures end.** Robust and clustered fits aggregate, and so do the baseline and residuals. The
+  reference point, a block sum independent of layout, and the measures, laid out by provider, build their working
+  sets as before.
+- **Tests.**
+  - Split into parts, the baseline and the martingale and score residuals match the whole-stratum kernels within
+    10⁻¹² (`CoxAggregatesSuite`).
+  - On many blocks, the unstratified cases' baseline and residuals match the whole stratum's within 10⁻¹², and their
+    robust covariance within 10⁻⁹ (`CoxAggregationSuite`).

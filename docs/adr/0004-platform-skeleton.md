@@ -62,4 +62,5 @@ A Cox stratum larger than a block is split when its times lie on a grid: its per
 `BlockOptions.driverBudgetBytes`. It spreads over ⌈rows / target⌉ blocks of its own, its rows placed by a hash of
 their content, and it is evaluated from per-time aggregates
 ([docs/spec/cox/per-time-aggregates.md](../spec/cox/per-time-aggregates.md)). Other models' groups keep one block, as
-do Cox strata whose per-time totals exceed the budget and the strata of robust fits (OI-30).
+do Cox strata whose per-time totals exceed the budget. For robust fits and residuals, the budget counts their
+residual tables (round 191, OI-30).

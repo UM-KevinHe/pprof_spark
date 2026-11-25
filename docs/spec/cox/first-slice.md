@@ -120,7 +120,7 @@ Strata within a block are taken in key order.
 
 Since round 190 (D-81), a stratum with more rows than a block, whose per-time totals fit the driver's budget,
 spreads over blocks of its own and is evaluated from per-time aggregates
-([per-time-aggregates.md](per-time-aggregates.md)). A robust fit keeps it whole until round 191. e^{ηᵢ} uses `StrictMath.exp`. A non-finite e^{ηᵢ} or S₀ makes
+([per-time-aggregates.md](per-time-aggregates.md)). Its baseline, residuals and robust variance come from per-time tables (round 191). e^{ηᵢ} uses `StrictMath.exp`. A non-finite e^{ηᵢ} or S₀ makes
 the evaluation non-finite, which step halving then treats as a decrease.
 
 ## 7. Inference

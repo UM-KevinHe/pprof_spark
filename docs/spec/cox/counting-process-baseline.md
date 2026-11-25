@@ -116,6 +116,10 @@ from it. The Neumaier compensation bounds this for S₀ and S₁. Since round 18
 term is removed. Its accuracy under late entry rests on the compensated difference of cumulative hazards
 ([weighted-gram.md](weighted-gram.md) §5). Heavily truncated fixtures test it, `lt-heavy-ties` among them.
 
+Since round 191 (D-81), a stratum evaluated from per-time aggregates gets its baseline on the driver. Its per-time
+totals at β̂, with the centre at zero, give the increments of §2 by the same formulas. Their running Neumaier total
+and exp(−H) follow as for any stratum ([per-time-aggregates.md](per-time-aggregates.md) §6).
+
 ## 7. Edge cases
 
 | Case | pprof_py v0.7.0 (probed) | pprof_spark |

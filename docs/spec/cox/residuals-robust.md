@@ -54,6 +54,12 @@ also keeps V as `naiveCovariance`, as pprof_py keeps `naive_covariance_`.
 | Driver | B and V_rob, p×p |
 | Output | The residual table stays distributed (DIST-1) |
 
+Since round 191 (D-81), a stratum evaluated from per-time aggregates takes the tables of its residuals from its per-time
+totals at β̂, on the driver: per event time h, g, c₀, c₁ and the means, and the running totals H and G. Each block then
+computes its rows' residuals with the per-row arithmetic above, and the robust variance follows from them
+([per-time-aggregates.md](per-time-aggregates.md) §6). When the tables, 4p + 5 numbers per event time, exceed the
+driver's budget, the stratum keeps one block.
+
 ## 5. Validation plan
 
 | Level | Test | Class |

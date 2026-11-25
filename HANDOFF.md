@@ -228,6 +228,50 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 191 (2026-11-23): the baseline, residuals and robust variance of aggregated strata (step 4, D-81)
+
+- Round 190 is on `main` as `c74247a`.
+- **Specifications first (NN-2).** These record it:
+  - the baseline's §6 and the residuals' §4;
+  - first-slice §6, and ADR-0004's amendment, which no longer keeps robust fits whole;
+  - `per-time-aggregates.md` §11, as built.
+- **Numerics** (`CoxAggregates`). From per-time totals:
+  - `baseline`, the increments of `CoxStratum.baseline`, at centre zero;
+  - `residualTables`, the per-time tables of `CoxResiduals`, with H and G as running Neumaier totals;
+  - `residuals`, `CoxResiduals`' per-row arithmetic on those tables.
+- **Engine.**
+  - **`CoxAggregation.totals`** gathers the aggregated strata's per-time totals at any β and centre, through pass 1's
+    shuffle.
+  - **The baseline** joins driver rows for those strata, which their blocks skip.
+  - **The residuals and robust meat** take the strata's residual tables, through `CoxKernel`'s `residualsOfGroup`.
+  - **Robust and clustered fits** now aggregate. For them and for residuals, the budget counts the residual tables:
+    4p + 5 numbers per event time.
+  - **Unchanged.** The reference point and the measures build their working sets as before.
+- **Tests.**
+  - **`CoxAggregatesSuite`** (5): the baseline and the residuals from parts match the whole-stratum kernels within
+    10⁻¹².
+  - **`CoxAggregationSuite`** (18): on many blocks, the baseline and residuals match the whole stratum's within
+    10⁻¹², and robust fits within 10⁻⁹.
+  - **`CoxLayoutSuite`.** The skewed test's robust fit now aggregates (24 blocks). Its bitwise test of robust fits
+    and baselines across partitions passes through the aggregated paths.
+- **Not measured** in the sandbox this round. These outputs are not part of step 4's exit.
+- **Records.** The specifications, ADR-0004, plan §4, OI-03, STATUS.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode):
+- Every module compiles with the build's flags. scalafmt is clean, and `check-engine-api.sh` passes with its
+  self-test.
+- Every suite passes:
+  - numerics, 120 tests;
+  - engine, 643 tests in seven batches;
+  - app 38, bench 30 and testkit 28;
+  - the Python tests on PySpark 4.1.0, 47.
+- `GoldenRunsSuite` passes against the existing manifest, 4 tests, with no re-baselining.
+- The patch applies to a fresh clone of `main` with an identical tree. Not run here: sbt, Spark Connect, JDK 21, Spark
+  4.0.0's jars, and the Python tests on PySpark 4.0.0.
+
+**Next: step 4's exit on the cluster** (plan §4): an unstratified 20M-row fit using every worker, and agreement with
+the stratum sweep within T-fn at a size both can run. Then step 5, per the plan.
+
 ## Round 190 (2026-11-23): Cox per-time aggregates, the evaluation (step 4's build, D-81)
 
 - Round 189 is on `main` as `b89f0d2`.
