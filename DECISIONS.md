@@ -103,9 +103,10 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
-### D-83: Logistic profile-likelihood Newton through SerBIN's reduced system, performance step 5's specification (Proposed, round 196)
+### D-83: Logistic profile-likelihood Newton through SerBIN's reduced system, performance step 5's specification (Accepted: approved by the maintainer, 2026-11-25)
 
-Proposed for the maintainer's approval: `docs/spec/logistic/profile-newton.md`.
+Proposed in round 196 and approved as written on 2026-11-25: `docs/spec/logistic/profile-newton.md`. The approval
+message read "D-8", taken as D-83, the decision asked about.
 - **The method.** One pass per iteration solves each provider's intercept in its task, by scalar Newton within the
   previous pass's median ∓ `bound`; providers without events, or with only events, are held at the bound. The pass
   returns SerBIN's pass A sums and the solved γ. The driver steps Δβ = S⁻¹r, SerBIN's reduced right-hand side, with

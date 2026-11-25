@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-25, round 196.
+Updated 2026-11-25, round 197.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -227,7 +227,8 @@ through round 100 as the maintainer reported.
 | 193 | Step 4's exit complete: on the cluster, one unstratified stratum aggregated over 46 and 88 blocks gave the same log-likelihood as one block (1M × 20, 250,000 × 180); at those sizes aggregation cost 3.1 to 4.9 times the sweep's CPU per row (OI-126) | Merged (3daa2a5) |
 | 194 | D-82 proposed: aggregate a Cox stratum only when its covariates exceed `CoxOptions.aggregateAboveBytes` (default 256 MiB), from step 4's exit measurements (`per-time-aggregates.md` §2a) | Merged (3a6c921) |
 | 195 | D-82 approved and built: `CoxOptions.aggregateAboveBytes` (default 256 MiB), persisted in `CoxFitIO` format 7, and set by the run specification, Python and PerfJob; aggregation starts only above it; tests and golden runs that force aggregation set it to 0 | Merged (c3883fa) |
-| 196 | Step 5's specification, logistic profile-likelihood Newton through SerBIN's reduced system (`docs/spec/logistic/profile-newton.md`), proposed as D-83: intercepts solved in the tasks, the β step from S⁻¹r, one pass per iteration, as an option; X-051 to register | Delivered as a patch |
+| 196 | Step 5's specification, logistic profile-likelihood Newton through SerBIN's reduced system (`docs/spec/logistic/profile-newton.md`), proposed as D-83: intercepts solved in the tasks, the β step from S⁻¹r, one pass per iteration, as an option; X-051 to register | Merged (dd6b96b) |
+| 197 | D-83 approved. Step 5's fixture `lfe-zero-events` (30,000 rows, 600 providers, 22 without events by chance), generated with the pinned environment, the existing logistic fixtures reproduced byte for byte; pprof_py's default stops 0.6 to 1.4 short of the bound there (X-051); SerBIN passes it; golden runs added, every recorded value unchanged | Delivered as a patch |
 
 ## Decisions and spikes
 

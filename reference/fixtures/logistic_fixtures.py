@@ -41,6 +41,10 @@ CASES = (
     {"id": "lfe-binomial", "seed": 24, "sizes": [11 + (3 * j) % 30 for j in range(30)], "max_trials": 20},
     {"id": "lfe-many", "seed": 25, "sizes": [20 + j % 20 for j in range(500)]},
     {"id": "lfe-clustered", "seed": 26, "sizes": BASE_SIZES, "patients": 3},
+    # Low event rates leave providers without events, as in study §4.3's case, and SerBIN's default stops before
+    # they reach the bound (X-051; docs/spec/logistic/profile-newton.md §9, D-83).
+    {"id": "lfe-zero-events", "seed": 27, "sizes": [55] * 500 + [25] * 100, "intercept": -3.5,
+     "natural_degenerate": True},
 )
 
 OPTIONS = {
@@ -104,12 +108,13 @@ def packed(matrix):
 
 def make_data(case):
     """Providers 1..m; within each, rows in generation order. Fails if an undesignated provider
-    has no events or only events, so only lfe-degenerate has degenerate providers."""
+    has no events or only events, unless the case allows them (natural_degenerate), so only lfe-degenerate and
+    lfe-zero-events have degenerate providers."""
     rng = np.random.Generator(np.random.PCG64(case["seed"]))
     binomial = "max_trials" in case
     parts = []
     for j, size in enumerate(case["sizes"], start=1):
-        g = -0.5 + 0.5 * rng.standard_normal()
+        g = case.get("intercept", -0.5) + 0.5 * rng.standard_normal()
         x1 = np.rint(rng.standard_normal(size) * 64) / 64
         x2 = np.rint((0.5 * g + rng.standard_normal(size)) * 64) / 64
         x3 = (rng.random(size) < 0.4).astype(float)
@@ -120,7 +125,7 @@ def make_data(case):
             y[:] = 0
         elif j in case.get("all_events", ()):
             y[:] = n
-        elif size > 10 and (y.sum() == 0 or y.sum() == n.sum()):
+        elif size > 10 and (y.sum() == 0 or y.sum() == n.sum()) and not case.get("natural_degenerate"):
             raise ValueError(f"{case['id']}: provider {j} has no events or only events; change the seed")
         part = pd.DataFrame({"provider": j, "y": y, "x1": x1, "x2": x2, "x3": x3})
         if binomial:
@@ -567,6 +572,12 @@ def generate(out, inputs, lock, write_json):
         else:
             df = make_data(case)
             df.to_csv(os.path.join(case_dir, "input.csv"), index=False)
+        if case.get("natural_degenerate"):
+            # Providers without events, or with only events, arose from the data: name them as designated ones are.
+            events = df.groupby("provider")["y"].sum()
+            trials = df.groupby("provider")["n"].sum() if "n" in df.columns else df.groupby("provider").size()
+            case = dict(case, zero_events=[int(j) for j in events.index if events[j] == 0],
+                        all_events=[int(j) for j in events.index if events[j] == trials[j]])
         model, default = fitted(df)
         tight_model, tight = fitted(df, **TIGHT)
         y_bar = float(np.sum(tight_model.outcome_) / np.sum(tight_model.N_))

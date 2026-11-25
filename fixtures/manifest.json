@@ -51,7 +51,8 @@
    "lfe-shifted",
    "lfe-binomial",
    "lfe-many",
-   "lfe-clustered"
+   "lfe-clustered",
+   "lfe-zero-events"
   ],
   "logistic-re": [
    "lgre-base",
@@ -335,6 +336,10 @@
   "logistic/lfe-shifted/input.csv": "b795403e68b6b03340f32ae5c4264489d85cc5c785aac0fadb21133b5acb1b8f",
   "logistic/lfe-shifted/pprof_py.json": "6b64365836c5be82257945b68dc1936b99f9dc8f2dfb27ff017cc5067a6c967f",
   "logistic/lfe-shifted/r_logistic.json": "471d1291c818d921f084d812b9d692eec19441f795491148334380778f9dd7d7",
+  "logistic/lfe-zero-events/case.json": "a84d831d39653c194b35a75a3c403ed7db78ecfcc08ffd0daea99981497fca0f",
+  "logistic/lfe-zero-events/input.csv": "00da64e81dd99b78189bf5532de9b0220f185c72a69602b56e83e98753418ecd",
+  "logistic/lfe-zero-events/pprof_py.json": "8fd15cfbc0a61e78b9cd6f9347f8597e8a93b89a17647173fcb814f35782f58c",
+  "logistic/lfe-zero-events/r_logistic.json": "57621c7853fb8c54b779d787e6d59fe2f4199c18e3363af11e32869ec01789bd",
   "logistic/poibin-tails.json": "00434ff369d537fd813128714b073abae4a611921e0881750e42b3b60461a72c",
   "three-stage/gauss-hermite.json": "96fac80b3b4c6481ea3b0a0127267f13ad83578480ada13d7b8a86cdce2ab05d",
   "three-stage/ts-golden-prep/case.json": "89f295097380411e0871ef0c150b8f37f20483071f3809f2cb758868c750282e",

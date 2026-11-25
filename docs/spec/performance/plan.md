@@ -280,7 +280,8 @@ Step 1 addresses OI-02 and part of OI-30.
   - interior intercepts are solved in the tasks, and bounded providers are held at the bound;
   - the β step comes from SerBIN's reduced system;
   - X-051 registers the reported effects of zero-event providers at the default tolerance.
-  - Specification: `docs/spec/logistic/profile-newton.md` (round 196), proposed as D-83.
+  - Specification: `docs/spec/logistic/profile-newton.md` (round 196), approved as D-83 on 2026-11-25; its
+    fixture in round 197.
 - **Step 6** takes up OI-66 and OI-61.
 
 ## 5. Benchmark grid
