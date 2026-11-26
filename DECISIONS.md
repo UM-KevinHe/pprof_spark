@@ -103,6 +103,17 @@ with a fused pairwise cascade make determinism nearly free. There is no fast mod
 
 `.devcontainer/` provides JDK 21, the pinned sbt and Metals; CI remains the source of evidence.
 
+### D-84: The profile method's last pass without S and r (Proposed, round 204)
+
+Proposed for the maintainer's approval: `docs/spec/logistic/profile-newton.md` §13, OI-127's remedy.
+- **The rule.** A trial whose change in β is already below `tol` ends the loop when accepted. Its pass solves the
+  intercepts and forms ℓ, exactly as pass A does, but not S and r, which nothing would use. It is tagged
+  `logistic.profile-final`.
+- **The same bits.** Every output is the same to the bit, since ℓ is formed by the same kernel in the same order.
+- **The gain.** On round 201's cluster figures, about 13% less Newton CPU than SerBIN at 4 iterations, and about 29%
+  where SerBIN takes 5.
+- **Evidence.** A sandbox prototype, not committed, with the measurement in §13.
+
 ### D-83: Logistic profile-likelihood Newton through SerBIN's reduced system, performance step 5's specification (Accepted: approved by the maintainer, 2026-11-25)
 
 Proposed in round 196 and approved as written on 2026-11-25: `docs/spec/logistic/profile-newton.md`. The approval

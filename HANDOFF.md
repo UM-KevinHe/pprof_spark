@@ -228,6 +228,41 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 204 (2026-11-26): D-84 proposed, the profile method's last pass without S and r
+
+- Round 203 is on `main` as `759ea70`. The maintainer asked for D-84 to be proposed before the held cluster rerun, so
+  that one session measures the improved method.
+- **D-84** (profile-newton.md §13, DECISIONS, Proposed).
+  - **The rule.** A trial whose change in β, computed as the loop's criterion, is below `tol` (at most `tol` without
+    backtracking) ends the loop when accepted. Its pass solves the intercepts and forms ℓ and the score term from the
+    same provider sums in the same order as pass A, without S and r. It is tagged `logistic.profile-final`.
+  - **The guard.** The loop requires S and r at the start of every iteration.
+  - **The same bits.** Every output is the same to the bit.
+- **The prototype** (sandbox; not committed; saved as `/home/claude/r204-prototype.diff`, 5 files, 124 lines added and
+  34 removed).
+  - **Changes.** `kernels.LogisticFE.schur(…, moments)` and `profile(…, moments)`; `ProfilePasses.solve(…, moments)`
+    and the loop's final-trial test and guard; `InMemoryProfilePasses`; the engine's `ProfileSum(p, moments)` and
+    `SparkProfilePasses`.
+  - **A numerics test.** Fits honouring the request against fits forced to form S and r: the same bits in β,
+    intercepts, trace, iterations and inner steps, under the default, 10⁻¹² and no backtracking, with at least one
+    light pass each.
+  - **Results.** `GoldenRunsSuite` against `main`'s manifest: 4 of 4, so all 67 runs, the 15 of the profile method
+    among them, kept their bits. `LogisticProfileSuite`: 9 of 9.
+  - **The sandbox measurement:** see §13. At 200,000 × 180, Newton CPU 1.47 times less than SerBIN's (1.32 without
+    D-84), the final pass about a fifth of a full pass. At 1M × 20, 1.37 times less (1.34 without).
+- **To build after approval.** The prototype's code and test, and `compare_newton.py` counting
+  `logistic.profile-final` among the Newton passes. On the prototype's reports it counted the profile method's passes
+  as 4.
+- **A note on the sandbox.** `compare_newton.py` given a point's folder also reads archived report folders beneath
+  it. The sandbox's comparisons therefore name the `reports` folder itself.
+- **Records.** profile-newton.md §13; DECISIONS (D-84); OI-127; plan §4; STATUS.
+
+Evidence (assistant sandbox): documentation only in the commit. The patch applies to a fresh clone of `main` with an
+identical tree; scalafmt is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next: the maintainer's review of D-84.** Then its build, and the held cluster comparison (N1 to N4, widget 6
+`serbin,profile,profile,serbin`, widget 7 `10`).
+
 ## Round 203 (2026-11-26): the cluster held before each timed fit
 
 - Rounds 201 and 202 are on `main` (`e8de432`, `11659c3`). The maintainer cannot change the cluster's workers, so round

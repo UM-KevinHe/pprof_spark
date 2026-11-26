@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-26, round 203.
+Updated 2026-11-26, round 204.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -234,7 +234,8 @@ through round 100 as the maintainer reported.
 | 200 | Step 5's exit prepared: perf-runbook's "Comparing the logistic Newton methods" (points 2, 4, 8 and 10, `serbin,profile`), `03_perf`'s widget 6, and `scripts/compare_newton.py` (passes, pass CPU, T-coef and T-var with tolerances.conf's values; `--self-test`) | Merged (91012fa) |
 | 201 | Step 5's exit measured on the cluster (points 2, 4, 8, 10; SerBIN against the profile method): the same fit (ℓ to the bit, T-coef worst ratio 2.9·10⁻⁶, R0), passes 37% to 50% fewer, Newton CPU 1.19 times less at 5M and equal at 4 iterations; OI-127 opened for the last pass's unused S and r | Merged (e8de432) |
 | 202 | Round 201 corrected after the maintainer found that autoscaling took most of the first fits' time: the GC and task-time savings are no longer attributed to the method; the runbook asks for a fixed cluster and the order `serbin,profile,profile,serbin`; `compare_newton.py` compares fit times only on one fixed executor count. Applies after round 201 | Merged (11659c3) |
-| 203 | The cluster held before each timed fit, since its size cannot be fixed: PerfJob's `--hold-executors n` (rounds of sleeping tasks until n executors are attached, asked again before the fit, recorded as `hold`), after statcompute's `hold_at` and D-22; `03_perf`'s widget 7; the runbook's "Holding the cluster" replaces round 202's fixed cluster; `compare_newton.py` lists each fit's executors | Delivered as a patch |
+| 203 | The cluster held before each timed fit, since its size cannot be fixed: PerfJob's `--hold-executors n` (rounds of sleeping tasks until n executors are attached, asked again before the fit, recorded as `hold`), after statcompute's `hold_at` and D-22; `03_perf`'s widget 7; the runbook's "Holding the cluster" replaces round 202's fixed cluster; `compare_newton.py` lists each fit's executors | Merged (759ea70) |
+| 204 | D-84 proposed (profile-newton.md §13, OI-127): a trial whose change in β is below `tol` gets a pass without S and r, tagged `logistic.profile-final`; results the same to the bit; a sandbox prototype's evidence, not committed | Delivered as a patch |
 
 ## Decisions and spikes
 

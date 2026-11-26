@@ -281,3 +281,52 @@ the maintainer's sign-off. The default-tolerance comparisons of §9 are stated a
 - **Passes.** 5 against 8 or 10.
 - **CPU.** 1.19 times less where SerBIN took 5 iterations, and equal at 4, because a profile pass costs a pass A. The
   last pass forms S and r that nothing uses (OI-127).
+
+## 13. D-84 (Proposed, round 204): the last pass without S and r
+
+**The problem** (OI-127). On the cluster (round 201), a profile pass costs what pass A does, 32 to 37 µs per row at 180
+features, and pass B 7 to 8. So the profile method's 5 passes for 4 iterations cost about SerBIN's 4 pass A and 4 pass
+B. The last of the 5 is the trial at the converged β, and it forms S and r that nothing uses.
+
+**The rule.**
+- A trial is **final** when its change in β, max over j of |βⱼ − β′ⱼ| computed as the loop computes its criterion
+  (§3), is below `tol`; at most `tol` without backtracking. Accepted, such a trial ends the loop.
+- Its pass solves the intercepts as §3 says, and forms ℓ and the score term from the same provider sums in the same
+  order as pass A, but not S and r.
+- The loop checks that no iteration follows such a pass. A final trial that is rejected is followed by a shorter one,
+  which is final too.
+
+**The same bits.**
+- The last pass's S and r are never used: the iteration stops, the fit's intercepts come from the pass's solved ones
+  (settled, §12), and the variance pass forms its own information.
+- ℓ is formed by the same kernel in the same order, so Armijo's test decides exactly as before.
+- Every output is therefore the same to the bit, and so are the iterates, X-051's behaviour and what a fit persists.
+
+**The tag.** Such passes are tagged `logistic.profile-final`, so reports show their cost apart.
+
+**The cost.**
+- O(n·p) per row instead of O(n·p²), about pass B's.
+- On round 201's figures: at 4 iterations, 4 full passes and 1 final against SerBIN's 4 pass A and 4 pass B, about
+  4 × 36 + 7.5 ≈ 151 µs per row against 4 × (36 + 7.5) = 174, about 13% less Newton CPU. Where SerBIN takes 5
+  iterations (5M), about 29% less.
+- **The sandbox prototype** (one core, round 204, two runs of each method, alternating):
+  - **200,000 × 180.** The final pass cost 2.2 to 2.8 µs per row, against a full pass's 11.6 to 12.0 and SerBIN's
+    pass B 3.4. Newton CPU was 9.92 s against SerBIN's 14.59: 1.47 times less, against 1.32 without D-84 (round 199).
+  - **1M × 20.** The final pass cost 0.47 to 0.49 µs per row, against 0.79 for a full pass and 0.70 to 0.73 for
+    pass B. Newton CPU was 3.63 s against 4.99: 1.37 times less, against 1.34 without.
+  - **The same fit.** Log-likelihoods are identical to the bit, and the estimates within T-coef of SerBIN's (worst
+    ratios 9.2·10⁻⁸ and 1.1·10⁻⁸).
+
+**Validation.**
+- A numerics test: fits whose passes honour the request, and fits whose passes always form S and r, agree to the
+  bit in β, intercepts, trace, iterations and inner steps, under the default, a tight tolerance, and no backtracking.
+- The profile method's 15 golden runs keep their bits.
+- `LogisticProfileSuite` passes as before.
+- The sandbox measurement above; then the cluster's comparison with the hold: N1 to N4, widget 6
+  `serbin,profile,profile,serbin`, widget 7 `10`.
+
+**Rounds.**
+1. This proposal (round 204). The prototype that gave the evidence is not committed.
+2. After approval, the build: the prototype's code and tests, and `compare_newton.py` counting
+   `logistic.profile-final` among the Newton passes.
+3. The held cluster comparison.
