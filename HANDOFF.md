@@ -228,6 +228,37 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 203 (2026-11-26): the cluster held before each timed fit
+
+- Rounds 201 and 202 are on `main` (`e8de432`, `11659c3`). The maintainer cannot change the cluster's workers, so round
+  202's fixed cluster cannot be had. The same problem arose in statcompute (taoxu2016/statcompute).
+- **statcompute's answer, read and followed.**
+  - `statcompute/bench/environment.py`'s `hold_at` submits rounds of sleeping tasks, eight per executor wanted, until
+    the autoscaler has attached the target.
+  - Its D-22 asks again just before a timed fit, because fits ran on six after the count said ten.
+  - Its runner flags fits whose executor count moved.
+- **PerfJob.**
+  - `--hold-executors n`, with `--hold-timeout` (default 900 s) and `--hold-task-seconds` (default 15), holds the
+    cluster just before the timed window. It asks once more if the count fell short, and writes `hold`: target,
+    reached, `asked_again`, rounds, seconds and `before_fit`.
+  - The count is the lower of the block managers' and the status tracker's, less the driver.
+  - The hold restores a job description the caller had set, and is skipped in local mode.
+- **`03_perf`.** Widget 7 adds `--hold-executors` to every run; giving it both ways is refused. The summary shows the
+  executors held before each fit.
+- **`compare_newton.py`.** A column of each fit's executors. Fit times still compare only on one unchanged count.
+- **`perf-runbook.md`.** "Holding the cluster" replaces round 202's "A fixed cluster". CPU per row per pass, passes,
+  bytes read and estimates remain the comparison's basis (D-76).
+- **Tests.** `PerfJobSuite` gains a test: the report's `hold` in local mode (skipped, target, `before_fit` 0), a zero
+  target refused, the new arguments accepted, and the loop run locally until its timeout.
+
+Evidence (assistant sandbox, JDK 17, Spark 4.1.0 in local mode): the bench suites pass, 31 tests, `PerfJobSuite`'s 12 among them. `compare_newton.py --self-test` passes, and the
+notebook parses. scalafmt is clean, and `check-engine-api.sh` passes with its self-test. The patch applies to a fresh
+clone of `main` with an identical tree. Not run here: a hold on a cluster, since local mode has no executors to
+attach.
+
+**Next.** On the cluster, rerun N1 to N4 with widget 6 `serbin,profile,profile,serbin` and widget 7 `10`, sending back
+every report line. OI-127's remedy is still to propose as D-84.
+
 ## Round 202 (2026-11-26): round 201 corrected for autoscaling
 
 - Round 201 (`e2dad55`) is not yet on `main`. This round applies after it.

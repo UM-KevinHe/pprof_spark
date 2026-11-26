@@ -115,11 +115,13 @@ def compare(current, baseline=(), out=print, conf=None):
     for point in sorted({f["point"] for f in fits}):
         here = [f for f in fits if f["point"] == point]
         out(f"\n## {point}\n")
-        out("| Fit | Seconds | Iterations | Passes | Pass CPU (s) | µs per row per pass | ℓ |")
-        out("|---|---|---|---|---|---|---|")
+        out("| Fit | Seconds | Executors | Iterations | Passes | Pass CPU (s) | µs per row per pass | ℓ |")
+        out("|---|---|---|---|---|---|---|---|")
         for f in here:
             passes = ", ".join(f"{tag.rsplit('.', 1)[1]} {n}" for tag, n in f["executions"].items() if n)
-            out(f"| {f['group']}{'' if f['succeeded'] else ' (failed)'} | {f['seconds']:.1f} | {f['iterations']} | "
+            low, high = f["executors"]
+            out(f"| {f['group']}{'' if f['succeeded'] else ' (failed)'} | {f['seconds']:.1f} | "
+                f"{'?' if low is None else (low if low == high else f'{low} to {high}')} | {f['iterations']} | "
                 f"{f['passes']} ({passes}) | {f['cpu_ms'] / 1000:.1f} | {f['us_per_row_pass']:.2f} | {f['loglik']!r} |")
         groups = {g: [f for f in here if f["group"] == g and f["succeeded"]] for g in ("serbin", "profile", "step 2")}
         if not (groups["serbin"] and groups["profile"]):

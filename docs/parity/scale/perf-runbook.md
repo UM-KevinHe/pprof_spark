@@ -180,15 +180,20 @@ Step 5's exit (plan §4) compares the profile-likelihood Newton (`--newton profi
 **The build.** Use round 199's build or later: its reports carry the estimates and standard errors the comparison
 needs.
 
-**A fixed cluster.** Set the cluster's minimum workers to its maximum, or turn autoscaling off, for these runs, and
-start them once the workers are up.
-- **Why.** With autoscaling, the first fit of a pair waits while workers are added. In round 201's runs most of the
-  first fit's time went to scaling from 1 to 10 workers: SerBIN, run first, had 3 to 7 executors where the profile
-  method had 8 to 10. So the fit times, task times and GC were not comparable.
-- **What is unaffected.** CPU per row per pass, the passes, the bytes read and the estimates do not depend on the
-  executors.
-- **The script.** `compare_newton.py` compares fit times only when every compared fit ran on one fixed executor
-  count, the same for all.
+**Holding the cluster** (round 203). The production cluster autoscales, and its size cannot be fixed for these
+runs. Set `03_perf`'s widget 7 to its maximum workers, 10, which adds `--hold-executors 10` to every run.
+- **What the hold does.** Before each timed fit, PerfJob submits rounds of sleeping tasks until the autoscaler has
+  attached that many executors, as statcompute's `hold_at` does. It asks once more if the count has fallen by the fit's
+  start (statcompute's D-22). The report's `hold` records the target, the executors reached and before the fit, the
+  rounds and the seconds.
+- **Its limit.** The autoscaler can still remove workers during a fit, and `fit.recording.executors_min` and
+  `executors_max` show it. `compare_newton.py` compares fit times only between fits that ran on one unchanged executor
+  count, the same for all, and lists the others.
+- **Why it is needed.** In round 201's runs, most of the first fit's time went to scaling from 1 to 10 workers:
+  SerBIN, run first, had 3 to 7 executors where the profile method had 8 to 10. So the fit times, task times and GC
+  were not comparable.
+- **What it does not affect.** CPU per row per pass, the passes, the bytes read and the estimates do not depend on the
+  executors (D-76), so they are compared whatever the hold achieved.
 
 **The runs.** Set `03_perf`'s widget 6 to `serbin,profile,profile,serbin`: each method fits the point twice, once first
 and once second, back to back on the same data and cluster. Run these points:

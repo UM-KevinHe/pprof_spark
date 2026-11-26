@@ -14,8 +14,9 @@
 # MAGIC 4. Send back the report line printed at the end.
 # MAGIC
 # MAGIC Widget 6 compares the logistic Newton methods (perf-runbook.md, "Comparing the logistic Newton methods"):
-# MAGIC `serbin,profile,profile,serbin` fits the point twice by each, each method once first. Fix the cluster's size
-# MAGIC first (minimum workers = maximum): with autoscaling, the first fit waits for workers and its time is not comparable.
+# MAGIC `serbin,profile,profile,serbin` fits the point twice by each, each method once first. On an autoscaling cluster,
+# MAGIC set widget 7 to its maximum workers: each fit then starts once they are attached (as statcompute's `hold_at`).
+# MAGIC Fits whose executors still changed are left out of time comparisons.
 # MAGIC
 # MAGIC Requirements: dedicated (single-user) compute, as for `01_parity`. Autoscaling is fine: the report records the
 # MAGIC cores the cluster offered during the fit, and points compare on CPU per row (D-76).
@@ -44,6 +45,7 @@ dbutils.widgets.text("custom", "", "3. Arguments of point 'custom', without --pa
 dbutils.widgets.text("extra", "", "4. Extra arguments for any point, e.g. --verify false")
 dbutils.widgets.text("storage_levels", "", "5. Storage levels to compare, e.g. OFF_HEAP,DISK_ONLY")
 dbutils.widgets.text("newton_methods", "", "6. Logistic Newton methods to compare, e.g. serbin,profile,profile,serbin")
+dbutils.widgets.text("hold_executors", "", "7. Executors to hold before each fit (autoscaling clusters), e.g. 10")
 
 # COMMAND ----------
 
@@ -96,12 +98,18 @@ if levels and "--storage-level" in arguments:
 methods = [method.strip() for method in dbutils.widgets.get("newton_methods").split(",") if method.strip()]
 if methods and "--newton" in arguments:
     raise ValueError("give the Newton methods either in widget 6 or as --newton, not both")
+hold = dbutils.widgets.get("hold_executors").strip()
+if hold and "--hold-executors" in arguments:
+    raise ValueError("give the executors to hold either in widget 7 or as --hold-executors, not both")
 reports = []
 for level in levels or [None]:
     for method in methods or [None]:
         started = time.time()
         line = " ".join(
-            arguments + (["--storage-level", level] if level else []) + (["--newton", method] if method else [])
+            arguments
+            + (["--storage-level", level] if level else [])
+            + (["--newton", method] if method else [])
+            + (["--hold-executors", hold] if hold else [])
         )
         reports.append(runner.runLine(spark._jsparkSession, line))
         print(f"{level or 'default storage'}, {method or 'default method'}: finished in {time.time() - started:.0f} s")
@@ -139,6 +147,7 @@ for line in reports:
         "storage": storage,
         "storage_used": storage_used,
         "newton": newton,
+        "held": (f"{parsed['hold'].get('before_fit')} of {parsed['hold']['target']}" if "hold" in parsed else ""),
         "succeeded": fit["succeeded"],
         "fit_s": round(fit["seconds"], 1),
         "iterations": fit.get("iterations"),

@@ -48,8 +48,8 @@ passes: pass A and pass B, or the profile pass. Task time is the executors' run 
 - **Wall time is not compared.** SerBIN ran first in each pair, while the cluster scaled up: it had as few as 3
   executors at 5M and 20M. At 100M SerBIN's cache also spilled 22.8 GB to disk.
   - The maintainer found that most of the first runs' time went to scaling the workers from 1 to 10 (round 202).
-  - The runbook now asks for a fixed cluster and the order `serbin,profile,profile,serbin`, and `compare_newton.py`
-    compares fit times only on one fixed executor count.
+  - The runbook now asks for the order `serbin,profile,profile,serbin`, with the cluster held at 10 executors
+    before each fit (round 203). `compare_newton.py` compares fit times only on one fixed executor count.
   - CPU per row per pass is unaffected: pass A cost 36.5 µs per row on 3 to 4 executors here, against 37.2 at step 2's
     exit; the profile pass cost 36.9 on 8. The fits took 316.8 and 89.8 s,
   631.2 and 245.7, 794.0 and 506.4, and 1,547.0 and 997.6.

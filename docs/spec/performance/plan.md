@@ -283,7 +283,7 @@ Step 1 addresses OI-02 and part of OI-30.
   - Specification: `docs/spec/logistic/profile-newton.md` (round 196), approved as D-83 on 2026-11-25; its
     fixture in round 197; X-051 approved in round 198; its build in round 199; its exit's runbook in round 200; its exit
     measured in round 201: passes 37% to 50% fewer, the same fit, CPU equal at 4 iterations (OI-127); fit
-    times to be measured on a fixed cluster (round 202).
+    times to be measured with the cluster held at 10 executors (round 203).
 - **Step 6** takes up OI-66 and OI-61.
 
 ## 5. Benchmark grid

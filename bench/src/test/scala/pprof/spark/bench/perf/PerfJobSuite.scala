@@ -133,6 +133,47 @@ class PerfJobSuite extends SparkSuite {
   }
 
   test(
+    "--hold-executors is reported, skipped in local mode and must be positive; a hold's rounds run until its time"
+  ) {
+    val path = Files.createTempDirectory("pprof-perf-hold").resolve("point").toString
+    val options = Map(
+      "model" -> "logistic",
+      "path" -> path,
+      "rows" -> "2000",
+      "providers" -> "20",
+      "features" -> "3",
+      "hold-executors" -> "10"
+    )
+    val report = new ObjectMapper().readTree(PerfJob.run(spark, options).report)
+    val hold = report.get("hold")
+    assertEquals(hold.get("target").asInt(), 10)
+    assertEquals(hold.get("skipped").asText(), "local session")
+    assertEquals(hold.get("before_fit").asInt(), 0)
+    assert(report.get("fit").get("succeeded").asBoolean(), report.get("fit").toString)
+    intercept[IllegalArgumentException](PerfJob.run(spark, options + ("hold-executors" -> "0")))
+    PerfJob.arguments(
+      Array(
+        "--model",
+        "cox",
+        "--path",
+        "p",
+        "--hold-executors",
+        "10",
+        "--hold-timeout",
+        "600",
+        "--hold-task-seconds",
+        "5"
+      )
+    )
+    // In local mode no executor is ever attached, so a hold allowed to run there asks until its time is up.
+    val held = PerfJob.hold(spark, 1, timeoutSeconds = 0.3, taskSeconds = 0.01, allowLocal = true)
+    assert(
+      held.rounds >= 1 && held.reached.contains(0) && held.seconds >= 0.3 && held.skipped.isEmpty,
+      held.toString
+    )
+  }
+
+  test(
     "arguments: --model and --path are required, unknown ones are refused, counts may be written 5e6"
   ) {
     val options = PerfJob.arguments(Array("--model", "cox", "--path", "p", "--rows", "5e6"))

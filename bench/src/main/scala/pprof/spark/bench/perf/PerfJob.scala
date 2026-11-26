@@ -25,6 +25,7 @@ object PerfJob {
     "usage: PerfJob --model cox|logistic --path <dir> [--rows n] [--providers m] [--features p] " +
       "[--design simple|correlated] [--seed s] [--strata provider|none] [--ties breslow|efron] " +
       "[--block-bytes b] [--budget-bytes b] [--aggregate-above-bytes b] [--newton serbin|profile] [--storage-level level] [--partitions k] [--check-partitions k] " +
+      "[--hold-executors n] [--hold-timeout s] [--hold-task-seconds s] " +
       "[--verify true|false] " +
       "[--plans true|false] [--report <dir>]"
 
@@ -42,6 +43,9 @@ object PerfJob {
     "budget-bytes",
     "aggregate-above-bytes",
     "newton",
+    "hold-executors",
+    "hold-timeout",
+    "hold-task-seconds",
     "storage-level",
     "partitions",
     "check-partitions",
@@ -67,6 +71,61 @@ object PerfJob {
 
   private def executors(spark: SparkSession): Int =
     math.max(0, spark.sparkContext.getExecutorMemoryStatus.size - 1)
+
+  /** Executors attached now: the lower of the block managers' and the status tracker's counts, each less the driver.
+    * statcompute's harness saw one count report ten executors while six ran (its D-22).
+    */
+  private[perf] def attached(spark: SparkSession): Int = {
+    val sc = spark.sparkContext
+    math.max(
+      0,
+      math.min(sc.getExecutorMemoryStatus.size, sc.statusTracker.getExecutorInfos.length) - 1
+    )
+  }
+
+  /** A hold's outcome: the executors asked for, those attached at its end (none when skipped), its seconds and rounds,
+    * and why it was skipped.
+    */
+  final case class Hold(
+      target: Int,
+      reached: Option[Int],
+      seconds: Double,
+      rounds: Int,
+      skipped: Option[String]
+  )
+
+  /** Holds an autoscaling cluster at `target` executors before a timed fit (perf-runbook, round 203), as statcompute's
+    * `hold_at` does: rounds of sleeping tasks, eight per executor wanted, keep the autoscaler adding workers until
+    * `target` are attached or `timeoutSeconds` pass. It cannot stop the autoscaler removing workers later; the fit's
+    * recording shows the executors the fit had. Skipped in local mode, unless `allowLocal` (for tests).
+    */
+  private[perf] def hold(
+      spark: SparkSession,
+      target: Int,
+      timeoutSeconds: Double,
+      taskSeconds: Double,
+      allowLocal: Boolean = false
+  ): Hold = {
+    val sc = spark.sparkContext
+    if (sc.isLocal && !allowLocal) Hold(target, None, 0.0, 0, Some("local session"))
+    else {
+      val started = System.nanoTime()
+      def elapsed: Double = (System.nanoTime() - started) / 1e9
+      val millis = math.max(1L, math.round(taskSeconds * 1000.0))
+      val previous = sc.getLocalProperty("spark.job.description")
+      var current = attached(spark)
+      var rounds = 0
+      while (current < target && elapsed < timeoutSeconds) {
+        val tasks = math.max(8 * target, 2 * sc.defaultParallelism)
+        sc.setJobDescription(s"pprof.bench.hold: asking for $target executors")
+        try sc.parallelize(0 until tasks, tasks).foreach(_ => Thread.sleep(millis))
+        finally sc.setLocalProperty("spark.job.description", previous)
+        rounds += 1
+        current = attached(spark)
+      }
+      Hold(target, Some(current), elapsed, rounds, None)
+    }
+  }
 
   /** The report line, and the physical plans by call site when `--plans true`. */
   final case class Result(report: String, plans: String)
@@ -260,6 +319,27 @@ object PerfJob {
         .get("partitions")
         .fold(prepared.data)(k => prepared.data.repartition(k.toInt, col("id")))
     val truth = new PerfParameters(d).beta
+    // Hold an autoscaling cluster at a size just before the timed fit, and ask once more when the count has fallen
+    // short by the fit's start (round 203; statcompute's hold_at and D-22).
+    options.get("hold-executors").foreach { value =>
+      val target = value.toInt
+      require(target > 0, s"hold-executors must be positive, got $value")
+      val timeout = options.get("hold-timeout").fold(900.0)(_.toDouble)
+      val task = options.get("hold-task-seconds").fold(15.0)(_.toDouble)
+      val first = hold(spark, target, timeout, task)
+      val again =
+        if (first.skipped.isEmpty && attached(spark) < target)
+          Some(hold(spark, target, timeout, task))
+        else None
+      val node = root.putObject("hold").put("target", target)
+      first.skipped.foreach(reason => node.put("skipped", reason))
+      first.reached.foreach(n => node.put("reached", n))
+      again.foreach(a => node.put("asked_again", true).put("reached_again", a.reached.getOrElse(0)))
+      node
+        .put("seconds", first.seconds + again.fold(0.0)(_.seconds))
+        .put("rounds", first.rounds + again.fold(0)(_.rounds))
+        .put("before_fit", attached(spark))
+    }
     val recorder = Recorder.attach(spark)
     val context = spark.sparkContext
     val described = Described.map(key => key -> context.getLocalProperty(key))
