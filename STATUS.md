@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-25, round 199.
+Updated 2026-11-25, round 200.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -230,7 +230,8 @@ through round 100 as the maintainer reported.
 | 196 | Step 5's specification, logistic profile-likelihood Newton through SerBIN's reduced system (`docs/spec/logistic/profile-newton.md`), proposed as D-83: intercepts solved in the tasks, the β step from S⁻¹r, one pass per iteration, as an option; X-051 to register | Merged (dd6b96b) |
 | 197 | D-83 approved. Step 5's fixture `lfe-zero-events` (30,000 rows, 600 providers, 22 without events by chance), generated with the pinned environment, the existing logistic fixtures reproduced byte for byte; pprof_py's default stops 0.6 to 1.4 short of the bound there (X-051); SerBIN passes it; golden runs added, every recorded value unchanged | Merged (6e8dce7) |
 | 198 | X-051 registered as proposed (class C): with `newton = "profile"`, providers without events report the bound at the default tolerance, where pprof_py's and R pprof's SerBIN stop short; measured on `lfe-zero-events`. pprof_py's `at_bound` rule (C35) corrected in the specifications | Merged (1ae77cf) |
-| 199 | X-051 approved, with its addendum on variances. Step 5's build: the profile-likelihood Newton as `LogisticOptions.newton = "profile"` (one `logistic.profile` pass per iteration, intercepts solved in the tasks, Δβ = S⁻¹r, the held intercepts settled at the final median's bound), persisted (format 6) and settable from the run specification, Python and PerfJob; tests against pprof_py at both tolerances; golden runs for the method, SerBIN's unchanged. Also fixes a provider-tests assertion that had failed on `lfe-zero-events` since round 197, when that suite was not run | Delivered as a patch |
+| 199 | X-051 approved, with its addendum on variances. Step 5's build: the profile-likelihood Newton as `LogisticOptions.newton = "profile"` (one `logistic.profile` pass per iteration, intercepts solved in the tasks, Δβ = S⁻¹r, the held intercepts settled at the final median's bound), persisted (format 6) and settable from the run specification, Python and PerfJob; tests against pprof_py at both tolerances; golden runs for the method, SerBIN's unchanged. Also fixes a provider-tests assertion that had failed on `lfe-zero-events` since round 197, when that suite was not run | Merged (ab26641) |
+| 200 | Step 5's exit prepared: perf-runbook's "Comparing the logistic Newton methods" (points 2, 4, 8 and 10, `serbin,profile`), `03_perf`'s widget 6, and `scripts/compare_newton.py` (passes, pass CPU, T-coef and T-var with tolerances.conf's values; `--self-test`) | Delivered as a patch |
 
 ## Decisions and spikes
 

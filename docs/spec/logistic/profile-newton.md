@@ -266,3 +266,11 @@ the maintainer's sign-off. The default-tolerance comparisons of §9 are stated a
   - The assertion now requires |z| > 37 only where R's z is infinite. Where R's z is finite it requires z beyond the
     reliable tail, with R's sign. The test fits with SerBIN, whose fits round 199's golden runs show unchanged to the
     bit, so the failure had been on `main` since round 197.
+
+**Round 200, the exit's preparation.**
+- `perf-runbook.md` gains "Comparing the logistic Newton methods", for step 2's exit points 2, 4, 8 and 10.
+- `03_perf`'s widget 6 fits a point by each listed method.
+- `scripts/compare_newton.py` compares the reports: passes, pass CPU, and T-coef and T-var with `tolerances.conf`'s
+  values.
+- In the sandbox, at 100,000 × 20, the profile estimates were within T-coef of SerBIN's at a worst ratio of
+  7.3·10⁻⁸, largest |Δβ|/SE 9.9·10⁻¹⁵.

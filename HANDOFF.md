@@ -228,6 +228,37 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 200 (2026-11-25): step 5's exit prepared
+
+- Round 199 is on `main` as `ab26641`. The maintainer asked for the runbook commands and a comparison script for
+  step 5's cluster exit.
+- **`docs/parity/scale/perf-runbook.md`, "Comparing the logistic Newton methods".**
+  - Points 2, 4, 8 and 10, step 2's exit points (5M to 100M rows at 180 features), with widget 6 set to
+    `serbin,profile`.
+  - Step 2's figures for each point; what to expect, from the sandbox; what to send back.
+- **`databricks/03_perf.py`.**
+  - Widget 6 fits a point once by each listed method. Giving both it and `--newton` is refused.
+  - The summary gains a `newton` column. Where both methods ran, a line gives the profile estimates' largest shift
+    in SerBIN's standard errors.
+- **`scripts/compare_newton.py`.**
+  - It reads report lines from text files, the notebook's pasted output included, or PerfJob report folders, plus
+    step 2's reports after `--baseline`.
+  - For each point it prints the fits, passes, pass CPU and fit time.
+  - It checks the profile estimates against SerBIN's by T-coef and the standard errors by T-var, with the D-09 rule
+    and `tolerances.conf`'s values.
+  - `--self-test` checks the arithmetic.
+- **Checked in the sandbox.** Two PerfJob fits at 100,000 × 20 × 200 providers, one by each method, on round 199's
+  build:
+  - passes 8 and 5;
+  - log-likelihoods identical;
+  - T-coef worst ratio 7.3·10⁻⁸, largest |Δβ|/SE 9.9·10⁻¹⁵; T-var 1.7·10⁻⁸.
+- **Records.** profile-newton.md §12; plan §4; STATUS.
+
+Evidence (assistant sandbox): the script's self-test passes, and the notebook parses as Python. The patch applies to a
+fresh clone of `main` with an identical tree; scalafmt is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next: the maintainer's cluster runs N1 to N4**, then the comparison against step 2's exit reports (round 185).
+
 ## Round 199 (2026-11-25): X-051 approved; step 5's build, the profile-likelihood Newton (D-83)
 
 - Round 198 is on `main` as `1ae77cf`. The maintainer signed off X-051 as proposed, and then confirmed an addendum

@@ -13,6 +13,9 @@
 # MAGIC 3. Choose a point, 1 to 13 as in the runbook, and run all. Or choose `custom` and give its arguments.
 # MAGIC 4. Send back the report line printed at the end.
 # MAGIC
+# MAGIC Widget 6 compares the logistic Newton methods (perf-runbook.md, "Comparing the logistic Newton methods"):
+# MAGIC `serbin,profile` fits the point once by each, back to back.
+# MAGIC
 # MAGIC Requirements: dedicated (single-user) compute, as for `01_parity`. Autoscaling is fine: the report records the
 # MAGIC cores the cluster offered during the fit, and points compare on CPU per row (D-76).
 
@@ -39,6 +42,7 @@ dbutils.widgets.text("data_root", "", "2. Data folder (s3://...)")
 dbutils.widgets.text("custom", "", "3. Arguments of point 'custom', without --path")
 dbutils.widgets.text("extra", "", "4. Extra arguments for any point, e.g. --verify false")
 dbutils.widgets.text("storage_levels", "", "5. Storage levels to compare, e.g. OFF_HEAP,DISK_ONLY")
+dbutils.widgets.text("newton_methods", "", "6. Logistic Newton methods to compare, e.g. serbin,profile")
 
 # COMMAND ----------
 
@@ -88,12 +92,18 @@ print(f"point {point}: PerfJob", " ".join(arguments))
 levels = [level.strip() for level in dbutils.widgets.get("storage_levels").split(",") if level.strip()]
 if levels and "--storage-level" in arguments:
     raise ValueError("give the storage levels either in widget 5 or as --storage-level, not both")
+methods = [method.strip() for method in dbutils.widgets.get("newton_methods").split(",") if method.strip()]
+if methods and "--newton" in arguments:
+    raise ValueError("give the Newton methods either in widget 6 or as --newton, not both")
 reports = []
 for level in levels or [None]:
-    started = time.time()
-    line = " ".join(arguments + (["--storage-level", level] if level else []))
-    reports.append(runner.runLine(spark._jsparkSession, line))
-    print(f"{level or 'default storage'}: finished in {time.time() - started:.0f} s")
+    for method in methods or [None]:
+        started = time.time()
+        line = " ".join(
+            arguments + (["--storage-level", level] if level else []) + (["--newton", method] if method else [])
+        )
+        reports.append(runner.runLine(spark._jsparkSession, line))
+        print(f"{level or 'default storage'}, {method or 'default method'}: finished in {time.time() - started:.0f} s")
 print(f"{len(reports)} report(s), also under {data_root}/{folder}/reports/, one folder per fit")
 
 # COMMAND ----------
@@ -123,9 +133,11 @@ for line in reports:
     storage = parsed["fit"].get("storage_level") or parsed["options"].get("storage-level", "default")
     storage_used = parsed["fit"].get("storage_level_used", "")
     sites = pd.DataFrame(recording["sites"])
+    newton = parsed["options"].get("newton", "serbin") if parsed["point"]["model"] == "logistic" else ""
     row = {
         "storage": storage,
         "storage_used": storage_used,
+        "newton": newton,
         "succeeded": fit["succeeded"],
         "fit_s": round(fit["seconds"], 1),
         "iterations": fit.get("iterations"),
@@ -141,9 +153,20 @@ for line in reports:
         row["cpu_us_per_row"] = round(sites["cpu_ms"].sum() * 1000.0 / rows, 1)
         row["heaviest"] = heaviest["tags"]
         row["heaviest_outside_cpu_gc"] = round(heaviest["other_ms"] / max(heaviest["run_ms"], 1), 3)
-        details.append((storage, fit, sites))
+        details.append((f"{storage} {newton}".strip(), fit, sites))
     summary.append(row)
 display(pd.DataFrame(summary))
+# Where both Newton methods ran (widget 6): the profile method's estimates against SerBIN's, in SerBIN's standard
+# errors. scripts/compare_newton.py makes the full comparison, with the T-coef check, from the report lines.
+fits = {}
+for line in reports:
+    parsed = json.loads(line)
+    if parsed["fit"].get("estimates") is not None:
+        fits.setdefault(parsed["options"].get("newton", "serbin"), parsed["fit"])
+if "serbin" in fits and "profile" in fits:
+    s, q = fits["serbin"], fits["profile"]
+    shift = max(abs(a - b) / e for a, b, e in zip(q["estimates"], s["estimates"], s["standard_errors"]))
+    print(f"profile against SerBIN: largest |Δβ|/SE {shift:.3g}; log-likelihoods {q['loglik']!r} and {s['loglik']!r}")
 for storage, fit, sites in details:
     print(f"== {storage}: {fit['seconds']:.0f} s, succeeded {fit['succeeded']}" + (f"; {fit['error']}" if "error" in fit else ""))
     display(sites[[c for c in columns if c in sites.columns]])

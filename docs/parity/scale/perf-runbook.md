@@ -170,6 +170,44 @@ rerun S8 on round 173's build or later and send back its report, failed or not.
 
 At 50M rows the cache (about 19 GiB) may fit in the executors' combined off-heap memory, 6.5 GiB each.
 
+## Comparing the logistic Newton methods (D-83, step 5's exit)
+
+Step 5's exit (plan §4) compares the profile-likelihood Newton (`--newton profile`) with SerBIN, the default, on step
+2's exit points. It asks for two things:
+- the passes and CPU per fit;
+- converged estimates within T-coef of SerBIN's.
+
+**The build.** Use round 199's build or later: its reports carry the estimates and standard errors the comparison
+needs.
+
+**The runs.** Set `03_perf`'s widget 6 to `serbin,profile`, which fits a point once by each method, back to back on
+the same data and cluster. Run these points:
+
+| # | Point | Size | Step 2's exit (round 185, SerBIN) |
+|---|---|---|---|
+| N1 | 2 | 5M rows × 180 features | Pass A 37.2 µs per row |
+| N2 | 4 | 20M × 180 | Pass A 36.5 µs per row |
+| N3 | 8 | 50M × 180 | Pass A 31.3 µs per row |
+| N4 | 10 | 100M × 180 | Pass A 30.4 µs per row; fit 1,195.4 s |
+
+- **R0 for both methods.** Points 2 and 4 refit on another partitioning (`--check-partitions 401`), which doubles
+  each fit.
+- **What to expect, from the sandbox** (perf-results.md, round 199):
+  - about half the passes: SerBIN makes two per iteration, plus one per eight rejected step lengths; the profile method
+    one per iteration, plus one at its start;
+  - about a quarter less pass CPU;
+  - log-likelihoods equal to the last digits;
+  - estimates far inside T-coef.
+- **Failures are results too.** A profile fit that fails, or does not converge where SerBIN does, is itself a result.
+- **Time.** At 100M rows step 2's SerBIN fit took 1,195 s, so N4 takes about 40 minutes for the two methods.
+
+**What to send back.** Every report line the notebook prints at the end.
+
+**The comparison.** It is made with
+`python3 scripts/compare_newton.py <report lines> --baseline <step 2's report lines>`. For each point it prints the
+fits, passes and pass CPU, and checks the profile estimates against SerBIN's (T-coef) and their standard errors
+(T-var), with the values of `tolerances.conf`. `--self-test` checks the script's arithmetic.
+
 ## Results
 
 `perf-results.md`.
