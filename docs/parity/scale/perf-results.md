@@ -11,6 +11,45 @@ Estimates and arithmetic are never entered here; they live in `docs/spec/perform
 
 The scale runs reported on 2026-11-13 used round 81's build (OI-103), so they are not entered.
 
+### 2026-11-26: step 5's exit, SerBIN and the profile-likelihood Newton (build `91012fa`, round 200)
+
+**The runs.** Points 2, 4, 8 and 10 (perf-runbook, "Comparing the logistic Newton methods"), with widget 6 set to
+`serbin,profile`. Each point was fitted by SerBIN, then by the profile method, back to back, on the production cluster:
+Spark 4.0, off-heap, autoscaling to 10 executors.
+
+**The figures.** Computed from the reports' JSON with `scripts/compare_newton.py` and a breakdown script. The report
+lines came pasted as text, and were transcribed into the sandbox for the computation. "Newton" means the iteration's
+passes: pass A and pass B, or the profile pass. Task time is the executors' run time, GC and reading included.
+
+| Point | Method | Iterations | Passes | Newton CPU | µs per row per pass | Newton task time | Newton reads | Fit CPU | Executors |
+|---|---|---|---|---|---|---|---|---|---|
+| 5M × 180 | SerBIN | 5 | 10 (5 A, 5 B) | 1,093 s | A 36.5, B 7.2 | 1,240 s | 20 GB | 1,793 s | 3 to 4 |
+| | profile | 4 | 5 | 921 s | 36.9 | 1,041 s | 10 GB | 1,540 s | 8 |
+| 20M × 180 | SerBIN | 4 | 8 (4 A, 4 B) | 3,618 s | A 37.8, B 7.4 | 4,311 s | 62 GB | 6,248 s | 3 to 7 |
+| | profile | 4 | 5 | 3,721 s | 37.2 | 4,235 s | 40 GB | 6,245 s | 9 to 10 |
+| 50M × 180 | SerBIN | 4 | 8 (4 A, 4 B) | 8,677 s | A 36.0, B 7.4 | 10,295 s | 159 GB | 14,811 s | 6 to 10 |
+| | profile | 4 | 5 | 8,721 s | 34.9 | 10,033 s | 99 GB | 14,887 s | 10 |
+| 100M × 180 | SerBIN | 4 | 8 (4 A, 4 B) | 16,048 s | A 31.9, B 8.2 | 22,018 s | 308 GB | 28,249 s | 5 to 10 |
+| | profile | 4 | 5 | 16,020 s | 32.0 | 19,399 s | 194 GB | 27,891 s | 9 to 10 |
+
+- **The same fit.** The log-likelihood is identical to the bit at all four points.
+  - The estimates are within T-coef of SerBIN's: worst ratios 1.4·10⁻⁷, 2.9·10⁻⁶, 2.1·10⁻⁶ and 1.9·10⁻⁶; the largest
+    |Δβ|/SE is 2.1·10⁻¹². The standard errors are within T-var, worst ratio at most 1.7·10⁻⁷.
+  - R0 holds to the bit at 5M and 20M for both methods, and the truth checks pass.
+- **Passes and reading.** Passes went from 10 to 5 and from 8 to 5. The Newton passes read 37% to 50% less, their
+  GC time is 30% to 48% less, and their task time 2% to 16% less.
+- **CPU.**
+  - 1.19 times less at 5M, where SerBIN took 5 iterations; within ±3% at 20M to 100M, where both took 4.
+  - A profile pass costs what pass A does: the intercepts' solve in the tasks costs almost nothing. Pass B costs 7 to
+    8 µs per row, so 5 profile passes cost about 4 pass A and 4 pass B.
+  - The fifth profile pass is the trial at the converged β. It forms S and r, which nothing uses after the loop
+    (OI-127).
+- **Wall time is not compared.** SerBIN ran first in each pair, while the cluster scaled up: it had as few as 3
+  executors at 5M and 20M. At 100M SerBIN's cache also spilled 22.8 GB to disk. The fits took 316.8 and 89.8 s,
+  631.2 and 245.7, 794.0 and 506.4, and 1,547.0 and 997.6.
+- **Against step 2's exit** (round 185). Pass A then took 37.2, 36.5, 31.3 and 30.4 µs per row; now 36.5, 37.8, 36.0
+  and 31.9. That is up to 15% between runs (50M).
+
 ### 2026-11-25: step 4's exit, agreement with the sweep (build `0814d9a`, round 191)
 
 The exit's second condition is agreement with the stratum sweep at a size both can run. Each point was run twice,

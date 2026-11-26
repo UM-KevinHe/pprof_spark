@@ -274,3 +274,10 @@ the maintainer's sign-off. The default-tolerance comparisons of §9 are stated a
   values.
 - In the sandbox, at 100,000 × 20, the profile estimates were within T-coef of SerBIN's at a worst ratio of
   7.3·10⁻⁸, largest |Δβ|/SE 9.9·10⁻¹⁵.
+
+**Round 201, the exit** (perf-results.md, 2026-11-26). On the cluster, at 5M to 100M rows × 180 features:
+- **The fit.** Log-likelihoods are identical to the bit, the estimates within T-coef of SerBIN's (worst ratio
+  2.9·10⁻⁶), and R0 holds.
+- **Passes.** 5 against 8 or 10.
+- **CPU.** 1.19 times less where SerBIN took 5 iterations, and equal at 4, because a profile pass costs a pass A. The
+  last pass forms S and r that nothing uses (OI-127).

@@ -228,6 +228,40 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 201 (2026-11-26): step 5's exit measured
+
+- Round 200 is on `main` as `91012fa`. The maintainer sent eight reports, built from `91012fa`: points 2, 4, 8 and 10,
+  each fitted by SerBIN and then by the profile method.
+- **How the figures were made.** The report lines came pasted as text, not as files. Each report's fields were
+  transcribed into the sandbox: the point, method, time, iterations, ℓ, the 180 estimates and standard errors, and every
+  site's executions and times. `scripts/compare_newton.py` and a breakdown script then computed the figures.
+  - The copies were checked: 180 values each; the estimates differ by uniform amounts (2·10⁻¹⁵ to 3.7·10⁻¹⁴ relative
+    within each point), with no outlier.
+  - No cluster detail is recorded.
+- **The same fit.**
+  - ℓ is identical to the bit at all four points.
+  - T-coef worst ratios are 1.4·10⁻⁷, 2.9·10⁻⁶, 2.1·10⁻⁶ and 1.9·10⁻⁶; the largest |Δβ|/SE is 2.1·10⁻¹². Standard
+    errors are within T-var, at most 1.7·10⁻⁷.
+  - R0 holds at 5M and 20M for both methods, and the truth checks pass.
+- **Passes and reading.** Passes: 10 to 5 at 5M, 8 to 5 elsewhere. The Newton passes read 37% to 50% less, GC 30% to
+  48% less, and their task time is 2% to 16% less.
+- **CPU.**
+  - Newton CPU is 1.19 times less at 5M, where SerBIN took 5 iterations, and within ±3% at 20M, 50M and 100M, where
+    both took 4.
+  - Per row, a profile pass costs 32.0 to 37.2 µs, about pass A's 31.9 to 37.8; pass B costs 7.2 to 8.2. So five
+    profile passes cost about four pass A and four pass B.
+  - The fifth pass, at the converged β, forms S and r that nothing uses: OI-127.
+- **Wall time is not compared.** SerBIN ran first in each pair, while the cluster scaled up (3 to 4 executors against
+  8 at 5M), and at 100M SerBIN's cache spilled 22.8 GB to disk.
+- **Records.** `perf-results.md` (cluster, 2026-11-26); OI-127; plan §4; profile-newton.md §12; STATUS.
+
+Evidence (assistant sandbox): documentation only. The patch applies to a fresh clone of `main` with an identical
+tree; scalafmt is clean, and `check-engine-api.sh` passes with its self-test.
+
+**Next.** OI-127's remedy for the maintainer: an iteration whose Newton step is already below `tol` makes its trial
+passes without S and r. That gives the same results to the bit, and should make the profile method's Newton CPU about
+15% less than SerBIN's at 4 iterations. Then the default.
+
 ## Round 200 (2026-11-25): step 5's exit prepared
 
 - Round 199 is on `main` as `ab26641`. The maintainer asked for the runbook commands and a comparison script for
