@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-11-26, round 201.
+Updated 2026-11-26, round 202.
 
 **Phase 0 closed on 2026-10-06** (docs/gates/phase-0.md). **Phase 1a, Cox estimation core: closed** (D-22; CI green through round 14).
 **Phase 1b, counting process and baseline: closed** (D-24). **Phase 1c, residuals and robust variance: closed** (D-26). **Phase 1d, provider workflows: closed** (D-29). **Phase 1 is complete.** **Phase 2, logistic provider
@@ -233,6 +233,7 @@ through round 100 as the maintainer reported.
 | 199 | X-051 approved, with its addendum on variances. Step 5's build: the profile-likelihood Newton as `LogisticOptions.newton = "profile"` (one `logistic.profile` pass per iteration, intercepts solved in the tasks, Δβ = S⁻¹r, the held intercepts settled at the final median's bound), persisted (format 6) and settable from the run specification, Python and PerfJob; tests against pprof_py at both tolerances; golden runs for the method, SerBIN's unchanged. Also fixes a provider-tests assertion that had failed on `lfe-zero-events` since round 197, when that suite was not run | Merged (ab26641) |
 | 200 | Step 5's exit prepared: perf-runbook's "Comparing the logistic Newton methods" (points 2, 4, 8 and 10, `serbin,profile`), `03_perf`'s widget 6, and `scripts/compare_newton.py` (passes, pass CPU, T-coef and T-var with tolerances.conf's values; `--self-test`) | Merged (91012fa) |
 | 201 | Step 5's exit measured on the cluster (points 2, 4, 8, 10; SerBIN against the profile method): the same fit (ℓ to the bit, T-coef worst ratio 2.9·10⁻⁶, R0), passes 37% to 50% fewer, Newton CPU 1.19 times less at 5M and equal at 4 iterations; OI-127 opened for the last pass's unused S and r | Delivered as a patch |
+| 202 | Round 201 corrected after the maintainer found that autoscaling took most of the first fits' time: the GC and task-time savings are no longer attributed to the method; the runbook asks for a fixed cluster and the order `serbin,profile,profile,serbin`; `compare_newton.py` compares fit times only on one fixed executor count. Applies after round 201 | Delivered as a patch |
 
 ## Decisions and spikes
 

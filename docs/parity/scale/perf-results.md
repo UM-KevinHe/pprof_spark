@@ -36,8 +36,9 @@ passes: pass A and pass B, or the profile pass. Task time is the executors' run 
   - The estimates are within T-coef of SerBIN's: worst ratios 1.4·10⁻⁷, 2.9·10⁻⁶, 2.1·10⁻⁶ and 1.9·10⁻⁶; the largest
     |Δβ|/SE is 2.1·10⁻¹². The standard errors are within T-var, worst ratio at most 1.7·10⁻⁷.
   - R0 holds to the bit at 5M and 20M for both methods, and the truth checks pass.
-- **Passes and reading.** Passes went from 10 to 5 and from 8 to 5. The Newton passes read 37% to 50% less, their
-  GC time is 30% to 48% less, and their task time 2% to 16% less.
+- **Passes and reading.** Passes went from 10 to 5 and from 8 to 5, and the Newton passes read 37% to 50% less. Their
+  GC and task times were lower too. But those depend on the executors a run had, and SerBIN's runs had fewer (below),
+  so they are not attributed to the method (round 202).
 - **CPU.**
   - 1.19 times less at 5M, where SerBIN took 5 iterations; within ±3% at 20M to 100M, where both took 4.
   - A profile pass costs what pass A does: the intercepts' solve in the tasks costs almost nothing. Pass B costs 7 to
@@ -45,7 +46,12 @@ passes: pass A and pass B, or the profile pass. Task time is the executors' run 
   - The fifth profile pass is the trial at the converged β. It forms S and r, which nothing uses after the loop
     (OI-127).
 - **Wall time is not compared.** SerBIN ran first in each pair, while the cluster scaled up: it had as few as 3
-  executors at 5M and 20M. At 100M SerBIN's cache also spilled 22.8 GB to disk. The fits took 316.8 and 89.8 s,
+  executors at 5M and 20M. At 100M SerBIN's cache also spilled 22.8 GB to disk.
+  - The maintainer found that most of the first runs' time went to scaling the workers from 1 to 10 (round 202).
+  - The runbook now asks for a fixed cluster and the order `serbin,profile,profile,serbin`, and `compare_newton.py`
+    compares fit times only on one fixed executor count.
+  - CPU per row per pass is unaffected: pass A cost 36.5 µs per row on 3 to 4 executors here, against 37.2 at step 2's
+    exit; the profile pass cost 36.9 on 8. The fits took 316.8 and 89.8 s,
   631.2 and 245.7, 794.0 and 506.4, and 1,547.0 and 997.6.
 - **Against step 2's exit** (round 185). Pass A then took 37.2, 36.5, 31.3 and 30.4 µs per row; now 36.5, 37.8, 36.0
   and 31.9. That is up to 15% between runs (50M).

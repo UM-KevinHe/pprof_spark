@@ -228,6 +228,39 @@ Smaller items alongside: OI-86, the OI-65 and OI-66 addenda, OI-91.
 
 ## Round log
 
+## Round 202 (2026-11-26): round 201 corrected for autoscaling
+
+- Round 201 (`e2dad55`) is not yet on `main`. This round applies after it.
+- **The finding.** The maintainer found that the cluster's autoscaling took most of the first fits' time: scaling the
+  workers from 1 to 10.
+  - The reports agree. At 5M SerBIN, run first, started on 1 executor and fitted with 3 to 4, against the profile
+    method's 8. Its data check took 432 s, against 9. At 20M to 100M it started with 6 executors, against 9 or 10.
+  - At 100M its cache spilled 22.8 GB to disk.
+- **What is withdrawn.** Round 201's GC (30% to 48% less) and task-time (2% to 16% less) savings: they depend on the
+  executors a run had. The fit times were already not compared.
+- **What stands.**
+  - The pass counts, the bytes read and the estimates are fixed by the algorithm and the data.
+  - CPU per row per pass is steady across executor counts: pass A 36.5 µs per row on 3 to 4 executors, 37.2 at step
+    2's exit; the profile pass 36.9 on 8.
+  - So the CPU finding, equal at 4 iterations, and OI-127 stand.
+- **`docs/parity/scale/perf-runbook.md`.**
+  - A fixed cluster for the comparison: minimum workers = maximum, or autoscaling off, starting once the workers are
+    up.
+  - Widget 6 set to `serbin,profile,profile,serbin`.
+  - Points 2 and 4 can rerun as `custom` without `--check-partitions`, since R0 held in round 201.
+  - Up to about 80 minutes at 100M.
+- **`scripts/compare_newton.py`** compares fit times only when every compared fit ran on one fixed executor count, the
+  same for all. Otherwise it names the ranges. The self-test gains that case. On round 201's reports it declines at
+  all four points.
+- **Also changed.** `databricks/03_perf.py`'s hint and header; perf-results.md's round 201 entry; plan §4; STATUS.
+
+Evidence (assistant sandbox): the script's self-test passes and the notebook parses. Round 201's and this round's
+patches apply in order to a fresh clone of `main` with an identical tree; scalafmt is clean, and `check-engine-api.sh`
+passes with its self-test.
+
+**Next.** On a fixed cluster, rerun N1 to N4 with `serbin,profile,profile,serbin` for the fit times. OI-127's remedy,
+the trial passes without S and r once the Newton step is below `tol`, is still to propose as D-84.
+
 ## Round 201 (2026-11-26): step 5's exit measured
 
 - Round 200 is on `main` as `91012fa`. The maintainer sent eight reports, built from `91012fa`: points 2, 4, 8 and 10,

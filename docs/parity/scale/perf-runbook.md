@@ -180,8 +180,18 @@ Step 5's exit (plan §4) compares the profile-likelihood Newton (`--newton profi
 **The build.** Use round 199's build or later: its reports carry the estimates and standard errors the comparison
 needs.
 
-**The runs.** Set `03_perf`'s widget 6 to `serbin,profile`, which fits a point once by each method, back to back on
-the same data and cluster. Run these points:
+**A fixed cluster.** Set the cluster's minimum workers to its maximum, or turn autoscaling off, for these runs, and
+start them once the workers are up.
+- **Why.** With autoscaling, the first fit of a pair waits while workers are added. In round 201's runs most of the
+  first fit's time went to scaling from 1 to 10 workers: SerBIN, run first, had 3 to 7 executors where the profile
+  method had 8 to 10. So the fit times, task times and GC were not comparable.
+- **What is unaffected.** CPU per row per pass, the passes, the bytes read and the estimates do not depend on the
+  executors.
+- **The script.** `compare_newton.py` compares fit times only when every compared fit ran on one fixed executor
+  count, the same for all.
+
+**The runs.** Set `03_perf`'s widget 6 to `serbin,profile,profile,serbin`: each method fits the point twice, once first
+and once second, back to back on the same data and cluster. Run these points:
 
 | # | Point | Size | Step 2's exit (round 185, SerBIN) |
 |---|---|---|---|
@@ -191,7 +201,9 @@ the same data and cluster. Run these points:
 | N4 | 10 | 100M × 180 | Pass A 30.4 µs per row; fit 1,195.4 s |
 
 - **R0 for both methods.** Points 2 and 4 refit on another partitioning (`--check-partitions 401`), which doubles
-  each fit.
+  each fit. R0 held for both methods in round 201. So to rerun them, choose point `custom` with
+  `--model logistic --rows 5e6 --features 180 --providers 8000` (N1) or
+  `--model logistic --rows 2e7 --features 180 --providers 8000` (N2).
 - **What to expect, from the sandbox** (perf-results.md, round 199):
   - about half the passes: SerBIN makes two per iteration, plus one per eight rejected step lengths; the profile method
     one per iteration, plus one at its start;
@@ -199,7 +211,7 @@ the same data and cluster. Run these points:
   - log-likelihoods equal to the last digits;
   - estimates far inside T-coef.
 - **Failures are results too.** A profile fit that fails, or does not converge where SerBIN does, is itself a result.
-- **Time.** At 100M rows step 2's SerBIN fit took 1,195 s, so N4 takes about 40 minutes for the two methods.
+- **Time.** At 100M rows step 2's SerBIN fit took 1,195 s, so N4 takes up to about 80 minutes for its four fits.
 
 **What to send back.** Every report line the notebook prints at the end.
 

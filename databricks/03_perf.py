@@ -14,7 +14,8 @@
 # MAGIC 4. Send back the report line printed at the end.
 # MAGIC
 # MAGIC Widget 6 compares the logistic Newton methods (perf-runbook.md, "Comparing the logistic Newton methods"):
-# MAGIC `serbin,profile` fits the point once by each, back to back.
+# MAGIC `serbin,profile,profile,serbin` fits the point twice by each, each method once first. Fix the cluster's size
+# MAGIC first (minimum workers = maximum): with autoscaling, the first fit waits for workers and its time is not comparable.
 # MAGIC
 # MAGIC Requirements: dedicated (single-user) compute, as for `01_parity`. Autoscaling is fine: the report records the
 # MAGIC cores the cluster offered during the fit, and points compare on CPU per row (D-76).
@@ -42,7 +43,7 @@ dbutils.widgets.text("data_root", "", "2. Data folder (s3://...)")
 dbutils.widgets.text("custom", "", "3. Arguments of point 'custom', without --path")
 dbutils.widgets.text("extra", "", "4. Extra arguments for any point, e.g. --verify false")
 dbutils.widgets.text("storage_levels", "", "5. Storage levels to compare, e.g. OFF_HEAP,DISK_ONLY")
-dbutils.widgets.text("newton_methods", "", "6. Logistic Newton methods to compare, e.g. serbin,profile")
+dbutils.widgets.text("newton_methods", "", "6. Logistic Newton methods to compare, e.g. serbin,profile,profile,serbin")
 
 # COMMAND ----------
 

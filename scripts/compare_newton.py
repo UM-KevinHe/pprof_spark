@@ -11,6 +11,8 @@ REPORTS are text files holding report lines, one JSON object per line (other lin
 `--baseline` are step 2's exit runs, listed beside the others.
 
 For each point the script lists every fit: its method, seconds, iterations, the Newton passes and their executor CPU.
+Fit times are compared only when every compared fit ran on one fixed executor count, the same for all: with
+autoscaling, the first fit of a pair waits for workers.
 Where both methods ran, it then compares the profile method's medians with SerBIN's, and the log-likelihoods. It
 checks the profile estimates against SerBIN's by the T-coef rule, and the standard errors by the T-var rule, with the
 values of testkit/src/main/resources/tolerances.conf. Step 5's exit asks for T-coef: a worst ratio of at most 1.
@@ -100,6 +102,7 @@ def summary(report, group):
         "estimates": fit.get("estimates"),
         "errors": fit.get("standard_errors"),
         "storage": fit.get("storage_level_used", ""),
+        "executors": (fit.get("recording", {}).get("executors_min"), fit.get("recording", {}).get("executors_max")),
     }
 
 
@@ -133,10 +136,20 @@ def compare(current, baseline=(), out=print, conf=None):
             + (f", step 2 {median('step 2', 'passes'):g}" if groups["step 2"] else "") + ".")
         out(f"- Pass CPU: SerBIN {s_cpu / 1000:.1f} s, profile {p_cpu / 1000:.1f} s, {s_cpu / p_cpu:.2f} times less"
             + (f"; step 2 {median('step 2', 'cpu_ms') / 1000:.1f} s" if groups["step 2"] else "") + ".")
-        change = 100.0 * (1.0 - p_sec / s_sec)
-        out(f"- Fit: SerBIN {s_sec:.1f} s, profile {p_sec:.1f} s, "
-            f"{abs(change):.0f}% {'shorter' if change >= 0 else 'longer'}"
-            + (f"; step 2 {median('step 2', 'seconds'):.1f} s" if groups["step 2"] else "") + ".")
+        # Fit times compare only on a fixed cluster: with autoscaling, the first fit of a pair waits for workers
+        # (round 202). Every compared fit must have run on one executor count, the same for all.
+        compared = groups["serbin"] + groups["profile"]
+        fixed = all(f["executors"][0] is not None and f["executors"][0] == f["executors"][1] for f in compared) \
+            and len({f["executors"] for f in compared}) == 1
+        if fixed:
+            change = 100.0 * (1.0 - p_sec / s_sec)
+            out(f"- Fit: SerBIN {s_sec:.1f} s, profile {p_sec:.1f} s, "
+                f"{abs(change):.0f}% {'shorter' if change >= 0 else 'longer'}"
+                + (f"; step 2 {median('step 2', 'seconds'):.1f} s" if groups["step 2"] else "") + ".")
+        else:
+            ranges = ", ".join(f"{f['group']} {f['executors'][0]} to {f['executors'][1]}" for f in compared)
+            out(f"- Fit time: not compared, because the executors changed during a fit or differed between fits "
+                f"({ranges}). Fix the cluster's size to compare it (perf-runbook).")
         serbin, profile = groups["serbin"][0], groups["profile"][0]
         relative = abs(profile["loglik"] - serbin["loglik"]) / abs(serbin["loglik"])
         out(f"- ℓ: relative difference {relative:.3g}.")
@@ -161,12 +174,13 @@ def self_test():
     assert worst_ratio([1e-9, 10.0], [0.0, 10.0], 1e-8, 0.0) < 1.0
     assert worst_ratio([math.nan], [1.0], 1e-8, 1e-10) == math.inf
 
-    def report(newton, passes, estimates):
+    def report(newton, passes, estimates, executors=(4, 4)):
         sites = [{"tags": tag, "executions": n, "cpu_ms": ms} for tag, n, ms in passes]
         options = {"model": "logistic"} if newton is None else {"model": "logistic", "newton": newton}
         return {"runner": "PerfJob", "point": {"name": "p", "n": 1000}, "options": options,
                 "fit": {"seconds": 10.0, "succeeded": True, "iterations": 5, "converged": True, "loglik": -500.0,
-                        "estimates": estimates, "standard_errors": [0.1, 0.2], "recording": {"sites": sites}}}
+                        "estimates": estimates, "standard_errors": [0.1, 0.2],
+                        "recording": {"sites": sites, "executors_min": executors[0], "executors_max": executors[1]}}}
 
     serbin = report(None, [("pprof.logistic.pass-a", 5, 5000), ("pprof.logistic.pass-b", 5, 1000)], [0.5, -0.3])
     close = report("profile", [("pprof.logistic.profile", 5, 4000)], [0.5 + 1e-12, -0.3])
@@ -177,6 +191,14 @@ def self_test():
     assert any("6.0 s, profile 4.0 s, 1.50 times less" in line for line in lines), lines
     assert compare([serbin, far], out=lambda _: None, conf=conf) == {"p": False}
     assert compare([serbin], out=lambda _: None, conf=conf) == {"p": None}
+    assert any("Fit: SerBIN 10.0 s, profile 10.0 s" in line for line in lines), lines
+    scaling = report(None, [("pprof.logistic.pass-a", 5, 5000), ("pprof.logistic.pass-b", 5, 1000)], [0.5, -0.3],
+                     executors=(3, 4))
+    fixed = report("profile", [("pprof.logistic.profile", 5, 4000)], [0.5, -0.3], executors=(8, 8))
+    lines = []
+    compare([scaling, fixed], out=lines.append, conf=conf)
+    assert any("Fit time: not compared" in line and "serbin 3 to 4, profile 8 to 8" in line for line in lines), lines
+    assert not any(line.startswith("- Fit: ") for line in lines), lines
     print("self-test: OK")
 
 
